@@ -1,1 +1,18 @@
+# Сборка и кэши
+*.iws
+*.iml
+*.ipr
 /build
+/app/build
+.gradle/
+/.gradle
+
+# Системные локи и бинарники AI Studio
+*.lock
+*.bin
+restored/
+blob_*/
+
+# Временные файлы ОС
+.DS_Store
+Thumbs.db

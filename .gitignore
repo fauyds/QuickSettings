@@ -16,3 +16,8 @@
 local.properties
 .env
 debug.keystore
+.gradle/
+*.lock
+*.bin
+restored/
+blob_*/
