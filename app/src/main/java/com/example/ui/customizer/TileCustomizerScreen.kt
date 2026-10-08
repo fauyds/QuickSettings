@@ -414,6 +414,7 @@ fun ActiveTileReorderItem(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(DarkUiSurfaceVariant.copy(alpha = 0.6f))
+            .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -572,6 +573,7 @@ fun HiddenTileItem(
             onClick = onAdd,
             shape = CircleShape,
             color = MonetPrimary.copy(alpha = 0.15f),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MonetPrimary.copy(alpha = 0.4f)),
             modifier = Modifier.testTag("add_tile_${tile.id}")
         ) {
             Row(

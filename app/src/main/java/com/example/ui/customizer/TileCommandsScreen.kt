@@ -130,9 +130,9 @@ fun TileCommandsScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-             .background(colorScheme.background)
-             .padding(horizontal = 16.dp, vertical = 12.dp)
-             .testTag("tile_commands_screen"),
+            .background(colorScheme.background)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .testTag("tile_commands_screen"),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
@@ -142,7 +142,7 @@ fun TileCommandsScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier .padding(16.dp),
+                    modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Row(
@@ -153,7 +153,7 @@ fun TileCommandsScreen(
                             modifier = Modifier
                                 .size(42.dp)
                                 .clip(CircleShape)
-                                 .background(colorScheme.primaryContainer),
+                                .background(colorScheme.primaryContainer),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -249,10 +249,10 @@ fun TileCommandCardItem(
         colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainer),
         modifier = Modifier
             .fillMaxWidth()
-             .testTag("tile_cmd_card_${tile.id}")
+            .testTag("tile_cmd_card_${tile.id}")
     ) {
         Column(
-            modifier = Modifier .padding(14.dp),
+            modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // Header Row: Icon, Title, and Master Override Switch
@@ -269,9 +269,9 @@ fun TileCommandCardItem(
                         modifier = Modifier
                             .size(38.dp)
                             .clip(CircleShape)
-                             .background(
+                            .background(
                                 if (config.isOverrideEnabled) colorScheme.primaryContainer
-                                else colorScheme.surfaceContainerHigh)
+                                else colorScheme.surfaceContainerHigh
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -309,7 +309,7 @@ fun TileCommandCardItem(
                         uncheckedThumbColor = colorScheme.outline,
                         uncheckedTrackColor = colorScheme.surfaceContainerHighest
                     ),
-                    modifier = Modifier .testTag("switch_override_${tile.id}")
+                    modifier = Modifier.testTag("switch_override_${tile.id}")
                 )
             }
 
@@ -317,7 +317,7 @@ fun TileCommandCardItem(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                     .padding(vertical = 4.dp),
+                    .padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -345,7 +345,7 @@ fun TileCommandCardItem(
                         uncheckedThumbColor = colorScheme.outline,
                         uncheckedTrackColor = colorScheme.surfaceContainerHighest
                     ),
-                    modifier = Modifier .testTag("switch_close_panel_${tile.id}")
+                    modifier = Modifier.testTag("switch_close_panel_${tile.id}")
                 )
             }
 
@@ -353,7 +353,7 @@ fun TileCommandCardItem(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                     .padding(vertical = 4.dp),
+                    .padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -381,7 +381,7 @@ fun TileCommandCardItem(
                         uncheckedThumbColor = colorScheme.outline,
                         uncheckedTrackColor = colorScheme.surfaceContainerHighest
                     ),
-                    modifier = Modifier .testTag("switch_force_state_${tile.id}")
+                    modifier = Modifier.testTag("switch_force_state_${tile.id}")
                 )
             }
 
@@ -389,7 +389,7 @@ fun TileCommandCardItem(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                     .padding(vertical = 4.dp),
+                    .padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -417,7 +417,7 @@ fun TileCommandCardItem(
                         uncheckedThumbColor = colorScheme.outline,
                         uncheckedTrackColor = colorScheme.surfaceContainerHighest
                     ),
-                    modifier = Modifier .testTag("switch_block_state_${tile.id}")
+                    modifier = Modifier.testTag("switch_block_state_${tile.id}")
                 )
             }
 
@@ -425,7 +425,7 @@ fun TileCommandCardItem(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                     .padding(vertical = 4.dp),
+                    .padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -453,14 +453,14 @@ fun TileCommandCardItem(
                         uncheckedThumbColor = colorScheme.outline,
                         uncheckedTrackColor = colorScheme.surfaceContainerHighest
                     ),
-                    modifier = Modifier .testTag("switch_always_active_${tile.id}")
+                    modifier = Modifier.testTag("switch_always_active_${tile.id}")
                 )
             }
 
             AnimatedVisibility(visible = config.isOverrideEnabled) {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier .padding(top = 4.dp)
+                    modifier = Modifier.padding(top = 4.dp)
                 ) {
                     Text(
                         text = "Execution Mode:",
@@ -480,16 +480,19 @@ fun TileCommandCardItem(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(10.dp))
-
-
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (isSelected) colorScheme.primary else colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                        shape = RoundedCornerShape(10.dp)
+                                    )
                                     .background(
                                         if (isSelected) colorScheme.primaryContainer
-                                        else colorScheme.surfaceContainerHigh)
-
+                                        else colorScheme.surfaceContainerHigh
+                                    )
                                     .clickable(
                                         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                                         indication = null
- {
+                                    ) {
                                         onConfigChange(config.copy(executionMode = mode))
                                     }
                                     .padding(vertical = 8.dp)
@@ -533,7 +536,7 @@ fun TileCommandCardItem(
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                 .testTag("field_intent_action_${tile.id}")
+                                .testTag("field_intent_action_${tile.id}")
                         )
 
                         // Target Package Name
@@ -553,7 +556,7 @@ fun TileCommandCardItem(
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                 .testTag("field_intent_package_${tile.id}")
+                                .testTag("field_intent_package_${tile.id}")
                         )
 
                         // Activity / Service Component
@@ -573,7 +576,7 @@ fun TileCommandCardItem(
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                 .testTag("field_intent_component_${tile.id}")
+                                .testTag("field_intent_component_${tile.id}")
                         )
 
                         // Input validation warning
@@ -610,7 +613,7 @@ fun TileCommandCardItem(
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                 .testTag("field_cmd_on_${tile.id}")
+                                .testTag("field_cmd_on_${tile.id}")
                         )
 
                         // Custom OFF Command Text Field
@@ -630,7 +633,7 @@ fun TileCommandCardItem(
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                 .testTag("field_cmd_off_${tile.id}")
+                                .testTag("field_cmd_off_${tile.id}")
                         )
 
                         // Input validation warning
@@ -662,7 +665,7 @@ fun TileCommandCardItem(
                             },
                             modifier = Modifier
                                 .weight(1f)
-                                 .testTag("btn_test_on_${tile.id}"),
+                                .testTag("btn_test_on_${tile.id}"),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = colorScheme.primary)
                         ) {
                             Icon(
@@ -700,7 +703,7 @@ fun TileCommandCardItem(
                             onClick = onReset,
                             modifier = Modifier
                                 .weight(1f)
-                                 .testTag("btn_reset_${tile.id}"),
+                                .testTag("btn_reset_${tile.id}"),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = colorScheme.onSurfaceVariant)
                         ) {
                             Icon(

@@ -1,194 +1,65 @@
-package com.example.ui.notification
+package com.example.ui.theme
 
-import android.content.Context
-import android.content.res.ColorStateList
-import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.RippleDrawable
-import android.os.Build
-import androidx.core.content.ContextCompat
+import androidx.compose.ui.graphics.Color
 
-/**
- * Monet (Material You) dynamic thematic color resolver for Android 12+ (API 31+) system resources
- * with graceful fallback colors for older API versions.
- */
-object MonetThemeHelper {
+// Expressive Dark Palette with rich Monet containers
+val DarkUiBackground = Color.Black.copy(alpha = 0.95f)
+val DarkUiSurface = Color(0xFF132223)
+val DarkUiSurfaceVariant = Color(0xFF1B2E2E)
+val DarkUiSurfaceContainerHigh = Color(0xFF243B3B)
 
-    fun getPrimaryAccent(context: Context, isDark: Boolean): Int {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            try {
-                val resId = if (isDark) android.R.color.system_accent1_200 else android.R.color.system_accent1_600
-                val color = ContextCompat.getColor(context, resId)
-                if (color != 0) return color
-            } catch (_: Throwable) {}
-        }
-        return if (isDark) Color.parseColor("#D0BCFF") else Color.parseColor("#6750A4")
-    }
+// Expressive Light Palette
+val LightUiBackground = Color.Black.copy(alpha = 0.95f)
+val LightUiSurface = Color(0xFFFFFFFF)
+val LightUiSurfaceVariant = Color(0xFFE2E8F0)
+val LightUiSurfaceContainerHigh = Color(0xFFCBD5E1)
 
-    fun getSecondaryAccent(context: Context, isDark: Boolean): Int {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            try {
-                val resId = if (isDark) android.R.color.system_accent2_200 else android.R.color.system_accent2_600
-                val color = ContextCompat.getColor(context, resId)
-                if (color != 0) return color
-            } catch (_: Throwable) {}
-        }
-        return if (isDark) Color.parseColor("#CCC2DC") else Color.parseColor("#625B71")
-    }
+// Backward compatible aliases
+val MonetSurface = DarkUiSurface
+val MonetSurfaceVariant = DarkUiSurfaceVariant
 
-    fun getTertiaryAccent(context: Context, isDark: Boolean): Int {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            try {
-                val resId = if (isDark) android.R.color.system_accent3_200 else android.R.color.system_accent3_600
-                val color = ContextCompat.getColor(context, resId)
-                if (color != 0) return color
-            } catch (_: Throwable) {}
-        }
-        return if (isDark) Color.parseColor("#EFB8C8") else Color.parseColor("#7D5260")
-    }
+// Monet Expressive Accents (Primary Cyan/Teal & Tertiary Rose/Pink/Violet)
+val MonetPrimary = Color(0xFF4EE3D0)
+val MonetOnPrimary = Color(0xFF003732)
+val MonetPrimaryContainer = Color(0xFF005049)
+val MonetOnPrimaryContainer = Color(0xFF70FFF0)
 
-    fun getCardBackground(context: Context, isDark: Boolean): Int {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            try {
-                val resId = if (isDark) android.R.color.system_neutral2_800 else android.R.color.system_neutral2_100
-                val color = ContextCompat.getColor(context, resId)
-                if (color != 0) return color
-            } catch (_: Throwable) {}
-        }
-        return if (isDark) Color.parseColor("#2B2930") else Color.parseColor("#F3EDF7")
-    }
+val DarkMonetPrimary = Color(0xFF4EE3D0)
+val DarkMonetOnPrimary = Color(0xFF003732)
+val DarkMonetPrimaryContainer = Color(0xFF005049)
+val DarkMonetOnPrimaryContainer = Color(0xFF70FFF0)
 
-    fun getCardOutline(context: Context, isDark: Boolean): Int {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            try {
-                val resId = if (isDark) android.R.color.system_neutral2_700 else android.R.color.system_neutral2_300
-                val color = ContextCompat.getColor(context, resId)
-                if (color != 0) return color
-            } catch (_: Throwable) {}
-        }
-        return if (isDark) Color.parseColor("#49454F") else Color.parseColor("#CAC4D0")
-    }
+val LightMonetPrimary = Color(0xFF006A60)
+val LightMonetOnPrimary = Color(0xFFFFFFFF)
+val LightMonetPrimaryContainer = Color(0xFF73F8E5)
+val LightMonetOnPrimaryContainer = Color(0xFF00201C)
 
-    fun getSurfaceBackground(context: Context, isDark: Boolean): Int {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            try {
-                val resId = if (isDark) android.R.color.system_neutral1_900 else android.R.color.system_neutral1_50
-                val color = ContextCompat.getColor(context, resId)
-                if (color != 0) return color
-            } catch (_: Throwable) {}
-        }
-        return if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FFFBFE")
-    }
+val MonetSecondary = Color(0xFF7DD3FC)
+val MonetOnSecondary = Color(0xFF003548)
+val MonetSecondaryContainer = Color(0xFF004D67)
 
-    fun getTextPrimary(context: Context, isDark: Boolean): Int {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            try {
-                val resId = if (isDark) android.R.color.system_neutral1_50 else android.R.color.system_neutral1_900
-                val color = ContextCompat.getColor(context, resId)
-                if (color != 0) return color
-            } catch (_: Throwable) {}
-        }
-        return if (isDark) Color.WHITE else Color.parseColor("#1C1B1F")
-    }
+val MonetTertiary = Color(0xFFFF85A1)
+val MonetOnTertiary = Color(0xFF5D0026)
+val MonetTertiaryContainer = Color(0xFF830038)
+val MonetOnTertiaryContainer = Color(0xFFFFD9E1)
 
-    fun getTextSecondary(context: Context, isDark: Boolean): Int {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            try {
-                val resId = if (isDark) android.R.color.system_neutral2_200 else android.R.color.system_neutral2_700
-                val color = ContextCompat.getColor(context, resId)
-                if (color != 0) return color
-            } catch (_: Throwable) {}
-        }
-        return if (isDark) Color.parseColor("#CAC4D0") else Color.parseColor("#49454F")
-    }
+// Functional indicators - Dark Mode
+val TileActiveBg = Color(0xFF4EE3D0)
+val TileActiveText = Color(0xFF003732)
+val TileInactiveBg = Color(0xFF232A36)
+val TileInactiveText = Color(0xFFD6DFEC)
+val TileUnavailableBg = Color(0xFF161A22)
+val TileUnavailableText = Color(0xFF6B7280)
 
-    fun getActionBackground(context: Context, isDark: Boolean): Int {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            try {
-                val resId = if (isDark) android.R.color.system_neutral2_700 else android.R.color.system_neutral2_200
-                val color = ContextCompat.getColor(context, resId)
-                if (color != 0) return color
-            } catch (_: Throwable) {}
-        }
-        return if (isDark) Color.parseColor("#3B383E") else Color.parseColor("#E7E0EC")
-    }
+// Functional indicators - Light Mode
+val LightTileActiveBg = Color(0xFF006A60)
+val LightTileActiveText = Color(0xFFFFFFFF)
+val LightTileInactiveBg = Color(0xFFE2E8F0)
+val LightTileInactiveText = Color(0xFF1E293B)
+val LightTileUnavailableBg = Color(0xFFF1F5F9)
+val LightTileUnavailableText = Color(0xFF94A3B8)
 
-    fun getOnPrimaryText(context: Context, isDark: Boolean): Int {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            try {
-                val resId = if (isDark) android.R.color.system_accent1_900 else android.R.color.system_accent1_50
-                val color = ContextCompat.getColor(context, resId)
-                if (color != 0) return color
-            } catch (_: Throwable) {}
-        }
-        return if (isDark) Color.parseColor("#381E72") else Color.WHITE
-    }
+// Slider & Glow Gradients
+val AccentGradientStart = Color(0xFF4EE3D0)
+val AccentGradientEnd = Color(0xFFFF85A1)
 
-    /**
-     * Creates a Material 3 rounded ripple drawable dynamically with Monet card background and outline.
-     */
-    fun createMonetCardDrawable(context: Context, isDark: Boolean, cornerRadiusPx: Float): RippleDrawable {
-        val bgColor = getCardBackground(context, isDark)
-        val outlineColor = getCardOutline(context, isDark)
-        val rippleColor = if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#22000000")
-
-        val contentShape = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = cornerRadiusPx
-            setColor(bgColor)
-            setStroke(1, outlineColor)
-        }
-
-        val maskShape = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = cornerRadiusPx
-            setColor(Color.WHITE)
-        }
-
-        return RippleDrawable(ColorStateList.valueOf(rippleColor), contentShape, maskShape)
-    }
-
-    /**
-     * Creates a pill-shaped action button with Monet styling and ripple.
-     */
-    fun createMonetActionButtonDrawable(context: Context, isDark: Boolean, cornerRadiusPx: Float): RippleDrawable {
-        val bgColor = getActionBackground(context, isDark)
-        val rippleColor = if (isDark) Color.parseColor("#44FFFFFF") else Color.parseColor("#22000000")
-
-        val contentShape = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = cornerRadiusPx
-            setColor(bgColor)
-        }
-
-        val maskShape = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = cornerRadiusPx
-            setColor(Color.WHITE)
-        }
-
-        return RippleDrawable(ColorStateList.valueOf(rippleColor), contentShape, maskShape)
-    }
-
-    /**
-     * Creates a prominent primary colored pill drawable (e.g. Clear all, Enable button).
-     */
-    fun createMonetPrimaryPillDrawable(context: Context, isDark: Boolean, cornerRadiusPx: Float): RippleDrawable {
-        val primaryColor = getPrimaryAccent(context, isDark)
-        val rippleColor = if (isDark) Color.parseColor("#44FFFFFF") else Color.parseColor("#33000000")
-
-        val contentShape = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = cornerRadiusPx
-            setColor(primaryColor)
-        }
-
-        val maskShape = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = cornerRadiusPx
-            setColor(Color.WHITE)
-        }
-
-        return RippleDrawable(ColorStateList.valueOf(rippleColor), contentShape, maskShape)
-    }
-}

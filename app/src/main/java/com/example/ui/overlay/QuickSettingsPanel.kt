@@ -1903,7 +1903,7 @@ fun UnifiedQsPanel(
                 } else if (isEditingTiles) {
                     ExpressiveCardShapes.SingleCard
                 } else {
-                    RoundedCornerShape(16.dp)
+                    ExpressiveCardShapes.TopCard
                 },
                 containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
                 modifier = Modifier

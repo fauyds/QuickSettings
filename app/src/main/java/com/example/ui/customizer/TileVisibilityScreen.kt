@@ -204,6 +204,7 @@ fun TileVisibilityScreen(
         Card(
             shape = VisibilityCardShapes.SingleCard,
             colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainerHigh),
+            border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.4f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -330,6 +331,14 @@ fun TileVisibilityScreen(
                         colorScheme.surfaceContainerLowest
                     } else {
                         colorScheme.surfaceContainer
+                    }
+                ),
+                border = BorderStroke(
+                    1.dp,
+                    if (isHidden) {
+                        colorScheme.outlineVariant.copy(alpha = 0.25f)
+                    } else {
+                        colorScheme.outlineVariant.copy(alpha = 0.45f)
                     }
                 ),
                 modifier = Modifier
