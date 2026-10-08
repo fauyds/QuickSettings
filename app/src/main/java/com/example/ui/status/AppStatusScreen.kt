@@ -1,8 +1,6 @@
 package com.example.ui.status
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -109,7 +107,6 @@ fun AppStatusScreen(
         Card(
             shape = AppStatusCardShapes.SingleCard,
             colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainer),
-            border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.45f)),
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag("app_status_header_card")
@@ -182,7 +179,6 @@ fun AppStatusScreen(
         Card(
             shape = AppStatusCardShapes.TopCard,
             colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainer),
-            border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.35f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
@@ -247,7 +243,6 @@ fun AppStatusScreen(
         Card(
             shape = AppStatusCardShapes.CenterCard,
             colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainer),
-            border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.35f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
@@ -329,7 +324,6 @@ fun AppStatusScreen(
         Card(
             shape = AppStatusCardShapes.CenterCard,
             colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainer),
-            border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.35f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
@@ -411,7 +405,6 @@ fun AppStatusScreen(
         Card(
             shape = AppStatusCardShapes.BottomCard,
             colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainer),
-            border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.35f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
@@ -490,7 +483,6 @@ fun AppStatusScreen(
                     bottomEnd = AppStatusCardShapes.InsideCorner
                 ),
                 colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainer),
-                border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.35f)),
                 modifier = Modifier.weight(1f)
             ) {
                 Column(
@@ -519,7 +511,6 @@ fun AppStatusScreen(
                     bottomEnd = AppStatusCardShapes.OuterCorner
                 ),
                 colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainer),
-                border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.35f)),
                 modifier = Modifier.weight(1f)
             ) {
                 Column(
@@ -565,7 +556,6 @@ fun TopTriggerStripBar(
     Card(
         shape = ExpressiveCardShapes.SingleCard,
         colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainer),
-        border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.45f)),
         modifier = Modifier
             .fillMaxWidth()
             .testTag("top_trigger_strip_card")
@@ -639,7 +629,6 @@ fun TopTriggerStripBar(
                         onClick = onRequestPermission,
                         shape = RoundedCornerShape(8.dp),
                         color = colorScheme.errorContainer.copy(alpha = 0.25f),
-                        border = BorderStroke(1.dp, colorScheme.error.copy(alpha = 0.7f)),
                         modifier = Modifier.testTag("grant_overlay_perm_btn")
                     ) {
                         Text(
@@ -662,7 +651,6 @@ fun TopTriggerStripBar(
                     onClick = onTestFloatingOverlay,
                     shape = RoundedCornerShape(8.dp),
                     color = colorScheme.primaryContainer,
-                    border = BorderStroke(1.dp, colorScheme.primary.copy(alpha = 0.4f)),
                     modifier = Modifier.testTag("open_floating_qs_btn")
                 ) {
                     Row(
