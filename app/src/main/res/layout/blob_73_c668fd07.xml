@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/ll_full_qs_container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="14dp"
+    android:paddingVertical="12dp">
+
+    <!-- Top Brightness Slider Row -->
+    <LinearLayout
+        android:id="@+id/ll_qs_top_brightness_row"
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:layout_marginBottom="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <FrameLayout
+            android:id="@+id/fl_qs_top_brightness_icon_pill"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center_vertical">
+
+            <ImageView
+                android:id="@+id/iv_qs_top_brightness_icon"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_gravity="center"
+                android:contentDescription="Brightness"
+                android:src="@drawable/ic_qs_brightness_low" />
+        </FrameLayout>
+
+        <SeekBar
+            android:id="@+id/sb_qs_top_brightness"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:max="255"
+            android:min="5"
+            android:paddingHorizontal="10dp"
+            android:progress="128" />
+
+        <TextView
+            android:id="@+id/tv_qs_top_brightness_percentage"
+            android:layout_width="36dp"
+            android:layout_height="wrap_content"
+            android:gravity="end|center_vertical"
+            android:text="50%"
+            android:textColor="#FFFFFFFF"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Tiles Paged Grid RecyclerView (Horizontal Paging with PagerSnapHelper) -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_qs_tiles"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:nestedScrollingEnabled="false"
+        android:overScrollMode="never" />
+
+    <!-- Bottom Brightness Slider Row (Optional based on settings) -->
+    <LinearLayout
+        android:id="@+id/ll_qs_bottom_brightness_row"
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <FrameLayout
+            android:id="@+id/fl_qs_bottom_brightness_icon_pill"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center_vertical">
+
+            <ImageView
+                android:id="@+id/iv_qs_bottom_brightness_icon"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_gravity="center"
+                android:contentDescription="Brightness"
+                android:src="@drawable/ic_qs_brightness_low" />
+        </FrameLayout>
+
+        <SeekBar
+            android:id="@+id/sb_qs_bottom_brightness"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:max="255"
+            android:min="5"
+            android:paddingHorizontal="10dp"
+            android:progress="128" />
+
+        <TextView
+            android:id="@+id/tv_qs_bottom_brightness_percentage"
+            android:layout_width="36dp"
+            android:layout_height="wrap_content"
+            android:gravity="end|center_vertical"
+            android:text="50%"
+            android:textColor="#FFFFFFFF"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Footer Controls Row -->
+    <RelativeLayout
+        android:id="@+id/rl_qs_footer_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:paddingVertical="2dp">
+
+        <!-- Left: Collapse to QQS -->
+        <ImageView
+            android:id="@+id/btn_qs_collapse"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Collapse"
+            android:padding="6dp"
+            android:src="@drawable/ic_qs_collapse" />
+
+        <!-- Center: Page Indicator Dots -->
+        <LinearLayout
+            android:id="@+id/ll_qs_page_indicators"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:gravity="center"
+            android:orientation="horizontal" />
+
+        <!-- Right: Action Buttons (Edit, Settings, Power) -->
+        <LinearLayout
+            android:id="@+id/ll_qs_footer_actions"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/btn_qs_edit_mode"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Edit Tiles"
+                android:padding="7dp"
+                android:src="@drawable/ic_qs_edit" />
+
+            <ImageView
+                android:id="@+id/btn_qs_settings"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="4dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="System Settings"
+                android:padding="7dp"
+                android:src="@drawable/ic_qs_settings" />
+
+            <ImageView
+                android:id="@+id/btn_qs_power"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="4dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Power Menu"
+                android:padding="7dp"
+                android:src="@drawable/ic_qs_power" />
+        </LinearLayout>
+    </RelativeLayout>
+</LinearLayout>

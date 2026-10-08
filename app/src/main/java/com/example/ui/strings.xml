@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">QuickPanel</string>
+    <string name="accessibility_service_description">Enables QuickPanel to expand system notification shades, monitor gestures, and execute system control actions.</string>
+</resources>

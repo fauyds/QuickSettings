@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/fl_tile_edit_studio_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingHorizontal="10dp"
+    android:paddingVertical="8dp">
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_tile_edit_studio"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:nestedScrollingEnabled="false"
+        android:overScrollMode="ifContentScrolls"
+        android:paddingBottom="48dp"
+        android:scrollbars="none" />
+</FrameLayout>

@@ -1,0 +1,6 @@
+{
+  "name": "QuickPanel",
+  "description": "Custom Material 3 Expressive Quick Settings overlay panel with native controls, third-party tile scanner, and multi-tier privileges.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
