@@ -1,9 +1,7 @@
 package com.example.ui.onboarding
 
 import android.widget.Toast
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,10 +33,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -112,7 +111,6 @@ fun PrivilegeWizardScreen(
         Card(
             shape = PrivilegeCardShapes.TopCard,
             colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainer),
-            border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.45f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -152,11 +150,6 @@ fun PrivilegeWizardScreen(
                             .background(
                                 if (isSelected) colorScheme.primaryContainer.copy(alpha = 0.4f)
                                 else colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
-                            )
-                            .border(
-                                width = if (isSelected) 1.5.dp else 1.dp,
-                                color = if (isSelected) colorScheme.primary else colorScheme.outlineVariant.copy(alpha = 0.35f),
-                                shape = RoundedCornerShape(12.dp)
                             )
                             .clickable {
                                 onModeSelected(mode)
@@ -229,7 +222,6 @@ fun PrivilegeWizardScreen(
         Card(
             shape = PrivilegeCardShapes.CenterCard,
             colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainer),
-            border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.45f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -303,7 +295,6 @@ fun PrivilegeWizardScreen(
         Card(
             shape = PrivilegeCardShapes.BottomCard,
             colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainer),
-            border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.45f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -325,7 +316,7 @@ fun PrivilegeWizardScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    OutlinedTextField(
+                    TextField(
                         value = testCommandText,
                         onValueChange = { testCommandText = it },
                         modifier = Modifier
@@ -334,11 +325,12 @@ fun PrivilegeWizardScreen(
                         label = { Text("Shell command", fontSize = 11.sp) },
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
+                        colors = TextFieldDefaults.colors(
                             focusedContainerColor = colorScheme.surfaceContainerHigh,
                             unfocusedContainerColor = colorScheme.surfaceContainerHighest.copy(alpha = 0.5f),
-                            focusedBorderColor = colorScheme.primary,
-                            unfocusedBorderColor = colorScheme.outlineVariant,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            disabledIndicatorColor = Color.Transparent,
                             focusedTextColor = colorScheme.onSurface,
                             unfocusedTextColor = colorScheme.onSurface
                         )
@@ -377,7 +369,6 @@ fun PrivilegeWizardScreen(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
                         .background(colorScheme.surfaceContainerLowest)
-                        .border(1.dp, colorScheme.outlineVariant.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
                         .padding(12.dp)
                 ) {
                     Text(
@@ -409,7 +400,6 @@ fun PermissionCheckRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(colorScheme.surfaceContainerHigh)
-            .border(1.dp, colorScheme.outlineVariant.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -502,7 +492,8 @@ fun PermissionCheckRow(
 @Composable
 fun ShizukuPermissionRow(
     statusState: com.example.system.ShizukuStatusState,
-    onRequestAccess: () -> Unit
+    onRequestAccess: () -> Unit,
+    showBorder: Boolean = false
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
@@ -517,7 +508,6 @@ fun ShizukuPermissionRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(colorScheme.surfaceContainerHigh)
-            .border(1.dp, colorScheme.outlineVariant.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -568,10 +558,6 @@ fun ShizukuPermissionRow(
                 colorScheme.primary
             else
                 colorScheme.onPrimary,
-            border = if (statusState == com.example.system.ShizukuStatusState.RUNNING_GRANTED)
-                BorderStroke(1.dp, colorScheme.primary.copy(alpha = 0.3f))
-            else
-                null,
             modifier = Modifier.testTag("btn_shizuku_permission_request")
         ) {
             Text(

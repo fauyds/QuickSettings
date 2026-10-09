@@ -3,7 +3,6 @@ package com.example.ui.customizer
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,14 +45,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -186,7 +185,8 @@ fun TileCommandsScreen(
                         onRequestAccess = {
                             val msg = privilegeEngine.requestShizukuPermission()
                             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                        }
+                        },
+                        showBorder = false
                     )
                 }
             }
@@ -480,11 +480,6 @@ fun TileCommandCardItem(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(10.dp))
-                                    .border(
-                                        width = 1.dp,
-                                        color = if (isSelected) colorScheme.primary else colorScheme.outlineVariant.copy(alpha = 0.5f),
-                                        shape = RoundedCornerShape(10.dp)
-                                    )
                                     .background(
                                         if (isSelected) colorScheme.primaryContainer
                                         else colorScheme.surfaceContainerHigh
@@ -520,15 +515,19 @@ fun TileCommandCardItem(
                         )
 
                         // Custom Intent / Action
-                        OutlinedTextField(
+                        TextField(
                             value = config.customIntentAction,
                             onValueChange = { onConfigChange(config.copy(customIntentAction = it)) },
                             label = { Text("Custom Intent / Action", fontSize = 12.sp) },
                             placeholder = { Text("e.g. android.settings.DISPLAY_SETTINGS or com.example.app/.MyActivity", fontSize = 11.5.sp) },
                             singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = colorScheme.primary,
-                                unfocusedBorderColor = colorScheme.outlineVariant,
+                            shape = RoundedCornerShape(10.dp),
+                            colors = TextFieldDefaults.colors(
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                disabledIndicatorColor = Color.Transparent,
+                                focusedContainerColor = colorScheme.surfaceContainerHigh,
+                                unfocusedContainerColor = colorScheme.surfaceContainerHigh,
                                 focusedLabelColor = colorScheme.primary,
                                 unfocusedLabelColor = colorScheme.onSurfaceVariant,
                                 focusedTextColor = colorScheme.onSurface,
@@ -540,15 +539,19 @@ fun TileCommandCardItem(
                         )
 
                         // Target Package Name
-                        OutlinedTextField(
+                        TextField(
                             value = config.customIntentPackage,
                             onValueChange = { onConfigChange(config.copy(customIntentPackage = it)) },
                             label = { Text("Target Package Name", fontSize = 12.sp) },
                             placeholder = { Text("e.g. com.android.settings", fontSize = 11.5.sp) },
                             singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = colorScheme.primary,
-                                unfocusedBorderColor = colorScheme.outlineVariant,
+                            shape = RoundedCornerShape(10.dp),
+                            colors = TextFieldDefaults.colors(
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                disabledIndicatorColor = Color.Transparent,
+                                focusedContainerColor = colorScheme.surfaceContainerHigh,
+                                unfocusedContainerColor = colorScheme.surfaceContainerHigh,
                                 focusedLabelColor = colorScheme.primary,
                                 unfocusedLabelColor = colorScheme.onSurfaceVariant,
                                 focusedTextColor = colorScheme.onSurface,
@@ -560,15 +563,19 @@ fun TileCommandCardItem(
                         )
 
                         // Activity / Service Component
-                        OutlinedTextField(
+                        TextField(
                             value = config.customIntentComponent,
                             onValueChange = { onConfigChange(config.copy(customIntentComponent = it)) },
                             label = { Text("Activity / Service Component", fontSize = 12.sp) },
                             placeholder = { Text("e.g. .DisplaySettings or com.example.app.MyService", fontSize = 11.5.sp) },
                             singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = colorScheme.primary,
-                                unfocusedBorderColor = colorScheme.outlineVariant,
+                            shape = RoundedCornerShape(10.dp),
+                            colors = TextFieldDefaults.colors(
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                disabledIndicatorColor = Color.Transparent,
+                                focusedContainerColor = colorScheme.surfaceContainerHigh,
+                                unfocusedContainerColor = colorScheme.surfaceContainerHigh,
                                 focusedLabelColor = colorScheme.primary,
                                 unfocusedLabelColor = colorScheme.onSurfaceVariant,
                                 focusedTextColor = colorScheme.onSurface,
@@ -597,15 +604,19 @@ fun TileCommandCardItem(
                         )
 
                         // Custom ON Command Text Field
-                        OutlinedTextField(
+                        TextField(
                             value = config.commandOn,
                             onValueChange = { onConfigChange(config.copy(commandOn = it)) },
                             label = { Text("Custom ON Shell Command", fontSize = 12.sp) },
                             placeholder = { Text("e.g. cmd statusbar expand-notifications or svc wifi enable", fontSize = 11.5.sp) },
                             singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = colorScheme.primary,
-                                unfocusedBorderColor = colorScheme.outlineVariant,
+                            shape = RoundedCornerShape(10.dp),
+                            colors = TextFieldDefaults.colors(
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                disabledIndicatorColor = Color.Transparent,
+                                focusedContainerColor = colorScheme.surfaceContainerHigh,
+                                unfocusedContainerColor = colorScheme.surfaceContainerHigh,
                                 focusedLabelColor = colorScheme.primary,
                                 unfocusedLabelColor = colorScheme.onSurfaceVariant,
                                 focusedTextColor = colorScheme.onSurface,
@@ -617,15 +628,19 @@ fun TileCommandCardItem(
                         )
 
                         // Custom OFF Command Text Field
-                        OutlinedTextField(
+                        TextField(
                             value = config.commandOff,
                             onValueChange = { onConfigChange(config.copy(commandOff = it)) },
                             label = { Text("Custom OFF Shell Command", fontSize = 12.sp) },
                             placeholder = { Text("e.g. svc wifi disable", fontSize = 11.5.sp) },
                             singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = colorScheme.primary,
-                                unfocusedBorderColor = colorScheme.outlineVariant,
+                            shape = RoundedCornerShape(10.dp),
+                            colors = TextFieldDefaults.colors(
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                disabledIndicatorColor = Color.Transparent,
+                                focusedContainerColor = colorScheme.surfaceContainerHigh,
+                                unfocusedContainerColor = colorScheme.surfaceContainerHigh,
                                 focusedLabelColor = colorScheme.primary,
                                 unfocusedLabelColor = colorScheme.onSurfaceVariant,
                                 focusedTextColor = colorScheme.onSurface,
@@ -651,7 +666,7 @@ fun TileCommandCardItem(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        OutlinedButton(
+                        FilledTonalButton(
                             onClick = {
                                 if (config.executionMode == CommandExecutionMode.STANDARD) {
                                     if (config.customIntentAction.isNotBlank() || config.customIntentPackage.isNotBlank() || config.customIntentComponent.isNotBlank()) {
@@ -666,7 +681,10 @@ fun TileCommandCardItem(
                             modifier = Modifier
                                 .weight(1f)
                                 .testTag("btn_test_on_${tile.id}"),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colorScheme.primary)
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = colorScheme.surfaceContainerHigh,
+                                contentColor = colorScheme.primary
+                            )
                         ) {
                             Icon(
                                 imageVector = Icons.Default.PlayArrow,
@@ -678,7 +696,7 @@ fun TileCommandCardItem(
                         }
 
                         if (config.executionMode != CommandExecutionMode.STANDARD) {
-                            OutlinedButton(
+                            FilledTonalButton(
                                 onClick = {
                                     if (config.commandOff.isNotBlank()) {
                                         onTestCommand(config.commandOff, config.executionMode)
@@ -687,7 +705,10 @@ fun TileCommandCardItem(
                                 modifier = Modifier
                                     .weight(1f)
                                     .testTag("btn_test_off_${tile.id}"),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colorScheme.primary)
+                                colors = ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = colorScheme.surfaceContainerHigh,
+                                    contentColor = colorScheme.primary
+                                )
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.PlayArrow,
@@ -699,12 +720,15 @@ fun TileCommandCardItem(
                             }
                         }
 
-                        OutlinedButton(
+                        FilledTonalButton(
                             onClick = onReset,
                             modifier = Modifier
                                 .weight(1f)
                                 .testTag("btn_reset_${tile.id}"),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = colorScheme.onSurfaceVariant)
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = colorScheme.surfaceContainerHigh,
+                                contentColor = colorScheme.onSurfaceVariant
+                            )
                         ) {
                             Icon(
                                 imageVector = Icons.Default.RestartAlt,

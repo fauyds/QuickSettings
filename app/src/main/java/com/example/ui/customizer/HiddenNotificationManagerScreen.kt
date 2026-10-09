@@ -1,6 +1,5 @@
 package com.example.ui.customizer
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -126,7 +125,6 @@ fun HiddenNotificationManagerScreen(
             Card(
                 shape = NotifHubCardShapes.SingleCard,
                 colors = CardDefaults.cardColors(containerColor = colorScheme.errorContainer),
-                border = BorderStroke(1.dp, colorScheme.error.copy(alpha = 0.4f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
@@ -190,7 +188,6 @@ fun HiddenNotificationManagerScreen(
             Card(
                 shape = NotifHubCardShapes.SingleCard,
                 colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainerHigh),
-                border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.45f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -249,7 +246,6 @@ fun HiddenNotificationManagerScreen(
                 Card(
                     shape = NotifHubCardShapes.SingleCard,
                     colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainerLowest),
-                    border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.35f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
@@ -276,10 +272,6 @@ fun HiddenNotificationManagerScreen(
                         shape = cardShape,
                         colors = CardDefaults.cardColors(
                             containerColor = if (isHidden) colorScheme.surfaceContainerLowest else colorScheme.surfaceContainer
-                        ),
-                        border = BorderStroke(
-                            1.dp,
-                            if (isHidden) colorScheme.outlineVariant.copy(alpha = 0.25f) else colorScheme.outlineVariant.copy(alpha = 0.45f)
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -411,7 +403,6 @@ fun HiddenNotificationManagerScreen(
                 Card(
                     shape = NotifHubCardShapes.SingleCard,
                     colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainerLowest),
-                    border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.35f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
@@ -434,7 +425,6 @@ fun HiddenNotificationManagerScreen(
                     Card(
                         shape = ruleCardShape,
                         colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainer),
-                        border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.45f)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
