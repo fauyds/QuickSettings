@@ -1897,13 +1897,12 @@ fun UnifiedQsPanel(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
+            val qsCardCorner = 20.dp
             ContainerCard(
                 shape = if (isSplitCarrier) {
-                    RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 4.dp, bottomEnd = 4.dp)
-                } else if (isEditingTiles) {
-                    ExpressiveCardShapes.SingleCard
+                    RoundedCornerShape(topStart = qsCardCorner, topEnd = qsCardCorner, bottomStart = 4.dp, bottomEnd = 4.dp)
                 } else {
-                    ExpressiveCardShapes.TopCard
+                    RoundedCornerShape(qsCardCorner)
                 },
                 containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
                 modifier = Modifier

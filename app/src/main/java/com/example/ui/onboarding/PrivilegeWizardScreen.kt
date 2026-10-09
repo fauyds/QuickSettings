@@ -47,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -135,82 +136,109 @@ fun PrivilegeWizardScreen(
                 )
 
                 // Select Mode Cards
-                PrivilegeMode.values().forEach { mode ->
-                    val isSelected = currentMode == mode
-                    val isAvailable = when (mode) {
-                        PrivilegeMode.STANDARD -> true
-                        PrivilegeMode.SHIZUKU -> isShizukuAvailable
-                        PrivilegeMode.ROOT -> isRootAvailable
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                if (isSelected) colorScheme.primaryContainer.copy(alpha = 0.4f)
-                                else colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
-                            )
-                            .clickable {
-                                onModeSelected(mode)
-                                if (mode == PrivilegeMode.SHIZUKU) {
-                                    privilegeEngine.requestShizukuPermission()
-                                }
-                            }
-                            .padding(12.dp)
-                            .testTag("privilege_mode_${mode.name.lowercase()}"),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    text = mode.title,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isSelected) colorScheme.onSurface else colorScheme.onSurfaceVariant
-                                )
-
-                                Surface(
-                                    color = if (isSelected) colorScheme.primaryContainer else colorScheme.surfaceVariant,
-                                    shape = RoundedCornerShape(6.dp)
-                                ) {
-                                    Text(
-                                        text = mode.badge,
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = if (isSelected) colorScheme.onPrimaryContainer else colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(2.dp))
-
-                            Text(
-                                text = mode.description,
-                                fontSize = 11.sp,
-                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-                            )
+                val modes = PrivilegeMode.values()
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    modes.forEachIndexed { index, mode ->
+                        val isSelected = currentMode == mode
+                        val isAvailable = when (mode) {
+                            PrivilegeMode.STANDARD -> true
+                            PrivilegeMode.SHIZUKU -> isShizukuAvailable
+                            PrivilegeMode.ROOT -> isRootAvailable
                         }
 
-                        if (isSelected) {
-                            Box(
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .clip(CircleShape)
-                                    .background(colorScheme.primary),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = colorScheme.onPrimary,
-                                    modifier = Modifier.size(16.dp)
+                        val itemShape = if (isSelected) {
+                            RoundedCornerShape(24.dp)
+                        } else {
+                            when {
+                                modes.size == 1 -> RoundedCornerShape(16.dp)
+                                index == 0 -> RoundedCornerShape(
+                                    topStart = 16.dp,
+                                    topEnd = 16.dp,
+                                    bottomStart = 4.dp,
+                                    bottomEnd = 4.dp
                                 )
+                                index == modes.size - 1 -> RoundedCornerShape(
+                                    topStart = 4.dp,
+                                    topEnd = 4.dp,
+                                    bottomStart = 16.dp,
+                                    bottomEnd = 16.dp
+                                )
+                                else -> RoundedCornerShape(4.dp)
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(itemShape)
+                                .background(
+                                    if (isSelected) colorScheme.primaryContainer
+                                    else colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
+                                )
+                                .clickable {
+                                    onModeSelected(mode)
+                                    if (mode == PrivilegeMode.SHIZUKU) {
+                                        privilegeEngine.requestShizukuPermission()
+                                    }
+                                }
+                                .padding(12.dp)
+                                .testTag("privilege_mode_${mode.name.lowercase()}"),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = mode.title,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSelected) colorScheme.onPrimaryContainer else colorScheme.onSurface
+                                    )
+
+                                    Surface(
+                                        color = if (isSelected) colorScheme.primary else colorScheme.surfaceVariant,
+                                        shape = RoundedCornerShape(6.dp)
+                                    ) {
+                                        Text(
+                                            text = mode.badge,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = if (isSelected) colorScheme.onPrimary else colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(2.dp))
+
+                                Text(
+                                    text = mode.description,
+                                    fontSize = 11.sp,
+                                    color = if (isSelected) colorScheme.onPrimaryContainer.copy(alpha = 0.85f) else colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                )
+                            }
+
+                            if (isSelected) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clip(CircleShape)
+                                        .background(colorScheme.primary),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = colorScheme.onPrimary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -238,56 +266,76 @@ fun PrivilegeWizardScreen(
                     color = colorScheme.primary
                 )
 
-                // 1. Overlay Permission
-                val hasOverlay = privilegeEngine.hasOverlayPermission()
-                PermissionCheckRow(
-                    title = "Draw Over Other Apps",
-                    description = "SYSTEM_ALERT_WINDOW for floating swipe trigger",
-                    icon = Icons.Default.Layers,
-                    isGranted = hasOverlay,
-                    onGrant = { privilegeEngine.requestOverlayPermission() }
-                )
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // 1. Overlay Permission
+                    val hasOverlay = privilegeEngine.hasOverlayPermission()
+                    PermissionCheckRow(
+                        title = "Draw Over Other Apps",
+                        description = "SYSTEM_ALERT_WINDOW for floating swipe trigger",
+                        icon = Icons.Default.Layers,
+                        isGranted = hasOverlay,
+                        onGrant = { privilegeEngine.requestOverlayPermission() },
+                        shape = RoundedCornerShape(
+                            topStart = 16.dp,
+                            topEnd = 16.dp,
+                            bottomStart = 4.dp,
+                            bottomEnd = 4.dp
+                        )
+                    )
 
-                // 2. Write System Settings
-                val hasWriteSettings = privilegeEngine.hasWriteSettingsPermission()
-                PermissionCheckRow(
-                    title = "Modify System Settings",
-                    description = "WRITE_SETTINGS for screen brightness & rotation",
-                    icon = Icons.Default.Tune,
-                    isGranted = hasWriteSettings,
-                    onGrant = { privilegeEngine.requestWriteSettingsPermission() }
-                )
+                    // 2. Write System Settings
+                    val hasWriteSettings = privilegeEngine.hasWriteSettingsPermission()
+                    PermissionCheckRow(
+                        title = "Modify System Settings",
+                        description = "WRITE_SETTINGS for screen brightness & rotation",
+                        icon = Icons.Default.Tune,
+                        isGranted = hasWriteSettings,
+                        onGrant = { privilegeEngine.requestWriteSettingsPermission() },
+                        shape = RoundedCornerShape(4.dp)
+                    )
 
-                // 3. Do Not Disturb Policy
-                val hasDnd = privilegeEngine.hasNotificationPolicyPermission()
-                PermissionCheckRow(
-                    title = "Notification Policy Access",
-                    description = "ACCESS_NOTIFICATION_POLICY for DND mode toggle",
-                    icon = Icons.Default.Notifications,
-                    isGranted = hasDnd,
-                    onGrant = { privilegeEngine.requestNotificationPolicyPermission() }
-                )
+                    // 3. Do Not Disturb Policy
+                    val hasDnd = privilegeEngine.hasNotificationPolicyPermission()
+                    PermissionCheckRow(
+                        title = "Notification Policy Access",
+                        description = "ACCESS_NOTIFICATION_POLICY for DND mode toggle",
+                        icon = Icons.Default.Notifications,
+                        isGranted = hasDnd,
+                        onGrant = { privilegeEngine.requestNotificationPolicyPermission() },
+                        shape = RoundedCornerShape(4.dp)
+                    )
 
-                // 4. Accessibility Service
-                val hasAccessibility = QuickPanelAccessibilityService.isRunning
-                PermissionCheckRow(
-                    title = "QuickPanel Accessibility Service",
-                    description = "Enables global shade expansion and gestures",
-                    icon = Icons.Default.Security,
-                    isGranted = hasAccessibility,
-                    onGrant = { privilegeEngine.openAccessibilitySettings() }
-                )
+                    // 4. Accessibility Service
+                    val hasAccessibility = QuickPanelAccessibilityService.isRunning
+                    PermissionCheckRow(
+                        title = "QuickPanel Accessibility Service",
+                        description = "Enables global shade expansion and gestures",
+                        icon = Icons.Default.Security,
+                        isGranted = hasAccessibility,
+                        onGrant = { privilegeEngine.openAccessibilitySettings() },
+                        shape = RoundedCornerShape(4.dp)
+                    )
 
-                // 5. Shizuku Access & Service Status
-                val shizukuStatus by privilegeEngine.shizukuStatus.collectAsStateWithLifecycle()
-                val context = LocalContext.current
-                ShizukuPermissionRow(
-                    statusState = shizukuStatus,
-                    onRequestAccess = {
-                        val resultMsg = privilegeEngine.requestShizukuPermission()
-                        Toast.makeText(context, resultMsg, Toast.LENGTH_SHORT).show()
-                    }
-                )
+                    // 5. Shizuku Access & Service Status
+                    val shizukuStatus by privilegeEngine.shizukuStatus.collectAsStateWithLifecycle()
+                    val context = LocalContext.current
+                    ShizukuPermissionRow(
+                        statusState = shizukuStatus,
+                        onRequestAccess = {
+                            val resultMsg = privilegeEngine.requestShizukuPermission()
+                            Toast.makeText(context, resultMsg, Toast.LENGTH_SHORT).show()
+                        },
+                        shape = RoundedCornerShape(
+                            topStart = 4.dp,
+                            topEnd = 4.dp,
+                            bottomStart = 16.dp,
+                            bottomEnd = 16.dp
+                        )
+                    )
+                }
             }
         }
 
@@ -391,14 +439,15 @@ fun PermissionCheckRow(
     description: String,
     icon: ImageVector,
     isGranted: Boolean,
-    onGrant: () -> Unit
+    onGrant: () -> Unit,
+    shape: Shape = RoundedCornerShape(12.dp)
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(shape)
             .background(colorScheme.surfaceContainerHigh)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -493,7 +542,8 @@ fun PermissionCheckRow(
 fun ShizukuPermissionRow(
     statusState: com.example.system.ShizukuStatusState,
     onRequestAccess: () -> Unit,
-    showBorder: Boolean = false
+    showBorder: Boolean = false,
+    shape: Shape = RoundedCornerShape(12.dp)
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
@@ -506,7 +556,7 @@ fun ShizukuPermissionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(shape)
             .background(colorScheme.surfaceContainerHigh)
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically,
