@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.example.ui.theme.SegmentedButtonShapes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AirplanemodeActive
 import androidx.compose.material.icons.filled.BatterySaver
@@ -472,14 +473,20 @@ fun TileCommandCardItem(
                     // Execution Mode Selector (Standard API / Shizuku / Root)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        CommandExecutionMode.entries.forEach { mode ->
+                        val allModes = CommandExecutionMode.entries
+                        allModes.forEach { mode ->
                             val isSelected = config.executionMode == mode
+                            val shape = SegmentedButtonShapes.getShape(
+                                item = mode,
+                                items = allModes,
+                                selectedItem = config.executionMode
+                            )
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .clip(shape)
                                     .background(
                                         if (isSelected) colorScheme.primaryContainer
                                         else colorScheme.surfaceContainerHigh

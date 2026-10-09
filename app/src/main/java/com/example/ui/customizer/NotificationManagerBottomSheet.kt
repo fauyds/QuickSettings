@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.example.ui.theme.SegmentedButtonShapes
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
@@ -298,14 +299,21 @@ fun NotificationManagerBottomSheet(
                         val totalBlockedCount = hiddenPkgs.size + hiddenChannels.size
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
+                            val tabs = listOf(0, 1)
                             FilterChip(
                                 selected = selectedTab == 0,
                                 onClick = {
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     selectedTab = 0
                                 },
+                                shape = SegmentedButtonShapes.getShape(
+                                    item = 0,
+                                    items = tabs,
+                                    selectedItem = selectedTab
+                                ),
+                                border = null,
                                 label = {
                                     Text(
                                         text = "Live Ongoing (${liveOngoingList.size})",
@@ -328,6 +336,12 @@ fun NotificationManagerBottomSheet(
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     selectedTab = 1
                                 },
+                                shape = SegmentedButtonShapes.getShape(
+                                    item = 1,
+                                    items = tabs,
+                                    selectedItem = selectedTab
+                                ),
+                                border = null,
                                 label = {
                                     Text(
                                         text = "Blocked Rules ($totalBlockedCount)",

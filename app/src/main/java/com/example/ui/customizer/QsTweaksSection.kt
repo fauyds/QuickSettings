@@ -33,6 +33,7 @@ import com.example.data.EditButtonPosition
 import com.example.data.PanelPreferences
 import com.example.model.QsGridLayout
 import com.example.ui.theme.ExpressiveCardShapes
+import com.example.ui.theme.SegmentedButtonShapes
 
 @Composable
 fun QsTweaksSection(modifier: Modifier = Modifier) {
@@ -77,12 +78,20 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    QsGridLayout.entries.forEach { grid ->
+                    val allGrids = QsGridLayout.entries
+                    allGrids.forEach { grid ->
                         val isSelected = gridLayout == grid
+                        val shape = SegmentedButtonShapes.getShape(
+                            item = grid,
+                            items = allGrids,
+                            selectedItem = gridLayout
+                        )
                         FilterChip(
                             selected = isSelected,
                             onClick = { PanelPreferences.setGridLayout(context, grid) },
                             label = { Text(grid.label, fontSize = 11.sp) },
+                            shape = shape,
+                            border = null,
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
                                 selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
@@ -184,15 +193,23 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    DatePosition.entries.forEach { pos ->
+                    val allDatePositions = DatePosition.entries
+                    allDatePositions.forEach { pos ->
                         val isSelected = datePosition == pos
+                        val shape = SegmentedButtonShapes.getShape(
+                            item = pos,
+                            items = allDatePositions,
+                            selectedItem = datePosition
+                        )
                         FilterChip(
                             selected = isSelected,
                             onClick = { PanelPreferences.setDatePosition(context, pos) },
                             label = { Text(pos.label, fontSize = 10.sp) },
+                            shape = shape,
+                            border = null,
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
                                 selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
@@ -234,15 +251,23 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    EditButtonPosition.entries.forEach { pos ->
+                    val allEditPositions = EditButtonPosition.entries
+                    allEditPositions.forEach { pos ->
                         val isSelected = editButtonPosition == pos
+                        val shape = SegmentedButtonShapes.getShape(
+                            item = pos,
+                            items = allEditPositions,
+                            selectedItem = editButtonPosition
+                        )
                         FilterChip(
                             selected = isSelected,
                             onClick = { PanelPreferences.setEditButtonPosition(context, pos) },
                             label = { Text(pos.label, fontSize = 10.sp) },
+                            shape = shape,
+                            border = null,
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
                                 selectedLabelColor = MaterialTheme.colorScheme.onPrimary,

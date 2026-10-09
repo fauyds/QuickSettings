@@ -12,13 +12,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -139,6 +142,7 @@ fun MainScreen(viewModel: MainViewModel) {
 
     Scaffold(
         containerColor = DarkUiBackground,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             Row(
                 modifier = Modifier
@@ -160,7 +164,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 val showTileStudioInNavBar = false
                 val showHardwareInNavBar = false
                 val allNavItems = listOf(
-                    Triple("QS Overlay", Icons.Default.Dashboard, 0),
+                    Triple("Preview", Icons.Default.Dashboard, 0),
                     Triple("App Status", Icons.Default.Info, 9),
                     Triple("Tile Studio", Icons.Default.Tune, 1),
                     Triple("Tile Commands", Icons.Default.Terminal, 6),
@@ -225,8 +229,8 @@ fun MainScreen(viewModel: MainViewModel) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
                 .statusBarsPadding()
+                .padding(bottom = innerPadding.calculateBottomPadding())
         ) {
             // Screen content switcher
             when (selectedTab) {

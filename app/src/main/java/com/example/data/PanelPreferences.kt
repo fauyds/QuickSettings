@@ -80,11 +80,31 @@ enum class TileShape(val id: String, val label: String, val description: String)
     SQUIRCLE("squircle", "Squircle", "Rounded square with 14dp corners"),
     SQUARE("square", "Square", "Sharp square with 4dp corners"),
     TEARDROP("teardrop", "Teardrop", "Asymmetric teardrop style"),
-    PILL("pill", "Pill", "Capsule pill shape");
+    PILL("pill", "Pill", "Capsule pill shape"),
+    // 8 Placeholders for custom QS tile shapes
+    CUSTOM_1("custom_1", "Custom 1", "Placeholder for custom shape 1"),
+    CUSTOM_2("custom_2", "Custom 2", "Placeholder for custom shape 2"),
+    CUSTOM_3("custom_3", "Custom 3", "Placeholder for custom shape 3"),
+    CUSTOM_4("custom_4", "Custom 4", "Placeholder for custom shape 4"),
+    CUSTOM_5("custom_5", "Custom 5", "Placeholder for custom shape 5"),
+    CUSTOM_6("custom_6", "Custom 6", "Placeholder for custom shape 6"),
+    CUSTOM_7("custom_7", "Custom 7", "Placeholder for custom shape 7"),
+    CUSTOM_8("custom_8", "Custom 8", "Placeholder for custom shape 8");
 
     companion object {
         fun fromId(id: String?): TileShape =
             entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: CIRCLE
+    }
+}
+
+enum class ProgressBarStyle(val id: String, val label: String, val description: String) {
+    DEFAULT("default", "Previous (M3)", "Standard Material 3 slider"),
+    STRAIGHT("straight", "Straight", "Clean minimal straight progress bar"),
+    WAVY("wavy", "Wavy", "Android 13/14 squiggly wave progress bar");
+
+    companion object {
+        fun fromId(id: String?): ProgressBarStyle =
+            entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: WAVY
     }
 }
 
@@ -106,6 +126,8 @@ object PanelPreferences {
     private const val KEY_SHOW_CARRIER_DIVIDER = "show_carrier_divider"
     private const val KEY_BRIGHTNESS_AT_BOTTOM = "brightness_at_bottom"
     private const val KEY_BRIGHTNESS_IN_QQS = "brightness_in_qqs"
+    private const val KEY_WAVY_PROGRESS_BARS = "wavy_progress_bars"
+    private const val KEY_PROGRESS_BAR_STYLE = "progress_bar_style"
     private const val KEY_ENABLE_CONTAINER_BLUR = "enable_container_blur"
     private const val KEY_INVISIBLE_STATUS_BAR_TRIGGER = "invisible_status_bar_trigger"
     private const val KEY_FORCE_IMMERSIVE_TRIGGER = "force_immersive_trigger"
@@ -220,6 +242,12 @@ object PanelPreferences {
     private val _brightnessInQqs = MutableStateFlow(false)
     val brightnessInQqs: StateFlow<Boolean> = _brightnessInQqs.asStateFlow()
 
+    private val _progressBarStyle = MutableStateFlow(ProgressBarStyle.WAVY)
+    val progressBarStyle: StateFlow<ProgressBarStyle> = _progressBarStyle.asStateFlow()
+
+    private val _wavyProgressBars = MutableStateFlow(true)
+    val wavyProgressBars: StateFlow<Boolean> = _wavyProgressBars.asStateFlow()
+
     private val _enableContainerBlur = MutableStateFlow(false)
     val enableContainerBlur: StateFlow<Boolean> = _enableContainerBlur.asStateFlow()
 
@@ -311,6 +339,18 @@ object PanelPreferences {
         _showCarrierDivider.value = prefs.getBoolean(KEY_SHOW_CARRIER_DIVIDER, false)
         _brightnessAtBottom.value = prefs.getBoolean(KEY_BRIGHTNESS_AT_BOTTOM, false)
         _brightnessInQqs.value = prefs.getBoolean(KEY_BRIGHTNESS_IN_QQS, false)
+        val savedStyleId = prefs.getString(KEY_PROGRESS_BAR_STYLE, null)
+        val resolvedStyle = if (savedStyleId != null) {
+            ProgressBarStyle.fromId(savedStyleId)
+        } else {
+            if (prefs.contains(KEY_WAVY_PROGRESS_BARS)) {
+                if (prefs.getBoolean(KEY_WAVY_PROGRESS_BARS, true)) ProgressBarStyle.WAVY else ProgressBarStyle.DEFAULT
+            } else {
+                ProgressBarStyle.WAVY
+            }
+        }
+        _progressBarStyle.value = resolvedStyle
+        _wavyProgressBars.value = (resolvedStyle == ProgressBarStyle.WAVY)
         _enableContainerBlur.value = prefs.getBoolean(KEY_ENABLE_CONTAINER_BLUR, false)
         _invisibleStatusBarTrigger.value = prefs.getBoolean(KEY_INVISIBLE_STATUS_BAR_TRIGGER, false)
         _forceImmersiveTrigger.value = prefs.getBoolean(KEY_FORCE_IMMERSIVE_TRIGGER, false)
@@ -544,6 +584,21 @@ object PanelPreferences {
         _brightnessInQqs.value = value
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_BRIGHTNESS_IN_QQS, value).apply()
+    }
+
+    fun setProgressBarStyle(context: Context, style: ProgressBarStyle) {
+        _progressBarStyle.value = style
+        _wavyProgressBars.value = (style == ProgressBarStyle.WAVY)
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString(KEY_PROGRESS_BAR_STYLE, style.id)
+            .putBoolean(KEY_WAVY_PROGRESS_BARS, style == ProgressBarStyle.WAVY)
+            .apply()
+    }
+
+    fun setWavyProgressBars(context: Context, enabled: Boolean) {
+        val style = if (enabled) ProgressBarStyle.WAVY else ProgressBarStyle.DEFAULT
+        setProgressBarStyle(context, style)
     }
 
     fun setEnableContainerBlur(context: Context, enabled: Boolean) {

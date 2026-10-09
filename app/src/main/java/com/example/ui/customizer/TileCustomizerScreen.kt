@@ -18,6 +18,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.example.ui.theme.SegmentedButtonShapes
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -243,10 +244,19 @@ fun TileCustomizerScreen(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        com.example.data.EditButtonPosition.entries.forEach { pos ->
+                        val allPositions = com.example.data.EditButtonPosition.entries
+                        allPositions.forEach { pos ->
+                            val isSelected = editButtonPosition == pos
+                            val shape = SegmentedButtonShapes.getShape(
+                                item = pos,
+                                items = allPositions,
+                                selectedItem = editButtonPosition
+                            )
                             FilterChip(
-                                selected = editButtonPosition == pos,
+                                selected = isSelected,
                                 onClick = { onSelectEditButtonPosition(pos) },
+                                shape = shape,
+                                border = null,
                                 label = { Text(pos.label, fontSize = 10.sp) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
@@ -265,7 +275,7 @@ fun TileCustomizerScreen(
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState()),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
                         text = "Grid Density:",
@@ -274,10 +284,19 @@ fun TileCustomizerScreen(
                         color = Color.White
                     )
 
-                    QsGridLayout.entries.forEach { grid ->
+                    val allGrids = QsGridLayout.entries
+                    allGrids.forEach { grid ->
+                        val isSelected = selectedGridLayout == grid
+                        val shape = SegmentedButtonShapes.getShape(
+                            item = grid,
+                            items = allGrids,
+                            selectedItem = selectedGridLayout
+                        )
                         FilterChip(
-                            selected = selectedGridLayout == grid,
+                            selected = isSelected,
                             onClick = { onSelectGridLayout(grid) },
+                            shape = shape,
+                            border = null,
                             label = { Text(grid.label, fontSize = 11.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MonetPrimary,

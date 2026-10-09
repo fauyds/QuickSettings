@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,7 +21,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -152,46 +158,79 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
             // SCREEN 2: DEDICATED CATEGORY VIEW (NO TABS)
             // ==========================================
             val activeCategory = selectedCategory!!
+            val categoryScrollState = rememberScrollState()
+            val isScrolledToTop = categoryScrollState.value == 0
 
-            // Clean Top Bar with Back Button & Category Title (No tabs bar!)
-            Row(
+            // Top Header: Back Button and Dynamic Title
+            // When scrolled down, title appears in the top app bar row beside the back button (like Android Settings)
+            // When scrolled to the very top, header expands with large title below the back button
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    .background(MaterialTheme.colorScheme.background)
             ) {
-                // Back Button to Categories Hub
-                FilledTonalButton(
-                    onClick = { selectedCategory = null },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = MaterialTheme.colorScheme.primary
-                    ),
-                    modifier = Modifier.testTag("back_to_categories_btn")
+                // Top Row: Back button and collapsed title
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, top = 10.dp, end = 16.dp, bottom = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Categories",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    // Circle Back Button in corner
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable(onClick = { selectedCategory = null })
+                            .testTag("back_to_categories_btn"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    // Collapsed title shown only when scrolled down (not at very top)
+                    AnimatedVisibility(
+                        visible = !isScrolledToTop,
+                        enter = fadeIn(),
+                        exit = fadeOut()
+                    ) {
+                        Text(
+                            text = activeCategory.title,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
 
-                // Active Category Title
-                Text(
-                    text = activeCategory.title,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f)
-                )
+                // Expanded Section: Shown only when scrolled to the very top
+                AnimatedVisibility(
+                    visible = isScrolledToTop,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+                    ) {
+                        // Large Category Title (as seen in Android Settings)
+                        Text(
+                            text = activeCategory.title,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.5).sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
             }
 
             // Scrollable Content for Active Category Only
@@ -199,23 +238,9 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(categoryScrollState),
                 verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing) // 4dp padding
             ) {
-                CategorySectionHeader(
-                    category = activeCategory,
-                    itemCount = when (activeCategory) {
-                        CustomizeCategory.HEADS_UP -> 1
-                        CustomizeCategory.BASIC -> 1
-                        CustomizeCategory.QS_DESIGN -> 7
-                        CustomizeCategory.QS_TWEAKS -> 5
-                        CustomizeCategory.DEBUG -> 1
-                        CustomizeCategory.TRIGGER -> 5
-                        CustomizeCategory.GESTURES -> 1
-                        CustomizeCategory.PERFORMANCE -> 3
-                    }
-                )
-
                 when (activeCategory) {
                     CustomizeCategory.HEADS_UP -> HeadsUpSection()
                     CustomizeCategory.BASIC -> BasicSettingsSection()

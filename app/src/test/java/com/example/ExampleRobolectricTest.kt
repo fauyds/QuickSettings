@@ -61,4 +61,25 @@ class ExampleRobolectricTest {
         assertEquals(5.0f, com.example.ui.status.AppStatusCardShapes.InsideCorner.value, 0.001f)
         assertEquals(4.0f, com.example.ui.status.AppStatusCardShapes.CardSpacing.value, 0.001f)
     }
+
+    @Test
+    fun `verify progress bar style preferences and reversions`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        com.example.data.PanelPreferences.init(context)
+
+        // Switch to STRAIGHT style
+        com.example.data.PanelPreferences.setProgressBarStyle(context, com.example.data.ProgressBarStyle.STRAIGHT)
+        assertEquals(com.example.data.ProgressBarStyle.STRAIGHT, com.example.data.PanelPreferences.progressBarStyle.value)
+        assertEquals(false, com.example.data.PanelPreferences.wavyProgressBars.value)
+
+        // Switch to WAVY style
+        com.example.data.PanelPreferences.setProgressBarStyle(context, com.example.data.ProgressBarStyle.WAVY)
+        assertEquals(com.example.data.ProgressBarStyle.WAVY, com.example.data.PanelPreferences.progressBarStyle.value)
+        assertEquals(true, com.example.data.PanelPreferences.wavyProgressBars.value)
+
+        // Revert back to previous/DEFAULT style
+        com.example.data.PanelPreferences.setProgressBarStyle(context, com.example.data.ProgressBarStyle.DEFAULT)
+        assertEquals(com.example.data.ProgressBarStyle.DEFAULT, com.example.data.PanelPreferences.progressBarStyle.value)
+        assertEquals(false, com.example.data.PanelPreferences.wavyProgressBars.value)
+    }
 }

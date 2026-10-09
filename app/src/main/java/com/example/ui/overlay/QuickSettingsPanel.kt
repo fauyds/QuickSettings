@@ -152,6 +152,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.runtime.collectAsState
+import com.example.ui.components.WavySlider
+import com.example.ui.components.QsProgressSlider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
@@ -3219,6 +3221,15 @@ fun CircularQsTile(
             TileShape.SQUARE -> RoundedCornerShape(4.dp)
             TileShape.TEARDROP -> RoundedCornerShape(topStart = 24.dp, topEnd = 6.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
             TileShape.PILL -> RoundedCornerShape(20.dp)
+            // 8 Custom Shape Placeholders - easily customize shapes here
+            TileShape.CUSTOM_1 -> RoundedCornerShape(topStart = 24.dp, topEnd = 6.dp, bottomEnd = 24.dp, bottomStart = 6.dp)
+            TileShape.CUSTOM_2 -> RoundedCornerShape(topStart = 6.dp, topEnd = 24.dp, bottomEnd = 6.dp, bottomStart = 24.dp)
+            TileShape.CUSTOM_3 -> RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomEnd = 6.dp, bottomStart = 6.dp)
+            TileShape.CUSTOM_4 -> RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp, bottomEnd = 24.dp, bottomStart = 24.dp)
+            TileShape.CUSTOM_5 -> RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomEnd = 4.dp, bottomStart = 20.dp)
+            TileShape.CUSTOM_6 -> RoundedCornerShape(topStart = 24.dp, topEnd = 14.dp, bottomEnd = 24.dp, bottomStart = 14.dp)
+            TileShape.CUSTOM_7 -> RoundedCornerShape(18.dp)
+            TileShape.CUSTOM_8 -> RoundedCornerShape(8.dp)
         }
     }
 
@@ -3394,18 +3405,18 @@ fun VolumeSliderRow(
             modifier = Modifier.width(68.dp)
         )
 
-        Slider(
+        val progressBarStyle by PanelPreferences.progressBarStyle.collectAsState()
+        QsProgressSlider(
             value = value,
             onValueChange = onValueChange,
             valueRange = 0f..1f,
+            style = progressBarStyle,
+            activeColor = accentColor,
+            inactiveColor = DarkUiSurfaceVariant,
+            thumbColor = accentColor,
             modifier = Modifier
                 .weight(1f)
-                .testTag("volume_slider_${label.lowercase()}"),
-            colors = SliderDefaults.colors(
-                thumbColor = accentColor,
-                activeTrackColor = accentColor,
-                inactiveTrackColor = DarkUiSurfaceVariant
-            )
+                .testTag("volume_slider_${label.lowercase()}")
         )
 
         Text(
@@ -3482,18 +3493,18 @@ fun BrightnessSliderRow(
                     )
                 }
 
-                Slider(
+                val progressBarStyle by PanelPreferences.progressBarStyle.collectAsState()
+                QsProgressSlider(
                     value = brightness.toFloat(),
                     onValueChange = { onBrightnessChange(it.toInt()) },
                     valueRange = 5f..255f,
+                    style = progressBarStyle,
+                    activeColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                    inactiveColor = inactiveTrackColor,
+                    thumbColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .weight(1f)
-                        .testTag("brightness_slider"),
-                    colors = SliderDefaults.colors(
-                        thumbColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                        activeTrackColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                        inactiveTrackColor = inactiveTrackColor
-                    )
+                        .testTag("brightness_slider")
                 )
 
                 val percentageColor = if (isDark) Color.White else Color(0xFF333333)

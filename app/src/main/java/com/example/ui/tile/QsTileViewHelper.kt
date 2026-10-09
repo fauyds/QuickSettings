@@ -95,17 +95,74 @@ object QsTileViewHelper {
             TileShape.SQUARE -> 4f * density
             TileShape.TEARDROP -> 18f * density
             TileShape.PILL -> 20f * density
+            // 8 Custom Shape Placeholders
+            TileShape.CUSTOM_1 -> 16f * density
+            TileShape.CUSTOM_2 -> 16f * density
+            TileShape.CUSTOM_3 -> 16f * density
+            TileShape.CUSTOM_4 -> 16f * density
+            TileShape.CUSTOM_5 -> 16f * density
+            TileShape.CUSTOM_6 -> 16f * density
+            TileShape.CUSTOM_7 -> 18f * density
+            TileShape.CUSTOM_8 -> 8f * density
+        }
+
+        // Asymmetric corner radii: [top-left, top-right, bottom-right, bottom-left] (2 floats each for x & y)
+        val customCornerRadii: FloatArray? = when (chosenShape) {
+            TileShape.TEARDROP -> floatArrayOf(
+                24f * density, 24f * density,
+                6f * density, 6f * density,
+                24f * density, 24f * density,
+                24f * density, 24f * density
+            )
+            // Custom shape 1 placeholder (Leaf)
+            TileShape.CUSTOM_1 -> floatArrayOf(
+                24f * density, 24f * density,
+                6f * density, 6f * density,
+                24f * density, 24f * density,
+                6f * density, 6f * density
+            )
+            // Custom shape 2 placeholder (Inverted Leaf)
+            TileShape.CUSTOM_2 -> floatArrayOf(
+                6f * density, 6f * density,
+                24f * density, 24f * density,
+                6f * density, 6f * density,
+                24f * density, 24f * density
+            )
+            // Custom shape 3 placeholder (Arch / Dome)
+            TileShape.CUSTOM_3 -> floatArrayOf(
+                24f * density, 24f * density,
+                24f * density, 24f * density,
+                6f * density, 6f * density,
+                6f * density, 6f * density
+            )
+            // Custom shape 4 placeholder (Inverted Arch)
+            TileShape.CUSTOM_4 -> floatArrayOf(
+                6f * density, 6f * density,
+                6f * density, 6f * density,
+                24f * density, 24f * density,
+                24f * density, 24f * density
+            )
+            // Custom shape 5 placeholder (Shield / Badge)
+            TileShape.CUSTOM_5 -> floatArrayOf(
+                20f * density, 20f * density,
+                20f * density, 20f * density,
+                4f * density, 4f * density,
+                20f * density, 20f * density
+            )
+            // Custom shape 6 placeholder (Pebble)
+            TileShape.CUSTOM_6 -> floatArrayOf(
+                24f * density, 24f * density,
+                14f * density, 14f * density,
+                24f * density, 24f * density,
+                14f * density, 14f * density
+            )
+            else -> null
         }
 
         val shapeDrawable = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            if (chosenShape == TileShape.TEARDROP) {
-                cornerRadii = floatArrayOf(
-                    24f * density, 24f * density,
-                    6f * density, 6f * density,
-                    24f * density, 24f * density,
-                    24f * density, 24f * density
-                )
+            if (customCornerRadii != null) {
+                cornerRadii = customCornerRadii
             } else {
                 this.cornerRadius = cornerRadius
             }
@@ -114,13 +171,8 @@ object QsTileViewHelper {
 
         val maskDrawable = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            if (chosenShape == TileShape.TEARDROP) {
-                cornerRadii = floatArrayOf(
-                    24f * density, 24f * density,
-                    6f * density, 6f * density,
-                    24f * density, 24f * density,
-                    24f * density, 24f * density
-                )
+            if (customCornerRadii != null) {
+                cornerRadii = customCornerRadii
             } else {
                 this.cornerRadius = cornerRadius
             }

@@ -50,9 +50,12 @@ import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import com.example.data.PanelPreferences
+import com.example.ui.components.QsProgressSlider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -181,6 +184,7 @@ fun AdaptiveMediaPlayerCard(
     val currentHeaderState = activeSessions.getOrElse(pagerState.currentPage.coerceIn(0 until activeSessions.size)) { mediaState }
     val isDark = androidx.compose.foundation.isSystemInDarkTheme()
     val playPauseColor = if (isDark) Color.White else Color.Black.copy(alpha = 0.8f)
+    val progressBarStyle by PanelPreferences.progressBarStyle.collectAsState()
 
     val artworkBitmap = currentHeaderState.artworkBitmap
     val artworkColor = remember(artworkBitmap, isDark) {
@@ -428,17 +432,17 @@ fun AdaptiveMediaPlayerCard(
                         Spacer(modifier = Modifier.height(6.dp))
 
                         val inactiveTrackColor = contentColor.copy(alpha = 0.22f)
-                        Slider(
+                        QsProgressSlider(
                             value = cardMedia.progress.coerceIn(0f, 1f),
                             onValueChange = onSeek,
+                            style = progressBarStyle,
+                            isPlaying = cardMedia.isPlaying,
+                            activeColor = accentColor,
+                            inactiveColor = inactiveTrackColor,
+                            thumbColor = accentColor,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .testTag("media_progress_slider"),
-                            colors = SliderDefaults.colors(
-                                thumbColor = accentColor,
-                                activeTrackColor = accentColor,
-                                inactiveTrackColor = inactiveTrackColor
-                            )
+                                .testTag("media_progress_slider")
                         )
 
                         Row(
