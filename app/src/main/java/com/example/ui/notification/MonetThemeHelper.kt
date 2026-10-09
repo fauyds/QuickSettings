@@ -125,27 +125,48 @@ object MonetThemeHelper {
     }
 
     /**
-     * Creates a Material 3 rounded ripple drawable dynamically with Monet card background and outline.
+     * Creates a Material 3 rounded ripple drawable dynamically with Monet card background and custom per-corner radii.
+     * radii: Array of 8 floats [tl_x, tl_y, tr_x, tr_y, br_x, br_y, bl_x, bl_y]
      */
-    fun createMonetCardDrawable(context: Context, isDark: Boolean, cornerRadiusPx: Float): RippleDrawable {
+    fun createMonetCardDrawable(
+        context: Context,
+        isDark: Boolean,
+        radii: FloatArray,
+        showStroke: Boolean = false
+    ): RippleDrawable {
         val bgColor = getCardBackground(context, isDark)
         val outlineColor = getCardOutline(context, isDark)
         val rippleColor = if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#22000000")
 
         val contentShape = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            cornerRadius = cornerRadiusPx
+            cornerRadii = radii
             setColor(bgColor)
-            setStroke(1, outlineColor)
+            if (showStroke) {
+                setStroke(1, outlineColor)
+            }
         }
 
         val maskShape = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            cornerRadius = cornerRadiusPx
+            cornerRadii = radii
             setColor(Color.WHITE)
         }
 
         return RippleDrawable(ColorStateList.valueOf(rippleColor), contentShape, maskShape)
+    }
+
+    /**
+     * Creates a Material 3 rounded ripple drawable dynamically with Monet card background and uniform corner radius.
+     */
+    fun createMonetCardDrawable(
+        context: Context,
+        isDark: Boolean,
+        cornerRadiusPx: Float,
+        showStroke: Boolean = false
+    ): RippleDrawable {
+        val radii = FloatArray(8) { cornerRadiusPx }
+        return createMonetCardDrawable(context, isDark, radii, showStroke)
     }
 
     /**

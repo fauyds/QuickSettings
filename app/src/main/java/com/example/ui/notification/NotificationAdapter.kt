@@ -4,12 +4,15 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.Outline
+import android.graphics.Path
 import android.os.Build
 import android.provider.Settings
 import android.text.format.DateFormat
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewOutlineProvider
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -56,6 +59,34 @@ class NotificationAdapter(
         private const val TYPE_FOOTER = 1
     }
 
+    private var attachedRecyclerView: RecyclerView? = null
+
+    override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
+        super.onAttachedToRecyclerView(recyclerView)
+        attachedRecyclerView = recyclerView
+    }
+
+    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
+        super.onDetachedFromRecyclerView(recyclerView)
+        attachedRecyclerView = null
+    }
+
+    override fun onCurrentListChanged(
+        previousList: MutableList<NotificationItem>,
+        currentList: MutableList<NotificationItem>
+    ) {
+        super.onCurrentListChanged(previousList, currentList)
+        attachedRecyclerView?.post {
+            if (currentList.isNotEmpty()) {
+                notifyItemChanged(0)
+                if (currentList.size > 1) {
+                    notifyItemChanged(1)
+                    notifyItemChanged(currentList.size - 1)
+                }
+            }
+        }
+    }
+
     override fun getItemCount(): Int {
         return currentList.size + if (showFooter && currentList.isNotEmpty()) 1 else 0
     }
@@ -77,7 +108,7 @@ class NotificationAdapter(
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         if (holder is NotificationViewHolder) {
             val item = getItem(position) ?: return
-            holder.bind(item)
+            holder.bind(item, position, currentList.size)
         } else if (holder is FooterViewHolder) {
             holder.bind()
         }
@@ -118,7 +149,7 @@ class NotificationAdapter(
         private val ivBigPicture: ImageView = itemView.findViewById(R.id.iv_notif_big_picture)
         private val llActions: LinearLayout = itemView.findViewById(R.id.ll_notif_actions)
 
-        fun bind(item: NotificationItem) {
+        fun bind(item: NotificationItem, position: Int, totalNotifCount: Int) {
             val context = itemView.context
             val density = context.resources.displayMetrics.density
             val isExpanded = isItemExpanded(item)
@@ -143,8 +174,67 @@ class NotificationAdapter(
             val textPrimaryColor = MonetThemeHelper.getTextPrimary(context, isDark)
             val textSecondaryColor = MonetThemeHelper.getTextSecondary(context, isDark)
 
-            // Dynamic Card Background with 20dp corner radius
-            flRoot.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, 20f * density)
+            // Dynamic Card Background: Inner corners 4dp, Outer corners 20dp (matching QQS corners)
+            val outerCornerPx = 20f * density
+            val innerCornerPx = 4f * density
+
+            val radii = when {
+                totalNotifCount <= 1 -> {
+                    FloatArray(8) { outerCornerPx }
+                }
+                position == 0 -> {
+                    floatArrayOf(
+                        outerCornerPx, outerCornerPx, // top-left
+                        outerCornerPx, outerCornerPx, // top-right
+                        innerCornerPx, innerCornerPx, // bottom-right
+                        innerCornerPx, innerCornerPx  // bottom-left
+                    )
+                }
+                position == totalNotifCount - 1 -> {
+                    floatArrayOf(
+                        innerCornerPx, innerCornerPx, // top-left
+                        innerCornerPx, innerCornerPx, // top-right
+                        outerCornerPx, outerCornerPx, // bottom-right
+                        outerCornerPx, outerCornerPx  // bottom-left
+                    )
+                }
+                else -> {
+                    FloatArray(8) { innerCornerPx }
+                }
+            }
+
+            flRoot.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, radii)
+
+            // Outline provider for crisp clipping to the dynamic shape
+            flRoot.outlineProvider = object : ViewOutlineProvider() {
+                private val path = Path()
+                override fun getOutline(view: View, outline: Outline) {
+                    if (view.width > 0 && view.height > 0) {
+                        path.reset()
+                        path.addRoundRect(
+                            0f, 0f, view.width.toFloat(), view.height.toFloat(),
+                            radii,
+                            Path.Direction.CW
+                        )
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            outline.setPath(path)
+                        } else {
+                            outline.setConvexPath(path)
+                        }
+                    }
+                }
+            }
+            flRoot.clipToOutline = true
+
+            // Distance between notifications: 3dp
+            val lp = flRoot.layoutParams as? ViewGroup.MarginLayoutParams
+            if (lp != null) {
+                val margin3dp = (3f * density).toInt()
+                if (lp.bottomMargin != margin3dp) {
+                    lp.bottomMargin = margin3dp
+                    flRoot.layoutParams = lp
+                }
+            }
 
             // 2. Root Click & Long-Click
             flRoot.setOnClickListener {

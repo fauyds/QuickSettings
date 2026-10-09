@@ -2702,7 +2702,8 @@ fun NotificationItemRow(
     item: NotificationItem,
     onClick: () -> Unit,
     onDismiss: () -> Unit,
-    onActionClick: (NotificationActionModel) -> Unit
+    onActionClick: (NotificationActionModel) -> Unit,
+    shape: androidx.compose.ui.graphics.Shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
 ) {
     val isDark = LocalIsDarkTheme.current
     val haptic = LocalHapticFeedback.current
@@ -2750,7 +2751,7 @@ fun NotificationItemRow(
                 )
         ) {
             ContainerCard(
-                shape = ExpressiveCardShapes.SingleCard,
+                shape = shape,
                 containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
                 onClick = onClick,
                 onLongClick = {
