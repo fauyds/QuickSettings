@@ -175,6 +175,62 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
             instance?.refreshActiveNotifications()
         }
 
+        fun isMediaNotification(sbn: StatusBarNotification?, n: Notification?): Boolean {
+            if (sbn == null || n == null) return false
+            if (n.category == Notification.CATEGORY_TRANSPORT) return true
+
+            val extras = n.extras
+            if (extras != null) {
+                if (extras.containsKey(Notification.EXTRA_MEDIA_SESSION) ||
+                    extras.get("android.mediaSession") != null ||
+                    extras.get(Notification.EXTRA_MEDIA_SESSION) != null
+                ) {
+                    return true
+                }
+
+                val template = extras.getCharSequence("android.template")?.toString()
+                    ?: extras.getString("android.template")
+                if (template != null && template.contains("MediaStyle", ignoreCase = true)) {
+                    return true
+                }
+            }
+
+            val pkg = sbn.packageName
+            if (pkg.contains("spotify") || pkg.contains("youtube.music") || pkg.contains("music") || pkg.contains("audio") || pkg.contains("podcast") || pkg.contains("player")) {
+                if (n.category == Notification.CATEGORY_TRANSPORT || (extras != null && extras.containsKey(Notification.EXTRA_MEDIA_SESSION))) {
+                    return true
+                }
+            }
+
+            return false
+        }
+
+        private fun areNotificationListsEqual(
+            oldList: List<NotificationItem>,
+            newList: List<NotificationItem>
+        ): Boolean {
+            if (oldList.size != newList.size) return false
+            for (i in oldList.indices) {
+                val old = oldList[i]
+                val new = newList[i]
+                if (old.key != new.key ||
+                    old.title != new.title ||
+                    old.text != new.text ||
+                    old.subText != new.subText ||
+                    old.appName != new.appName ||
+                    old.isOngoing != new.isOngoing ||
+                    old.isClearable != new.isClearable ||
+                    old.actions.size != new.actions.size
+                ) {
+                    return false
+                }
+                for (j in old.actions.indices) {
+                    if (old.actions[j].title != new.actions[j].title) return false
+                }
+            }
+            return true
+        }
+
         fun getAllActiveOngoingNotifications(context: Context): List<NotificationItem> {
             val sService = instance ?: return emptyList()
             val sbns = sService.activeNotifications ?: return emptyList()
@@ -183,6 +239,7 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
 
             for (sbn in sbns) {
                 val n = sbn.notification ?: continue
+                if (isMediaNotification(sbn, n)) continue
                 val extras = n.extras ?: continue
 
                 // We only care about ongoing/persistent notifications
@@ -269,16 +326,23 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
-        refreshActiveNotifications()
-        if (sbn != null) {
-            triggerHeadsUpIfNeeded(sbn)
+        if (sbn == null) return
+        val n = sbn.notification ?: return
+
+        // Skip 1-second ticker/progress updates from active media notifications from flooding the shade or heads-up
+        if (isMediaNotification(sbn, n)) {
+            return
         }
+
+        refreshActiveNotifications()
+        triggerHeadsUpIfNeeded(sbn)
     }
 
     private fun triggerHeadsUpIfNeeded(sbn: StatusBarNotification) {
         if (!PanelPreferences.enableHeadsUpOverlay.value) return
 
         val n = sbn.notification ?: return
+        if (isMediaNotification(sbn, n)) return
         val extras = n.extras ?: return
 
         // Ignore notifications from self to prevent loops
@@ -483,6 +547,12 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
 
                 for (sbn in sbns) {
                     val n = sbn.notification ?: continue
+
+                    // Skip media playback notifications from duplicating in the standard notification list
+                    if (isMediaNotification(sbn, n)) {
+                        continue
+                    }
+
                     val extras = n.extras ?: continue
 
                     val channelId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) n.channelId else null
@@ -587,7 +657,10 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                 }
 
                 // Sort newest first
-                _notifications.value = list.sortedByDescending { it.postTime }
+                val sortedList = list.sortedByDescending { it.postTime }
+                if (!areNotificationListsEqual(_notifications.value, sortedList)) {
+                    _notifications.value = sortedList
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Error parsing active notifications: ${e.message}")
             }

@@ -432,7 +432,7 @@ fun ActiveTileReorderItem(
                 modifier = Modifier
                     .size(34.dp)
                     .clip(CircleShape)
-                    .background(MonetPrimary.copy(alpha = 0.15f)),
+                    .background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center
             ) {
                 val isThirdParty = tile.isExternal || tile.category == TileCategory.THIRD_PARTY || tile.id.contains("/")
@@ -442,15 +442,15 @@ fun ActiveTileReorderItem(
                     com.example.system.ExternalTileIcon(
                         packageName = pkg,
                         serviceClassName = cls,
-                        tintColor = MonetPrimary,
+                        tintColor = MaterialTheme.colorScheme.onPrimary,
                         contentDescription = tile.label,
                         fallbackDrawable = tile.externalDrawable,
                         modifier = Modifier.size(18.dp)
                     )
                 } else {
                     tile.iconVector?.let {
-                        Icon(it, contentDescription = null, tint = MonetPrimary, modifier = Modifier.size(18.dp))
-                    } ?: Icon(Icons.Default.DragHandle, contentDescription = null, tint = MonetPrimary, modifier = Modifier.size(18.dp))
+                        Icon(it, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(18.dp))
+                    } ?: Icon(Icons.Default.DragHandle, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(18.dp))
                 }
             }
 
@@ -519,11 +519,25 @@ fun HiddenTileItem(
     tile: QsTileModel,
     onAdd: () -> Unit
 ) {
+    val isDark = com.example.ui.theme.LocalIsDarkTheme.current
+    val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
+    val inactiveBg = if (isDark) {
+        Color(
+            red = (surfaceVariant.red * 0.72f).coerceIn(0f, 1f),
+            green = (surfaceVariant.green * 0.72f).coerceIn(0f, 1f),
+            blue = (surfaceVariant.blue * 0.72f).coerceIn(0f, 1f),
+            alpha = surfaceVariant.alpha
+        )
+    } else {
+        Color.White
+    }
+    val inactiveIcon = if (isDark) Color.White.copy(alpha = 0.90f) else Color(0xFF1E293B)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.background)
+            .background(com.example.ui.theme.getSettingsScreenBackgroundColor(isDark))
             .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -537,7 +551,7 @@ fun HiddenTileItem(
                 modifier = Modifier
                     .size(34.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.06f)),
+                    .background(inactiveBg),
                 contentAlignment = Alignment.Center
             ) {
                 val isThirdParty = tile.isExternal || tile.category == TileCategory.THIRD_PARTY || tile.id.contains("/")
@@ -547,15 +561,15 @@ fun HiddenTileItem(
                     com.example.system.ExternalTileIcon(
                         packageName = pkg,
                         serviceClassName = cls,
-                        tintColor = Color.LightGray,
+                        tintColor = inactiveIcon,
                         contentDescription = tile.label,
                         fallbackDrawable = tile.externalDrawable,
                         modifier = Modifier.size(18.dp)
                     )
                 } else {
                     tile.iconVector?.let {
-                        Icon(it, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(18.dp))
-                    } ?: Icon(Icons.Default.Add, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(18.dp))
+                        Icon(it, contentDescription = null, tint = inactiveIcon, modifier = Modifier.size(18.dp))
+                    } ?: Icon(Icons.Default.Add, contentDescription = null, tint = inactiveIcon, modifier = Modifier.size(18.dp))
                 }
             }
 

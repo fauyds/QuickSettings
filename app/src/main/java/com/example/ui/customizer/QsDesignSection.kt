@@ -40,6 +40,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -86,30 +88,38 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "QQS Icon Size",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = 17.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "$qqsTileSizeValue dp",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = 16.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
                     Text(
-                        text = "QQS Icon Size",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "$qqsTileSizeValue dp",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        text = "Adjust the size of the circular icons in the compact Quick Quick Settings (QQS) panel.",
+                        fontSize = 12.sp,
+                        lineHeight = 15.sp,
+                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-
-                Text(
-                    text = "Adjust the size of the circular icons in the compact Quick Quick Settings (QQS) panel.",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
 
                 Slider(
                     value = qqsTileSizeValue.toFloat(),
@@ -146,30 +156,38 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "QQS Icon Quantity",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = 17.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "$qqsTileCount icons",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = 16.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
                     Text(
-                        text = "QQS Icon Quantity",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "$qqsTileCount icons",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        text = "Set the number of quick toggle circular icons shown in the collapsed header row (from 2 to 6).",
+                        fontSize = 12.sp,
+                        lineHeight = 15.sp,
+                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-
-                Text(
-                    text = "Set the number of quick toggle circular icons shown in the collapsed header row (from 2 to 6).",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
 
                 Slider(
                     value = qqsTileCount.toFloat(),
@@ -210,16 +228,18 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             ) {
                 // Enabled Tile Shape
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
                             text = "Enabled Tile Shape",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
+                            lineHeight = 20.sp,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Choose the shape when a tile is active/ON",
                             fontSize = 12.sp,
+                            lineHeight = 18.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

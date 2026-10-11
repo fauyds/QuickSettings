@@ -49,6 +49,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -112,17 +114,21 @@ fun NativeControlsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                         Text(
                             text = "NATIVE SYSTEM CONTROLS",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp,
+                            letterSpacing = 1.1.sp,
+                            lineHeight = 14.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MonetPrimary
                         )
                         Text(
                             text = "Live telemetry & direct hardware observers",
                             fontSize = 13.sp,
+                            lineHeight = 16.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

@@ -3243,20 +3243,15 @@ fun CircularQsTile(
     val (backgroundColor, iconColor) = remember(tile.state, isDark, primaryColor, onPrimaryColor, cardContainerColor) {
         val inactiveBg = if (isDark) {
             Color(
-                red = (cardContainerColor.red * 0.85f).coerceIn(0f, 1f),
-                green = (cardContainerColor.green * 0.85f).coerceIn(0f, 1f),
-                blue = (cardContainerColor.blue * 0.85f).coerceIn(0f, 1f),
+                red = (cardContainerColor.red * 0.72f).coerceIn(0f, 1f),
+                green = (cardContainerColor.green * 0.72f).coerceIn(0f, 1f),
+                blue = (cardContainerColor.blue * 0.72f).coerceIn(0f, 1f),
                 alpha = cardContainerColor.alpha
             )
         } else {
-            Color(
-                red = (cardContainerColor.red + (1f - cardContainerColor.red) * 0.3f).coerceIn(0f, 1f),
-                green = (cardContainerColor.green + (1f - cardContainerColor.green) * 0.3f).coerceIn(0f, 1f),
-                blue = (cardContainerColor.blue + (1f - cardContainerColor.blue) * 0.3f).coerceIn(0f, 1f),
-                alpha = cardContainerColor.alpha
-            )
+            Color.White
         }
-        val inactiveText = if (isDark) Color.White.copy(alpha = 0.75f) else Color(0xFF333333)
+        val inactiveText = if (isDark) Color.White.copy(alpha = 0.90f) else Color(0xFF1E293B)
         val unavailableBg = inactiveBg.copy(alpha = 0.5f)
         val unavailableText = inactiveText.copy(alpha = 0.4f)
 

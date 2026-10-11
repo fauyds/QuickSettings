@@ -1,6 +1,7 @@
 package com.example.ui.customizer
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,7 +44,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.NotificationBlacklistManager
@@ -81,11 +86,15 @@ fun HiddenNotificationManagerScreen(
     val context = LocalContext.current
     val isGranted = remember { QuickPanelNotificationListenerService.isPermissionGranted(context) }
     val colorScheme = MaterialTheme.colorScheme
+    val isDark = com.example.ui.theme.LocalIsDarkTheme.current
+    val screenBg = com.example.ui.theme.getSettingsScreenBackgroundColor(isDark)
+    val cardBg = com.example.ui.theme.getSettingsCardBackgroundColor(isDark)
+    val nonGrantedRed = com.example.ui.theme.getNonGrantedRedColor(isDark)
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colorScheme.background)
+            .background(screenBg)
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
             .testTag("notif_hub_screen"),
@@ -108,14 +117,14 @@ fun HiddenNotificationManagerScreen(
             )
 
             Surface(
-                color = if (isGranted) colorScheme.primaryContainer else colorScheme.errorContainer,
+                color = if (isGranted) colorScheme.primaryContainer else nonGrantedRed,
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text(
                     text = if (isGranted) "Active" else "Permission Needed",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = if (isGranted) colorScheme.onPrimaryContainer else colorScheme.onErrorContainer,
+                    color = if (isGranted) colorScheme.onPrimaryContainer else Color.White,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                 )
             }
@@ -124,7 +133,7 @@ fun HiddenNotificationManagerScreen(
         if (!isGranted) {
             Card(
                 shape = NotifHubCardShapes.SingleCard,
-                colors = CardDefaults.cardColors(containerColor = colorScheme.errorContainer),
+                colors = CardDefaults.cardColors(containerColor = nonGrantedRed),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
@@ -139,13 +148,13 @@ fun HiddenNotificationManagerScreen(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(colorScheme.error.copy(alpha = 0.2f)),
+                                .background(Color.White.copy(alpha = 0.2f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.NotificationsOff,
                                 contentDescription = null,
-                                tint = colorScheme.error,
+                                tint = Color.White,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -153,19 +162,19 @@ fun HiddenNotificationManagerScreen(
                             text = "Notification Access Required",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = colorScheme.onErrorContainer
+                            color = Color.White
                         )
                     }
                     Text(
                         text = "To block active ongoing notifications, hide system notifications, or restore previously blacklisted notification rules, please grant Notification Listener access in the system settings.",
                         fontSize = 12.sp,
-                        color = colorScheme.onErrorContainer.copy(alpha = 0.85f)
+                        color = Color.White.copy(alpha = 0.9f)
                     )
                     Button(
                         onClick = { QuickPanelNotificationListenerService.openPermissionSettings(context) },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = colorScheme.error,
-                            contentColor = colorScheme.onError
+                            containerColor = Color.White,
+                            contentColor = nonGrantedRed
                         ),
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -208,16 +217,20 @@ fun HiddenNotificationManagerScreen(
                             modifier = Modifier.size(22.dp)
                         )
                     }
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                         Text(
                             text = "Notification Interceptor Active",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
+                            lineHeight = 17.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = colorScheme.onSurface
                         )
                         Text(
                             text = "Ongoing & persistent notifications on this device are analyzed in real-time. Block any noisy persistent cards below.",
                             fontSize = 11.sp,
+                            lineHeight = 14.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = colorScheme.onSurfaceVariant
                         )
                     }
@@ -244,7 +257,7 @@ fun HiddenNotificationManagerScreen(
             if (liveOngoingList.isEmpty()) {
                 SettingsCard(
                     shape = NotifHubCardShapes.SingleCard,
-                    colors = CardDefaults.cardColors(containerColor = colorScheme.background),
+                    colors = CardDefaults.cardColors(containerColor = cardBg),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
@@ -270,7 +283,7 @@ fun HiddenNotificationManagerScreen(
                     SettingsCard(
                         shape = cardShape,
                         colors = CardDefaults.cardColors(
-                            containerColor = if (isHidden) colorScheme.background else if (androidx.compose.foundation.isSystemInDarkTheme()) colorScheme.surface else androidx.compose.ui.graphics.Color.White
+                            containerColor = if (isHidden) screenBg else cardBg
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -293,31 +306,41 @@ fun HiddenNotificationManagerScreen(
                                         .size(38.dp)
                                         .clip(CircleShape)
                                         .background(
-                                            if (isHidden) colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                            else colorScheme.primaryContainer
+                                            if (isHidden) colorScheme.primary.copy(alpha = 0.35f)
+                                            else colorScheme.primary
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.NotificationsActive,
                                         contentDescription = null,
-                                        tint = if (isHidden) colorScheme.onSurfaceVariant.copy(alpha = 0.5f) else colorScheme.onPrimaryContainer,
+                                        tint = colorScheme.onPrimary,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
 
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Column(
+                                    modifier = Modifier.weight(1f, fill = false),
+                                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                                ) {
                                     Text(
                                         text = item.appName,
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
+                                        lineHeight = 16.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                                         color = if (isHidden) colorScheme.onSurface.copy(alpha = 0.5f) else colorScheme.onSurface
                                     )
                                     Text(
                                         text = if (item.title.isNotBlank()) item.title else item.text,
                                         fontSize = 12.sp,
-                                        color = colorScheme.onSurfaceVariant.copy(alpha = if (isHidden) 0.5f else 0.8f),
-                                        maxLines = 1
+                                        lineHeight = 15.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                        color = colorScheme.onSurfaceVariant.copy(alpha = if (isHidden) 0.5f else 0.8f)
                                     )
                                     if (!item.channelId.isNullOrBlank()) {
                                         Surface(
@@ -328,6 +351,9 @@ fun HiddenNotificationManagerScreen(
                                                 text = "Channel: ${item.channelId}",
                                                 fontSize = 9.sp,
                                                 fontWeight = FontWeight.Medium,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                                                 color = colorScheme.onSurfaceVariant,
                                                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                                             )
@@ -335,6 +361,8 @@ fun HiddenNotificationManagerScreen(
                                     }
                                 }
                             }
+
+                            Spacer(modifier = Modifier.width(8.dp))
 
                             // Hide / Unhide Toggle
                             Button(
@@ -364,7 +392,8 @@ fun HiddenNotificationManagerScreen(
                                 Text(
                                     text = if (isHidden) "Unhide" else "Hide",
                                     fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1
                                 )
                             }
                         }
@@ -401,7 +430,7 @@ fun HiddenNotificationManagerScreen(
             if (blacklistRules.isEmpty()) {
                 SettingsCard(
                     shape = NotifHubCardShapes.SingleCard,
-                    colors = CardDefaults.cardColors(containerColor = colorScheme.background),
+                    colors = CardDefaults.cardColors(containerColor = cardBg),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
@@ -433,8 +462,8 @@ fun HiddenNotificationManagerScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                                modifier = Modifier.weight(1f, fill = false),
+                                verticalArrangement = Arrangement.spacedBy(1.dp)
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -448,6 +477,7 @@ fun HiddenNotificationManagerScreen(
                                             text = if (isPackage) "Package Rule" else "Channel Rule",
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
                                             color = if (isPackage) colorScheme.onPrimaryContainer else colorScheme.onTertiaryContainer,
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                         )
@@ -456,9 +486,15 @@ fun HiddenNotificationManagerScreen(
                                 Text(
                                     text = ruleId,
                                     fontSize = 11.sp,
+                                    lineHeight = 14.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                                     color = colorScheme.onSurfaceVariant
                                 )
                             }
+
+                            Spacer(modifier = Modifier.width(8.dp))
 
                             // Delete Rule / Restore Button
                             IconButton(

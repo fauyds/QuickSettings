@@ -43,6 +43,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,7 +62,7 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(com.example.ui.theme.getSettingsScreenBackgroundColor(com.example.ui.theme.LocalIsDarkTheme.current))
     ) {
         if (selectedCategory == null) {
             // ==========================================
@@ -78,18 +80,20 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 16.dp, bottom = 6.dp, start = 4.dp, end = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
                         text = "CUSTOMIZE",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp,
+                        letterSpacing = 1.1.sp,
+                        lineHeight = 16.sp,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
                         text = "Select a category to customize Quick Settings",
                         fontSize = 13.sp,
+                        lineHeight = 18.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -167,7 +171,7 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
+                    .background(com.example.ui.theme.getSettingsScreenBackgroundColor(com.example.ui.theme.LocalIsDarkTheme.current))
             ) {
                 // Top Row: Back button and collapsed title
                 Row(
@@ -183,7 +187,7 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                         modifier = Modifier
                             .size(42.dp)
                             .clip(CircleShape)
-                            .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else androidx.compose.ui.graphics.Color.White)
+                            .background(com.example.ui.theme.getSettingsCardBackgroundColor(isDark))
                             .clickable(onClick = { selectedCategory = null })
                             .testTag("back_to_categories_btn"),
                         contentAlignment = Alignment.Center
@@ -206,6 +210,7 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                             text = activeCategory.title,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
+                            lineHeight = 26.sp,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -228,6 +233,7 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = (-0.5).sp,
+                            lineHeight = 38.sp,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -276,7 +282,7 @@ fun CategoryButton(
         onClick = onClick,
         shape = shape,
         colors = CardDefaults.cardColors(
-            containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else androidx.compose.ui.graphics.Color.White
+            containerColor = com.example.ui.theme.getSettingsCardBackgroundColor(isDark)
         ),
         modifier = modifier
             .fillMaxWidth()
@@ -294,13 +300,13 @@ fun CategoryButton(
                 modifier = Modifier
                     .size(42.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                    .background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = category.icon,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -308,17 +314,21 @@ fun CategoryButton(
             // Category Title & Description
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                verticalArrangement = Arrangement.spacedBy(1.dp)
             ) {
                 Text(
                     text = category.title,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
+                    lineHeight = 18.sp,
+                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = category.description,
                     fontSize = 12.sp,
+                    lineHeight = 15.sp,
+                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

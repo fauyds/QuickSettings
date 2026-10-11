@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -109,25 +110,24 @@ fun AlbumArtworkView(
                 contentScale = ContentScale.Crop
             )
         } else {
-            val resId = try {
-                R.drawable.album_art_kygo_1790704645442
-            } catch (e: Exception) {
-                0
-            }
-
-            if (resId != 0) {
-                Image(
-                    painter = painterResource(id = resId),
-                    contentDescription = "Album Cover",
-                    modifier = Modifier.size(size),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                Color(0xFF4C566A),
+                                Color(0xFF2E3440)
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(
                     imageVector = if (mediaState.isPlaying) Icons.Default.GraphicEq else Icons.Default.MusicNote,
                     contentDescription = "Music Artwork",
-                    tint = Color.White.copy(alpha = 0.85f),
-                    modifier = Modifier.size(size * 0.45f)
+                    tint = Color.White.copy(alpha = 0.9f),
+                    modifier = Modifier.size(size * 0.48f)
                 )
             }
         }

@@ -19,6 +19,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -41,16 +43,20 @@ fun BasicSettingsSection(modifier: Modifier = Modifier) {
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text(
                     text = "App Settings Theme Mode",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
+                    lineHeight = 17.sp,
+                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "Customize the theme for the app settings. The Quick Settings panel retains its authentic system dark appearance.",
                     fontSize = 12.sp,
+                    lineHeight = 15.sp,
+                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

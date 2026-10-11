@@ -429,8 +429,11 @@ fun NotificationManagerBottomSheet(
                                                         isBlocked = isBlocked
                                                     )
 
-                                                    Column {
+                                                    Column(
+                                                        modifier = Modifier.weight(1f, fill = false)
+                                                    ) {
                                                         Row(
+                                                            modifier = Modifier.fillMaxWidth(),
                                                             verticalAlignment = Alignment.CenterVertically,
                                                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                                                         ) {
@@ -440,7 +443,8 @@ fun NotificationManagerBottomSheet(
                                                                 fontWeight = FontWeight.Bold,
                                                                 color = if (isBlocked) Color.Gray else if (isDark) Color.White else Color(0xFF222222),
                                                                 maxLines = 1,
-                                                                overflow = TextOverflow.Ellipsis
+                                                                overflow = TextOverflow.Ellipsis,
+                                                                modifier = Modifier.weight(1f, fill = false)
                                                             )
 
                                                             if (isBlocked) {
@@ -452,6 +456,7 @@ fun NotificationManagerBottomSheet(
                                                                         text = "Blocked",
                                                                         fontSize = 9.sp,
                                                                         fontWeight = FontWeight.Bold,
+                                                                        maxLines = 1,
                                                                         color = Color(0xFFFF5252),
                                                                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                                                                     )
@@ -465,6 +470,7 @@ fun NotificationManagerBottomSheet(
                                                                         text = "Ongoing",
                                                                         fontSize = 9.sp,
                                                                         fontWeight = FontWeight.Medium,
+                                                                        maxLines = 1,
                                                                         color = MaterialTheme.colorScheme.primary,
                                                                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                                                                     )
@@ -649,7 +655,9 @@ fun NotificationManagerBottomSheet(
                                                         )
                                                     }
 
-                                                    Column {
+                                                    Column(
+                                                        modifier = Modifier.weight(1f, fill = false)
+                                                    ) {
                                                         Text(
                                                             text = if (isPackage) "Package: $ruleId" else "Channel: $ruleId",
                                                             fontSize = 12.sp,
@@ -661,10 +669,14 @@ fun NotificationManagerBottomSheet(
                                                         Text(
                                                             text = if (isPackage) "Blocked from alert stream" else "Blocked channel alert",
                                                             fontSize = 10.sp,
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis,
                                                             color = if (isDark) Color.Gray else Color(0xFF777777)
                                                         )
                                                     }
                                                 }
+
+                                                Spacer(modifier = Modifier.width(8.dp))
 
                                                 Button(
                                                     onClick = {

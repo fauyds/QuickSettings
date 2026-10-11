@@ -51,8 +51,11 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -98,11 +101,14 @@ fun PrivilegeWizardScreen(
     val scope = rememberCoroutineScope()
     var testCommandText by remember { mutableStateOf("svc wifi enable") }
     val colorScheme = MaterialTheme.colorScheme
+    val isDark = com.example.ui.theme.LocalIsDarkTheme.current
+    val screenBg = com.example.ui.theme.getSettingsScreenBackgroundColor(isDark)
+    val cardBg = com.example.ui.theme.getSettingsCardBackgroundColor(isDark)
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colorScheme.background)
+            .background(screenBg)
             .verticalScroll(scrollState)
             .padding(horizontal = 14.dp, vertical = 12.dp)
             .testTag("privilege_wizard_screen"),
@@ -111,7 +117,7 @@ fun PrivilegeWizardScreen(
         // TOP CARD: Execution Privilege Modes
         Card(
             shape = PrivilegeCardShapes.TopCard,
-            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainer),
+            colors = CardDefaults.cardColors(containerColor = cardBg),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -132,6 +138,8 @@ fun PrivilegeWizardScreen(
                 Text(
                     text = "Choose how QuickPanel triggers hardware toggles and executes actions. Dynamic command routing will automatically adapt.",
                     fontSize = 12.sp,
+                    lineHeight = 15.sp,
+                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                     color = colorScheme.onSurfaceVariant
                 )
 
@@ -176,7 +184,7 @@ fun PrivilegeWizardScreen(
                                 .clip(itemShape)
                                 .background(
                                     if (isSelected) colorScheme.primaryContainer
-                                    else colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
+                                    else screenBg
                                 )
                                 .clickable {
                                     onModeSelected(mode)
@@ -189,8 +197,12 @@ fun PrivilegeWizardScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
+                            Column(
+                                modifier = Modifier.weight(1f, fill = false),
+                                verticalArrangement = Arrangement.spacedBy(1.dp)
+                            ) {
                                 Row(
+                                    modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
@@ -198,33 +210,43 @@ fun PrivilegeWizardScreen(
                                         text = mode.title,
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
+                                        lineHeight = 16.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false),
+                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                                         color = if (isSelected) colorScheme.onPrimaryContainer else colorScheme.onSurface
                                     )
 
                                     Surface(
                                         color = if (isSelected) colorScheme.primary else colorScheme.surfaceVariant,
-                                        shape = RoundedCornerShape(6.dp)
+                                        shape = CircleShape
                                     ) {
                                         Text(
                                             text = mode.badge,
                                             fontSize = 9.sp,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = if (isSelected) colorScheme.onPrimary else colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            lineHeight = 12.sp,
+                                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                            maxLines = 1,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
                                         )
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.height(2.dp))
-
                                 Text(
                                     text = mode.description,
                                     fontSize = 11.sp,
+                                    lineHeight = 14.sp,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                                     color = if (isSelected) colorScheme.onPrimaryContainer.copy(alpha = 0.85f) else colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                                 )
                             }
 
                             if (isSelected) {
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Box(
                                     modifier = Modifier
                                         .size(24.dp)
@@ -249,7 +271,7 @@ fun PrivilegeWizardScreen(
         // CENTER CARD: System Permissions Checklist
         Card(
             shape = PrivilegeCardShapes.CenterCard,
-            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainer),
+            colors = CardDefaults.cardColors(containerColor = cardBg),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -310,31 +332,68 @@ fun PrivilegeWizardScreen(
 
                     // 4. Accessibility Service
                     val hasAccessibility = QuickPanelAccessibilityService.isRunning
+                    val isModeAccessVisible = currentMode == PrivilegeMode.SHIZUKU || currentMode == PrivilegeMode.ROOT
                     PermissionCheckRow(
                         title = "QuickPanel Accessibility Service",
                         description = "Enables global shade expansion and gestures",
                         icon = Icons.Default.Security,
                         isGranted = hasAccessibility,
                         onGrant = { privilegeEngine.openAccessibilitySettings() },
-                        shape = RoundedCornerShape(4.dp)
+                        shape = if (!isModeAccessVisible) {
+                            RoundedCornerShape(
+                                topStart = 4.dp,
+                                topEnd = 4.dp,
+                                bottomStart = 16.dp,
+                                bottomEnd = 16.dp
+                            )
+                        } else {
+                            RoundedCornerShape(4.dp)
+                        }
                     )
 
-                    // 5. Shizuku Access & Service Status
-                    val shizukuStatus by privilegeEngine.shizukuStatus.collectAsStateWithLifecycle()
+                    // 5. Additional mode access granting:
+                    // Standard Mode - Hidden
+                    // Shizuku Mode - Show "Shizuku ADB Service"
+                    // Root Mode - Show "Root Access"
                     val context = LocalContext.current
-                    ShizukuPermissionRow(
-                        statusState = shizukuStatus,
-                        onRequestAccess = {
-                            val resultMsg = privilegeEngine.requestShizukuPermission()
-                            Toast.makeText(context, resultMsg, Toast.LENGTH_SHORT).show()
-                        },
-                        shape = RoundedCornerShape(
-                            topStart = 4.dp,
-                            topEnd = 4.dp,
-                            bottomStart = 16.dp,
-                            bottomEnd = 16.dp
-                        )
-                    )
+                    when (currentMode) {
+                        PrivilegeMode.STANDARD -> {
+                            // Hidden in Standard Mode
+                        }
+                        PrivilegeMode.SHIZUKU -> {
+                            val shizukuStatus by privilegeEngine.shizukuStatus.collectAsStateWithLifecycle()
+                            ShizukuPermissionRow(
+                                statusState = shizukuStatus,
+                                onRequestAccess = {
+                                    val resultMsg = privilegeEngine.requestShizukuPermission()
+                                    Toast.makeText(context, resultMsg, Toast.LENGTH_SHORT).show()
+                                },
+                                shape = RoundedCornerShape(
+                                    topStart = 4.dp,
+                                    topEnd = 4.dp,
+                                    bottomStart = 16.dp,
+                                    bottomEnd = 16.dp
+                                )
+                            )
+                        }
+                        PrivilegeMode.ROOT -> {
+                            val isRootActive by privilegeEngine.isRootAvailable.collectAsStateWithLifecycle()
+                            RootPermissionRow(
+                                isRootGranted = isRootActive,
+                                onRequestAccess = {
+                                    val granted = privilegeEngine.requestRootPermission()
+                                    val msg = if (granted) "Root access granted!" else "Root request failed. Please check root manager."
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                },
+                                shape = RoundedCornerShape(
+                                    topStart = 4.dp,
+                                    topEnd = 4.dp,
+                                    bottomStart = 16.dp,
+                                    bottomEnd = 16.dp
+                                )
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -342,7 +401,7 @@ fun PrivilegeWizardScreen(
         // BOTTOM CARD: Dynamic Command Execution Console
         Card(
             shape = PrivilegeCardShapes.BottomCard,
-            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainer),
+            colors = CardDefaults.cardColors(containerColor = cardBg),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -374,8 +433,8 @@ fun PrivilegeWizardScreen(
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = colorScheme.surfaceContainerHigh,
-                            unfocusedContainerColor = colorScheme.surfaceContainerHighest.copy(alpha = 0.5f),
+                            focusedContainerColor = screenBg,
+                            unfocusedContainerColor = screenBg,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledIndicatorColor = Color.Transparent,
@@ -443,12 +502,15 @@ fun PermissionCheckRow(
     shape: Shape = RoundedCornerShape(12.dp)
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val isDark = com.example.ui.theme.LocalIsDarkTheme.current
+    val screenBg = com.example.ui.theme.getSettingsScreenBackgroundColor(isDark)
+    val nonGrantedRed = com.example.ui.theme.getNonGrantedRedColor(isDark)
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(colorScheme.surfaceContainerHigh)
+            .background(screenBg)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -463,29 +525,33 @@ fun PermissionCheckRow(
                     .size(34.dp)
                     .clip(CircleShape)
                     .background(
-                        if (isGranted) colorScheme.primaryContainer
-                        else colorScheme.surfaceVariant
+                        if (isGranted) colorScheme.primary
+                        else nonGrantedRed
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = if (isGranted) colorScheme.onPrimaryContainer else colorScheme.onSurfaceVariant,
+                    tint = if (isGranted) colorScheme.onPrimary else Color.White,
                     modifier = Modifier.size(18.dp)
                 )
             }
 
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text(
                     text = title,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
+                    lineHeight = 15.sp,
+                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                     color = colorScheme.onSurface
                 )
                 Text(
                     text = description,
                     fontSize = 10.sp,
+                    lineHeight = 13.sp,
+                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                     color = colorScheme.onSurfaceVariant
                 )
             }
@@ -494,7 +560,7 @@ fun PermissionCheckRow(
         if (isGranted) {
             Surface(
                 shape = CircleShape,
-                color = colorScheme.primary.copy(alpha = 0.15f)
+                color = colorScheme.primary
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -504,14 +570,14 @@ fun PermissionCheckRow(
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = null,
-                        tint = colorScheme.primary,
+                        tint = colorScheme.onPrimary,
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
                         text = "Active",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = colorScheme.primary
+                        color = colorScheme.onPrimary
                     )
                 }
             }
@@ -520,8 +586,8 @@ fun PermissionCheckRow(
                 onClick = onGrant,
                 shape = CircleShape,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = colorScheme.primary,
-                    contentColor = colorScheme.onPrimary
+                    containerColor = nonGrantedRed,
+                    contentColor = Color.White
                 ),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                 modifier = Modifier
@@ -546,18 +612,21 @@ fun ShizukuPermissionRow(
     shape: Shape = RoundedCornerShape(12.dp)
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val isDark = com.example.ui.theme.LocalIsDarkTheme.current
+    val screenBg = com.example.ui.theme.getSettingsScreenBackgroundColor(isDark)
+    val nonGrantedRed = com.example.ui.theme.getNonGrantedRedColor(isDark)
 
     val (statusColor, statusBg) = when (statusState) {
         com.example.system.ShizukuStatusState.RUNNING_GRANTED -> Pair(colorScheme.primary, colorScheme.primaryContainer)
-        com.example.system.ShizukuStatusState.PERMISSION_REQUIRED -> Pair(colorScheme.tertiary, colorScheme.tertiaryContainer)
-        com.example.system.ShizukuStatusState.SERVICE_NOT_RUNNING -> Pair(colorScheme.error, colorScheme.errorContainer)
+        com.example.system.ShizukuStatusState.PERMISSION_REQUIRED -> Pair(nonGrantedRed, nonGrantedRed)
+        com.example.system.ShizukuStatusState.SERVICE_NOT_RUNNING -> Pair(nonGrantedRed, nonGrantedRed)
     }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(colorScheme.surfaceContainerHigh)
+            .background(screenBg)
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -571,28 +640,35 @@ fun ShizukuPermissionRow(
                 modifier = Modifier
                     .size(34.dp)
                     .clip(CircleShape)
-                    .background(statusBg),
+                    .background(
+                        if (statusState == com.example.system.ShizukuStatusState.RUNNING_GRANTED) colorScheme.primary
+                        else nonGrantedRed
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Terminal,
                     contentDescription = null,
-                    tint = statusColor,
+                    tint = if (statusState == com.example.system.ShizukuStatusState.RUNNING_GRANTED) colorScheme.onPrimary else Color.White,
                     modifier = Modifier.size(18.dp)
                 )
             }
 
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text(
                     text = "Shizuku ADB Service",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
+                    lineHeight = 15.sp,
+                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                     color = colorScheme.onSurface
                 )
                 Text(
                     text = statusState.label,
                     fontSize = 10.sp,
-                    color = statusColor
+                    lineHeight = 13.sp,
+                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                    color = if (statusState == com.example.system.ShizukuStatusState.RUNNING_GRANTED) colorScheme.primary else nonGrantedRed
                 )
             }
         }
@@ -601,17 +677,99 @@ fun ShizukuPermissionRow(
             onClick = onRequestAccess,
             shape = CircleShape,
             color = if (statusState == com.example.system.ShizukuStatusState.RUNNING_GRANTED)
-                colorScheme.primary.copy(alpha = 0.15f)
-            else
-                colorScheme.primary,
-            contentColor = if (statusState == com.example.system.ShizukuStatusState.RUNNING_GRANTED)
                 colorScheme.primary
             else
-                colorScheme.onPrimary,
+                nonGrantedRed,
+            contentColor = if (statusState == com.example.system.ShizukuStatusState.RUNNING_GRANTED)
+                colorScheme.onPrimary
+            else
+                Color.White,
             modifier = Modifier.testTag("btn_shizuku_permission_request")
         ) {
             Text(
                 text = if (statusState == com.example.system.ShizukuStatusState.RUNNING_GRANTED) "Granted" else "Request Access",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun RootPermissionRow(
+    isRootGranted: Boolean,
+    onRequestAccess: () -> Unit,
+    shape: Shape = RoundedCornerShape(12.dp)
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val isDark = com.example.ui.theme.LocalIsDarkTheme.current
+    val screenBg = com.example.ui.theme.getSettingsScreenBackgroundColor(isDark)
+    val nonGrantedRed = com.example.ui.theme.getNonGrantedRedColor(isDark)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(screenBg)
+            .padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.weight(1f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(if (isRootGranted) colorScheme.primary else nonGrantedRed),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Security,
+                    contentDescription = null,
+                    tint = if (isRootGranted) colorScheme.onPrimary else Color.White,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text(
+                    text = "Root Access",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    lineHeight = 15.sp,
+                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                    color = colorScheme.onSurface
+                )
+                Text(
+                    text = if (isRootGranted) "Granted (/system/bin/su active)" else "Superuser access required",
+                    fontSize = 10.sp,
+                    lineHeight = 13.sp,
+                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                    color = if (isRootGranted) colorScheme.primary else nonGrantedRed
+                )
+            }
+        }
+
+        Surface(
+            onClick = onRequestAccess,
+            shape = CircleShape,
+            color = if (isRootGranted)
+                colorScheme.primary
+            else
+                nonGrantedRed,
+            contentColor = if (isRootGranted)
+                colorScheme.onPrimary
+            else
+                Color.White,
+            modifier = Modifier.testTag("btn_root_permission_request")
+        ) {
+            Text(
+                text = if (isRootGranted) "Granted" else "Request Access",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)

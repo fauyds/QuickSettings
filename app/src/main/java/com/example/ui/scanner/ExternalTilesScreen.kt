@@ -56,6 +56,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -110,17 +112,21 @@ fun ExternalTilesScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                         Text(
                             text = "EXTERNAL TILE SCANNER",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp,
+                            letterSpacing = 1.1.sp,
+                            lineHeight = 14.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MonetPrimary
                         )
                         Text(
                             text = "Discovers third-party TileService integrations",
                             fontSize = 13.sp,
+                            lineHeight = 16.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -281,7 +287,7 @@ fun ExternalTileCardItem(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(MonetTertiary.copy(alpha = 0.2f)),
+                        .background(MaterialTheme.colorScheme.primary),
                     contentAlignment = Alignment.Center
                 ) {
                     val pkg = tile.packageName ?: if (tile.id.contains("/")) tile.id.substringBefore('/') else null
@@ -289,7 +295,7 @@ fun ExternalTileCardItem(
                     com.example.system.ExternalTileIcon(
                         packageName = pkg,
                         serviceClassName = cls,
-                        tintColor = MonetTertiary,
+                        tintColor = MaterialTheme.colorScheme.onPrimary,
                         contentDescription = tile.label,
                         fallbackDrawable = tile.externalDrawable,
                         modifier = Modifier.size(20.dp)

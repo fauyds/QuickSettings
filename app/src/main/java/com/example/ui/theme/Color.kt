@@ -72,10 +72,11 @@ val AccentGradientEnd = Color(0xFFFF85A1)
 
 /**
  * 1. Quick Settings Overlay Panel Background (`qsPanelBackgroundColor`).
- * Light: Clean non-Monet neutral (#F1F3F4), Dark: #1E1E1E
+ * Uses adaptive Monet surfaceVariant in both dark and light modes.
  */
+@Composable
 fun getQsPanelBackgroundColor(isDark: Boolean): Color {
-    return if (isDark) Color(0xFF1E1E1E) else Color(0xFFF1F3F4)
+    return androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
 }
 
 /**
@@ -92,6 +93,14 @@ fun getSettingsScreenBackgroundColor(isDark: Boolean): Color {
  */
 fun getSettingsCardBackgroundColor(isDark: Boolean): Color {
     return if (isDark) Color(0xFF1E1E1E) else Color.White
+}
+
+/**
+ * 4. Non-Granted / Inactive Solid Red Color.
+ * Light: #C62828, Dark: #B71C1C
+ */
+fun getNonGrantedRedColor(isDark: Boolean): Color {
+    return if (isDark) Color(0xFFB71C1C) else Color(0xFFC62828)
 }
 
 

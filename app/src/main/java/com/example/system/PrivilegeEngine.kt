@@ -159,6 +159,13 @@ class PrivilegeEngine(private val context: Context) {
         }
     }
 
+    fun requestRootPermission(): Boolean {
+        val granted = runRootCommand("id")
+        _isRootAvailable.value = checkRootBinary() || granted
+        _lastExecutionLog.value = if (granted) "Root access granted!" else "Root access denied or su unavailable."
+        return granted
+    }
+
     fun hasOverlayPermission(): Boolean = Settings.canDrawOverlays(context)
     fun requestOverlayPermission() {
         val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }

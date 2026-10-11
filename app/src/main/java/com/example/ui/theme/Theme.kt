@@ -117,7 +117,7 @@ fun QuickPanelTheme(
                 base.copy(
                     background = Color(0xFFEBF3F2),
                     surface = base.surfaceContainerLow,
-                    surfaceVariant = base.surfaceContainerHigh
+                    surfaceVariant = base.surfaceVariant
                 )
             }
         }

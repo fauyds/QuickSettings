@@ -18,6 +18,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,17 +44,21 @@ fun GesturesSection(modifier: Modifier = Modifier) {
         ) {
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(1.dp)
             ) {
                 Text(
                     text = "Hide QS/QQS on Volume Key Press",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
+                    lineHeight = 17.sp,
+                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "Automatically close Quick Settings panel and place a transparent corner square when pressing hardware volume keys.",
                     fontSize = 12.sp,
+                    lineHeight = 15.sp,
+                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

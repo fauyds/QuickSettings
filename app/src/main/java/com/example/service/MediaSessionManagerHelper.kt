@@ -12,9 +12,12 @@ import android.media.session.PlaybackState
 import android.util.Log
 import com.example.data.PanelPreferences
 import com.example.model.MediaState
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import java.util.concurrent.CopyOnWriteArrayList
 
 data class AudioOutputInfo(
@@ -140,8 +143,35 @@ object MediaSessionManagerHelper {
     }
 
     private var lastUpdateMediaTime = 0L
+    private var progressTickerJob: kotlinx.coroutines.Job? = null
+    private var previewPositionMs = 81200L
+    private val helperScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.SupervisorJob())
+
+    private fun checkStartTicker(states: List<MediaState>) {
+        val anyPlaying = states.any { it.isPlaying }
+        if (anyPlaying) {
+            if (progressTickerJob == null || progressTickerJob?.isActive != true) {
+                progressTickerJob = helperScope.launch {
+                    while (this.isActive) {
+                        kotlinx.coroutines.delay(1000L)
+                        if (activeControllers.isEmpty() && PanelPreferences.forceShowMediaPreview.value) {
+                            previewPositionMs = (previewPositionMs + 1000L) % 232000L
+                        }
+                        updateMediaStateInternal()
+                    }
+                }
+            }
+        } else {
+            progressTickerJob?.cancel()
+            progressTickerJob = null
+        }
+    }
 
     fun updateMediaState() {
+        updateMediaStateInternal()
+    }
+
+    private fun updateMediaStateInternal() {
         val now = System.currentTimeMillis()
         if (now - lastUpdateMediaTime < 100) return // Throttle rapid updates within 100ms
         lastUpdateMediaTime = now
@@ -167,7 +197,11 @@ object MediaSessionManagerHelper {
 
             _selectedSessionIndex.value = targetIndex
             _mediaState.value = states.getOrNull(targetIndex)
+            checkStartTicker(states)
         } else if (forcePreview) {
+            val totalPreviewDur = 232000L
+            val previewProgress = (previewPositionMs.toFloat() / totalPreviewDur.toFloat()).coerceIn(0f, 1f)
+
             val preview1 = MediaState(
                 title = "Never Let You Go",
                 artist = "Kygo",
@@ -175,9 +209,9 @@ object MediaSessionManagerHelper {
                 packageName = "com.spotify.music",
                 isPlaying = true,
                 isFavorite = false,
-                progress = 0.35f,
-                currentPositionMs = 81200L,
-                totalDurationMs = 232000L,
+                progress = previewProgress,
+                currentPositionMs = previewPositionMs,
+                totalDurationMs = totalPreviewDur,
                 outputDevice = getActiveOutputDevice(context).name,
                 isHeadphonesOrBluetooth = getActiveOutputDevice(context).isHeadphonesOrBluetooth,
                 sessionIndex = 0
@@ -220,9 +254,11 @@ object MediaSessionManagerHelper {
             }
             _selectedSessionIndex.value = targetIndex
             _mediaState.value = previews.getOrNull(targetIndex)
+            checkStartTicker(previews)
         } else {
             _sessionsList.value = emptyList()
             _mediaState.value = null
+            checkStartTicker(emptyList())
         }
     }
 
@@ -251,8 +287,18 @@ object MediaSessionManagerHelper {
             ?: "Unknown Artist"
 
         val totalDurationMs = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
-        val currentPositionMs = playbackState?.position ?: 0L
+        val rawPos = playbackState?.position ?: 0L
+        val lastUpdateTime = playbackState?.lastPositionUpdateTime ?: 0L
         val isPlaying = playbackState?.state == PlaybackState.STATE_PLAYING || playbackState?.state == PlaybackState.STATE_BUFFERING
+        val speed = playbackState?.playbackSpeed ?: 1.0f
+
+        val currentPositionMs = if (isPlaying && lastUpdateTime > 0) {
+            val elapsed = android.os.SystemClock.elapsedRealtime() - lastUpdateTime
+            val estimated = (rawPos + (elapsed * speed).toLong())
+            if (totalDurationMs > 0) estimated.coerceIn(0L, totalDurationMs) else estimated.coerceAtLeast(0L)
+        } else {
+            rawPos
+        }
 
         val progress = if (totalDurationMs > 0) {
             (currentPositionMs.toFloat() / totalDurationMs.toFloat()).coerceIn(0f, 1f)

@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -76,17 +77,21 @@ fun TriggerSection(modifier: Modifier = Modifier) {
             ) {
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
                 ) {
                     Text(
                         text = "Invisible Status Bar Trigger",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
+                        lineHeight = 17.sp,
+                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "Make the status bar trigger totally invisible while keeping swipe gestures active.",
                         fontSize = 12.sp,
+                        lineHeight = 15.sp,
+                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -118,17 +123,21 @@ fun TriggerSection(modifier: Modifier = Modifier) {
             ) {
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
                 ) {
                     Text(
                         text = "Immersive Mode Thin 8dp Trigger",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 16.sp,
+                        lineHeight = 19.sp,
+                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "Enables the ultra-thin 8dp trigger strip (replaces thick status bar activator) with 1st-swipe reveal & 2nd-swipe panel gesture.",
                         fontSize = 12.sp,
+                        lineHeight = 15.sp,
+                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -164,17 +173,21 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                 ) {
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalArrangement = Arrangement.spacedBy(1.dp)
                     ) {
                         Text(
                             text = "System Panel Detection",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
+                            lineHeight = 17.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Auto-detect when the stock system notification shade opens to substitute it with the custom panel. Disable to only trigger via status bar swipe.",
                             fontSize = 12.sp,
+                            lineHeight = 15.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -225,17 +238,21 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                 ) {
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalArrangement = Arrangement.spacedBy(1.dp)
                     ) {
                         Text(
                             text = "Panel Replacement Delay",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
+                            lineHeight = 17.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Set a custom delay before substituting the stock system notification shade with our custom panel.",
                             fontSize = 12.sp,
+                            lineHeight = 15.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -324,17 +341,21 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                 ) {
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalArrangement = Arrangement.spacedBy(1.dp)
                     ) {
                         Text(
                             text = "Stock Shade Auto-Override",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
+                            lineHeight = 17.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Automatically intercepts native System UI notification shade expansion and substitutes it with the custom Quick Settings panel.",
                             fontSize = 12.sp,
+                            lineHeight = 15.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

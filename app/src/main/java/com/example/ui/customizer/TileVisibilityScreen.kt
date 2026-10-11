@@ -48,7 +48,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.PrivilegeMode
@@ -114,11 +117,14 @@ fun TileVisibilityScreen(
     }
 
     val colorScheme = MaterialTheme.colorScheme
+    val isDark = com.example.ui.theme.LocalIsDarkTheme.current
+    val screenBg = com.example.ui.theme.getSettingsScreenBackgroundColor(isDark)
+    val cardBg = com.example.ui.theme.getSettingsCardBackgroundColor(isDark)
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colorScheme.background)
+            .background(screenBg)
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
             .testTag("tile_visibility_screen"),
@@ -154,6 +160,9 @@ fun TileVisibilityScreen(
             }
         }
 
+        val isDark = com.example.ui.theme.LocalIsDarkTheme.current
+        val cardBg = com.example.ui.theme.getSettingsCardBackgroundColor(isDark)
+
         // Search Bar with Monet Styling
         TextField(
             value = searchQuery,
@@ -161,7 +170,7 @@ fun TileVisibilityScreen(
             modifier = Modifier.fillMaxWidth(),
             placeholder = {
                 Text(
-                    text = "Search system & custom tiles...",
+                    text = "Search tiles",
                     fontSize = 13.sp,
                     color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
@@ -186,10 +195,10 @@ fun TileVisibilityScreen(
                     }
                 }
             },
-            shape = RoundedCornerShape(12.dp),
+            shape = CircleShape,
             colors = TextFieldDefaults.colors(
-                focusedContainerColor = colorScheme.surfaceContainerHigh,
-                unfocusedContainerColor = colorScheme.surfaceContainer,
+                focusedContainerColor = cardBg,
+                unfocusedContainerColor = cardBg,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
                 disabledIndicatorColor = Color.Transparent,
@@ -220,28 +229,32 @@ fun TileVisibilityScreen(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(colorScheme.primaryContainer),
+                            .background(colorScheme.primary),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = null,
-                            tint = colorScheme.onPrimaryContainer,
+                            tint = colorScheme.onPrimary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
 
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                         Text(
                             text = "Compatibility Auto-Hide",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
+                            lineHeight = 17.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = colorScheme.onSurface
                         )
                         Text(
                             text = "Mode: ${privilegeMode.badge}",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
+                            lineHeight = 14.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = colorScheme.primary
                         )
                     }
@@ -250,12 +263,14 @@ fun TileVisibilityScreen(
                 Text(
                     text = "Automatically hide tiles that are unsupported in your current operational mode (${privilegeMode.badge}) to declutter your Quick Settings panel.",
                     fontSize = 12.sp,
+                    lineHeight = 15.sp,
+                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                     color = colorScheme.onSurfaceVariant
                 )
 
                 Button(
                     onClick = { viewModel.applySmartHideUnsupportedTiles() },
-                    shape = RoundedCornerShape(10.dp),
+                    shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colorScheme.primary,
                         contentColor = colorScheme.onPrimary
@@ -326,11 +341,7 @@ fun TileVisibilityScreen(
             SettingsCard(
                 shape = cardShape,
                 colors = CardDefaults.cardColors(
-                    containerColor = if (isHidden) {
-                        colorScheme.background
-                    } else {
-                        if (androidx.compose.foundation.isSystemInDarkTheme()) colorScheme.surface else Color.White
-                    }
+                    containerColor = if (isHidden) screenBg else cardBg
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -349,26 +360,22 @@ fun TileVisibilityScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Tile Icon with Monet PrimaryContainer / SurfaceVariant circle
+                        // Tile Icon with Active QS Tile primary background and white icon
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
                                 .background(
                                     if (isHidden) {
-                                        colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                        colorScheme.primary.copy(alpha = 0.35f)
                                     } else {
-                                        colorScheme.primaryContainer
+                                        colorScheme.primary
                                     }
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
                             val isThirdParty = tile.isExternal || tile.category == com.example.model.TileCategory.THIRD_PARTY || tile.id.contains("/")
-                            val iconTint = if (isHidden) {
-                                colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                            } else {
-                                colorScheme.onPrimaryContainer
-                            }
+                            val iconTint = colorScheme.onPrimary
 
                             if (isThirdParty) {
                                 val pkg = tile.packageName ?: if (tile.id.contains("/")) tile.id.substringBefore('/') else null
@@ -401,9 +408,10 @@ fun TileVisibilityScreen(
                         // Label, Subtitle & Badges
                         Column(
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                            verticalArrangement = Arrangement.spacedBy(1.dp)
                         ) {
                             Row(
+                                modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
@@ -411,6 +419,11 @@ fun TileVisibilityScreen(
                                     text = tile.label,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
+                                    lineHeight = 16.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false),
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                                     color = if (isHidden) {
                                         colorScheme.onSurface.copy(alpha = 0.5f)
                                     } else {
@@ -422,13 +435,14 @@ fun TileVisibilityScreen(
                                     Surface(
                                         color = colorScheme.tertiaryContainer,
                                         contentColor = colorScheme.onTertiaryContainer,
-                                        shape = RoundedCornerShape(4.dp)
+                                        shape = CircleShape
                                     ) {
                                         Text(
                                             text = "3rd Party",
                                             fontSize = 9.sp,
                                             fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                            maxLines = 1,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                         )
                                     }
                                 }
@@ -437,6 +451,10 @@ fun TileVisibilityScreen(
                             Text(
                                 text = tile.subtitle,
                                 fontSize = 11.sp,
+                                lineHeight = 14.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                                 color = colorScheme.onSurfaceVariant.copy(alpha = if (isHidden) 0.5f else 0.75f)
                             )
 
@@ -449,13 +467,13 @@ fun TileVisibilityScreen(
                                     Surface(
                                         color = colorScheme.errorContainer,
                                         contentColor = colorScheme.onErrorContainer,
-                                        shape = RoundedCornerShape(4.dp)
+                                        shape = CircleShape
                                     ) {
                                         Text(
                                             text = "Unsupported in Standard Mode",
                                             fontSize = 9.sp,
                                             fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                         )
                                     }
                                 } else {
@@ -467,19 +485,21 @@ fun TileVisibilityScreen(
                                     Surface(
                                         color = badgeBg,
                                         contentColor = badgeTextCol,
-                                        shape = RoundedCornerShape(4.dp)
+                                        shape = CircleShape
                                     ) {
                                         Text(
                                             text = badgeText,
                                             fontSize = 9.sp,
                                             fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                         )
                                     }
                                 }
                             }
                         }
                     }
+
+                    Spacer(modifier = Modifier.width(8.dp))
 
                     // Show / Hide Switch with Monet colors
                     Row(

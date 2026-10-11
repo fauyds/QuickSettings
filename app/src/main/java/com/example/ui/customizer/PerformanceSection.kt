@@ -26,6 +26,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -76,17 +78,21 @@ fun PerformanceSection(modifier: Modifier = Modifier) {
             ) {
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
                 ) {
                     Text(
                         text = "Disable Panel Animations",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
+                        lineHeight = 17.sp,
+                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "Open, close, and expand Quick Settings instantly without transition animations or slide delays.",
                         fontSize = 12.sp,
+                        lineHeight = 15.sp,
+                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -119,17 +125,21 @@ fun PerformanceSection(modifier: Modifier = Modifier) {
             ) {
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
                 ) {
                     Text(
-                        text = "Режим высокой плавности (Prime Core)",
+                        text = "Prime Core High Smoothness Mode",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
+                        lineHeight = 17.sp,
+                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "(Требуется Shizuku) Задействует 7-е ядро CPU через taskset для устранения лагов списков и свайпа.",
+                        text = "(Requires Shizuku) Pin taskset to CPU core 7 to eliminate swipe and list scrolling micro-stutters.",
                         fontSize = 12.sp,
+                        lineHeight = 15.sp,
+                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -193,16 +203,23 @@ fun PerformanceSection(modifier: Modifier = Modifier) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(1.dp)
+                    ) {
                         Text(
                             text = "System Animation Speed",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
+                            lineHeight = 17.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Set system animator duration scale via Settings.Global (requires Shizuku/Root/WRITE_SECURE_SETTINGS).",
                             fontSize = 12.sp,
+                            lineHeight = 15.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
