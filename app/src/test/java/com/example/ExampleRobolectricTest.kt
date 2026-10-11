@@ -82,4 +82,22 @@ class ExampleRobolectricTest {
         assertEquals(com.example.data.ProgressBarStyle.DEFAULT, com.example.data.PanelPreferences.progressBarStyle.value)
         assertEquals(false, com.example.data.PanelPreferences.wavyProgressBars.value)
     }
+
+    @Test
+    fun `verify app settings theme mode toggle and panel isolation`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        com.example.data.PanelPreferences.init(context)
+
+        // Set App Settings Theme to LIGHT
+        com.example.data.PanelPreferences.setThemeMode(context, com.example.data.ThemeMode.LIGHT)
+        assertEquals(com.example.data.ThemeMode.LIGHT, com.example.data.PanelPreferences.themeMode.value)
+
+        // Set App Settings Theme to DARK
+        com.example.data.PanelPreferences.setThemeMode(context, com.example.data.ThemeMode.DARK)
+        assertEquals(com.example.data.ThemeMode.DARK, com.example.data.PanelPreferences.themeMode.value)
+
+        // Set App Settings Theme to SYSTEM
+        com.example.data.PanelPreferences.setThemeMode(context, com.example.data.ThemeMode.SYSTEM)
+        assertEquals(com.example.data.ThemeMode.SYSTEM, com.example.data.PanelPreferences.themeMode.value)
+    }
 }

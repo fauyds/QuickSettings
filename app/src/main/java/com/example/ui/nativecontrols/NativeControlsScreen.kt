@@ -37,6 +37,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
@@ -60,9 +61,6 @@ import com.example.model.MediaState
 import com.example.ui.overlay.CompactMediaTile
 import com.example.ui.overlay.ExpandedMediaCard
 import com.example.system.NativeTileManager
-import com.example.ui.theme.DarkUiBackground
-import com.example.ui.theme.DarkUiSurface
-import com.example.ui.theme.DarkUiSurfaceVariant
 import com.example.ui.theme.ExpressiveCardShapes
 import com.example.ui.theme.MonetOnPrimary
 import com.example.ui.theme.MonetPrimary
@@ -92,7 +90,7 @@ fun NativeControlsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(DarkUiBackground)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(scrollState)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing) // 4.dp
@@ -100,7 +98,7 @@ fun NativeControlsScreen(
         // TOP CARD: top corners 32dp, bottom corners 8dp
         Card(
             shape = ExpressiveCardShapes.TopCard,
-            colors = CardDefaults.cardColors(containerColor = DarkUiSurface),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -125,7 +123,7 @@ fun NativeControlsScreen(
                         Text(
                             text = "Live telemetry & direct hardware observers",
                             fontSize = 13.sp,
-                            color = Color.LightGray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
@@ -134,7 +132,7 @@ fun NativeControlsScreen(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(DarkUiSurfaceVariant)
+                            .background(MaterialTheme.colorScheme.surface)
                             .testTag("refresh_hardware_button")
                     ) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = MonetPrimary, modifier = Modifier.size(18.dp))
@@ -146,7 +144,7 @@ fun NativeControlsScreen(
                     text = "Display Brightness: ${((brightness / 255f) * 100).toInt()}%",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 Row(
@@ -159,7 +157,7 @@ fun NativeControlsScreen(
                         onValueChange = { nativeManager.setBrightness(it.toInt()) },
                         valueRange = 5f..255f,
                         modifier = Modifier.weight(1f).testTag("hw_brightness_slider"),
-                        colors = SliderDefaults.colors(thumbColor = MonetPrimary, activeTrackColor = MonetPrimary, inactiveTrackColor = DarkUiSurfaceVariant)
+                        colors = SliderDefaults.colors(thumbColor = MonetPrimary, activeTrackColor = MonetPrimary, inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant)
                     )
                 }
             }
@@ -168,7 +166,7 @@ fun NativeControlsScreen(
         // CENTER CARD: top corners 8dp, bottom corners 8dp
         Card(
             shape = ExpressiveCardShapes.CenterCard,
-            colors = CardDefaults.cardColors(containerColor = DarkUiSurface),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -200,7 +198,7 @@ fun NativeControlsScreen(
         // BOTTOM CARD: top corners 8dp, bottom corners 32dp
         Card(
             shape = ExpressiveCardShapes.BottomCard,
-            colors = CardDefaults.cardColors(containerColor = DarkUiSurface),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -257,7 +255,7 @@ fun NativeControlsScreen(
 
         Card(
             shape = ExpressiveCardShapes.SingleCard,
-            colors = CardDefaults.cardColors(containerColor = DarkUiSurface),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -281,7 +279,7 @@ fun NativeControlsScreen(
                     Text(
                         text = "Android 10/11",
                         fontSize = 10.sp,
-                        color = Color.LightGray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -289,15 +287,15 @@ fun NativeControlsScreen(
                     text = "1. Compact Media Tile (QS / QQS Layout):",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 CompactMediaTile(
                     mediaState = sampleMedia,
                     cornerRadius = 16.dp,
-                    backgroundColor = DarkUiSurfaceVariant,
+                    backgroundColor = MaterialTheme.colorScheme.surface,
                     accentColor = MonetPrimary,
-                    contentColor = Color.White,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
                     onPlayPauseClick = {
                         sampleMedia = sampleMedia.copy(isPlaying = !sampleMedia.isPlaying)
                     },
@@ -317,15 +315,15 @@ fun NativeControlsScreen(
                     text = "2. Expanded Media Card (Notification Panel Layout):",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 ExpandedMediaCard(
                     mediaState = sampleMedia,
                     cornerRadius = 20.dp,
-                    backgroundColor = DarkUiSurfaceVariant,
+                    backgroundColor = MaterialTheme.colorScheme.surface,
                     accentColor = MonetPrimary,
-                    contentColor = Color.White,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
                     onPlayPauseClick = {
                         sampleMedia = sampleMedia.copy(isPlaying = !sampleMedia.isPlaying)
                     },
@@ -375,7 +373,8 @@ fun ToggleRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(DarkUiSurfaceVariant.copy(alpha = 0.5f))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -404,12 +403,12 @@ fun ToggleRow(
                     text = label,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = if (state) "Enabled" else "Disabled",
                     fontSize = 11.sp,
-                    color = if (state) MonetPrimary else Color.Gray
+                    color = if (state) MonetPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -420,8 +419,8 @@ fun ToggleRow(
             colors = SwitchDefaults.colors(
                 checkedThumbColor = MonetOnPrimary,
                 checkedTrackColor = MonetPrimary,
-                uncheckedThumbColor = Color.LightGray,
-                uncheckedTrackColor = DarkUiSurfaceVariant
+                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                uncheckedTrackColor = MaterialTheme.colorScheme.outlineVariant
             ),
             modifier = Modifier.testTag("toggle_${label.lowercase().replace(" ", "_")}")
         )
@@ -451,21 +450,21 @@ fun AudioStreamRow(
             Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
         }
 
-        Text(text = label, fontSize = 12.sp, color = Color.White, modifier = Modifier.width(96.dp))
+        Text(text = label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.width(96.dp))
 
         Slider(
             value = value,
             onValueChange = onValueChange,
             valueRange = 0f..1f,
             modifier = Modifier.weight(1f),
-            colors = SliderDefaults.colors(thumbColor = accent, activeTrackColor = accent, inactiveTrackColor = DarkUiSurfaceVariant)
+            colors = SliderDefaults.colors(thumbColor = accent, activeTrackColor = accent, inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant)
         )
 
         Text(
             text = "${(value * 100).toInt()}%",
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.LightGray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.width(36.dp)
         )
     }

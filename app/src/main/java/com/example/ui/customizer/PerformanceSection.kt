@@ -64,10 +64,8 @@ fun PerformanceSection(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)
     ) {
         // 1. Disable Panel Animations Toggle Card
-        Card(
-            shape = CustomizeCardShapes.TopCard,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth()
+        SettingsCard(
+            shape = CustomizeCardShapes.TopCard
         ) {
             Row(
                 modifier = Modifier
@@ -108,12 +106,9 @@ fun PerformanceSection(modifier: Modifier = Modifier) {
         }
 
         // 2. Prime Core Mode (Shizuku taskset) Card
-        Card(
+        SettingsCard(
             shape = CustomizeCardShapes.CenterCard,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("prime_core_affinity_card")
+            modifier = Modifier.testTag("prime_core_affinity_card")
         ) {
             Row(
                 modifier = Modifier
@@ -183,12 +178,9 @@ fun PerformanceSection(modifier: Modifier = Modifier) {
         }
 
         // 3. System Animation Speed Controller Card
-        Card(
+        SettingsCard(
             shape = CustomizeCardShapes.BottomCard,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("system_animation_speed_card")
+            modifier = Modifier.testTag("system_animation_speed_card")
         ) {
             Column(
                 modifier = Modifier

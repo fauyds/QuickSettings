@@ -185,9 +185,8 @@ fun HiddenNotificationManagerScreen(
             }
 
             // Status Info Card
-            Card(
+            SettingsCard(
                 shape = NotifHubCardShapes.SingleCard,
-                colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainerHigh),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -243,9 +242,9 @@ fun HiddenNotificationManagerScreen(
             }
 
             if (liveOngoingList.isEmpty()) {
-                Card(
+                SettingsCard(
                     shape = NotifHubCardShapes.SingleCard,
-                    colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainerLowest),
+                    colors = CardDefaults.cardColors(containerColor = colorScheme.background),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
@@ -268,10 +267,10 @@ fun HiddenNotificationManagerScreen(
                         else -> NotifHubCardShapes.CenterCard
                     }
 
-                    Card(
+                    SettingsCard(
                         shape = cardShape,
                         colors = CardDefaults.cardColors(
-                            containerColor = if (isHidden) colorScheme.surfaceContainerLowest else colorScheme.surfaceContainer
+                            containerColor = if (isHidden) colorScheme.background else if (androidx.compose.foundation.isSystemInDarkTheme()) colorScheme.surface else androidx.compose.ui.graphics.Color.White
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -400,9 +399,9 @@ fun HiddenNotificationManagerScreen(
             }
 
             if (blacklistRules.isEmpty()) {
-                Card(
+                SettingsCard(
                     shape = NotifHubCardShapes.SingleCard,
-                    colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainerLowest),
+                    colors = CardDefaults.cardColors(containerColor = colorScheme.background),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
@@ -422,9 +421,8 @@ fun HiddenNotificationManagerScreen(
                         else -> NotifHubCardShapes.CenterCard
                     }
 
-                    Card(
+                    SettingsCard(
                         shape = ruleCardShape,
-                        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainer),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(

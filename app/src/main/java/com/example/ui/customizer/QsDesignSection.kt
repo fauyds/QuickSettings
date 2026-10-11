@@ -77,10 +77,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)
     ) {
         // 1. QQS Icon Size Card
-        Card(
-            shape = CustomizeCardShapes.TopCard,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth()
+        SettingsCard(
+            shape = CustomizeCardShapes.TopCard
         ) {
             Column(
                 modifier = Modifier
@@ -139,10 +137,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         }
 
         // 2. QQS Icon Quantity Card
-        Card(
-            shape = CustomizeCardShapes.CenterCard,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth()
+        SettingsCard(
+            shape = CustomizeCardShapes.CenterCard
         ) {
             Column(
                 modifier = Modifier
@@ -202,12 +198,9 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         }
 
         // 3. Tile Shape Customization (Enabled / Disabled)
-        Card(
+        SettingsCard(
             shape = CustomizeCardShapes.CenterCard,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("tile_shape_selection_card")
+            modifier = Modifier.testTag("tile_shape_selection_card")
         ) {
             Column(
                 modifier = Modifier
@@ -290,7 +283,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                     selectedContainerColor = MaterialTheme.colorScheme.primary,
                                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
                                     selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
-                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    containerColor = MaterialTheme.colorScheme.background,
                                     labelColor = MaterialTheme.colorScheme.onSurface
                                 ),
                                 modifier = Modifier.testTag("enabled_tile_shape_${shape.id}")
@@ -376,7 +369,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                     selectedContainerColor = MaterialTheme.colorScheme.primary,
                                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
                                     selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
-                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    containerColor = MaterialTheme.colorScheme.background,
                                     labelColor = MaterialTheme.colorScheme.onSurface
                                 ),
                                 modifier = Modifier.testTag("disabled_tile_shape_${shape.id}")
@@ -388,10 +381,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         }
 
         // 4. Show SIM Card Carrier Card
-        Card(
-            shape = CustomizeCardShapes.CenterCard,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth()
+        SettingsCard(
+            shape = CustomizeCardShapes.CenterCard
         ) {
             Row(
                 modifier = Modifier
@@ -437,12 +428,9 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             enter = expandVertically() + fadeIn(),
             exit = shrinkVertically() + fadeOut()
         ) {
-            Card(
+            SettingsCard(
                 shape = CustomizeCardShapes.CenterCard,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("carrier_divider_card")
+                modifier = Modifier.testTag("carrier_divider_card")
             ) {
                 Row(
                     modifier = Modifier
@@ -484,10 +472,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         }
 
         // 6. Move Brightness to Bottom Card
-        Card(
-            shape = CustomizeCardShapes.CenterCard,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth()
+        SettingsCard(
+            shape = CustomizeCardShapes.CenterCard
         ) {
             Row(
                 modifier = Modifier
@@ -528,10 +514,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         }
 
         // 7. Show Brightness Slider in QQS Card
-        Card(
-            shape = CustomizeCardShapes.CenterCard,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth()
+        SettingsCard(
+            shape = CustomizeCardShapes.CenterCard
         ) {
             Row(
                 modifier = Modifier
@@ -574,10 +558,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         // 8. Progress Bar Style Card (Previous M3, Straight, Wavy)
         var previewSliderValue by remember { mutableFloatStateOf(0.65f) }
         val currentProgressBarStyle by PanelPreferences.progressBarStyle.collectAsState()
-        Card(
-            shape = CustomizeCardShapes.BottomCard,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth()
+        SettingsCard(
+            shape = CustomizeCardShapes.BottomCard
         ) {
             Column(
                 modifier = Modifier
@@ -721,7 +703,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
                                 selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
                                 selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
-                                containerColor = MaterialTheme.colorScheme.surface,
+                                containerColor = MaterialTheme.colorScheme.background,
                                 labelColor = MaterialTheme.colorScheme.onSurface
                             ),
                             modifier = Modifier
@@ -736,7 +718,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.65f))
+                        .background(MaterialTheme.colorScheme.background)
                         .padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {

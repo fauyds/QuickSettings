@@ -36,6 +36,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -65,9 +66,6 @@ import com.example.model.QsTileModel
 import com.example.model.TileActionOverrideType
 import com.example.model.TileCommandConfig
 import com.example.system.ExternalTileScanner
-import com.example.ui.theme.DarkUiBackground
-import com.example.ui.theme.DarkUiSurface
-import com.example.ui.theme.DarkUiSurfaceVariant
 import com.example.ui.theme.ExpressiveCardShapes
 import com.example.ui.theme.MonetOnPrimary
 import com.example.ui.theme.MonetPrimary
@@ -90,7 +88,7 @@ fun ExternalTilesScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(DarkUiBackground)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(scrollState)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing) // 4.dp
@@ -98,7 +96,7 @@ fun ExternalTilesScreen(
         // TOP CARD: top corners 32dp, bottom corners 8dp
         Card(
             shape = ExpressiveCardShapes.TopCard,
-            colors = CardDefaults.cardColors(containerColor = DarkUiSurface),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -123,7 +121,7 @@ fun ExternalTilesScreen(
                         Text(
                             text = "Discovers third-party TileService integrations",
                             fontSize = 13.sp,
-                            color = Color.LightGray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
@@ -135,7 +133,7 @@ fun ExternalTilesScreen(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(DarkUiSurfaceVariant)
+                                .background(MaterialTheme.colorScheme.surface)
                                 .testTag("scan_tiles_button")
                         ) {
                             Icon(Icons.Default.Refresh, contentDescription = "Scan", tint = MonetPrimary, modifier = Modifier.size(18.dp))
@@ -146,7 +144,7 @@ fun ExternalTilesScreen(
                 Text(
                     text = "Scans Android PackageManager for installed apps declaring TileService. You can override tile tap behavior to bind media commands (e.g. input keyevent 127) or direct intents without launching foreground app UI.",
                     fontSize = 12.sp,
-                    color = Color.LightGray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -154,7 +152,7 @@ fun ExternalTilesScreen(
         // CENTER CARD: top corners 8dp, bottom corners 8dp
         Card(
             shape = ExpressiveCardShapes.CenterCard,
-            colors = CardDefaults.cardColors(containerColor = DarkUiSurface),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -221,7 +219,7 @@ fun ExternalTilesScreen(
         // BOTTOM CARD: top corners 8dp, bottom corners 32dp
         Card(
             shape = ExpressiveCardShapes.BottomCard,
-            colors = CardDefaults.cardColors(containerColor = DarkUiSurface),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -241,7 +239,7 @@ fun ExternalTilesScreen(
                 Text(
                     text = "Third-party tiles can execute background keyevents (e.g. Media Pause 127) or direct system broadcasts under Standard, Shizuku, or Root modes silently without collapsing the Quick Settings panel.",
                     fontSize = 12.sp,
-                    color = Color.LightGray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -264,7 +262,8 @@ fun ExternalTileCardItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(DarkUiSurfaceVariant.copy(alpha = 0.5f))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -302,12 +301,12 @@ fun ExternalTileCardItem(
                         text = tile.label,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = if (config.isOverrideEnabled) "Action Overridden (${config.overrideType.displayName})" else tile.subtitle,
                         fontSize = 11.sp,
-                        color = if (config.isOverrideEnabled) MonetTertiary else Color.Gray
+                        color = if (config.isOverrideEnabled) MonetTertiary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -357,7 +356,7 @@ fun ExternalTileCardItem(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp))
-                    .background(DarkUiSurface.copy(alpha = 0.8f))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                     .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -380,12 +379,12 @@ fun ExternalTileCardItem(
                             text = "Override default tap action",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Bypass app activity launch and execute direct command/intent",
                             fontSize = 11.sp,
-                            color = Color.Gray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Switch(
@@ -408,12 +407,12 @@ fun ExternalTileCardItem(
                                 text = "Bypass parent app UI launch",
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Medium,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "Prevent opening the app interface in foreground",
                                 fontSize = 10.5.sp,
-                                color = Color.Gray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Switch(

@@ -136,9 +136,8 @@ fun TileCommandsScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Card(
+            SettingsCard(
                 shape = ExpressiveCardShapes.SingleCard,
-                colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainer),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
@@ -245,9 +244,8 @@ fun TileCommandCardItem(
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
-    Card(
+    SettingsCard(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainer),
         modifier = Modifier
             .fillMaxWidth()
             .testTag("tile_cmd_card_${tile.id}")
@@ -489,7 +487,7 @@ fun TileCommandCardItem(
                                     .clip(shape)
                                     .background(
                                         if (isSelected) colorScheme.primaryContainer
-                                        else colorScheme.surfaceContainerHigh
+                                        else colorScheme.background
                                     )
                                     .clickable(
                                         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },

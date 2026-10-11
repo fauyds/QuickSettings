@@ -82,6 +82,9 @@ import com.example.ui.theme.DarkUiBackground
 import com.example.ui.theme.DarkUiSurface
 import com.example.ui.theme.DarkUiSurfaceVariant
 import com.example.ui.theme.ExpressiveCardShapes
+import com.example.ui.theme.QuickPanelTheme
+import com.example.ui.theme.LocalIsDarkTheme
+import com.example.ui.theme.getSettingsScreenBackgroundColor
 import com.example.ui.theme.MonetOnPrimary
 import com.example.ui.theme.MonetPrimary
 import com.example.ui.theme.MonetTertiary
@@ -140,8 +143,11 @@ fun MainScreen(viewModel: MainViewModel) {
         viewModel.setSelectedTab(0)
     }
 
+    val isDarkSettings = LocalIsDarkTheme.current
+    val settingsScreenBackgroundColor = com.example.ui.theme.getSettingsScreenBackgroundColor(isDarkSettings)
+
     Scaffold(
-        containerColor = DarkUiBackground,
+        containerColor = settingsScreenBackgroundColor,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             Row(
@@ -164,7 +170,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 val showTileStudioInNavBar = false
                 val showHardwareInNavBar = false
                 val allNavItems = listOf(
-                    Triple("Preview", Icons.Default.Dashboard, 0),
+                    Triple("Overlay", Icons.Default.Dashboard, 0),
                     Triple("App Status", Icons.Default.Info, 9),
                     Triple("Tile Studio", Icons.Default.Tune, 1),
                     Triple("Tile Commands", Icons.Default.Terminal, 6),
@@ -235,31 +241,37 @@ fun MainScreen(viewModel: MainViewModel) {
             // Screen content switcher
             when (selectedTab) {
                 0 -> {
-                    // TAB 0: Interactive QS Overlay Panel
-                    QuickSettingsPanel(
-                        expansionStage = expansionStage,
-                        onStageChange = { viewModel.setExpansionStage(it) },
-                        tiles = tiles,
-                        gridLayout = qsGridLayout,
-                        onTileClick = { viewModel.handleTileClick(it) },
-                        onTileLongClick = { viewModel.handleTileLongClick(it) },
-                        brightness = brightness,
-                        onBrightnessChange = { viewModel.setBrightness(it) },
-                        mediaVolume = mediaVol,
-                        ringVolume = ringVol,
-                        alarmVolume = alarmVol,
-                        notificationVolume = notifVol,
-                        onVolumeChange = { stream, fraction -> viewModel.setStreamVolume(stream, fraction) },
-                        notifications = notifications,
-                        isNotificationPermissionGranted = isNotifPermGranted,
-                        onNotificationClick = { viewModel.launchNotification(it) },
-                        onNotificationDismiss = { viewModel.dismissNotification(it.key) },
-                        onNotificationActionClick = { viewModel.executeNotificationAction(it) },
-                        onDismissAllNotifications = { viewModel.dismissAllNotifications() },
-                        onRequestNotificationAccess = { viewModel.openNotificationListenerSettings() },
-                        onNavigateToCustomizer = { viewModel.setSelectedTab(1) },
-                        onNavigateToNotificationHub = { viewModel.setSelectedTab(8) }
-                    )
+                    // TAB 0: Interactive QS Overlay Panel with dark tint below the panel in preview screen only
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.55f))
+                    ) {
+                        QuickSettingsPanel(
+                            expansionStage = expansionStage,
+                            onStageChange = { viewModel.setExpansionStage(it) },
+                            tiles = tiles,
+                            gridLayout = qsGridLayout,
+                            onTileClick = { viewModel.handleTileClick(it) },
+                            onTileLongClick = { viewModel.handleTileLongClick(it) },
+                            brightness = brightness,
+                            onBrightnessChange = { viewModel.setBrightness(it) },
+                            mediaVolume = mediaVol,
+                            ringVolume = ringVol,
+                            alarmVolume = alarmVol,
+                            notificationVolume = notifVol,
+                            onVolumeChange = { stream, fraction -> viewModel.setStreamVolume(stream, fraction) },
+                            notifications = notifications,
+                            isNotificationPermissionGranted = isNotifPermGranted,
+                            onNotificationClick = { viewModel.launchNotification(it) },
+                            onNotificationDismiss = { viewModel.dismissNotification(it.key) },
+                            onNotificationActionClick = { viewModel.executeNotificationAction(it) },
+                            onDismissAllNotifications = { viewModel.dismissAllNotifications() },
+                            onRequestNotificationAccess = { viewModel.openNotificationListenerSettings() },
+                            onNavigateToCustomizer = { viewModel.setSelectedTab(1) },
+                            onNavigateToNotificationHub = { viewModel.setSelectedTab(8) }
+                        )
+                    }
                 }
 
                 1 -> {

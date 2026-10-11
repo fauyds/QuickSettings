@@ -321,12 +321,7 @@ fun NotificationManagerBottomSheet(
                                         fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal
                                     )
                                 },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                    containerColor = if (isDark) DarkUiSurfaceVariant else MaterialTheme.colorScheme.surfaceVariant,
-                                    labelColor = if (isDark) Color.White else Color(0xFF333333)
-                                ),
+                                colors = settingsChipColors(),
                                 modifier = Modifier.weight(1f).testTag("tab_live_ongoing")
                             )
 
@@ -349,12 +344,7 @@ fun NotificationManagerBottomSheet(
                                         fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal
                                     )
                                 },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                    containerColor = if (isDark) DarkUiSurfaceVariant else MaterialTheme.colorScheme.surfaceVariant,
-                                    labelColor = if (isDark) Color.White else Color(0xFF333333)
-                                ),
+                                colors = settingsChipColors(),
                                 modifier = Modifier.weight(1f).testTag("tab_blocked_rules")
                             )
                         }
@@ -409,13 +399,13 @@ fun NotificationManagerBottomSheet(
                                         val isChannelHidden = item.channelId != null && hiddenChannels.contains(item.channelId)
                                         val isBlocked = isPkgHidden || isChannelHidden
 
-                                        Card(
+                                        SettingsCard(
                                             shape = ExpressiveCardShapes.SingleCard,
                                             colors = CardDefaults.cardColors(
                                                 containerColor = if (isBlocked) {
-                                                    if (isDark) DarkUiSurfaceVariant.copy(alpha = 0.25f) else Color.LightGray.copy(alpha = 0.2f)
+                                                    if (isDark) DarkUiSurfaceVariant.copy(alpha = 0.25f) else MaterialTheme.colorScheme.background
                                                 } else {
-                                                    if (isDark) DarkUiSurfaceVariant else MaterialTheme.colorScheme.surfaceVariant
+                                                    if (isDark) DarkUiSurfaceVariant else Color.White
                                                 }
                                             ),
                                             modifier = Modifier.fillMaxWidth().testTag("ongoing_item_${item.id}")
@@ -625,10 +615,10 @@ fun NotificationManagerBottomSheet(
                                     }
 
                                     blacklistRules.forEach { (ruleId, isPackage) ->
-                                        Card(
+                                        SettingsCard(
                                             shape = ExpressiveCardShapes.SingleCard,
                                             colors = CardDefaults.cardColors(
-                                                containerColor = if (isDark) DarkUiSurfaceVariant else MaterialTheme.colorScheme.surfaceVariant
+                                                containerColor = if (isDark) DarkUiSurfaceVariant else Color.White
                                             ),
                                             modifier = Modifier.fillMaxWidth().testTag("rule_card_$ruleId")
                                         ) {

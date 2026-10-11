@@ -562,204 +562,206 @@ fun QuickSettingsPanel(
                     .background(Color.Transparent)
                     .graphicsLayer {
                         translationY = dragTranslationYState.floatValue
-                        clip = true
+                        clip = false
                         compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
                     }
                     .padding(horizontal = if (isLandscape) 24.dp else 12.dp, vertical = 6.dp)
         ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(
-                    if (expansionStage == QsExpansionStage.FULL_QS && !isLandscape) {
-                        Modifier.wrapContentHeight()
-                    } else {
-                        Modifier.fillMaxHeight()
-                    }
-                )
-                .widthIn(max = if (isLandscape) 920.dp else 640.dp)
-                .align(Alignment.TopCenter)
-        ) {
-            // Header Bar (Clock, Date, System Settings, Tile Studio, Battery)
-            Box(modifier = Modifier.fillMaxWidth().then(shadeDragModifier)) {
-                QsHeaderBar(
-                    currentStage = expansionStage,
-                    isEditingTiles = isEditingTiles,
-                    onHeaderClick = {
-                        if (isEditingTiles) {
-                            saveAndExitEditMode()
-                        } else {
-                            when (expansionStage) {
-                                QsExpansionStage.COLLAPSED -> onStageChange(QsExpansionStage.QQS)
-                                QsExpansionStage.QQS -> onStageChange(QsExpansionStage.FULL_QS)
-                                QsExpansionStage.FULL_QS -> onStageChange(QsExpansionStage.QQS)
-                            }
+            // Background dismissal backdrop for tapping outside panel
+            if (expansionStage != QsExpansionStage.COLLAPSED) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Transparent)
+                        .pointerInput(Unit) {
+                            detectTapGestures(onTap = {
+                                onStageChange(QsExpansionStage.COLLAPSED)
+                            })
                         }
-                    },
-                    onTimeClick = {
-                        launchClockApp(context)
-                        onStageChange(QsExpansionStage.COLLAPSED)
-                    },
-                    onDateClick = {
-                        launchCalendarApp(context)
-                        onStageChange(QsExpansionStage.COLLAPSED)
-                    },
-                    onSettingsClick = {
-                        try {
-                            val intent = Intent(Settings.ACTION_SETTINGS).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            context.startActivity(intent)
-                        } catch (e: Exception) {
-                            // Ignore
-                        }
-                    },
-                    onToggleEditMode = {
-                        if (isEditingTiles) {
-                            saveAndExitEditMode()
-                        } else {
-                            enterEditMode()
-                            onStageChange(QsExpansionStage.FULL_QS)
-                        }
-                    },
-                    unreadNotificationCount = notifications.size
                 )
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // Expansion Views
-            when (expansionStage) {
-                QsExpansionStage.COLLAPSED -> {
-                    // Minimal subtle drag pill without text labels
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .then(shadeDragModifier)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) { onStageChange(QsExpansionStage.QQS) }
-                            .padding(vertical = 8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(width = 40.dp, height = 4.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.35f))
-                        )
-                    }
-                }
-
-                QsExpansionStage.QQS, QsExpansionStage.FULL_QS -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .then(
-                                if (expansionStage == QsExpansionStage.FULL_QS && !isEditingTiles) {
-                                    Modifier.wrapContentHeight()
-                                } else {
-                                    Modifier.weight(1f, fill = false)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight()
+                    .widthIn(max = if (isLandscape) 920.dp else 640.dp)
+                    .align(Alignment.TopCenter)
+            ) {
+                // Header Bar (Clock, Date, System Settings, Tile Studio, Battery)
+                Box(modifier = Modifier.fillMaxWidth().then(shadeDragModifier)) {
+                    QsHeaderBar(
+                        currentStage = expansionStage,
+                        isEditingTiles = isEditingTiles,
+                        onHeaderClick = {
+                            if (isEditingTiles) {
+                                saveAndExitEditMode()
+                            } else {
+                                when (expansionStage) {
+                                    QsExpansionStage.COLLAPSED -> onStageChange(QsExpansionStage.QQS)
+                                    QsExpansionStage.QQS -> onStageChange(QsExpansionStage.FULL_QS)
+                                    QsExpansionStage.FULL_QS -> onStageChange(QsExpansionStage.QQS)
                                 }
-                            )
-                            .then(
-                                if (isEditingTiles) {
-                                    Modifier.verticalScroll(
-                                        state = editScrollState,
-                                        enabled = isEditingTiles && !isTileDragging
-                                    )
-                                } else {
-                                    Modifier
-                                }
-                            )
-                    ) {
-                        // Quick Settings Panel (QQS / FULL QS)
-                        UnifiedQsPanel(
-                            expansionStage = expansionStage,
-                            isEditingTiles = isEditingTiles,
-                            editScrollState = editScrollState,
-                            isTileDragging = isTileDragging,
-                            onTileDragStateChange = { isTileDragging = it },
-                            onToggleEditMode = {
-                                if (isEditingTiles) {
-                                    saveAndExitEditMode()
-                                } else {
-                                    enterEditMode()
-                                    onStageChange(QsExpansionStage.FULL_QS)
-                                }
-                            },
-                            tiles = tiles,
-                            editActiveTiles = editActiveTiles,
-                            editInactiveTiles = editInactiveTiles,
-                            gridLayout = gridLayout,
-                            brightness = brightness,
-                            onBrightnessChange = onBrightnessChange,
-                            onTileClick = onTileClick,
-                            onTileLongClick = { tile ->
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                if (tile.id == "screenrecord") {
-                                    isScreenRecordConfigOpen = true
-                                }
-                                onTileLongClick(tile)
-                            },
-                            onExpandFull = { onStageChange(QsExpansionStage.FULL_QS) },
-                            onCollapseToQqs = { onStageChange(QsExpansionStage.QQS) },
-                            onClosePanel = { onStageChange(QsExpansionStage.COLLAPSED) },
-                            notifications = notifications,
-                            isNotificationPermissionGranted = isNotificationPermissionGranted,
-                            onNotificationClick = { item ->
-                                onNotificationClick(item)
-                            },
-                            onNotificationDismiss = onNotificationDismiss,
-                            onNotificationActionClick = { action ->
-                                onNotificationActionClick(action)
-                            },
-                            onDismissAllNotifications = onDismissAllNotifications,
-                            onRequestNotificationAccess = onRequestNotificationAccess,
-                            onNavigateToNotificationHub = onNavigateToNotificationHub,
-                            onOpenNotificationManager = { isNotificationManagerOpen = true },
-                            onTilesReordered = { activeList, inactiveList ->
-                                editActiveTiles = activeList
-                                editInactiveTiles = inactiveList
-                            },
-                            dragMorphFraction = manualDragMorphFraction,
-                            isDraggingMorph = isDraggingMorph,
-                            shadeDragModifier = shadeDragModifier,
-                            shadeDragToCloseModifier = shadeDragToCloseModifier
-                        )
-                    }
-                }
-            }
-        }
-
-        if (isScreenRecordConfigOpen) {
-            com.example.ui.customizer.ScreenRecordBottomSheet(
-                onDismissRequest = { isScreenRecordConfigOpen = false }
-            )
-        }
-
-        if (isNotificationManagerOpen) {
-            com.example.ui.customizer.NotificationManagerBottomSheet(
-                onDismissRequest = { isNotificationManagerOpen = false }
-            )
-        }
-
-        // Invisible bottom-left detection square for volume key / bottom-left touch dismiss
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .size(64.dp)
-                .testTag("invisible_bottom_left_volume_detector")
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onTap = {
+                            }
+                        },
+                        onTimeClick = {
+                            launchClockApp(context)
                             onStageChange(QsExpansionStage.COLLAPSED)
-                        }
+                        },
+                        onDateClick = {
+                            launchCalendarApp(context)
+                            onStageChange(QsExpansionStage.COLLAPSED)
+                        },
+                        onSettingsClick = {
+                            try {
+                                val intent = Intent(Settings.ACTION_SETTINGS).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                // Ignore
+                            }
+                        },
+                        onToggleEditMode = {
+                            if (isEditingTiles) {
+                                saveAndExitEditMode()
+                            } else {
+                                enterEditMode()
+                                onStageChange(QsExpansionStage.FULL_QS)
+                            }
+                        },
+                        unreadNotificationCount = notifications.size
                     )
                 }
-        )
-    }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Expansion Views
+                when (expansionStage) {
+                    QsExpansionStage.COLLAPSED -> {
+                        // Minimal subtle drag pill without text labels
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .then(shadeDragModifier)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) { onStageChange(QsExpansionStage.QQS) }
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(width = 40.dp, height = 4.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = 0.35f))
+                            )
+                        }
+                    }
+
+                    QsExpansionStage.QQS, QsExpansionStage.FULL_QS -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f, fill = false)
+                                .then(
+                                    if (isEditingTiles) {
+                                        Modifier.verticalScroll(
+                                            state = editScrollState,
+                                            enabled = isEditingTiles && !isTileDragging
+                                        )
+                                    } else {
+                                        Modifier
+                                    }
+                                )
+                        ) {
+                            // Quick Settings Panel (QQS / FULL QS)
+                            UnifiedQsPanel(
+                                expansionStage = expansionStage,
+                                isEditingTiles = isEditingTiles,
+                                editScrollState = editScrollState,
+                                isTileDragging = isTileDragging,
+                                onTileDragStateChange = { isTileDragging = it },
+                                onToggleEditMode = {
+                                    if (isEditingTiles) {
+                                        saveAndExitEditMode()
+                                    } else {
+                                        enterEditMode()
+                                        onStageChange(QsExpansionStage.FULL_QS)
+                                    }
+                                },
+                                tiles = tiles,
+                                editActiveTiles = editActiveTiles,
+                                editInactiveTiles = editInactiveTiles,
+                                gridLayout = gridLayout,
+                                brightness = brightness,
+                                onBrightnessChange = onBrightnessChange,
+                                onTileClick = onTileClick,
+                                onTileLongClick = { tile ->
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    if (tile.id == "screenrecord") {
+                                        isScreenRecordConfigOpen = true
+                                    }
+                                    onTileLongClick(tile)
+                                },
+                                onExpandFull = { onStageChange(QsExpansionStage.FULL_QS) },
+                                onCollapseToQqs = { onStageChange(QsExpansionStage.QQS) },
+                                onClosePanel = { onStageChange(QsExpansionStage.COLLAPSED) },
+                                notifications = notifications,
+                                isNotificationPermissionGranted = isNotificationPermissionGranted,
+                                onNotificationClick = { item ->
+                                    onNotificationClick(item)
+                                },
+                                onNotificationDismiss = onNotificationDismiss,
+                                onNotificationActionClick = { action ->
+                                    onNotificationActionClick(action)
+                                },
+                                onDismissAllNotifications = onDismissAllNotifications,
+                                onRequestNotificationAccess = onRequestNotificationAccess,
+                                onNavigateToNotificationHub = onNavigateToNotificationHub,
+                                onOpenNotificationManager = { isNotificationManagerOpen = true },
+                                onTilesReordered = { activeList, inactiveList ->
+                                    editActiveTiles = activeList
+                                    editInactiveTiles = inactiveList
+                                },
+                                dragMorphFraction = manualDragMorphFraction,
+                                isDraggingMorph = isDraggingMorph,
+                                shadeDragModifier = shadeDragModifier,
+                                shadeDragToCloseModifier = shadeDragToCloseModifier
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (isScreenRecordConfigOpen) {
+                com.example.ui.customizer.ScreenRecordBottomSheet(
+                    onDismissRequest = { isScreenRecordConfigOpen = false }
+                )
+            }
+
+            if (isNotificationManagerOpen) {
+                com.example.ui.customizer.NotificationManagerBottomSheet(
+                    onDismissRequest = { isNotificationManagerOpen = false }
+                )
+            }
+
+            // Invisible bottom-left detection square for volume key / bottom-left touch dismiss
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .size(64.dp)
+                    .testTag("invisible_bottom_left_volume_detector")
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = {
+                                onStageChange(QsExpansionStage.COLLAPSED)
+                            }
+                        )
+                    }
+            )
+        }
 }
 
 fun launchClockApp(context: Context) {
@@ -1906,7 +1908,7 @@ fun UnifiedQsPanel(
                 } else {
                     RoundedCornerShape(qsCardCorner)
                 },
-                containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
+                containerColor = com.example.ui.theme.getQsPanelBackgroundColor(isDark),
                 modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentHeight()
@@ -2283,7 +2285,7 @@ fun UnifiedQsPanel(
         if (isSplitCarrier) {
             ContainerCard(
                 shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 20.dp, bottomEnd = 20.dp),
-                containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
+                containerColor = com.example.ui.theme.getQsPanelBackgroundColor(isDark),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Box(
@@ -2754,7 +2756,7 @@ fun NotificationItemRow(
         ) {
             ContainerCard(
                 shape = shape,
-                containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
+                containerColor = com.example.ui.theme.getQsPanelBackgroundColor(isDark),
                 onClick = onClick,
                 onLongClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -3531,7 +3533,7 @@ fun BrightnessSliderRow(
 fun BlurredContainerCard(
     modifier: Modifier = Modifier,
     shape: androidx.compose.ui.graphics.Shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-    containerColor: Color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
+    containerColor: Color = com.example.ui.theme.getQsPanelBackgroundColor(LocalIsDarkTheme.current),
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
     content: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit
@@ -3563,7 +3565,7 @@ fun BlurredContainerCard(
 fun ContainerCard(
     shape: androidx.compose.ui.graphics.Shape = ExpressiveCardShapes.SingleCard,
     modifier: Modifier = Modifier,
-    containerColor: Color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
+    containerColor: Color = com.example.ui.theme.getQsPanelBackgroundColor(LocalIsDarkTheme.current),
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
     content: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit

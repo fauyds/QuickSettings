@@ -31,12 +31,9 @@ fun BasicSettingsSection(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val themeMode by PanelPreferences.themeMode.collectAsState()
 
-    Card(
+    SettingsCard(
         shape = CustomizeCardShapes.SingleCard,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        modifier = modifier
-            .fillMaxWidth()
-            .testTag("theme_mode_card")
+        modifier = modifier.testTag("theme_mode_card")
     ) {
         Column(
             modifier = Modifier
@@ -44,12 +41,19 @@ fun BasicSettingsSection(modifier: Modifier = Modifier) {
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = "App & QS Theme Mode",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "App Settings Theme Mode",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Customize the theme for the app settings. The Quick Settings panel retains its authentic system dark appearance.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -59,7 +63,7 @@ fun BasicSettingsSection(modifier: Modifier = Modifier) {
                     Surface(
                         onClick = { PanelPreferences.setThemeMode(context, mode) },
                         shape = RoundedCornerShape(10.dp),
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.background,
                         modifier = Modifier.weight(1f)
                     ) {
                         Box(

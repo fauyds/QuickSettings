@@ -184,8 +184,8 @@ class TriggerContainerLayout @JvmOverloads constructor(
                     }
 
                     isTrackingSwipe = false
-                    if (diffY >= (3f * density) || (elapsed < 300 && diffX < (20f * density))) {
-                        Log.d(TAG, "[INSTANT FLICK/TAP OPEN] diffY=$diffY elapsed=$elapsed ms -> Opening panel!")
+                    if (diffY >= (8f * density) && diffY > (diffX * 0.3f)) {
+                        Log.d(TAG, "[INSTANT FLICK OPEN] diffY=$diffY elapsed=$elapsed ms -> Opening panel!")
                         QuickPanelAccessibilityService.collapseStockNotificationShade()
                         onSwipeDownToOpen?.invoke(false)
                         return true

@@ -54,8 +54,10 @@ private val ExpressiveDarkColorScheme = darkColorScheme(
     onSurface = Color(0xFFEDF2F7),
     surfaceVariant = DarkUiSurfaceVariant,
     onSurfaceVariant = Color(0xFFCAD4E0),
+    surfaceContainer = DarkUiSurface,
     surfaceContainerHigh = DarkUiSurfaceContainerHigh,
-    outline = Color(0xFF4A5568)
+    outline = Color(0xFF4A5568),
+    outlineVariant = Color(0xFF2D3748)
 )
 
 private val ExpressiveLightColorScheme = lightColorScheme(
@@ -71,14 +73,19 @@ private val ExpressiveLightColorScheme = lightColorScheme(
     onTertiary = Color(0xFFFFFFFF),
     tertiaryContainer = Color(0xFFFFD9E2),
     onTertiaryContainer = Color(0xFF3E001D),
-    background = LightUiBackground,
+    background = Color(0xFFEBF3F2),
     onBackground = Color(0xFF0F172A),
-    surface = LightUiSurface,
+    surface = Color(0xFFE4F0EF),
     onSurface = Color(0xFF0F172A),
-    surfaceVariant = LightUiSurfaceVariant,
-    onSurfaceVariant = Color(0xFF475569),
-    surfaceContainerHigh = LightUiSurfaceContainerHigh,
-    outline = Color(0xFF94A3B8)
+    surfaceVariant = Color(0xFFDCECEB),
+    onSurfaceVariant = Color(0xFF233533),
+    surfaceContainer = Color(0xFFE4F0EF),
+    surfaceContainerLow = Color(0xFFE8F3F2),
+    surfaceContainerLowest = Color(0xFFF2F8F7),
+    surfaceContainerHigh = Color(0xFFD8E8E7),
+    surfaceContainerHighest = Color(0xFFD0E2E1),
+    outline = Color(0xFF889C9A),
+    outlineVariant = Color(0xFFC0D2D0)
 )
 
 @Composable
@@ -108,9 +115,9 @@ fun QuickPanelTheme(
                 )
             } else {
                 base.copy(
-                    background = LightUiBackground,
-                    surface = base.surface,
-                    surfaceVariant = base.surfaceVariant
+                    background = Color(0xFFEBF3F2),
+                    surface = base.surfaceContainerLow,
+                    surfaceVariant = base.surfaceContainerHigh
                 )
             }
         }
@@ -133,9 +140,9 @@ fun QuickPanelTheme(
     }
 }
 
-// Keep backward compatibility name alias
+// App settings theme alias
 @Composable
-fun MyApplicationTheme(
+fun AppSettingsTheme(
     darkTheme: Boolean? = null,
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit

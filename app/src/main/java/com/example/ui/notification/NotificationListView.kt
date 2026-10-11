@@ -88,9 +88,11 @@ class NotificationListView @JvmOverloads constructor(
     }
 
     init {
+        setBackgroundColor(android.graphics.Color.TRANSPARENT)
         val root = LayoutInflater.from(context).inflate(R.layout.layout_notification_list, this, true)
 
         rvNotifications = root.findViewById(R.id.rv_notifications)
+        rvNotifications.setBackgroundColor(android.graphics.Color.TRANSPARENT)
         flPermissionCard = root.findViewById(R.id.fl_notif_permission_card)
         flEmptyCard = root.findViewById(R.id.fl_notif_empty_card)
         btnEnablePermission = root.findViewById(R.id.btn_notif_enable_permission)

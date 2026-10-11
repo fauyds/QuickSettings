@@ -64,10 +64,8 @@ fun TriggerSection(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)
     ) {
         // 1. Invisible Status Bar Trigger Card
-        Card(
-            shape = CustomizeCardShapes.TopCard,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth()
+        SettingsCard(
+            shape = CustomizeCardShapes.TopCard
         ) {
             Row(
                 modifier = Modifier
@@ -108,10 +106,8 @@ fun TriggerSection(modifier: Modifier = Modifier) {
         }
 
         // 2. Immersive Mode Thin 8dp Trigger Card
-        Card(
-            shape = CustomizeCardShapes.CenterCard,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth()
+        SettingsCard(
+            shape = CustomizeCardShapes.CenterCard
         ) {
             Row(
                 modifier = Modifier
@@ -152,10 +148,8 @@ fun TriggerSection(modifier: Modifier = Modifier) {
         }
 
         // 3. System Panel Detection Card
-        Card(
-            shape = CustomizeCardShapes.CenterCard,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth()
+        SettingsCard(
+            shape = CustomizeCardShapes.CenterCard
         ) {
             Column(
                 modifier = Modifier
@@ -214,12 +208,9 @@ fun TriggerSection(modifier: Modifier = Modifier) {
         }
 
         // 4. Panel Replacement Delay Card
-        Card(
+        SettingsCard(
             shape = CustomizeCardShapes.CenterCard,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("panel_replacement_delay_card")
+            modifier = Modifier.testTag("panel_replacement_delay_card")
         ) {
             Column(
                 modifier = Modifier
@@ -306,7 +297,7 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
                                 selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                containerColor = MaterialTheme.colorScheme.surface,
+                                containerColor = MaterialTheme.colorScheme.background,
                                 labelColor = MaterialTheme.colorScheme.onSurface
                             ),
                             modifier = Modifier.testTag("delay_preset_${delayVal}")
@@ -317,10 +308,8 @@ fun TriggerSection(modifier: Modifier = Modifier) {
         }
 
         // 5. Stock Shade Auto-Override Card
-        Card(
-            shape = CustomizeCardShapes.BottomCard,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth()
+        SettingsCard(
+            shape = CustomizeCardShapes.BottomCard
         ) {
             Column(
                 modifier = Modifier
@@ -448,7 +437,7 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                             stockShadeWhitelist.forEach { pkg ->
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
-                                    color = MaterialTheme.colorScheme.surface,
+                                    color = MaterialTheme.colorScheme.background,
                                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
                                 ) {
                                     Row(
@@ -551,7 +540,7 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                             customBlacklistPackages.forEach { pkg ->
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
-                                    color = MaterialTheme.colorScheme.surface,
+                                    color = MaterialTheme.colorScheme.background,
                                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f))
                                 ) {
                                     Row(
@@ -584,7 +573,7 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                             customBlacklistClasses.forEach { cls ->
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
-                                    color = MaterialTheme.colorScheme.surface,
+                                    color = MaterialTheme.colorScheme.background,
                                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f))
                                 ) {
                                     Row(

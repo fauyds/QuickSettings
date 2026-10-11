@@ -35,6 +35,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,9 +55,6 @@ import androidx.compose.ui.unit.sp
 import com.example.model.QsGridLayout
 import com.example.model.QsTileModel
 import com.example.model.TileCategory
-import com.example.ui.theme.DarkUiBackground
-import com.example.ui.theme.DarkUiSurface
-import com.example.ui.theme.DarkUiSurfaceVariant
 import com.example.ui.theme.ExpressiveCardShapes
 import com.example.ui.theme.MonetPrimary
 import com.example.ui.theme.MonetOnPrimary
@@ -87,15 +85,14 @@ fun TileCustomizerScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(DarkUiBackground)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(scrollState)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing) // 4.dp
     ) {
         // TOP CARD: top corners 32dp, bottom corners 8dp
-        Card(
+        SettingsCard(
             shape = ExpressiveCardShapes.TopCard,
-            colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -115,7 +112,7 @@ fun TileCustomizerScreen(
                 Text(
                     text = "Reorder active tiles, adjust QQS tile size & quantity, or move tiles between active and available pools.",
                     fontSize = 13.sp,
-                    color = Color.LightGray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 // QQS Icon Quantity Slider
@@ -132,7 +129,7 @@ fun TileCustomizerScreen(
                             text = "QQS Icon Quantity:",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "$qqsTileCount icons",
@@ -150,7 +147,7 @@ fun TileCustomizerScreen(
                         colors = androidx.compose.material3.SliderDefaults.colors(
                             thumbColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
                             activeTrackColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                            inactiveTrackColor = DarkUiSurfaceVariant
+                            inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -172,7 +169,7 @@ fun TileCustomizerScreen(
                             text = "QQS Tile Size:",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "${qqsTileSize}dp",
@@ -189,7 +186,7 @@ fun TileCustomizerScreen(
                         colors = androidx.compose.material3.SliderDefaults.colors(
                             thumbColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
                             activeTrackColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                            inactiveTrackColor = DarkUiSurfaceVariant
+                            inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -208,12 +205,12 @@ fun TileCustomizerScreen(
                             text = "Move Date to Header Inline:",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Display date inline next to time in header",
                             fontSize = 11.sp,
-                            color = Color.LightGray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     androidx.compose.material3.Switch(
@@ -236,7 +233,7 @@ fun TileCustomizerScreen(
                         text = "Edit Pencil Icon Location:",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
 
                     Row(
@@ -258,12 +255,7 @@ fun TileCustomizerScreen(
                                 shape = shape,
                                 border = null,
                                 label = { Text(pos.label, fontSize = 10.sp) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary,
-                                    containerColor = DarkUiSurfaceVariant,
-                                    labelColor = Color.White
-                                ),
+                                colors = settingsChipColors(),
                                 modifier = Modifier.testTag("edit_pos_${pos.id}")
                             )
                         }
@@ -281,7 +273,7 @@ fun TileCustomizerScreen(
                         text = "Grid Density:",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
 
                     val allGrids = QsGridLayout.entries
@@ -298,12 +290,7 @@ fun TileCustomizerScreen(
                             shape = shape,
                             border = null,
                             label = { Text(grid.label, fontSize = 11.sp) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MonetPrimary,
-                                selectedLabelColor = Color(0xFF003732),
-                                containerColor = DarkUiSurfaceVariant,
-                                labelColor = Color.White
-                            ),
+                            colors = settingsChipColors(selectedLabelColor = Color(0xFF003732)),
                             modifier = Modifier.testTag("grid_col_${grid.id}")
                         )
                     }
@@ -312,9 +299,8 @@ fun TileCustomizerScreen(
         }
 
         // CENTER CARD: top corners 8dp, bottom corners 8dp
-        Card(
+        SettingsCard(
             shape = ExpressiveCardShapes.CenterCard,
-            colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -338,7 +324,7 @@ fun TileCustomizerScreen(
                     Text(
                         text = "Top $qqsTileCount in QQS",
                         fontSize = 11.sp,
-                        color = Color.LightGray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -361,9 +347,8 @@ fun TileCustomizerScreen(
         }
 
         // BOTTOM CARD: top corners 8dp, bottom corners 32dp
-        Card(
+        SettingsCard(
             shape = ExpressiveCardShapes.BottomCard,
-            colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -381,7 +366,7 @@ fun TileCustomizerScreen(
                 )
 
                 if (hiddenTiles.isEmpty()) {
-                    Text("All tiles are currently active in your Quick Settings panel.", color = Color.LightGray, fontSize = 12.sp)
+                    Text("All tiles are currently active in your Quick Settings panel.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 } else {
                     hiddenTiles.forEach { tile ->
                         HiddenTileItem(
@@ -432,8 +417,8 @@ fun ActiveTileReorderItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(DarkUiSurfaceVariant.copy(alpha = 0.6f))
-            .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.background)
+            .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -474,12 +459,12 @@ fun ActiveTileReorderItem(
                     text = "${index + 1}. ${tile.label}",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "${tile.category.title} • ${tile.subtitle}",
                     fontSize = 10.sp,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -494,7 +479,7 @@ fun ActiveTileReorderItem(
                 Icon(
                     Icons.Default.KeyboardArrowUp,
                     contentDescription = "Move Up",
-                    tint = if (!isFirst) Color.White else Color.DarkGray,
+                    tint = if (!isFirst) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -508,7 +493,7 @@ fun ActiveTileReorderItem(
                 Icon(
                     Icons.Default.KeyboardArrowDown,
                     contentDescription = "Move Down",
-                    tint = if (!isLast) Color.White else Color.DarkGray,
+                    tint = if (!isLast) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -538,7 +523,8 @@ fun HiddenTileItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF22201D)) // Darker background
+            .background(MaterialTheme.colorScheme.background)
+            .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -578,12 +564,12 @@ fun HiddenTileItem(
                     text = tile.label,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Color.LightGray
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = tile.category.title,
                     fontSize = 10.sp,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

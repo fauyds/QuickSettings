@@ -1,5 +1,6 @@
 package com.example.ui.theme
 
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 // Expressive Dark Palette with rich Monet containers
@@ -8,11 +9,15 @@ val DarkUiSurface = Color(0xFF132223)
 val DarkUiSurfaceVariant = Color(0xFF1B2E2E)
 val DarkUiSurfaceContainerHigh = Color(0xFF243B3B)
 
-// Expressive Light Palette
-val LightUiBackground = Color.Black.copy(alpha = 0.95f)
-val LightUiSurface = Color(0xFFFFFFFF)
-val LightUiSurfaceVariant = Color(0xFFE2E8F0)
-val LightUiSurfaceContainerHigh = Color(0xFFCBD5E1)
+// Expressive Light Palette (Monet Tinted)
+val LightUiBackground = Color(0xFFEBF3F2)
+val LightUiSurface = Color(0xFFE4F0EF)
+val LightUiSurfaceVariant = Color(0xFFDCECEB)
+val LightUiSurfaceContainerHigh = Color(0xFFD8E8E7)
+val LightUiSurfaceContainer = Color(0xFFE4F0EF)
+val LightUiSurfaceContainerLow = Color(0xFFE8F3F2)
+val LightUiSurfaceContainerLowest = Color(0xFFF2F8F7)
+val LightUiSurfaceContainerHighest = Color(0xFFD0E2E1)
 
 // Backward compatible aliases
 val MonetSurface = DarkUiSurface
@@ -62,4 +67,31 @@ val LightTileUnavailableText = Color(0xFF94A3B8)
 // Slider & Glow Gradients
 val AccentGradientStart = Color(0xFF4EE3D0)
 val AccentGradientEnd = Color(0xFFFF85A1)
+
+// Explicit Decoupled Component Colors
+
+/**
+ * 1. Quick Settings Overlay Panel Background (`qsPanelBackgroundColor`).
+ * Light: Clean non-Monet neutral (#F1F3F4), Dark: #1E1E1E
+ */
+fun getQsPanelBackgroundColor(isDark: Boolean): Color {
+    return if (isDark) Color(0xFF1E1E1E) else Color(0xFFF1F3F4)
+}
+
+/**
+ * 2. Settings Root Screen / Scaffold Background (`settingsScreenBackgroundColor`).
+ * Light: Gray 7% (#ECECEC), Dark: #121212
+ */
+fun getSettingsScreenBackgroundColor(isDark: Boolean): Color {
+    return if (isDark) Color(0xFF121212) else Color(0xFFECECEC)
+}
+
+/**
+ * 3. Settings Card Container Color (`settingsCardBackgroundColor`).
+ * Light: Totally white (#FFFFFF), Dark: #1E1E1E
+ */
+fun getSettingsCardBackgroundColor(isDark: Boolean): Color {
+    return if (isDark) Color(0xFF1E1E1E) else Color.White
+}
+
 

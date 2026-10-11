@@ -29,10 +29,9 @@ fun DebugSection(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val forceShowMediaPreview by PanelPreferences.forceShowMediaPreview.collectAsState()
 
-    Card(
+    SettingsCard(
         shape = CustomizeCardShapes.SingleCard,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
     ) {
         Row(
             modifier = Modifier

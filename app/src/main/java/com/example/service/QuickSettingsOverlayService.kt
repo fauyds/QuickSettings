@@ -634,7 +634,7 @@ class QuickSettingsOverlayService : Service() {
                     val alarmVol by nativeTileManager.alarmVolume.collectAsState()
                     val notifVol by nativeTileManager.notificationVolume.collectAsState()
 
-                    // Stationary Full-Screen Dim Backdrop (Never moves up or down when panel/notifications move)
+                    // Stationary Full-Screen Dark Tinted Backdrop
                     Box(
                         modifier = Modifier
                             .fillMaxSize()

@@ -202,9 +202,8 @@ fun TileVisibilityScreen(
         Spacer(modifier = Modifier.height(2.dp))
 
         // Smart Suggestion Action Card
-        Card(
+        SettingsCard(
             shape = VisibilityCardShapes.SingleCard,
-            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainerHigh),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -324,13 +323,13 @@ fun TileVisibilityScreen(
                 else -> VisibilityCardShapes.CenterCard
             }
 
-            Card(
+            SettingsCard(
                 shape = cardShape,
                 colors = CardDefaults.cardColors(
                     containerColor = if (isHidden) {
-                        colorScheme.surfaceContainerLowest
+                        colorScheme.background
                     } else {
-                        colorScheme.surfaceContainer
+                        if (androidx.compose.foundation.isSystemInDarkTheme()) colorScheme.surface else Color.White
                     }
                 ),
                 modifier = Modifier

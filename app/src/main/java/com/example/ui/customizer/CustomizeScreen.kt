@@ -177,12 +177,13 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    val isDark = com.example.ui.theme.LocalIsDarkTheme.current
                     // Circle Back Button in corner
                     Box(
                         modifier = Modifier
                             .size(42.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else androidx.compose.ui.graphics.Color.White)
                             .clickable(onClick = { selectedCategory = null })
                             .testTag("back_to_categories_btn"),
                         contentAlignment = Alignment.Center
@@ -270,11 +271,12 @@ fun CategoryButton(
     modifier: Modifier = Modifier,
     shape: Shape = CustomizeCardShapes.SingleCard
 ) {
+    val isDark = com.example.ui.theme.LocalIsDarkTheme.current
     Card(
         onClick = onClick,
         shape = shape,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else androidx.compose.ui.graphics.Color.White
         ),
         modifier = modifier
             .fillMaxWidth()

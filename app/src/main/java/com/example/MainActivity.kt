@@ -11,7 +11,7 @@ import com.example.service.QuickSettingsOverlayService
 import com.example.ui.MainScreen
 import com.example.ui.MainViewModel
 import com.example.ui.overlay.QsExpansionStage
-import com.example.ui.theme.QuickPanelTheme
+import com.example.ui.theme.AppSettingsTheme
 
 class MainActivity : ComponentActivity() {
 
@@ -57,7 +57,7 @@ class MainActivity : ComponentActivity() {
         handleTriggerIntent(intent)
 
         setContent {
-            QuickPanelTheme {
+            AppSettingsTheme {
                 MainScreen(viewModel = viewModel)
             }
         }

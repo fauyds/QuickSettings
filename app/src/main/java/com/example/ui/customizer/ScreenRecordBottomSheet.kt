@@ -40,6 +40,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -279,9 +280,8 @@ fun ScreenRecordBottomSheet(
                     }
 
                     // 1. Video Resolution Section
-                    Card(
+                    SettingsCard(
                         shape = ExpressiveCardShapes.TopCard,
-                        colors = CardDefaults.cardColors(containerColor = if (isDark) DarkUiSurfaceVariant.copy(alpha = 0.6f) else Color.White),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
@@ -321,9 +321,8 @@ fun ScreenRecordBottomSheet(
                     }
 
                     // 2. Audio Source Section
-                    Card(
+                    SettingsCard(
                         shape = ExpressiveCardShapes.CenterCard,
-                        colors = CardDefaults.cardColors(containerColor = if (isDark) DarkUiSurfaceVariant.copy(alpha = 0.6f) else Color.White),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
@@ -370,9 +369,8 @@ fun ScreenRecordBottomSheet(
                     }
 
                     // 3. Frame Rate & Show Touches Section
-                    Card(
+                    SettingsCard(
                         shape = ExpressiveCardShapes.BottomCard,
-                        colors = CardDefaults.cardColors(containerColor = if (isDark) DarkUiSurfaceVariant.copy(alpha = 0.6f) else Color.White),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
@@ -405,7 +403,7 @@ fun ScreenRecordBottomSheet(
                                     Surface(
                                         onClick = { PanelPreferences.setScreenRecordFps(context, fpsItem) },
                                         shape = RoundedCornerShape(12.dp),
-                                        color = if (isSelected) MonetPrimary else if (isDark) DarkUiSurface else Color(0xFFF1F5F9),
+                                        color = if (isSelected) MonetPrimary else MaterialTheme.colorScheme.background,
                                         border = androidx.compose.foundation.BorderStroke(
                                             width = 1.dp,
                                             color = if (isSelected) MonetPrimary else if (isDark) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.1f)
@@ -433,7 +431,7 @@ fun ScreenRecordBottomSheet(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isDark) DarkUiSurface.copy(alpha = 0.6f) else Color(0xFFF1F5F9))
+                                    .background(if (isDark) DarkUiSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.background)
                                     .padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
@@ -549,7 +547,7 @@ private fun OptionItemRow(
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) MonetPrimary.copy(alpha = 0.16f) else if (isDark) DarkUiSurface.copy(alpha = 0.4f) else Color(0xFFF8FAFC),
+        color = if (isSelected) MonetPrimary.copy(alpha = 0.16f) else MaterialTheme.colorScheme.background,
         border = androidx.compose.foundation.BorderStroke(
             width = if (isSelected) 1.5.dp else 1.dp,
             color = if (isSelected) MonetPrimary else if (isDark) Color.White.copy(alpha = 0.06f) else Color.Black.copy(alpha = 0.06f)

@@ -49,10 +49,8 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)
     ) {
         // 1. QS Grid Layout Density Card
-        Card(
-            shape = CustomizeCardShapes.TopCard,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth()
+        SettingsCard(
+            shape = CustomizeCardShapes.TopCard
         ) {
             Column(
                 modifier = Modifier
@@ -95,7 +93,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
                                 selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                containerColor = MaterialTheme.colorScheme.surface,
+                                containerColor = MaterialTheme.colorScheme.background,
                                 labelColor = MaterialTheme.colorScheme.onSurface
                             ),
                             modifier = Modifier.testTag("grid_col_${grid.id}")
@@ -106,10 +104,8 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         }
 
         // 2. Drag Handle Length Card
-        Card(
-            shape = CustomizeCardShapes.CenterCard,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth()
+        SettingsCard(
+            shape = CustomizeCardShapes.CenterCard
         ) {
             Column(
                 modifier = Modifier
@@ -166,10 +162,9 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         }
 
         // 3. Date Position in Header Card
-        Card(
+        SettingsCard(
             shape = CustomizeCardShapes.CenterCard,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth().testTag("date_position_card")
+            modifier = Modifier.testTag("date_position_card")
         ) {
             Column(
                 modifier = Modifier
@@ -213,7 +208,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
                                 selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                containerColor = MaterialTheme.colorScheme.surface,
+                                containerColor = MaterialTheme.colorScheme.background,
                                 labelColor = MaterialTheme.colorScheme.onSurface
                             ),
                             modifier = Modifier.testTag("date_pos_${pos.id}")
@@ -224,10 +219,8 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         }
 
         // 4. Edit Pencil Icon Location Card
-        Card(
-            shape = CustomizeCardShapes.CenterCard,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth()
+        SettingsCard(
+            shape = CustomizeCardShapes.CenterCard
         ) {
             Column(
                 modifier = Modifier
@@ -271,7 +264,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
                                 selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                containerColor = MaterialTheme.colorScheme.surface,
+                                containerColor = MaterialTheme.colorScheme.background,
                                 labelColor = MaterialTheme.colorScheme.onSurface
                             ),
                             modifier = Modifier.testTag("edit_pos_${pos.id}")
@@ -282,10 +275,8 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         }
 
         // 5. Hide QQS Drag Handle Card
-        Card(
-            shape = CustomizeCardShapes.BottomCard,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth()
+        SettingsCard(
+            shape = CustomizeCardShapes.BottomCard
         ) {
             Row(
                 modifier = Modifier

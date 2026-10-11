@@ -62,12 +62,9 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
         QuickPanelNotificationListenerService.isPermissionGranted(context)
     }
 
-    Card(
+    SettingsCard(
         shape = CustomizeCardShapes.SingleCard,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        modifier = modifier
-            .fillMaxWidth()
-            .testTag("heads_up_overlay_engine_card")
+        modifier = modifier.testTag("heads_up_overlay_engine_card")
     ) {
         Column(
             modifier = Modifier
@@ -222,7 +219,7 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
                 // Test Heads-Up Button Trigger
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface,
+                    color = MaterialTheme.colorScheme.background,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
