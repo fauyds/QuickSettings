@@ -1835,10 +1835,29 @@ fun UnifiedQsPanel(
     val carrierName = remember(context) {
         try {
             val tm = context.getSystemService(android.content.Context.TELEPHONY_SERVICE) as? android.telephony.TelephonyManager
-            val name = tm?.networkOperatorName
-            if (!name.isNullOrBlank() && name != "Android") name else "Google Fi"
+            val simState = tm?.simState ?: android.telephony.TelephonyManager.SIM_STATE_UNKNOWN
+            val isSimAvailable = simState != android.telephony.TelephonyManager.SIM_STATE_ABSENT &&
+                    simState != android.telephony.TelephonyManager.SIM_STATE_UNKNOWN
+
+            val name = tm?.networkOperatorName?.trim()
+            val simOperatorName = tm?.simOperatorName?.trim()
+            val resolvedName = if (!name.isNullOrBlank() && name != "Android" && !name.equals("Google Fi", ignoreCase = true)) {
+                name
+            } else if (!simOperatorName.isNullOrBlank() && simOperatorName != "Android" && !simOperatorName.equals("Google Fi", ignoreCase = true)) {
+                simOperatorName
+            } else if (name.equals("Google Fi", ignoreCase = true) || simOperatorName.equals("Google Fi", ignoreCase = true)) {
+                if (isSimAvailable) "Google Fi" else "No SIM"
+            } else {
+                null
+            }
+
+            if (!resolvedName.isNullOrBlank()) {
+                resolvedName
+            } else {
+                if (isSimAvailable) "Emergency calls only" else "No SIM"
+            }
         } catch (e: Exception) {
-            "Google Fi"
+            "No SIM"
         }
     }
     val activeTiles = remember(tiles, isEditingTiles, editActiveTiles) {

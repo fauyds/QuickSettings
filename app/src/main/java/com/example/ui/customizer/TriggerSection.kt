@@ -54,6 +54,7 @@ fun TriggerSection(modifier: Modifier = Modifier) {
     val invisibleStatusBarTrigger by PanelPreferences.invisibleStatusBarTrigger.collectAsState()
     val forceImmersiveTrigger by PanelPreferences.forceImmersiveTrigger.collectAsState()
     val overrideSystemQs by PanelPreferences.overrideSystemQs.collectAsState()
+    val autoSystemPanelClosing by PanelPreferences.autoSystemPanelClosing.collectAsState()
     val detectorCooldownMs by PanelPreferences.detectorCooldownMs.collectAsState()
     val panelReplacementDelayMs by PanelPreferences.panelReplacementDelayMs.collectAsState()
     val stockShadeWhitelist by PanelPreferences.stockShadeWhitelist.collectAsState()
@@ -217,6 +218,70 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                         modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                     )
                 }
+            }
+        }
+
+        // 3b. Use auto system panel closing Option Card (Android 12 to 15)
+        SettingsCard(
+            shape = CustomizeCardShapes.CenterCard,
+            modifier = Modifier.testTag("auto_system_panel_closing_card")
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "Use auto system panel closing",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = 17.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Surface(
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text(
+                                text = "A12-A15",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                    Text(
+                        text = "Actively forces the stock notification shade to collapse on Android 12 through 15 when opening the custom panel, resolving issues on devices where the system panel remains stuck open.",
+                        fontSize = 12.sp,
+                        lineHeight = 15.sp,
+                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Switch(
+                    checked = autoSystemPanelClosing,
+                    onCheckedChange = { PanelPreferences.setAutoSystemPanelClosing(context, it) },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                    ),
+                    modifier = Modifier.testTag("auto_system_panel_closing_toggle")
+                )
             }
         }
 

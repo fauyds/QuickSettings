@@ -93,6 +93,8 @@ class QuickPanelAccessibilityService : AccessibilityService() {
 
         fun collapseStockNotificationShade(): Boolean {
             var result = false
+            val useAutoClosing = PanelPreferences.autoSystemPanelClosing.value
+
             instance?.let { service ->
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     try {
@@ -108,9 +110,30 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                 } catch (e: Exception) {
                     // Ignore
                 }
+
+                if (useAutoClosing) {
+                    // Try reflection on StatusBarManager collapsePanels() for Android 12 to 15
+                    try {
+                        val sbm = service.getSystemService("statusbar")
+                        val collapseMethod = sbm?.javaClass?.getMethod("collapsePanels")
+                        collapseMethod?.invoke(sbm)
+                    } catch (_: Exception) {
+                        // Fallback reflection on collapse()
+                        try {
+                            val sbm = service.getSystemService("statusbar")
+                            val collapseMethod = sbm?.javaClass?.getMethod("collapse")
+                            collapseMethod?.invoke(sbm)
+                        } catch (_: Exception) {}
+                    }
+                }
+
                 if (service.privilegeEngine.isShizukuGranted()) {
                     service.serviceScope.launch(Dispatchers.IO) {
                         service.privilegeEngine.executeShizukuShell("cmd statusbar collapse; service call statusbar 2")
+                    }
+                } else if (useAutoClosing && service.privilegeEngine.isRootAvailable.value) {
+                    service.serviceScope.launch(Dispatchers.IO) {
+                        service.privilegeEngine.executeCommand("cmd statusbar collapse || service call statusbar 2")
                     }
                 }
             }
@@ -123,9 +146,28 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                 } catch (e: Exception) {
                     // Ignore
                 }
+
+                if (useAutoClosing) {
+                    try {
+                        val sbm = overlayService.getSystemService("statusbar")
+                        val collapseMethod = sbm?.javaClass?.getMethod("collapsePanels")
+                        collapseMethod?.invoke(sbm)
+                    } catch (_: Exception) {
+                        try {
+                            val sbm = overlayService.getSystemService("statusbar")
+                            val collapseMethod = sbm?.javaClass?.getMethod("collapse")
+                            collapseMethod?.invoke(sbm)
+                        } catch (_: Exception) {}
+                    }
+                }
+
                 if (overlayService.privilegeEngine.isShizukuGranted()) {
                     overlayService.serviceScope.launch(Dispatchers.IO) {
                         overlayService.privilegeEngine.executeShizukuShell("cmd statusbar collapse; service call statusbar 2")
+                    }
+                } else if (useAutoClosing && overlayService.privilegeEngine.isRootAvailable.value) {
+                    overlayService.serviceScope.launch(Dispatchers.IO) {
+                        overlayService.privilegeEngine.executeCommand("cmd statusbar collapse || service call statusbar 2")
                     }
                 }
             }
