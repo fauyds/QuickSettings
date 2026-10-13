@@ -407,10 +407,14 @@ fun QuickSettingsPanel(
                         onStageChange(QsExpansionStage.QQS)
                     } else {
                         // Dragged UP less than 36dp -> Snap back open!
-                        coroutineScope.launch {
-                            val anim = androidx.compose.animation.core.Animatable(dragTranslationYState.floatValue)
-                            anim.animateTo(0f, androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 400f)) {
-                                dragTranslationYState.floatValue = this.value
+                        if (disablePanelAnimations) {
+                            dragTranslationYState.floatValue = 0f
+                        } else {
+                            coroutineScope.launch {
+                                val anim = androidx.compose.animation.core.Animatable(dragTranslationYState.floatValue)
+                                anim.animateTo(0f, androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 400f)) {
+                                    dragTranslationYState.floatValue = this.value
+                                }
                             }
                         }
                     }
@@ -423,20 +427,25 @@ fun QuickSettingsPanel(
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         val panelHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
                         val startVal = dragTranslationYState.floatValue
-                        coroutineScope.launch {
-                            val anim = androidx.compose.animation.core.Animatable(startVal)
-                            anim.animateTo(
-                                targetValue = -panelHeightPx,
-                                animationSpec = androidx.compose.animation.core.tween(
-                                    durationMillis = 220,
-                                    easing = androidx.compose.animation.core.FastOutLinearInEasing
-                                )
-                            ) {
-                                dragTranslationYState.floatValue = this.value
-                            }
+                        if (disablePanelAnimations) {
                             dragTranslationYState.floatValue = 0f
+                            onStageChange(QsExpansionStage.COLLAPSED)
+                        } else {
+                            coroutineScope.launch {
+                                val anim = androidx.compose.animation.core.Animatable(startVal)
+                                anim.animateTo(
+                                    targetValue = -panelHeightPx,
+                                    animationSpec = androidx.compose.animation.core.tween(
+                                        durationMillis = 220,
+                                        easing = androidx.compose.animation.core.FastOutLinearInEasing
+                                    )
+                                ) {
+                                    dragTranslationYState.floatValue = this.value
+                                }
+                                dragTranslationYState.floatValue = 0f
+                            }
+                            onStageChange(QsExpansionStage.COLLAPSED)
                         }
-                        onStageChange(QsExpansionStage.COLLAPSED)
                     } else if (dragAccumulatedY > with(density) { 50.dp.toPx() } || manualDragMorphFraction > 0.40f) {
                         // Swiped DOWN in QQS -> Morph transition expands to FULL_QS without shifting panel!
                         isDraggingMorph = false
@@ -446,10 +455,14 @@ fun QuickSettingsPanel(
                     } else {
                         // Dragged UP less than 36dp -> Snap back open!
                         isDraggingMorph = false
-                        coroutineScope.launch {
-                            val anim = androidx.compose.animation.core.Animatable(dragTranslationYState.floatValue)
-                            anim.animateTo(0f, androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 400f)) {
-                                dragTranslationYState.floatValue = this.value
+                        if (disablePanelAnimations) {
+                            dragTranslationYState.floatValue = 0f
+                        } else {
+                            coroutineScope.launch {
+                                val anim = androidx.compose.animation.core.Animatable(dragTranslationYState.floatValue)
+                                anim.animateTo(0f, androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 400f)) {
+                                    dragTranslationYState.floatValue = this.value
+                                }
                             }
                         }
                     }
@@ -518,30 +531,39 @@ fun QuickSettingsPanel(
                             dragTranslationYState.floatValue = 0f
                             onStageChange(QsExpansionStage.QQS)
                         } else {
-                            // Swiped UP in QQS -> Trigger smooth dismissal following finger!
+                            // Swiped UP in QQS -> Trigger dismissal
                             val panelHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
                             val startVal = dragTranslationYState.floatValue
-                            coroutineScope.launch {
-                                val anim = androidx.compose.animation.core.Animatable(startVal)
-                                anim.animateTo(
-                                    targetValue = -panelHeightPx,
-                                    animationSpec = androidx.compose.animation.core.tween(
-                                        durationMillis = 220,
-                                        easing = androidx.compose.animation.core.FastOutLinearInEasing
-                                    )
-                                ) {
-                                    dragTranslationYState.floatValue = this.value
-                                }
+                            if (disablePanelAnimations) {
                                 dragTranslationYState.floatValue = 0f
+                                onStageChange(QsExpansionStage.COLLAPSED)
+                            } else {
+                                coroutineScope.launch {
+                                    val anim = androidx.compose.animation.core.Animatable(startVal)
+                                    anim.animateTo(
+                                        targetValue = -panelHeightPx,
+                                        animationSpec = androidx.compose.animation.core.tween(
+                                            durationMillis = 220,
+                                            easing = androidx.compose.animation.core.FastOutLinearInEasing
+                                        )
+                                    ) {
+                                        dragTranslationYState.floatValue = this.value
+                                    }
+                                    dragTranslationYState.floatValue = 0f
+                                }
+                                onStageChange(QsExpansionStage.COLLAPSED)
                             }
-                            onStageChange(QsExpansionStage.COLLAPSED)
                         }
                     } else {
                         // Dragged less than threshold -> Snap back open!
-                        coroutineScope.launch {
-                            val anim = androidx.compose.animation.core.Animatable(dragTranslationYState.floatValue)
-                            anim.animateTo(0f, androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 400f)) {
-                                dragTranslationYState.floatValue = this.value
+                        if (disablePanelAnimations) {
+                            dragTranslationYState.floatValue = 0f
+                        } else {
+                            coroutineScope.launch {
+                                val anim = androidx.compose.animation.core.Animatable(dragTranslationYState.floatValue)
+                                anim.animateTo(0f, androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 400f)) {
+                                    dragTranslationYState.floatValue = this.value
+                                }
                             }
                         }
                     }
@@ -1832,6 +1854,7 @@ fun UnifiedQsPanel(
     val brightnessInQqs by PanelPreferences.brightnessInQqs.collectAsState()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val disablePanelAnimations by PanelPreferences.disablePanelAnimations.collectAsState()
     val carrierName = remember(context) {
         try {
             val tm = context.getSystemService(android.content.Context.TELEPHONY_SERVICE) as? android.telephony.TelephonyManager
@@ -1901,7 +1924,7 @@ fun UnifiedQsPanel(
     }
     val morphProgress by animateFloatAsState(
         targetValue = targetMorph,
-        animationSpec = if (isDraggingMorph) {
+        animationSpec = if (isDraggingMorph || disablePanelAnimations) {
             androidx.compose.animation.core.snap()
         } else {
             spring(
@@ -3221,8 +3244,8 @@ fun CircularQsTile(
     val haptic = LocalHapticFeedback.current
 
     val qqsTileSizeValue by PanelPreferences.qqsTileSize.collectAsState()
-    val enabledTileShapePref by PanelPreferences.enabledTileShape.collectAsState()
-    val disabledTileShapePref by PanelPreferences.disabledTileShape.collectAsState()
+    val enabledTileShapeId by PanelPreferences.enabledTileShapeId.collectAsState()
+    val disabledTileShapeId by PanelPreferences.disabledTileShapeId.collectAsState()
     val baseQqsSize = qqsTileSizeValue.dp.coerceIn(36.dp, 64.dp)
 
     val isActive = tile.state == TileState.ACTIVE
@@ -3233,25 +3256,10 @@ fun CircularQsTile(
     val onPrimaryColor = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary
     val cardContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
 
-    val chosenShape = if (isActive) enabledTileShapePref else disabledTileShapePref
+    val chosenShapeId = if (isActive) enabledTileShapeId else disabledTileShapeId
 
-    val tileShape = remember(chosenShape) {
-        when (chosenShape) {
-            TileShape.CIRCLE -> CircleShape
-            TileShape.SQUIRCLE -> RoundedCornerShape(14.dp)
-            TileShape.SQUARE -> RoundedCornerShape(4.dp)
-            TileShape.TEARDROP -> RoundedCornerShape(topStart = 24.dp, topEnd = 6.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
-            TileShape.PILL -> RoundedCornerShape(20.dp)
-            // 8 Custom Shape Placeholders - easily customize shapes here
-            TileShape.CUSTOM_1 -> RoundedCornerShape(topStart = 24.dp, topEnd = 6.dp, bottomEnd = 24.dp, bottomStart = 6.dp)
-            TileShape.CUSTOM_2 -> RoundedCornerShape(topStart = 6.dp, topEnd = 24.dp, bottomEnd = 6.dp, bottomStart = 24.dp)
-            TileShape.CUSTOM_3 -> RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomEnd = 6.dp, bottomStart = 6.dp)
-            TileShape.CUSTOM_4 -> RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp, bottomEnd = 24.dp, bottomStart = 24.dp)
-            TileShape.CUSTOM_5 -> RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomEnd = 4.dp, bottomStart = 20.dp)
-            TileShape.CUSTOM_6 -> RoundedCornerShape(topStart = 24.dp, topEnd = 14.dp, bottomEnd = 24.dp, bottomStart = 14.dp)
-            TileShape.CUSTOM_7 -> RoundedCornerShape(18.dp)
-            TileShape.CUSTOM_8 -> RoundedCornerShape(8.dp)
-        }
+    val tileShape = remember(chosenShapeId) {
+        com.example.ui.shape.QsShapeManager.getComposeShape(chosenShapeId)
     }
 
     val circleSize = if (morphProgress >= 0.5f) 56.dp else baseQqsSize

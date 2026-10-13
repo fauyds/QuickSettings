@@ -81,15 +81,14 @@ enum class TileShape(val id: String, val label: String, val description: String)
     SQUARE("square", "Square", "Sharp square with 4dp corners"),
     TEARDROP("teardrop", "Teardrop", "Asymmetric teardrop style"),
     PILL("pill", "Pill", "Capsule pill shape"),
-    // 8 Placeholders for custom QS tile shapes
-    CUSTOM_1("custom_1", "Custom 1", "Placeholder for custom shape 1"),
-    CUSTOM_2("custom_2", "Custom 2", "Placeholder for custom shape 2"),
-    CUSTOM_3("custom_3", "Custom 3", "Placeholder for custom shape 3"),
-    CUSTOM_4("custom_4", "Custom 4", "Placeholder for custom shape 4"),
-    CUSTOM_5("custom_5", "Custom 5", "Placeholder for custom shape 5"),
-    CUSTOM_6("custom_6", "Custom 6", "Placeholder for custom shape 6"),
-    CUSTOM_7("custom_7", "Custom 7", "Placeholder for custom shape 7"),
-    CUSTOM_8("custom_8", "Custom 8", "Placeholder for custom shape 8");
+    CUSTOM_1("custom_1", "Leaf", "Leaf shape with diagonal rounded corners"),
+    CUSTOM_2("custom_2", "Inverted Leaf", "Inverted diagonal leaf shape"),
+    CUSTOM_3("custom_3", "Arch", "Arch / dome with rounded top corners"),
+    CUSTOM_4("custom_4", "Inverted Arch", "Inverted arch with rounded bottom corners"),
+    CUSTOM_5("custom_5", "Shield", "Shield / badge shape"),
+    CUSTOM_6("custom_6", "Pebble", "Organic pebble shape"),
+    CUSTOM_7("custom_7", "Flower", "Material You 4-petal flower shape"),
+    CUSTOM_8("custom_8", "Hexagon", "Rounded hexagon shape");
 
     companion object {
         fun fromId(id: String?): TileShape =
@@ -98,7 +97,7 @@ enum class TileShape(val id: String, val label: String, val description: String)
 }
 
 enum class ProgressBarStyle(val id: String, val label: String, val description: String) {
-    DEFAULT("default", "Previous (M3)", "Standard Material 3 slider"),
+    DEFAULT("default", "M3", "Standard Material 3 slider"),
     STRAIGHT("straight", "Straight", "Clean minimal straight progress bar"),
     WAVY("wavy", "Wavy", "Android 13/14 squiggly wave progress bar");
 
@@ -160,6 +159,10 @@ object PanelPreferences {
     private const val KEY_HIDDEN_TILE_IDS = "hidden_tile_ids"
     private const val KEY_ENABLE_HEADS_UP_OVERLAY = "enable_heads_up_overlay"
     private const val KEY_HEADS_UP_TIMEOUT_SECONDS = "heads_up_timeout_seconds"
+    private const val KEY_INITIAL_SETUP_COMPLETED = "initial_setup_completed"
+
+    private val _initialSetupCompleted = MutableStateFlow(false)
+    val initialSetupCompleted: StateFlow<Boolean> = _initialSetupCompleted.asStateFlow()
 
     // Heads-Up Overlay Preferences
     private val _enableHeadsUpOverlay = MutableStateFlow(true)
@@ -209,6 +212,12 @@ object PanelPreferences {
 
     private val _datePosition = MutableStateFlow(DatePosition.BELOW_TIME)
     val datePosition: StateFlow<DatePosition> = _datePosition.asStateFlow()
+
+    private val _enabledTileShapeId = MutableStateFlow("circle")
+    val enabledTileShapeId: StateFlow<String> = _enabledTileShapeId.asStateFlow()
+
+    private val _disabledTileShapeId = MutableStateFlow("circle")
+    val disabledTileShapeId: StateFlow<String> = _disabledTileShapeId.asStateFlow()
 
     private val _enabledTileShape = MutableStateFlow(TileShape.CIRCLE)
     val enabledTileShape: StateFlow<TileShape> = _enabledTileShape.asStateFlow()
@@ -322,19 +331,27 @@ object PanelPreferences {
             _datePosition.value = if (legacyInline) DatePosition.NEXT_TO_TIME else DatePosition.BELOW_TIME
             _showDateInQqsHeader.value = legacyInline
         }
+        com.example.ui.shape.QsShapeManager.init(context)
         val savedEnabledTileShape = prefs.getString(KEY_ENABLED_TILE_SHAPE, null) ?: prefs.getString(KEY_TILE_SHAPE, null)
         if (savedEnabledTileShape != null) {
+            _enabledTileShapeId.value = savedEnabledTileShape
             val shape = TileShape.fromId(savedEnabledTileShape)
             _enabledTileShape.value = shape
             _activeSquareShape.value = (shape == TileShape.SQUIRCLE || shape == TileShape.SQUARE)
         } else {
             val legacySquare = prefs.getBoolean(KEY_ACTIVE_SQUARE_SHAPE, false)
             _activeSquareShape.value = legacySquare
-            _enabledTileShape.value = if (legacySquare) TileShape.SQUIRCLE else TileShape.CIRCLE
+            val shape = if (legacySquare) TileShape.SQUIRCLE else TileShape.CIRCLE
+            _enabledTileShape.value = shape
+            _enabledTileShapeId.value = shape.id
         }
         val savedDisabledTileShape = prefs.getString(KEY_DISABLED_TILE_SHAPE, null)
         if (savedDisabledTileShape != null) {
+            _disabledTileShapeId.value = savedDisabledTileShape
             _disabledTileShape.value = TileShape.fromId(savedDisabledTileShape)
+        } else {
+            _disabledTileShapeId.value = "circle"
+            _disabledTileShape.value = TileShape.CIRCLE
         }
         _hideQqsDragHandle.value = prefs.getBoolean(KEY_HIDE_QQS_DRAG_HANDLE, false)
         _dragHandleVerticalOffset.value = prefs.getFloat(KEY_DRAG_HANDLE_VERTICAL_OFFSET, 4f)
@@ -405,6 +422,13 @@ object PanelPreferences {
         _animationSpeedScale.value = prefs.getFloat(KEY_ANIMATION_SPEED_SCALE, sysAnimatorScale)
         _disablePanelAnimations.value = prefs.getBoolean(KEY_DISABLE_PANEL_ANIMATIONS, false)
         _usePrimeCoreAffinity.value = prefs.getBoolean(KEY_USE_PRIME_CORE_AFFINITY, false)
+        _initialSetupCompleted.value = prefs.getBoolean(KEY_INITIAL_SETUP_COMPLETED, false)
+    }
+
+    fun setInitialSetupCompleted(context: Context, completed: Boolean) {
+        _initialSetupCompleted.value = completed
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_INITIAL_SETUP_COMPLETED, completed).apply()
     }
 
     fun setUsePrimeCoreAffinity(context: Context, enabled: Boolean) {
@@ -536,23 +560,35 @@ object PanelPreferences {
         setDatePosition(context, pos)
     }
 
-    fun setEnabledTileShape(context: Context, shape: TileShape) {
+    fun setEnabledTileShapeId(context: Context, shapeId: String) {
+        _enabledTileShapeId.value = shapeId
+        val shape = TileShape.fromId(shapeId)
         _enabledTileShape.value = shape
         _activeSquareShape.value = (shape == TileShape.SQUIRCLE || shape == TileShape.SQUARE)
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
-            .putString(KEY_ENABLED_TILE_SHAPE, shape.id)
-            .putString(KEY_TILE_SHAPE, shape.id)
+            .putString(KEY_ENABLED_TILE_SHAPE, shapeId)
+            .putString(KEY_TILE_SHAPE, shapeId)
             .putBoolean(KEY_ACTIVE_SQUARE_SHAPE, shape == TileShape.SQUIRCLE || shape == TileShape.SQUARE)
             .apply()
     }
 
-    fun setDisabledTileShape(context: Context, shape: TileShape) {
+    fun setDisabledTileShapeId(context: Context, shapeId: String) {
+        _disabledTileShapeId.value = shapeId
+        val shape = TileShape.fromId(shapeId)
         _disabledTileShape.value = shape
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
-            .putString(KEY_DISABLED_TILE_SHAPE, shape.id)
+            .putString(KEY_DISABLED_TILE_SHAPE, shapeId)
             .apply()
+    }
+
+    fun setEnabledTileShape(context: Context, shape: TileShape) {
+        setEnabledTileShapeId(context, shape.id)
+    }
+
+    fun setDisabledTileShape(context: Context, shape: TileShape) {
+        setDisabledTileShapeId(context, shape.id)
     }
 
     fun setTileShape(context: Context, shape: TileShape) {

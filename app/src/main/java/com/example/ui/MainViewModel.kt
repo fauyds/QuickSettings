@@ -70,7 +70,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             hiddenSet.addAll(listOf(
                 "wifi", "cellular", "hotspot", "location", "airplane", "nfc", 
                 "battery_saver", "dnd", "dark_mode", "aod", "ambient_display", 
-                "screenshot", "cpu_info", "fps_info", "sound_search"
+                "screenshot", "cpu_info", "fps_info", "sound_search",
+                "bluetooth", "caffeine", "heads_up", "reading_mode"
             ))
         }
         PanelPreferences.setAllTilesHidden(getApplication(), hiddenSet)
@@ -102,10 +103,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val editButtonPosition: StateFlow<com.example.data.EditButtonPosition> = PanelPreferences.editButtonPosition
     val showDateInQqsHeader: StateFlow<Boolean> = PanelPreferences.showDateInQqsHeader
 
+    private val _showInitialSetup = MutableStateFlow(false)
+    val showInitialSetup: StateFlow<Boolean> = _showInitialSetup.asStateFlow()
+
     init {
         PanelPreferences.init(application)
         com.example.data.NotificationBlacklistManager.init(application)
+        _showInitialSetup.value = !PanelPreferences.initialSetupCompleted.value
         refreshServiceState()
+    }
+
+    fun openInitialSetup() {
+        _showInitialSetup.value = true
+    }
+
+    fun completeInitialSetup() {
+        PanelPreferences.setInitialSetupCompleted(getApplication(), true)
+        _showInitialSetup.value = false
+    }
+
+    fun dismissInitialSetup() {
+        _showInitialSetup.value = false
     }
 
     fun setQsGridLayout(layout: QsGridLayout) {
@@ -132,6 +150,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val enabled = _isOverlayEnabled.value
         val running = (QuickSettingsOverlayService.isRunning || (QuickPanelAccessibilityService.isRunning && QuickPanelAccessibilityService.instance?.isInterceptionEnabled == true))
         _isOverlayServiceRunning.value = enabled && running
+        privilegeEngine.refreshPermissions()
     }
 
     fun setExpansionStage(stage: QsExpansionStage) {

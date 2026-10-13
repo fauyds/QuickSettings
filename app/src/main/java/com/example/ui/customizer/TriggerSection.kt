@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -111,64 +112,16 @@ fun TriggerSection(modifier: Modifier = Modifier) {
             }
         }
 
-        // 2. Immersive Mode Thin 8dp Trigger Card
-        SettingsCard(
-            shape = CustomizeCardShapes.CenterCard
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(1.dp)
-                ) {
-                    Text(
-                        text = "Immersive Mode Thin 8dp Trigger",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp,
-                        lineHeight = 19.sp,
-                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Enables the ultra-thin 8dp trigger strip (replaces thick status bar activator) with 1st-swipe reveal & 2nd-swipe panel gesture.",
-                        fontSize = 12.sp,
-                        lineHeight = 15.sp,
-                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Switch(
-                    checked = forceImmersiveTrigger,
-                    onCheckedChange = { PanelPreferences.setForceImmersiveTrigger(context, it) },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                        checkedTrackColor = MaterialTheme.colorScheme.primary,
-                        uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surface
-                    ),
-                    modifier = Modifier.testTag("force_immersive_trigger_toggle")
-                )
-            }
-        }
-
-        // 3. System Panel Detection Card
-        SettingsCard(
-            shape = CustomizeCardShapes.CenterCard
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+        // 2. Immersive Mode Thin 8dp Trigger Card - Hidden
+        val showImmersiveTrigger = false
+        if (showImmersiveTrigger) {
+            SettingsCard(
+                shape = CustomizeCardShapes.CenterCard
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -177,15 +130,15 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                         verticalArrangement = Arrangement.spacedBy(1.dp)
                     ) {
                         Text(
-                            text = "System Panel Detection",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
+                            text = "Immersive Mode Thin 8dp Trigger",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 16.sp,
+                            lineHeight = 19.sp,
                             style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Auto-detect when the stock system notification shade opens to substitute it with the custom panel. Disable to only trigger via status bar swipe.",
+                            text = "Enables the ultra-thin 8dp trigger strip (replaces thick status bar activator) with 1st-swipe reveal & 2nd-swipe panel gesture.",
                             fontSize = 12.sp,
                             lineHeight = 15.sp,
                             style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
@@ -194,29 +147,83 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                     }
 
                     Switch(
-                        checked = overrideSystemQs,
-                        onCheckedChange = { PanelPreferences.setOverrideSystemQs(context, it) },
+                        checked = forceImmersiveTrigger,
+                        onCheckedChange = { PanelPreferences.setForceImmersiveTrigger(context, it) },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
                             checkedTrackColor = MaterialTheme.colorScheme.primary,
                             uncheckedThumbColor = MaterialTheme.colorScheme.outline,
                             uncheckedTrackColor = MaterialTheme.colorScheme.surface
                         ),
-                        modifier = Modifier.testTag("override_system_qs_toggle")
+                        modifier = Modifier.testTag("force_immersive_trigger_toggle")
                     )
                 }
+            }
+        }
 
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = RoundedCornerShape(4.dp)
+        // 3. System Panel Detection Card - Hidden in favor of Stock Shade Auto-Override
+        val showSystemPanelDetection = false
+        if (showSystemPanelDetection) {
+            SettingsCard(
+                shape = CustomizeCardShapes.CenterCard
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(
-                        text = "EXPERIMENTAL",
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                        ) {
+                            Text(
+                                text = "System Panel Detection",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 17.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Auto-detect when the stock system notification shade opens to substitute it with the custom panel. Disable to only trigger via status bar swipe.",
+                                fontSize = 12.sp,
+                                lineHeight = 15.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Switch(
+                            checked = overrideSystemQs,
+                            onCheckedChange = { PanelPreferences.setOverrideSystemQs(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("override_system_qs_toggle")
+                        )
+                    }
+
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = "EXPERIMENTAL",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                        )
+                    }
                 }
             }
         }
@@ -355,7 +362,7 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                     Text("1000 ms (1.0s)", fontSize = 10.sp, color = Color.Gray)
                 }
 
-                // Quick Preset Chips for convenient selection
+                // Quick Preset Buttons
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -363,27 +370,44 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    listOf(
+                    val delayPresets = listOf(
                         0 to "Instant (0 ms)",
                         50 to "50 ms",
                         150 to "150 ms",
                         300 to "300 ms",
                         500 to "500 ms",
                         1000 to "1000 ms"
-                    ).forEach { (delayVal, label) ->
+                    )
+                    delayPresets.forEachIndexed { index, (delayVal, label) ->
                         val isSelected = panelReplacementDelayMs == delayVal
-                        FilterChip(
-                            selected = isSelected,
+                        val shape = if (isSelected) {
+                            CircleShape
+                        } else {
+                            when (index) {
+                                0 -> RoundedCornerShape(topStart = 50.dp, bottomStart = 50.dp, topEnd = 8.dp, bottomEnd = 8.dp)
+                                delayPresets.size - 1 -> RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp, topEnd = 50.dp, bottomEnd = 50.dp)
+                                else -> RoundedCornerShape(8.dp)
+                            }
+                        }
+
+                        Button(
                             onClick = { PanelPreferences.setPanelReplacementDelayMs(context, delayVal) },
-                            label = { Text(label, fontSize = 10.sp) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                containerColor = MaterialTheme.colorScheme.background,
-                                labelColor = MaterialTheme.colorScheme.onSurface
+                            shape = shape,
+                            border = null,
+                            elevation = null,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.background,
+                                contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                             ),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                             modifier = Modifier.testTag("delay_preset_${delayVal}")
-                        )
+                        ) {
+                            Text(
+                                text = label,
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
                     }
                 }
             }

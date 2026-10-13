@@ -41,6 +41,18 @@ class PrivilegeEngine(private val context: Context) {
     private val _lastExecutionLog = MutableStateFlow<String>("Engine initialized in Standard mode.")
     val lastExecutionLog: StateFlow<String> = _lastExecutionLog.asStateFlow()
 
+    private val _hasOverlay = MutableStateFlow(hasOverlayPermission())
+    val hasOverlay: StateFlow<Boolean> = _hasOverlay.asStateFlow()
+
+    private val _hasWriteSettings = MutableStateFlow(hasWriteSettingsPermission())
+    val hasWriteSettings: StateFlow<Boolean> = _hasWriteSettings.asStateFlow()
+
+    private val _hasNotificationPolicy = MutableStateFlow(hasNotificationPolicyPermission())
+    val hasNotificationPolicy: StateFlow<Boolean> = _hasNotificationPolicy.asStateFlow()
+
+    private val _hasAccessibility = MutableStateFlow(hasAccessibilityPermission())
+    val hasAccessibility: StateFlow<Boolean> = _hasAccessibility.asStateFlow()
+
     private val binderReceivedListener = Shizuku.OnBinderReceivedListener {
         _lastExecutionLog.value = "Shizuku binder received!"
         updateShizukuStatus()
@@ -187,9 +199,47 @@ class PrivilegeEngine(private val context: Context) {
         context.startActivity(intent)
     }
 
+    fun hasAccessibilityPermission(): Boolean {
+        if (com.example.service.QuickPanelAccessibilityService.isRunning) return true
+        return isAccessibilityServiceEnabled(context)
+    }
+
+    private fun isAccessibilityServiceEnabled(ctx: Context): Boolean {
+        return try {
+            val enabledServices = Settings.Secure.getString(
+                ctx.contentResolver,
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            ) ?: return false
+            val colonSplitter = android.text.TextUtils.SimpleStringSplitter(':')
+            colonSplitter.setString(enabledServices)
+            val myComponentName = "${ctx.packageName}/${com.example.service.QuickPanelAccessibilityService::class.java.name}"
+            val shortComponentName = "${ctx.packageName}/.service.QuickPanelAccessibilityService"
+            while (colonSplitter.hasNext()) {
+                val componentName = colonSplitter.next()
+                if (componentName.equals(myComponentName, ignoreCase = true) ||
+                    componentName.equals(shortComponentName, ignoreCase = true) ||
+                    componentName.contains("QuickPanelAccessibilityService", ignoreCase = true)) {
+                    return true
+                }
+            }
+            false
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     fun openAccessibilitySettings() {
         val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
         context.startActivity(intent)
+    }
+
+    fun refreshPermissions() {
+        _hasOverlay.value = hasOverlayPermission()
+        _hasWriteSettings.value = hasWriteSettingsPermission()
+        _hasNotificationPolicy.value = hasNotificationPolicyPermission()
+        _hasAccessibility.value = hasAccessibilityPermission()
+        detectCapabilities()
+        updateShizukuStatus()
     }
 
     suspend fun executeCommand(shellCommand: String, fallbackIntent: Intent? = null): Boolean {
@@ -372,23 +422,33 @@ class PrivilegeEngine(private val context: Context) {
         }
     }
 
+    fun isRootGranted(): Boolean {
+        return _isRootAvailable.value || checkRootBinary()
+    }
+
     /**
      * Applies or resets CPU core affinity to the Prime Core (Cortex-X / 7th core).
-     * Strictly executed via Shizuku Remote Process API (UID 2000 shell privileges).
+     * Executed via Root shell privileges (or Shizuku if root is absent).
      */
     fun applyPrimeCoreAffinity(enable: Boolean): Boolean {
-        if (!isShizukuGranted()) {
-            val errorMsg = "Shizuku permission required for Prime Core mode"
-            _lastExecutionLog.value = errorMsg
-            Log.w("PrivilegeEngine", errorMsg)
-            return false
-        }
-
         val pid = android.os.Process.myPid()
         val command = if (enable) {
             "taskset -p 80 $pid || taskset -ap 7 $pid || taskset -p 0x80 $pid"
         } else {
             "taskset -p ff $pid || taskset -ap 0-7 $pid || taskset -p 0xff $pid"
+        }
+
+        if (isRootGranted()) {
+            val success = runRootCommand(command)
+            Log.i("PrivilegeEngine", "applyPrimeCoreAffinity via Root(enable=$enable, pid=$pid) -> success: $success")
+            return success
+        }
+
+        if (!isShizukuGranted()) {
+            val errorMsg = "Root permission required for High Smoothness mode"
+            _lastExecutionLog.value = errorMsg
+            Log.w("PrivilegeEngine", errorMsg)
+            return false
         }
 
         val (success, output) = executeShizukuShell(command)

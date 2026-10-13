@@ -100,4 +100,70 @@ class ExampleRobolectricTest {
         com.example.data.PanelPreferences.setThemeMode(context, com.example.data.ThemeMode.SYSTEM)
         assertEquals(com.example.data.ThemeMode.SYSTEM, com.example.data.PanelPreferences.themeMode.value)
     }
+
+    @Test
+    fun `verify all built-in QS shapes have XML drawable and valid paths`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        com.example.ui.shape.QsShapeManager.init(context)
+
+        val shapes = com.example.ui.shape.QsShapeManager.allShapes.value
+        assertEquals(13, shapes.size)
+
+        // Verify key built-in shapes
+        assertNotNull(shapes.find { it.id == "circle" })
+        assertNotNull(shapes.find { it.id == "squircle" })
+        assertNotNull(shapes.find { it.id == "square" })
+        assertNotNull(shapes.find { it.id == "teardrop" })
+        assertNotNull(shapes.find { it.id == "pill" })
+        assertNotNull(shapes.find { it.id == "custom_1" })
+        assertNotNull(shapes.find { it.id == "custom_7" }) // Flower
+        assertNotNull(shapes.find { it.id == "custom_8" }) // Hexagon
+
+        // Verify each built-in shape can produce a drawable and compose shape
+        shapes.forEach { shape ->
+            val drawable = com.example.ui.shape.QsShapeManager.createDrawable(shape.id, android.graphics.Color.BLUE)
+            assertNotNull(drawable)
+            drawable.setBounds(0, 0, 100, 100)
+
+            val composeShape = com.example.ui.shape.QsShapeManager.getComposeShape(shape.id)
+            assertNotNull(composeShape)
+        }
+    }
+
+    @Test
+    fun `verify importing and deleting custom XML drawable shape`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        com.example.ui.shape.QsShapeManager.init(context)
+
+        val starXml = """
+            <vector xmlns:android="http://schemas.android.com/apk/res/android"
+                android:width="100dp"
+                android:height="100dp"
+                android:viewportWidth="100"
+                android:viewportHeight="100">
+                <path
+                    android:fillColor="#FFFFFFFF"
+                    android:pathData="M 50,2 L 64.5,33.5 L 98.5,38 L 73.5,62 L 79.5,96 L 50,79.5 L 20.5,96 L 26.5,62 L 1.5,38 L 35.5,33.5 Z" />
+            </vector>
+        """.trimIndent()
+
+        // 1. Import Star shape
+        val result = com.example.ui.shape.QsShapeManager.importShapeFromXml(context, starXml, "Star")
+        org.junit.Assert.assertTrue(result.isSuccess)
+        val importedStar = result.getOrNull()!!
+        assertEquals("Star", importedStar.label)
+        org.junit.Assert.assertTrue(importedStar.isCustom)
+
+        // 2. Select it as enabled tile shape
+        com.example.data.PanelPreferences.setEnabledTileShapeId(context, importedStar.id)
+        assertEquals(importedStar.id, com.example.data.PanelPreferences.enabledTileShapeId.value)
+
+        // 3. Test deleting the custom shape
+        val deleted = com.example.ui.shape.QsShapeManager.deleteImportedShape(context, importedStar.id)
+        org.junit.Assert.assertTrue(deleted)
+
+        // Revert enabled tile shape to circle
+        com.example.data.PanelPreferences.setEnabledTileShapeId(context, "circle")
+        assertEquals("circle", com.example.data.PanelPreferences.enabledTileShapeId.value)
+    }
 }

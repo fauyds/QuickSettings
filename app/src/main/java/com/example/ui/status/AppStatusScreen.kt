@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -94,7 +95,8 @@ fun AppStatusScreen(
     onTestFloatingOverlay: () -> Unit,
     onRequestPermission: () -> Unit,
     onOpenAccessibilitySettings: () -> Unit,
-    onSimulateSwipeDown: () -> Unit
+    onSimulateSwipeDown: () -> Unit,
+    onLaunchInitialSetup: (() -> Unit)? = null
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val isDark = com.example.ui.theme.LocalIsDarkTheme.current
@@ -160,6 +162,65 @@ fun AppStatusScreen(
                             style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = colorScheme.onSurfaceVariant
                         )
+                    }
+                }
+            }
+        }
+
+        if (onLaunchInitialSetup != null) {
+            Card(
+                shape = AppStatusCardShapes.SingleCard,
+                colors = CardDefaults.cardColors(containerColor = cardBg),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("app_status_initial_setup_card")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Build,
+                                contentDescription = null,
+                                tint = colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            Text(
+                                text = "Initial Setup Wizard",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Setup privileges, configure tiles & triggers",
+                                fontSize = 11.sp,
+                                color = colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    FilledTonalButton(
+                        onClick = onLaunchInitialSetup,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.testTag("btn_launch_initial_setup")
+                    ) {
+                        Text("Start", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
             }

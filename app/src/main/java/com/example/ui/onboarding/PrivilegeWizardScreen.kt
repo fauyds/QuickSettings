@@ -105,6 +105,25 @@ fun PrivilegeWizardScreen(
     val screenBg = com.example.ui.theme.getSettingsScreenBackgroundColor(isDark)
     val cardBg = com.example.ui.theme.getSettingsCardBackgroundColor(isDark)
 
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                privilegeEngine.refreshPermissions()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        privilegeEngine.refreshPermissions()
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    val hasOverlay by privilegeEngine.hasOverlay.collectAsStateWithLifecycle()
+    val hasWriteSettings by privilegeEngine.hasWriteSettings.collectAsStateWithLifecycle()
+    val hasDnd by privilegeEngine.hasNotificationPolicy.collectAsStateWithLifecycle()
+    val hasAccessibility by privilegeEngine.hasAccessibility.collectAsStateWithLifecycle()
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -293,13 +312,15 @@ fun PrivilegeWizardScreen(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     // 1. Overlay Permission
-                    val hasOverlay = privilegeEngine.hasOverlayPermission()
                     PermissionCheckRow(
                         title = "Draw Over Other Apps",
                         description = "SYSTEM_ALERT_WINDOW for floating swipe trigger",
                         icon = Icons.Default.Layers,
                         isGranted = hasOverlay,
-                        onGrant = { privilegeEngine.requestOverlayPermission() },
+                        onGrant = {
+                            privilegeEngine.requestOverlayPermission()
+                            privilegeEngine.refreshPermissions()
+                        },
                         shape = RoundedCornerShape(
                             topStart = 16.dp,
                             topEnd = 16.dp,
@@ -309,36 +330,42 @@ fun PrivilegeWizardScreen(
                     )
 
                     // 2. Write System Settings
-                    val hasWriteSettings = privilegeEngine.hasWriteSettingsPermission()
                     PermissionCheckRow(
                         title = "Modify System Settings",
                         description = "WRITE_SETTINGS for screen brightness & rotation",
                         icon = Icons.Default.Tune,
                         isGranted = hasWriteSettings,
-                        onGrant = { privilegeEngine.requestWriteSettingsPermission() },
+                        onGrant = {
+                            privilegeEngine.requestWriteSettingsPermission()
+                            privilegeEngine.refreshPermissions()
+                        },
                         shape = RoundedCornerShape(4.dp)
                     )
 
                     // 3. Do Not Disturb Policy
-                    val hasDnd = privilegeEngine.hasNotificationPolicyPermission()
                     PermissionCheckRow(
                         title = "Notification Policy Access",
                         description = "ACCESS_NOTIFICATION_POLICY for DND mode toggle",
                         icon = Icons.Default.Notifications,
                         isGranted = hasDnd,
-                        onGrant = { privilegeEngine.requestNotificationPolicyPermission() },
+                        onGrant = {
+                            privilegeEngine.requestNotificationPolicyPermission()
+                            privilegeEngine.refreshPermissions()
+                        },
                         shape = RoundedCornerShape(4.dp)
                     )
 
                     // 4. Accessibility Service
-                    val hasAccessibility = QuickPanelAccessibilityService.isRunning
                     val isModeAccessVisible = currentMode == PrivilegeMode.SHIZUKU || currentMode == PrivilegeMode.ROOT
                     PermissionCheckRow(
                         title = "QuickPanel Accessibility Service",
                         description = "Enables global shade expansion and gestures",
                         icon = Icons.Default.Security,
                         isGranted = hasAccessibility,
-                        onGrant = { privilegeEngine.openAccessibilitySettings() },
+                        onGrant = {
+                            privilegeEngine.openAccessibilitySettings()
+                            privilegeEngine.refreshPermissions()
+                        },
                         shape = if (!isModeAccessVisible) {
                             RoundedCornerShape(
                                 topStart = 4.dp,
@@ -366,6 +393,7 @@ fun PrivilegeWizardScreen(
                                 statusState = shizukuStatus,
                                 onRequestAccess = {
                                     val resultMsg = privilegeEngine.requestShizukuPermission()
+                                    privilegeEngine.refreshPermissions()
                                     Toast.makeText(context, resultMsg, Toast.LENGTH_SHORT).show()
                                 },
                                 shape = RoundedCornerShape(
@@ -382,6 +410,7 @@ fun PrivilegeWizardScreen(
                                 isRootGranted = isRootActive,
                                 onRequestAccess = {
                                     val granted = privilegeEngine.requestRootPermission()
+                                    privilegeEngine.refreshPermissions()
                                     val msg = if (granted) "Root access granted!" else "Root request failed. Please check root manager."
                                     Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                 },

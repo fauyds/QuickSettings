@@ -6,7 +6,7 @@ enum class PrivilegeMode(
     val badge: String
 ) {
     STANDARD(
-        title = "Non-Root / Standard Mode",
+        title = "Non root",
         description = "Uses Accessibility Service, Write Settings permission, and native System Settings dialog fallbacks.",
         badge = "Safe / Default"
     ),
@@ -16,7 +16,7 @@ enum class PrivilegeMode(
         badge = "Elevated ADB"
     ),
     ROOT(
-        title = "Superuser / Root Mode",
+        title = "Root",
         description = "Direct root shell (su) execution for immediate privileged system toggles without confirmation dialogs.",
         badge = "Full Control"
     )

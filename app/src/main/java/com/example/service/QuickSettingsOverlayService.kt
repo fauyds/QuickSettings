@@ -431,10 +431,10 @@ class QuickSettingsOverlayService : Service() {
                     val disablePanelAnimations by PanelPreferences.disablePanelAnimations.collectAsState()
                     val speedFactor = animSpeedScale.coerceAtLeast(0.01f)
 
-                    val backdropAlpha = remember { androidx.compose.animation.core.Animatable(0f) }
-                    val panelOffsetY = remember { androidx.compose.animation.core.Animatable(initialOffsetY) }
-                    val panelAlpha = remember { androidx.compose.animation.core.Animatable(0f) }
-                    val panelScale = remember { androidx.compose.animation.core.Animatable(0.95f) }
+                    val backdropAlpha = remember { androidx.compose.animation.core.Animatable(if (disablePanelAnimations) 0.50f else 0f) }
+                    val panelOffsetY = remember { androidx.compose.animation.core.Animatable(if (disablePanelAnimations) 0f else initialOffsetY) }
+                    val panelAlpha = remember { androidx.compose.animation.core.Animatable(if (disablePanelAnimations) 1f else 0f) }
+                    val panelScale = remember { androidx.compose.animation.core.Animatable(if (disablePanelAnimations) 1f else 0.95f) }
 
                     var isClosing by remember { mutableStateOf(false) }
                     var wasPulling by remember { mutableStateOf(false) }
@@ -872,54 +872,28 @@ class StatusTriggerView(context: Context) : View(context) {
 
         val density = resources.displayMetrics.density
 
-        // 1. Full-width background across the whole screen width (0 to w)
-        val bgGradColors = intArrayOf(
-            if (isPressedState) 0xE61B212B.toInt() else 0xB31B212B.toInt(),
-            if (isPressedState) 0xCC0C0F14.toInt() else 0x990C0F14.toInt()
-        )
-        backgroundPaint.shader = LinearGradient(0f, 0f, 0f, h, bgGradColors, null, Shader.TileMode.CLAMP)
+        // 1. Full-width background across the whole screen width: totally black with transparency
+        backgroundPaint.shader = null
+        backgroundPaint.color = if (isPressedState) 0x99000000.toInt() else 0x66000000.toInt()
         canvas.drawRect(0f, 0f, w, h, backgroundPaint)
 
-        // 2. Full-width glowing bottom accent edge across whole screen width
-        val borderThickness = if (isPressedState) 2.5f * density else 2.0f * density
-        bottomBorderPaint.shader = LinearGradient(
-            0f, 0f, w, 0f,
-            intArrayOf(
-                0x994EE3D0.toInt(),
-                if (isPressedState) 0xFF4EE3D0.toInt() else 0xEE4EE3D0.toInt(),
-                if (isPressedState) 0xFFFF85A1.toInt() else 0xEEFF85A1.toInt(),
-                0x99FF85A1.toInt()
-            ),
-            floatArrayOf(0f, 0.35f, 0.65f, 1f),
-            Shader.TileMode.CLAMP
-        )
+        // 2. Subtle bottom border line in transparent black
+        val borderThickness = 1.0f * density
+        bottomBorderPaint.shader = null
+        bottomBorderPaint.color = if (isPressedState) 0xCC000000.toInt() else 0x88000000.toInt()
         canvas.drawRect(0f, h - borderThickness, w, h, bottomBorderPaint)
 
-        // 3. Subtle top glow line across whole screen width
-        sideGlowPaint.shader = LinearGradient(
-            0f, 0f, w, 0f,
-            intArrayOf(0x444EE3D0, 0x884EE3D0.toInt(), 0x44FF85A1.toInt()),
-            null,
-            Shader.TileMode.CLAMP
-        )
-        canvas.drawRect(0f, 0f, w, 1.2f * density, sideGlowPaint)
-
-        // 4. Centered pull handle indicator across full status bar thickness
-        val pillWidth = (w * 0.28f).coerceIn(60f * density, 120f * density)
-        val pillHeight = 3.5f * density
+        // 3. Subtle centered pull handle in transparent black
+        val pillWidth = (w * 0.25f).coerceIn(48f * density, 96f * density)
+        val pillHeight = 3.0f * density
         val pillCorner = pillHeight / 2f
         val pillLeft = (w - pillWidth) / 2f
         val pillTop = h - pillHeight - borderThickness - (2f * density)
 
         if (pillTop > 0) {
             pillRect.set(pillLeft, pillTop, pillLeft + pillWidth, pillTop + pillHeight)
-            centerPillPaint.shader = LinearGradient(
-                pillLeft, pillTop, pillLeft + pillWidth, pillTop + pillHeight,
-                intArrayOf(0xFF4EE3D0.toInt(), 0xFFFF85A1.toInt()),
-                null,
-                Shader.TileMode.CLAMP
-            )
-            centerPillPaint.alpha = if (isPressedState) 255 else 220
+            centerPillPaint.shader = null
+            centerPillPaint.color = if (isPressedState) 0xCC000000.toInt() else 0x88000000.toInt()
             canvas.drawRoundRect(pillRect, pillCorner, pillCorner, centerPillPaint)
         }
     }

@@ -128,14 +128,24 @@ fun MainScreen(viewModel: MainViewModel) {
     val isShizukuAvail by viewModel.privilegeEngine.isShizukuAvailable.collectAsStateWithLifecycle()
     val lastLog by viewModel.privilegeEngine.lastExecutionLog.collectAsStateWithLifecycle()
 
-    val hasOverlayPermission = viewModel.privilegeEngine.hasOverlayPermission()
-    val isAccessibilityRunning = QuickPanelAccessibilityService.isRunning
+    val hasOverlayPermission by viewModel.privilegeEngine.hasOverlay.collectAsStateWithLifecycle()
+    val isAccessibilityRunning by viewModel.privilegeEngine.hasAccessibility.collectAsStateWithLifecycle()
     val showScreenRecordSheet by viewModel.tileRegistry.showScreenRecordSheet.collectAsStateWithLifecycle()
 
     if (showScreenRecordSheet) {
         com.example.ui.customizer.ScreenRecordBottomSheet(
             onDismissRequest = { viewModel.tileRegistry.showScreenRecordSheet.value = false }
         )
+    }
+
+    val showInitialSetup by viewModel.showInitialSetup.collectAsStateWithLifecycle()
+    if (showInitialSetup) {
+        com.example.ui.onboarding.InitialSetupScreen(
+            viewModel = viewModel,
+            onComplete = { viewModel.completeInitialSetup() },
+            onDismiss = { viewModel.dismissInitialSetup() }
+        )
+        return
     }
 
     // Handle back button when in sub-tabs
@@ -373,7 +383,8 @@ fun MainScreen(viewModel: MainViewModel) {
                             } else if (expansionStage == QsExpansionStage.QQS) {
                                 viewModel.setExpansionStage(QsExpansionStage.FULL_QS)
                             }
-                        }
+                        },
+                        onLaunchInitialSetup = { viewModel.openInitialSetup() }
                     )
                 }
             }

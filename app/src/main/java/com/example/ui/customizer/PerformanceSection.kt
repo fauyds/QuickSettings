@@ -111,9 +111,9 @@ fun PerformanceSection(modifier: Modifier = Modifier) {
             }
         }
 
-        // 2. Prime Core Mode (Shizuku taskset) Card
+        // 2. Prime Core Mode (Root taskset) Card
         SettingsCard(
-            shape = CustomizeCardShapes.CenterCard,
+            shape = CustomizeCardShapes.BottomCard,
             modifier = Modifier.testTag("prime_core_affinity_card")
         ) {
             Row(
@@ -136,7 +136,7 @@ fun PerformanceSection(modifier: Modifier = Modifier) {
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "(Requires Shizuku) Pin taskset to CPU core 7 to eliminate swipe and list scrolling micro-stutters.",
+                        text = "Works with Root only. Pins CPU thread affinity to the prime core to completely eliminate swipe and scrolling micro-stutters.",
                         fontSize = 12.sp,
                         lineHeight = 15.sp,
                         style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
@@ -150,28 +150,28 @@ fun PerformanceSection(modifier: Modifier = Modifier) {
                         coroutineScope.launch(Dispatchers.IO) {
                             val engine = NativeTileManager.instance?.privilegeEngine ?: PrivilegeEngine(context)
                             if (enabled) {
-                                if (engine.isShizukuGranted()) {
+                                if (engine.isRootGranted()) {
                                     val ok = engine.applyPrimeCoreAffinity(true)
                                     PanelPreferences.setUsePrimeCoreAffinity(context, true)
                                     withContext(Dispatchers.Main) {
                                         if (ok) {
-                                            Toast.makeText(context, "Привязка к Prime Core (Ядро 7) успешно применена через Shizuku!", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, "High Smoothness Mode enabled via Root!", Toast.LENGTH_SHORT).show()
                                         } else {
                                             val log = engine.lastExecutionLog.value
-                                            Toast.makeText(context, "Ошибка taskset: $log", Toast.LENGTH_LONG).show()
+                                            Toast.makeText(context, "Taskset error: $log", Toast.LENGTH_LONG).show()
                                         }
                                     }
                                 } else {
                                     withContext(Dispatchers.Main) {
-                                        Toast.makeText(context, "Shizuku permission required for Prime Core mode", Toast.LENGTH_SHORT).show()
-                                        engine.requestShizukuPermission()
+                                        Toast.makeText(context, "Root permission required for High Smoothness mode", Toast.LENGTH_SHORT).show()
+                                        engine.requestRootPermission()
                                     }
                                 }
                             } else {
                                 engine.applyPrimeCoreAffinity(false)
                                 PanelPreferences.setUsePrimeCoreAffinity(context, false)
                                 withContext(Dispatchers.Main) {
-                                    Toast.makeText(context, "Стандартное планирование CPU восстановлено", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Standard CPU scheduling restored", Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }
@@ -187,72 +187,75 @@ fun PerformanceSection(modifier: Modifier = Modifier) {
             }
         }
 
-        // 3. System Animation Speed Controller Card
-        SettingsCard(
-            shape = CustomizeCardShapes.BottomCard,
-            modifier = Modifier.testTag("system_animation_speed_card")
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+        // 3. System Animation Speed Controller Card - Hidden
+        val showSystemAnimationSpeed = false
+        if (showSystemAnimationSpeed) {
+            SettingsCard(
+                shape = CustomizeCardShapes.BottomCard,
+                modifier = Modifier.testTag("system_animation_speed_card")
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(
-                            text = "System Animation Speed",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Set system animator duration scale via Settings.Global (requires Shizuku/Root/WRITE_SECURE_SETTINGS).",
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Text(
-                        text = String.format(java.util.Locale.US, "%.2fx", localSliderValue),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 12.dp)
-                    )
-                }
-
-                Slider(
-                    value = localSliderValue,
-                    onValueChange = { localSliderValue = it },
-                    valueRange = 0f..2f,
-                    colors = SliderDefaults.colors(
-                        activeTrackColor = MaterialTheme.colorScheme.primary,
-                        inactiveTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
-                        thumbColor = MaterialTheme.colorScheme.primary
-                    ),
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .testTag("animation_speed_slider")
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text("0.0x (Off)", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("1.0x (Default)", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("2.0x (Slow)", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                        ) {
+                            Text(
+                                text = "System Animation Speed",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 17.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Set system animator duration scale via Settings.Global (requires Shizuku/Root/WRITE_SECURE_SETTINGS).",
+                                fontSize = 12.sp,
+                                lineHeight = 15.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Text(
+                            text = String.format(java.util.Locale.US, "%.2fx", localSliderValue),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(start = 12.dp)
+                        )
+                    }
+
+                    Slider(
+                        value = localSliderValue,
+                        onValueChange = { localSliderValue = it },
+                        valueRange = 0f..2f,
+                        colors = SliderDefaults.colors(
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                            inactiveTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
+                            thumbColor = MaterialTheme.colorScheme.primary
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("animation_speed_slider")
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("0.0x (Off)", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("1.0x (Default)", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("2.0x (Slow)", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
         }

@@ -7,11 +7,13 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -61,13 +63,37 @@ import com.example.ui.theme.ExpressiveCardShapes
 import com.example.ui.theme.SegmentedButtonShapes
 import com.example.ui.theme.MonetPrimary
 
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FileOpen
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import com.example.ui.shape.QsShapeItem
+import com.example.ui.shape.QsShapeManager
+
 @Composable
 fun QsDesignSection(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val qqsTileSizeValue by PanelPreferences.qqsTileSize.collectAsState()
     val qqsTileCount by PanelPreferences.qqsTileCount.collectAsState()
-    val currentEnabledTileShape by PanelPreferences.enabledTileShape.collectAsState()
-    val currentDisabledTileShape by PanelPreferences.disabledTileShape.collectAsState()
+    val currentEnabledTileShapeId by PanelPreferences.enabledTileShapeId.collectAsState()
+    val currentDisabledTileShapeId by PanelPreferences.disabledTileShapeId.collectAsState()
+    val allShapes by QsShapeManager.allShapes.collectAsState()
     val showCarrier by PanelPreferences.showCarrier.collectAsState()
     val showCarrierDivider by PanelPreferences.showCarrierDivider.collectAsState()
     val brightnessAtBottom by PanelPreferences.brightnessAtBottom.collectAsState()
@@ -215,7 +241,9 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             }
         }
 
-        // 3. Tile Shape Customization (Enabled / Disabled)
+        var showImportDialog by remember { mutableStateOf(false) }
+
+        // 3. Tile Shape Customization (Enabled / Disabled) backed by XML drawables with path
         SettingsCard(
             shape = CustomizeCardShapes.CenterCard,
             modifier = Modifier.testTag("tile_shape_selection_card")
@@ -226,20 +254,63 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Header with Import Action
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            text = "Tile Shapes (XML Paths)",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "All QS shapes are rendered via vector XML drawable paths. You can also import custom XML shapes.",
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = { showImportDialog = true },
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.testTag("import_xml_shape_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Import XML Shape",
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Import XML",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
                 // Enabled Tile Shape
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
                             text = "Enabled Tile Shape",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            lineHeight = 20.sp,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Choose the shape when a tile is active/ON",
                             fontSize = 12.sp,
-                            lineHeight = 18.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -251,17 +322,19 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val allShapes = TileShape.entries
                         allShapes.forEach { shape ->
-                            val selected = (currentEnabledTileShape == shape)
+                            val selected = (currentEnabledTileShapeId == shape.id)
                             val chipShape = SegmentedButtonShapes.getShape(
                                 item = shape,
                                 items = allShapes,
-                                selectedItem = currentEnabledTileShape
+                                selectedItem = allShapes.firstOrNull { it.id == currentEnabledTileShapeId }
                             )
+                            val composeShape = remember(shape.id) {
+                                QsShapeManager.getComposeShape(shape.id)
+                            }
                             FilterChip(
                                 selected = selected,
-                                onClick = { PanelPreferences.setEnabledTileShape(context, shape) },
+                                onClick = { PanelPreferences.setEnabledTileShapeId(context, shape.id) },
                                 shape = chipShape,
                                 border = null,
                                 label = {
@@ -275,24 +348,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                     Box(
                                         modifier = Modifier
                                             .size(16.dp)
-                                            .clip(
-                                                when (shape) {
-                                                    TileShape.CIRCLE -> CircleShape
-                                                    TileShape.SQUIRCLE -> RoundedCornerShape(4.dp)
-                                                    TileShape.SQUARE -> RoundedCornerShape(1.dp)
-                                                    TileShape.TEARDROP -> RoundedCornerShape(topStart = 7.dp, topEnd = 2.dp, bottomStart = 7.dp, bottomEnd = 7.dp)
-                                                    TileShape.PILL -> RoundedCornerShape(6.dp)
-                                                    // 8 Custom Shape Placeholders
-                                                    TileShape.CUSTOM_1 -> RoundedCornerShape(topStart = 7.dp, topEnd = 2.dp, bottomEnd = 7.dp, bottomStart = 2.dp)
-                                                    TileShape.CUSTOM_2 -> RoundedCornerShape(topStart = 2.dp, topEnd = 7.dp, bottomEnd = 2.dp, bottomStart = 7.dp)
-                                                    TileShape.CUSTOM_3 -> RoundedCornerShape(topStart = 7.dp, topEnd = 7.dp, bottomEnd = 2.dp, bottomStart = 2.dp)
-                                                    TileShape.CUSTOM_4 -> RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp, bottomEnd = 7.dp, bottomStart = 7.dp)
-                                                    TileShape.CUSTOM_5 -> RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp, bottomEnd = 1.dp, bottomStart = 6.dp)
-                                                    TileShape.CUSTOM_6 -> RoundedCornerShape(topStart = 7.dp, topEnd = 4.dp, bottomEnd = 7.dp, bottomStart = 4.dp)
-                                                    TileShape.CUSTOM_7 -> RoundedCornerShape(5.dp)
-                                                    TileShape.CUSTOM_8 -> RoundedCornerShape(2.dp)
-                                                }
-                                            )
+                                            .clip(composeShape)
                                             .background(
                                                 if (selected) MaterialTheme.colorScheme.onPrimary
                                                 else MaterialTheme.colorScheme.primary
@@ -337,17 +393,19 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val allShapes = TileShape.entries
                         allShapes.forEach { shape ->
-                            val selected = (currentDisabledTileShape == shape)
+                            val selected = (currentDisabledTileShapeId == shape.id)
                             val chipShape = SegmentedButtonShapes.getShape(
                                 item = shape,
                                 items = allShapes,
-                                selectedItem = currentDisabledTileShape
+                                selectedItem = allShapes.firstOrNull { it.id == currentDisabledTileShapeId }
                             )
+                            val composeShape = remember(shape.id) {
+                                QsShapeManager.getComposeShape(shape.id)
+                            }
                             FilterChip(
                                 selected = selected,
-                                onClick = { PanelPreferences.setDisabledTileShape(context, shape) },
+                                onClick = { PanelPreferences.setDisabledTileShapeId(context, shape.id) },
                                 shape = chipShape,
                                 border = null,
                                 label = {
@@ -361,24 +419,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                     Box(
                                         modifier = Modifier
                                             .size(16.dp)
-                                            .clip(
-                                                when (shape) {
-                                                    TileShape.CIRCLE -> CircleShape
-                                                    TileShape.SQUIRCLE -> RoundedCornerShape(4.dp)
-                                                    TileShape.SQUARE -> RoundedCornerShape(1.dp)
-                                                    TileShape.TEARDROP -> RoundedCornerShape(topStart = 7.dp, topEnd = 2.dp, bottomStart = 7.dp, bottomEnd = 7.dp)
-                                                    TileShape.PILL -> RoundedCornerShape(6.dp)
-                                                    // 8 Custom Shape Placeholders
-                                                    TileShape.CUSTOM_1 -> RoundedCornerShape(topStart = 7.dp, topEnd = 2.dp, bottomEnd = 7.dp, bottomStart = 2.dp)
-                                                    TileShape.CUSTOM_2 -> RoundedCornerShape(topStart = 2.dp, topEnd = 7.dp, bottomEnd = 2.dp, bottomStart = 7.dp)
-                                                    TileShape.CUSTOM_3 -> RoundedCornerShape(topStart = 7.dp, topEnd = 7.dp, bottomEnd = 2.dp, bottomStart = 2.dp)
-                                                    TileShape.CUSTOM_4 -> RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp, bottomEnd = 7.dp, bottomStart = 7.dp)
-                                                    TileShape.CUSTOM_5 -> RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp, bottomEnd = 1.dp, bottomStart = 6.dp)
-                                                    TileShape.CUSTOM_6 -> RoundedCornerShape(topStart = 7.dp, topEnd = 4.dp, bottomEnd = 7.dp, bottomStart = 4.dp)
-                                                    TileShape.CUSTOM_7 -> RoundedCornerShape(5.dp)
-                                                    TileShape.CUSTOM_8 -> RoundedCornerShape(2.dp)
-                                                }
-                                            )
+                                            .clip(composeShape)
                                             .background(
                                                 if (selected) MaterialTheme.colorScheme.onPrimary
                                                 else MaterialTheme.colorScheme.primary
@@ -397,7 +438,95 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         }
                     }
                 }
+
+                // Custom Imported Shapes Management
+                val customShapes = allShapes.filter { it.isCustom }
+                if (customShapes.isNotEmpty()) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "Imported Custom Shapes (${customShapes.size})",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+
+                        customShapes.forEach { customShape ->
+                            val customComposeShape = remember(customShape.id) {
+                                QsShapeManager.getComposeShape(customShape.id)
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .clip(customComposeShape)
+                                            .background(MaterialTheme.colorScheme.primary)
+                                    )
+                                    Column {
+                                        Text(
+                                            text = customShape.label,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "Viewport: ${customShape.viewportWidth.toInt()}x${customShape.viewportHeight.toInt()}",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+
+                                IconButton(
+                                    onClick = {
+                                        QsShapeManager.deleteImportedShape(context, customShape.id)
+                                        if (currentEnabledTileShapeId == customShape.id) {
+                                            PanelPreferences.setEnabledTileShapeId(context, "circle")
+                                        }
+                                        if (currentDisabledTileShapeId == customShape.id) {
+                                            PanelPreferences.setDisabledTileShapeId(context, "circle")
+                                        }
+                                        Toast.makeText(context, "Removed shape \"${customShape.label}\"", Toast.LENGTH_SHORT).show()
+                                    },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Delete custom shape",
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
+        }
+
+        if (showImportDialog) {
+            ImportXmlShapeDialog(
+                onDismiss = { showImportDialog = false },
+                onShapeImported = { importedItem ->
+                    PanelPreferences.setEnabledTileShapeId(context, importedItem.id)
+                    showImportDialog = false
+                }
+            )
         }
 
         // 4. Show SIM Card Carrier Card
@@ -588,35 +717,14 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Progress Bar & Slider Style",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-
-                        if (currentProgressBarStyle != ProgressBarStyle.DEFAULT) {
-                            TextButton(
-                                onClick = { PanelPreferences.setProgressBarStyle(context, ProgressBarStyle.DEFAULT) },
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                                modifier = Modifier.testTag("revert_progress_bar_style_button")
-                            ) {
-                                Text(
-                                    text = "Revert to Previous",
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                    }
                     Text(
-                        text = "Customize the progress bar and slider appearance for media player, volume, and brightness. Choose between the previous Material 3 slider, sleek straight bar, or Android 13/14 animated wavy track.",
+                        text = "Progress Bar & Slider Style",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Customize the progress bar and slider appearance for media player, volume, and brightness. Choose between the M3 slider, sleek straight bar, or Android 13/14 animated wavy track.",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -755,7 +863,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         )
                         Text(
                             text = when (currentProgressBarStyle) {
-                                ProgressBarStyle.DEFAULT -> "Previous Style (Default M3)"
+                                ProgressBarStyle.DEFAULT -> "M3 Slider"
                                 ProgressBarStyle.STRAIGHT -> "Straight Progress Bar"
                                 ProgressBarStyle.WAVY -> "Squiggly Wave Active"
                             },
@@ -780,4 +888,319 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             }
         }
     }
+}
+
+@Composable
+fun ImportXmlShapeDialog(
+    onDismiss: () -> Unit,
+    onShapeImported: (QsShapeItem) -> Unit
+) {
+    val context = LocalContext.current
+    var selectedTab by remember { mutableIntStateOf(0) } // 0: Paste XML, 1: Pick File
+    var xmlInput by remember { mutableStateOf("") }
+    var shapeLabel by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                if (inputStream != null) {
+                    val content = inputStream.bufferedReader().use { it.readText() }
+                    xmlInput = content
+                    var fileName: String? = null
+                    context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val nameIdx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                            if (nameIdx >= 0) fileName = cursor.getString(nameIdx)
+                        }
+                    }
+                    if (shapeLabel.isBlank()) {
+                        shapeLabel = fileName?.removeSuffix(".xml")?.replace('_', ' ')?.replace('-', ' ')?.trim()?.split(" ")?.joinToString(" ") { word ->
+                            word.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+                        } ?: "Custom Shape"
+                    }
+                    errorMessage = null
+                }
+            } catch (e: Exception) {
+                errorMessage = "Failed to read file: ${e.message}"
+            }
+        }
+    }
+
+    // Live parsed shape for preview
+    val parsedShape: QsShapeItem? = remember(xmlInput) {
+        if (xmlInput.isNotBlank()) {
+            try {
+                errorMessage = null
+                QsShapeManager.parseXmlDrawable(xmlInput, shapeLabel.ifBlank { "Preview" })
+            } catch (e: Exception) {
+                errorMessage = e.message
+                null
+            }
+        } else {
+            errorMessage = null
+            null
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "Import XML Shape",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(
+                    text = "Import any Android XML vector drawable with <path android:pathData=\"...\"> to use as your QS Tile shape.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // Tabs: Paste XML / Pick File
+                TabRow(
+                    selectedTabIndex = selectedTab,
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    contentColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        text = { Text("Paste XML", fontSize = 13.sp) }
+                    )
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        text = { Text("Pick File", fontSize = 13.sp) }
+                    )
+                }
+
+                if (selectedTab == 0) {
+                    // Paste XML section
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Vector XML Code",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        TextButton(
+                            onClick = {
+                                xmlInput = """
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 50,2 L 64.5,33.5 L 98.5,38 L 73.5,62 L 79.5,96 L 50,79.5 L 20.5,96 L 26.5,62 L 1.5,38 L 35.5,33.5 Z" />
+</vector>""".trimIndent()
+                                if (shapeLabel.isBlank()) shapeLabel = "Star"
+                            },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text("Insert Star Sample", fontSize = 11.sp)
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = xmlInput,
+                        onValueChange = {
+                            xmlInput = it
+                        },
+                        placeholder = {
+                            Text(
+                                "<vector ...>\n  <path android:pathData=\"...\" />\n</vector>",
+                                fontSize = 12.sp
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 120.dp, max = 180.dp),
+                        textStyle = TextStyle(fontSize = 12.sp),
+                        maxLines = 8
+                    )
+                } else {
+                    // Pick File section
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FileOpen,
+                            contentDescription = null,
+                            modifier = Modifier.size(36.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Choose an XML vector drawable file (.xml) from your device",
+                            fontSize = 12.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Button(
+                            onClick = { filePickerLauncher.launch("*/*") }
+                        ) {
+                            Text("Select XML File")
+                        }
+                    }
+                }
+
+                // Shape Label Input
+                OutlinedTextField(
+                    value = shapeLabel,
+                    onValueChange = { shapeLabel = it },
+                    label = { Text("Shape Name") },
+                    placeholder = { Text("e.g. Star, Badge, Hexagon") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Error Message if invalid
+                if (errorMessage != null) {
+                    Text(
+                        text = errorMessage ?: "",
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp
+                    )
+                }
+
+                // Live Preview Card
+                if (parsedShape != null) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Live Shape Preview",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Active preview
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                val previewShape = remember(parsedShape.pathData) {
+                                    com.example.ui.shape.VectorPathShape(
+                                        parsedShape.pathData,
+                                        parsedShape.viewportWidth,
+                                        parsedShape.viewportHeight
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(previewShape)
+                                        .background(MaterialTheme.colorScheme.primary),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.AutoAwesome,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimary,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                                Text("Active Tile", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+
+                            // Inactive preview
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                val previewShape = remember(parsedShape.pathData) {
+                                    com.example.ui.shape.VectorPathShape(
+                                        parsedShape.pathData,
+                                        parsedShape.viewportWidth,
+                                        parsedShape.viewportHeight
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(previewShape)
+                                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.AutoAwesome,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                                Text("Inactive Tile", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val labelToUse = shapeLabel.ifBlank { "Custom Shape" }
+                    val result = QsShapeManager.importShapeFromXml(context, xmlInput, labelToUse)
+                    if (result.isSuccess) {
+                        val imported = result.getOrNull()!!
+                        Toast.makeText(context, "Shape \"${imported.label}\" imported successfully!", Toast.LENGTH_SHORT).show()
+                        onShapeImported(imported)
+                    } else {
+                        errorMessage = result.exceptionOrNull()?.message ?: "Failed to import shape"
+                    }
+                },
+                enabled = parsedShape != null
+            ) {
+                Text("Save & Apply")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

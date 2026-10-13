@@ -99,7 +99,8 @@ fun TileVisibilityScreen(
         setOf(
             "wifi", "cellular", "hotspot", "location", "airplane", "nfc",
             "battery_saver", "dnd", "dark_mode", "aod", "ambient_display",
-            "screenshot", "screenrecord", "cpu_info", "fps_info", "sound_search"
+            "screenshot", "screenrecord", "cpu_info", "fps_info", "sound_search",
+            "bluetooth", "caffeine", "heads_up", "reading_mode"
         )
     }
 
