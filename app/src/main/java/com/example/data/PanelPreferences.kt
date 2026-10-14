@@ -177,9 +177,13 @@ object PanelPreferences {
     private const val KEY_ENABLE_HEADS_UP_OVERLAY = "enable_heads_up_overlay"
     private const val KEY_HEADS_UP_TIMEOUT_SECONDS = "heads_up_timeout_seconds"
     private const val KEY_INITIAL_SETUP_COMPLETED = "initial_setup_completed"
-
     private val _initialSetupCompleted = MutableStateFlow(false)
     val initialSetupCompleted: StateFlow<Boolean> = _initialSetupCompleted.asStateFlow()
+
+    // Privilege Engine Mode Preference
+    private const val KEY_PRIVILEGE_MODE = "privilege_mode"
+    private val _privilegeMode = MutableStateFlow(com.example.model.PrivilegeMode.STANDARD)
+    val privilegeMode: StateFlow<com.example.model.PrivilegeMode> = _privilegeMode.asStateFlow()
 
     // Heads-Up Overlay Preferences
     private const val KEY_ENABLE_SYSTEM_HEADS_UP = "enable_system_heads_up"
@@ -449,12 +453,24 @@ object PanelPreferences {
         _disablePanelAnimations.value = prefs.getBoolean(KEY_DISABLE_PANEL_ANIMATIONS, false)
         _usePrimeCoreAffinity.value = prefs.getBoolean(KEY_USE_PRIME_CORE_AFFINITY, false)
         _initialSetupCompleted.value = prefs.getBoolean(KEY_INITIAL_SETUP_COMPLETED, false)
+        val savedMode = prefs.getString(KEY_PRIVILEGE_MODE, com.example.model.PrivilegeMode.STANDARD.name)
+        _privilegeMode.value = try {
+            com.example.model.PrivilegeMode.valueOf(savedMode ?: com.example.model.PrivilegeMode.STANDARD.name)
+        } catch (_: Exception) {
+            com.example.model.PrivilegeMode.STANDARD
+        }
     }
 
     fun setInitialSetupCompleted(context: Context, completed: Boolean) {
         _initialSetupCompleted.value = completed
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_INITIAL_SETUP_COMPLETED, completed).apply()
+    }
+
+    fun setPrivilegeMode(context: Context, mode: com.example.model.PrivilegeMode) {
+        _privilegeMode.value = mode
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_PRIVILEGE_MODE, mode.name).apply()
     }
 
     fun setUsePrimeCoreAffinity(context: Context, enabled: Boolean) {

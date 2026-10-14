@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.example.data.PanelPreferences
 import com.example.data.ThemeMode
+import com.example.system.SystemThemeObserver
 
 val LocalIsDarkTheme = staticCompositionLocalOf { true }
 
@@ -95,11 +96,20 @@ fun QuickPanelTheme(
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
+    SystemThemeObserver.init(context)
+
     val userThemeMode by PanelPreferences.themeMode.collectAsState()
-    val systemInDark = isSystemInDarkTheme()
+    val observerSystemInDark by SystemThemeObserver.isDarkTheme.collectAsState()
+    val composeSystemInDark = isSystemInDarkTheme()
+
+    val systemInDark = if (userThemeMode == ThemeMode.SYSTEM) {
+        observerSystemInDark || composeSystemInDark
+    } else {
+        composeSystemInDark
+    }
 
     val isDark = darkTheme ?: when (userThemeMode) {
-        ThemeMode.SYSTEM -> systemInDark
+        ThemeMode.SYSTEM -> observerSystemInDark
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }

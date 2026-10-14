@@ -51,7 +51,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         tileRegistry.allTiles,
         PanelPreferences.hiddenTileIds
     ) { all, hidden ->
-        all.filter { it.id !in hidden }
+        all.filter {
+            it.isVisible && it.id !in hidden &&
+            (if (it.id == "sound_profile") "sound_mode" !in hidden && "volume" !in hidden else true)
+        }
     }.stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000), emptyList())
 
     val allRawTiles: StateFlow<List<QsTileModel>> = tileRegistry.allTiles
@@ -59,7 +62,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val hiddenTileIds: StateFlow<Set<String>> = PanelPreferences.hiddenTileIds
 
     fun setTileHidden(tileId: String, hidden: Boolean) {
-        PanelPreferences.setTileHidden(getApplication(), tileId, hidden)
+        val canonicalId = if (tileId == "sound_mode" || tileId == "volume") "sound_profile" else tileId
+        PanelPreferences.setTileHidden(getApplication(), canonicalId, hidden)
+        tileRegistry.setTileVisibility(canonicalId, !hidden)
+        if (canonicalId == "sound_profile") {
+            PanelPreferences.setTileHidden(getApplication(), "sound_mode", hidden)
+            PanelPreferences.setTileHidden(getApplication(), "volume", hidden)
+        }
     }
 
     fun applySmartHideUnsupportedTiles() {
@@ -75,6 +84,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             ))
         }
         PanelPreferences.setAllTilesHidden(getApplication(), hiddenSet)
+        tileRegistry.allTiles.value.forEach { tile ->
+            val shouldHide = tile.id in hiddenSet
+            tileRegistry.setTileVisibility(tile.id, !shouldHide)
+        }
     }
     val notifications: StateFlow<List<NotificationItem>> = QuickPanelNotificationListenerService.notifications
 
@@ -108,9 +121,38 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         PanelPreferences.init(application)
+        privilegeEngine.syncWithPreferences()
         com.example.data.NotificationBlacklistManager.init(application)
         _showInitialSetup.value = !PanelPreferences.initialSetupCompleted.value
         refreshServiceState()
+
+        viewModelScope.launch {
+            tileRegistry.allTiles.collect { all ->
+                if (all.isNotEmpty()) {
+                    val hiddenFromPrefs = PanelPreferences.hiddenTileIds.value
+                    val combinedHidden = hiddenFromPrefs.toMutableSet()
+                    all.forEach { tile ->
+                        if (!tile.isVisible) {
+                            combinedHidden.add(tile.id)
+                            if (tile.id == "sound_profile") {
+                                combinedHidden.add("sound_mode")
+                                combinedHidden.add("volume")
+                            }
+                        }
+                    }
+                    if (combinedHidden != hiddenFromPrefs) {
+                        PanelPreferences.setAllTilesHidden(application, combinedHidden)
+                    }
+                    combinedHidden.forEach { id ->
+                        val canonical = if (id == "sound_mode" || id == "volume") "sound_profile" else id
+                        val tile = all.find { it.id == canonical }
+                        if (tile != null && tile.isVisible) {
+                            tileRegistry.setTileVisibility(canonical, false)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     fun openInitialSetup() {
@@ -166,7 +208,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleTileVisibility(tileId: String, currentVisible: Boolean) {
-        tileRegistry.toggleTileVisibility(tileId, currentVisible)
+        val canonicalId = if (tileId == "sound_mode" || tileId == "volume") "sound_profile" else tileId
+        val newVisible = !currentVisible
+        tileRegistry.setTileVisibility(canonicalId, newVisible)
+        PanelPreferences.setTileHidden(getApplication(), canonicalId, !newVisible)
+        if (canonicalId == "sound_profile") {
+            PanelPreferences.setTileHidden(getApplication(), "sound_mode", !newVisible)
+            PanelPreferences.setTileHidden(getApplication(), "volume", !newVisible)
+        }
     }
 
     fun toggleQqsFavorite(tileId: String, currentFavorite: Boolean) {
@@ -179,6 +228,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateTilesOrderAndVisibility(activeTiles: List<QsTileModel>, inactiveTiles: List<QsTileModel>) {
         tileRegistry.updateTilesOrderAndVisibility(activeTiles, inactiveTiles)
+        val inactiveIds = inactiveTiles.map { it.id }.toSet()
+        PanelPreferences.setAllTilesHidden(getApplication(), inactiveIds)
     }
 
     fun setBrightness(value: Int) {
@@ -191,6 +242,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setPrivilegeMode(mode: PrivilegeMode) {
         privilegeEngine.setMode(mode)
+        PanelPreferences.setPrivilegeMode(getApplication(), mode)
     }
 
     fun addExternalTile(tile: QsTileModel) {

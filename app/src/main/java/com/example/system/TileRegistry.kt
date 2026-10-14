@@ -579,6 +579,33 @@ class TileRegistry(
         }
     }
 
+    fun setTileVisibility(tileId: String, isVisible: Boolean) {
+        scope.launch(Dispatchers.IO) {
+            val currentTile = allTiles.value.find { it.id == tileId }
+            val isExt = currentTile?.isExternal == true || currentTile?.category == TileCategory.THIRD_PARTY || tileId.contains("/")
+            if (isExt && currentTile != null) {
+                val pkg = currentTile.packageName ?: if (tileId.contains("/")) tileId.substringBefore('/') else null
+                val cls = currentTile.serviceClassName ?: if (tileId.contains("/")) tileId.substringAfter('/') else null
+                val entity = TileEntity(
+                    tileId = tileId,
+                    label = currentTile.label,
+                    subtitle = currentTile.subtitle,
+                    categoryName = TileCategory.THIRD_PARTY.name,
+                    orderIndex = currentTile.orderIndex,
+                    isVisible = isVisible,
+                    isQqsFavorite = currentTile.isQqsFavorite,
+                    isExternal = true,
+                    packageName = pkg,
+                    serviceClassName = cls,
+                    settingsAction = null
+                )
+                repository.insert(entity)
+            } else {
+                repository.setVisibility(tileId, isVisible)
+            }
+        }
+    }
+
     fun toggleQqsFavorite(tileId: String, currentFavorite: Boolean) {
         scope.launch(Dispatchers.IO) {
             repository.setQqsFavorite(tileId, !currentFavorite)
@@ -694,6 +721,7 @@ class TileRegistry(
                 order++
             }
             PanelPreferences.saveActiveTileIds(context, activeTiles.map { it.id })
+            PanelPreferences.setAllTilesHidden(context, inactiveTiles.map { it.id }.toSet())
         }
     }
 }

@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.BatterySaver
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Brightness4
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FlashlightOn
 import androidx.compose.material.icons.filled.LocationOn
@@ -44,10 +45,12 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.WifiTethering
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -77,6 +80,7 @@ import com.example.data.TileCommandRepository
 import com.example.model.CommandExecutionMode
 import com.example.model.TileCommandConfig
 import com.example.system.PrivilegeEngine
+import com.example.model.PrivilegeMode
 import com.example.ui.theme.ExpressiveCardShapes
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.Immutable
@@ -123,6 +127,11 @@ fun TileCommandsScreen(
         KnownTilesList + customTileIds.map { id ->
             TileInfo(id, id.substringAfterLast('.').ifBlank { id }, Icons.Default.Terminal)
         }
+    }
+
+    val activeMode by privilegeEngine.currentMode.collectAsStateWithLifecycle()
+    val areAllOverridesEnabled = remember(configs, allDisplayTiles) {
+        allDisplayTiles.all { tile -> configs[tile.id]?.isOverrideEnabled == true }
     }
 
     val colorScheme = MaterialTheme.colorScheme
@@ -188,14 +197,196 @@ fun TileCommandsScreen(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    val shizukuStatus by privilegeEngine.shizukuStatus.collectAsStateWithLifecycle()
-                    com.example.ui.onboarding.ShizukuPermissionRow(
-                        statusState = shizukuStatus,
-                        onRequestAccess = {
-                            val msg = privilegeEngine.requestShizukuPermission()
-                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                    when (activeMode) {
+                        PrivilegeMode.STANDARD -> {
+                            // Standard API mode requires no ADB or Root daemon
+                        }
+                        PrivilegeMode.SHIZUKU -> {
+                            val shizukuStatus by privilegeEngine.shizukuStatus.collectAsStateWithLifecycle()
+                            com.example.ui.onboarding.ShizukuPermissionRow(
+                                statusState = shizukuStatus,
+                                onRequestAccess = {
+                                    val msg = privilegeEngine.requestShizukuPermission()
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                },
+                                showBorder = false
+                            )
+                        }
+                        PrivilegeMode.ROOT -> {
+                            val isRootActive by privilegeEngine.isRootAvailable.collectAsStateWithLifecycle()
+                            com.example.ui.onboarding.RootPermissionRow(
+                                isRootGranted = isRootActive,
+                                onRequestAccess = {
+                                    val granted = privilegeEngine.requestRootPermission()
+                                    privilegeEngine.refreshPermissions()
+                                    val msg = if (granted) "Root access granted!" else "Root request failed. Please check root manager."
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Target Execution Engine Mode Selector Card
+        item {
+            SettingsCard(
+                shape = ExpressiveCardShapes.SingleCard,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("tile_cmd_engine_card")
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "TARGET EXECUTION ENGINE",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.1.sp,
+                            color = colorScheme.primary
+                        )
+                        Surface(
+                            color = colorScheme.primaryContainer,
+                            shape = CircleShape
+                        ) {
+                            Text(
+                                text = activeMode.title,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = if (activeMode == PrivilegeMode.STANDARD)
+                            "Standard option shows Intent action settings for launching system activities."
+                        else
+                            "${activeMode.title} option shows promptless shell commands for ON and OFF execution.",
+                        fontSize = 12.sp,
+                        lineHeight = 15.sp,
+                        color = colorScheme.onSurfaceVariant
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val modes = PrivilegeMode.entries
+                        modes.forEachIndexed { index, mode ->
+                            val isSelected = activeMode == mode
+                            val shape = if (isSelected) {
+                                CircleShape
+                            } else {
+                                when (index) {
+                                    0 -> RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp, topEnd = 8.dp, bottomEnd = 8.dp)
+                                    modes.size - 1 -> RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp, topEnd = 24.dp, bottomEnd = 24.dp)
+                                    else -> RoundedCornerShape(8.dp)
+                                }
+                            }
+
+                            Button(
+                                onClick = {
+                                    privilegeEngine.setMode(mode)
+                                },
+                                shape = shape,
+                                border = null,
+                                elevation = null,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isSelected) colorScheme.primary else colorScheme.surfaceContainerHigh,
+                                    contentColor = if (isSelected) colorScheme.onPrimary else colorScheme.onSurfaceVariant
+                                ),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(38.dp)
+                                    .testTag("tile_cmd_mode_btn_${mode.name.lowercase()}")
+                            ) {
+                                Text(
+                                    text = mode.title,
+                                    fontSize = 11.5.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Master Enable All Overrides Card
+        item {
+            SettingsCard(
+                shape = ExpressiveCardShapes.SingleCard,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("tile_cmd_enable_all_card")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            Text(
+                                text = "Enable All Tile Overrides",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = colorScheme.onSurface
+                            )
+                            Text(
+                                text = if (areAllOverridesEnabled) "All tile overrides are active" else "Turn on custom command overrides for all tiles",
+                                fontSize = 11.5.sp,
+                                lineHeight = 15.sp,
+                                color = colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Switch(
+                        checked = areAllOverridesEnabled,
+                        onCheckedChange = { enable ->
+                            val currentExecMode = when (activeMode) {
+                                PrivilegeMode.ROOT -> CommandExecutionMode.ROOT
+                                PrivilegeMode.SHIZUKU -> CommandExecutionMode.SHIZUKU
+                                PrivilegeMode.STANDARD -> CommandExecutionMode.STANDARD
+                            }
+                            TileCommandRepository.setAllOverridesEnabled(context, enable, currentExecMode)
                         },
-                        showBorder = false
+                        modifier = Modifier.testTag("tile_cmd_toggle_all_commands")
                     )
                 }
             }

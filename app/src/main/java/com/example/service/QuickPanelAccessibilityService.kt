@@ -478,6 +478,7 @@ class QuickPanelAccessibilityService : AccessibilityService() {
             }
         }
 
+        com.example.system.SystemThemeObserver.init(this)
         updateLauncherPackages()
 
         val filter = IntentFilter().apply {
@@ -492,6 +493,7 @@ class QuickPanelAccessibilityService : AccessibilityService() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        com.example.system.SystemThemeObserver.onConfigurationChanged(this, newConfig)
         immersiveModeDetector?.checkNow()
         val immersive = isImmersiveModeActive()
         updateTriggerVisibility(immersive)

@@ -31,6 +31,9 @@ object TileCommandRepository {
         "aod" to ("settings put secure doze_always_on 1" to "settings put secure doze_always_on 0"),
         "ambient_display" to ("settings put secure doze_enabled 1" to "settings put secure doze_enabled 0"),
         "caffeine" to ("settings put system screen_off_timeout 2147483647" to "settings put system screen_off_timeout 30000"),
+        "heads_up" to ("settings put global heads_up_notifications_enabled 1" to "settings put global heads_up_notifications_enabled 0"),
+        "sound_mode" to ("cmd audio set-volume 3 100" to "cmd audio set-volume 3 0"),
+        "sound_profile" to ("cmd audio set-volume 3 100" to "cmd audio set-volume 3 0"),
         "screenshot" to ("input keyevent 120" to "input keyevent 120"),
         "screenrecord" to ("screenrecord --time-limit 15 /sdcard/screenrecord.mp4 &" to "pkill -2 screenrecord")
     )
@@ -117,6 +120,12 @@ object TileCommandRepository {
             }
         }
 
+        if (map.containsKey("sound_mode") && !map.containsKey("sound_profile")) {
+            map["sound_profile"] = map["sound_mode"]!!.copy(tileId = "sound_profile")
+        } else if (map.containsKey("sound_profile") && !map.containsKey("sound_mode")) {
+            map["sound_mode"] = map["sound_profile"]!!.copy(tileId = "sound_mode")
+        }
+
         _tileConfigs.value = map
     }
 
@@ -164,13 +173,21 @@ object TileCommandRepository {
                 return config
             }
         }
+        val aliasId = when (tileId) {
+            "sound_mode" -> "sound_profile"
+            "sound_profile" -> "sound_mode"
+            else -> null
+        }
+        if (aliasId != null) {
+            _tileConfigs.value[aliasId]?.let { return it.copy(tileId = tileId) }
+        }
         return TileCommandConfig(tileId = tileId)
     }
 
     fun saveConfig(context: Context, config: TileCommandConfig) {
         appContext = context.applicationContext
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit()
+        val editor = prefs.edit()
             .putBoolean("override_${config.tileId}", config.isOverrideEnabled)
             .putString("type_${config.tileId}", config.overrideType.id)
             .putString("mode_${config.tileId}", config.executionMode.id)
@@ -184,15 +201,41 @@ object TileCommandRepository {
             .putBoolean("block_state_${config.tileId}", config.blockStateChanging)
             .putBoolean("always_active_${config.tileId}", config.alwaysActive)
             .putBoolean("bypass_app_${config.tileId}", config.bypassAppLaunch)
-            .apply()
+
+        val aliasId = when (config.tileId) {
+            "sound_mode" -> "sound_profile"
+            "sound_profile" -> "sound_mode"
+            else -> null
+        }
+        if (aliasId != null) {
+            editor
+                .putBoolean("override_$aliasId", config.isOverrideEnabled)
+                .putString("type_$aliasId", config.overrideType.id)
+                .putString("mode_$aliasId", config.executionMode.id)
+                .putString("cmd_on_$aliasId", config.commandOn)
+                .putString("cmd_off_$aliasId", config.commandOff)
+                .putString("intent_action_$aliasId", config.customIntentAction)
+                .putString("intent_pkg_$aliasId", config.customIntentPackage)
+                .putString("intent_comp_$aliasId", config.customIntentComponent)
+                .putBoolean("close_panel_$aliasId", config.closePanelOnPress)
+                .putBoolean("force_state_$aliasId", config.forceStateChangeAnyway)
+                .putBoolean("block_state_$aliasId", config.blockStateChanging)
+                .putBoolean("always_active_$aliasId", config.alwaysActive)
+                .putBoolean("bypass_app_$aliasId", config.bypassAppLaunch)
+        }
+        editor.apply()
 
         val current = _tileConfigs.value.toMutableMap()
         current[config.tileId] = config
+        if (aliasId != null) {
+            current[aliasId] = config.copy(tileId = aliasId)
+        }
         _tileConfigs.value = current
     }
 
     fun resetConfig(context: Context, tileId: String) {
-        val defaultPair = defaultTilesList.find { it.first == tileId }?.second ?: ("" to "")
+        val canonicalId = if (tileId == "sound_profile") "sound_mode" else tileId
+        val defaultPair = defaultTilesList.find { it.first == tileId || it.first == canonicalId }?.second ?: ("" to "")
         val config = TileCommandConfig(
             tileId = tileId,
             isOverrideEnabled = false,
@@ -209,6 +252,62 @@ object TileCommandRepository {
             bypassAppLaunch = true
         )
         saveConfig(context, config)
+    }
+
+    fun setGlobalExecutionMode(context: Context, mode: CommandExecutionMode, enableOverrides: Boolean = true) {
+        appContext = context.applicationContext
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val editor = prefs.edit()
+        val currentMap = _tileConfigs.value.toMutableMap()
+
+        val allTileIds = (defaultTilesList.map { it.first } + currentMap.keys).toSet()
+
+        for (tileId in allTileIds) {
+            val existing = currentMap[tileId] ?: TileCommandConfig(tileId = tileId)
+            val defaultPair = defaultTilesList.find { it.first == tileId }?.second ?: ("" to "")
+            val updated = existing.copy(
+                executionMode = mode,
+                isOverrideEnabled = if (enableOverrides) true else existing.isOverrideEnabled,
+                commandOn = if (existing.commandOn.isBlank()) defaultPair.first else existing.commandOn,
+                commandOff = if (existing.commandOff.isBlank()) defaultPair.second else existing.commandOff
+            )
+            currentMap[tileId] = updated
+
+            editor.putString("mode_$tileId", mode.id)
+                .putBoolean("override_$tileId", updated.isOverrideEnabled)
+                .putString("cmd_on_$tileId", updated.commandOn)
+                .putString("cmd_off_$tileId", updated.commandOff)
+        }
+        editor.apply()
+        _tileConfigs.value = currentMap
+    }
+
+    fun setAllOverridesEnabled(context: Context, enable: Boolean, currentMode: CommandExecutionMode? = null) {
+        appContext = context.applicationContext
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val editor = prefs.edit()
+        val currentMap = _tileConfigs.value.toMutableMap()
+
+        val allTileIds = (defaultTilesList.map { it.first } + currentMap.keys).toSet()
+
+        for (tileId in allTileIds) {
+            val existing = currentMap[tileId] ?: TileCommandConfig(tileId = tileId)
+            val defaultPair = defaultTilesList.find { it.first == tileId }?.second ?: ("" to "")
+            val updated = existing.copy(
+                isOverrideEnabled = enable,
+                executionMode = currentMode ?: existing.executionMode,
+                commandOn = if (existing.commandOn.isBlank()) defaultPair.first else existing.commandOn,
+                commandOff = if (existing.commandOff.isBlank()) defaultPair.second else existing.commandOff
+            )
+            currentMap[tileId] = updated
+
+            editor.putBoolean("override_$tileId", enable)
+                .putString("mode_$tileId", updated.executionMode.id)
+                .putString("cmd_on_$tileId", updated.commandOn)
+                .putString("cmd_off_$tileId", updated.commandOff)
+        }
+        editor.apply()
+        _tileConfigs.value = currentMap
     }
 }
 

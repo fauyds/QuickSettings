@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RotateRight
@@ -527,7 +528,7 @@ private fun PrivilegeEngineStep(viewModel: MainViewModel) {
             requestButtonText = null,
             onRequestPermission = null,
             isPermissionGranted = true,
-            onSelect = { privilegeEngine.setMode(PrivilegeMode.STANDARD) }
+            onSelect = { viewModel.setPrivilegeMode(PrivilegeMode.STANDARD) }
         )
 
         // Mode 2: Shizuku Mode
@@ -565,7 +566,7 @@ private fun PrivilegeEngineStep(viewModel: MainViewModel) {
             },
             isPermissionGranted = shizukuStatus == ShizukuStatusState.RUNNING_GRANTED,
             onSelect = {
-                privilegeEngine.setMode(PrivilegeMode.SHIZUKU)
+                viewModel.setPrivilegeMode(PrivilegeMode.SHIZUKU)
                 if (shizukuStatus != ShizukuStatusState.RUNNING_GRANTED) {
                     val msg = privilegeEngine.requestShizukuPermission()
                     Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
@@ -611,7 +612,7 @@ private fun PrivilegeEngineStep(viewModel: MainViewModel) {
             },
             isPermissionGranted = isRootAvail,
             onSelect = {
-                privilegeEngine.setMode(PrivilegeMode.ROOT)
+                viewModel.setPrivilegeMode(PrivilegeMode.ROOT)
                 if (!isRootAvail) {
                     val ok = privilegeEngine.requestRootPermission()
                     val msg = if (ok) "Root access granted!" else "Root access denied or SU not found"
@@ -989,7 +990,10 @@ private fun TileCommandsStep(viewModel: MainViewModel) {
                         }
 
                         Button(
-                            onClick = { activeMode = mode },
+                            onClick = {
+                                activeMode = mode
+                                viewModel.setPrivilegeMode(mode)
+                            },
                             shape = shape,
                             border = null,
                             elevation = null,
@@ -1011,6 +1015,76 @@ private fun TileCommandsStep(viewModel: MainViewModel) {
                         }
                     }
                 }
+            }
+        }
+
+        // Master Enable All Toggles Card
+        val areAllOverridesEnabled = remember(configs) {
+            SetupAllTilesList.all { tile -> configs[tile.id]?.isOverrideEnabled == true }
+        }
+
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = cardBg),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("setup_enable_all_commands_card")
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                        Text(
+                            text = "Enable All Tile Overrides",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = if (areAllOverridesEnabled) "All tile overrides are active" else "Turn on custom command overrides for all tiles",
+                            fontSize = 11.5.sp,
+                            lineHeight = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Switch(
+                    checked = areAllOverridesEnabled,
+                    onCheckedChange = { enable ->
+                        val currentExecMode = if (activeMode == PrivilegeMode.ROOT) CommandExecutionMode.ROOT
+                            else if (activeMode == PrivilegeMode.SHIZUKU) CommandExecutionMode.SHIZUKU
+                            else CommandExecutionMode.STANDARD
+                        TileCommandRepository.setAllOverridesEnabled(context, enable, currentExecMode)
+                    },
+                    modifier = Modifier.testTag("setup_toggle_all_commands")
+                )
             }
         }
 
@@ -1175,6 +1249,14 @@ private fun SetupTileCommandEditorCard(
                             )
                         }
                     }
+
+                    Switch(
+                        checked = config.isOverrideEnabled,
+                        onCheckedChange = { isChecked ->
+                            onSaveConfig(config.copy(isOverrideEnabled = isChecked))
+                        },
+                        modifier = Modifier.testTag("setup_switch_override_${tile.id}")
+                    )
 
                     IconButton(
                         onClick = { isExpanded = !isExpanded },
@@ -1377,10 +1459,70 @@ private fun SetupTileCommandEditorCard(
  */
 @Composable
 private fun TileVisibilityStep(viewModel: MainViewModel) {
-    val hiddenTileIds by viewModel.hiddenTileIds.collectAsState()
+    val hiddenTileIds by viewModel.hiddenTileIds.collectAsStateWithLifecycle()
+    val allRawTiles by viewModel.allRawTiles.collectAsStateWithLifecycle()
     val isDark = LocalIsDarkTheme.current
     val cardBg = getSettingsCardBackgroundColor(isDark)
     val context = LocalContext.current
+
+    val fallbackTiles = remember {
+        listOf(
+            SetupTileVisEntry("wifi", "Wi-Fi", Icons.Default.Wifi),
+            SetupTileVisEntry("cellular", "Mobile Data", Icons.Default.SignalCellular4Bar),
+            SetupTileVisEntry("bluetooth", "Bluetooth", Icons.Default.Bluetooth),
+            SetupTileVisEntry("torch", "Flashlight", Icons.Default.FlashlightOn),
+            SetupTileVisEntry("autorotate", "Auto-Rotate", Icons.Default.RotateRight),
+            SetupTileVisEntry("hotspot", "Hotspot / Wi-Fi Tethering", Icons.Default.WifiTethering),
+            SetupTileVisEntry("airplane", "Airplane Mode", Icons.Default.AirplanemodeActive),
+            SetupTileVisEntry("location", "Location", Icons.Default.LocationOn),
+            SetupTileVisEntry("nfc", "NFC", Icons.Default.Nfc),
+            SetupTileVisEntry("battery_saver", "Battery Saver", Icons.Default.BatterySaver),
+            SetupTileVisEntry("sound_profile", "Sound & Volume", Icons.Default.VolumeUp),
+            SetupTileVisEntry("dark_mode", "Dark Theme", Icons.Default.DarkMode),
+            SetupTileVisEntry("dnd", "Do Not Disturb", Icons.Default.NotificationsOff),
+            SetupTileVisEntry("aod", "Always-On Display", Icons.Default.Wallpaper),
+            SetupTileVisEntry("ambient_display", "Ambient Display", Icons.Default.Visibility),
+            SetupTileVisEntry("caffeine", "Caffeine", Icons.Default.LocalCafe),
+            SetupTileVisEntry("heads_up", "Heads Up", Icons.Default.NotificationsActive),
+            SetupTileVisEntry("screenshot", "Screenshot", Icons.Default.CameraAlt),
+            SetupTileVisEntry("screenrecord", "Screen Record", Icons.Default.Videocam)
+        )
+    }
+
+    val displayTiles = remember(allRawTiles) {
+        if (allRawTiles.isNotEmpty()) {
+            allRawTiles.map { tile ->
+                SetupTileVisEntry(
+                    id = tile.id,
+                    label = tile.label,
+                    icon = tile.iconVector ?: when (tile.id) {
+                        "wifi" -> Icons.Default.Wifi
+                        "cellular" -> Icons.Default.SignalCellular4Bar
+                        "bluetooth" -> Icons.Default.Bluetooth
+                        "torch" -> Icons.Default.FlashlightOn
+                        "autorotate" -> Icons.Default.RotateRight
+                        "hotspot" -> Icons.Default.WifiTethering
+                        "airplane" -> Icons.Default.AirplanemodeActive
+                        "location" -> Icons.Default.LocationOn
+                        "nfc" -> Icons.Default.Nfc
+                        "battery_saver" -> Icons.Default.BatterySaver
+                        "sound_profile", "sound_mode", "volume" -> Icons.Default.VolumeUp
+                        "dark_mode" -> Icons.Default.DarkMode
+                        "dnd" -> Icons.Default.NotificationsOff
+                        "aod" -> Icons.Default.Wallpaper
+                        "ambient_display" -> Icons.Default.Visibility
+                        "caffeine" -> Icons.Default.LocalCafe
+                        "heads_up" -> Icons.Default.NotificationsActive
+                        "screenshot" -> Icons.Default.CameraAlt
+                        "screenrecord" -> Icons.Default.Videocam
+                        else -> Icons.Default.Tune
+                    }
+                )
+            }
+        } else {
+            fallbackTiles
+        }
+    }
 
     SetupStepHeader(
         icon = Icons.Default.Visibility,
@@ -1454,23 +1596,15 @@ private fun TileVisibilityStep(viewModel: MainViewModel) {
                     color = MaterialTheme.colorScheme.primary
                 )
 
-                val essentialTiles = listOf(
-                    Triple("wifi", "Wi-Fi", Icons.Default.Wifi),
-                    Triple("bluetooth", "Bluetooth", Icons.Default.Bluetooth),
-                    Triple("torch", "Flashlight", Icons.Default.FlashlightOn),
-                    Triple("cellular", "Mobile Data", Icons.Default.SignalCellular4Bar),
-                    Triple("autorotate", "Auto-Rotate", Icons.Default.RotateRight),
-                    Triple("hotspot", "Hotspot", Icons.Default.WifiTethering),
-                    Triple("airplane", "Airplane Mode", Icons.Default.AirplanemodeActive),
-                    Triple("location", "Location", Icons.Default.LocationOn),
-                    Triple("battery_saver", "Battery Saver", Icons.Default.BatterySaver),
-                    Triple("dark_mode", "Dark Theme", Icons.Default.DarkMode),
-                    Triple("screenrecord", "Screen Record", Icons.Default.Videocam),
-                    Triple("volume", "Sound & Volume", Icons.Default.VolumeUp)
-                )
+                displayTiles.forEach { tile ->
+                    val rawTile = allRawTiles.find { it.id == tile.id }
+                    val isHidden = tile.id in hiddenTileIds ||
+                        (rawTile != null && !rawTile.isVisible) ||
+                        (if (tile.id == "sound_profile" || tile.id == "sound_mode" || tile.id == "volume")
+                            "sound_mode" in hiddenTileIds || "sound_profile" in hiddenTileIds || "volume" in hiddenTileIds
+                         else false)
+                    val isVisible = !isHidden
 
-                essentialTiles.forEach { (tileId, title, icon) ->
-                    val isVisible = tileId !in hiddenTileIds
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -1478,7 +1612,8 @@ private fun TileVisibilityStep(viewModel: MainViewModel) {
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.weight(1f)
                         ) {
                             Box(
                                 modifier = Modifier
@@ -1488,14 +1623,14 @@ private fun TileVisibilityStep(viewModel: MainViewModel) {
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = icon,
+                                    imageVector = tile.icon,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
                             Text(
-                                text = title,
+                                text = tile.label,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -1505,9 +1640,9 @@ private fun TileVisibilityStep(viewModel: MainViewModel) {
                         Switch(
                             checked = isVisible,
                             onCheckedChange = { visible ->
-                                viewModel.setTileHidden(tileId, !visible)
+                                viewModel.setTileHidden(tile.id, !visible)
                             },
-                            modifier = Modifier.testTag("setup_tile_vis_$tileId")
+                            modifier = Modifier.testTag("setup_tile_vis_${tile.id}")
                         )
                     }
                 }
@@ -1515,6 +1650,12 @@ private fun TileVisibilityStep(viewModel: MainViewModel) {
         }
     }
 }
+
+private data class SetupTileVisEntry(
+    val id: String,
+    val label: String,
+    val icon: ImageVector
+)
 
 /**
  * STEP 5: Trigger & Shade Toggles

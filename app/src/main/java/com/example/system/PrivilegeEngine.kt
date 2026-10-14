@@ -26,8 +26,24 @@ enum class ShizukuStatusState(val label: String) {
 
 class PrivilegeEngine(private val context: Context) {
 
-    private val _currentMode = MutableStateFlow(PrivilegeMode.STANDARD)
+    private val _currentMode = MutableStateFlow(
+        try {
+            val prefs = context.getSharedPreferences("quickpanel_prefs", Context.MODE_PRIVATE)
+            val saved = prefs.getString("privilege_mode", PrivilegeMode.STANDARD.name)
+            PrivilegeMode.valueOf(saved ?: PrivilegeMode.STANDARD.name)
+        } catch (_: Exception) {
+            com.example.data.PanelPreferences.privilegeMode.value
+        }
+    )
     val currentMode: StateFlow<PrivilegeMode> = _currentMode.asStateFlow()
+
+    fun syncWithPreferences() {
+        val savedMode = com.example.data.PanelPreferences.privilegeMode.value
+        if (_currentMode.value != savedMode) {
+            _currentMode.value = savedMode
+            _lastExecutionLog.value = "Active privilege mode synced to: ${savedMode.title}"
+        }
+    }
 
     private val _isRootAvailable = MutableStateFlow(false)
     val isRootAvailable: StateFlow<Boolean> = _isRootAvailable.asStateFlow()
@@ -113,6 +129,13 @@ class PrivilegeEngine(private val context: Context) {
     fun setMode(mode: PrivilegeMode) {
         _currentMode.value = mode
         _lastExecutionLog.value = "Active privilege mode set to: ${mode.title}"
+        com.example.data.PanelPreferences.setPrivilegeMode(context, mode)
+        val execMode = when (mode) {
+            PrivilegeMode.ROOT -> com.example.model.CommandExecutionMode.ROOT
+            PrivilegeMode.SHIZUKU -> com.example.model.CommandExecutionMode.SHIZUKU
+            PrivilegeMode.STANDARD -> com.example.model.CommandExecutionMode.STANDARD
+        }
+        com.example.data.TileCommandRepository.setGlobalExecutionMode(context, execMode, enableOverrides = true)
         if (mode == PrivilegeMode.SHIZUKU) {
             requestShizukuPermission()
         }

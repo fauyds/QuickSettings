@@ -185,13 +185,13 @@ class NativeTileManager(
     fun checkDarkThemeState(): Boolean {
         return try {
             val nightMode = Settings.Secure.getInt(contentResolver, "ui_night_mode", -1)
-            if (nightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES) {
-                true
-            } else if (nightMode == android.content.res.Configuration.UI_MODE_NIGHT_NO) {
-                false
-            } else {
-                val currentUiMode = context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
-                currentUiMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            when (nightMode) {
+                1 -> false // UiModeManager.MODE_NIGHT_NO
+                2 -> true  // UiModeManager.MODE_NIGHT_YES
+                else -> {
+                    val currentUiMode = context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+                    currentUiMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+                }
             }
         } catch (e: Exception) {
             val currentUiMode = context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
@@ -402,6 +402,14 @@ class NativeTileManager(
         }
 
         // Observer for Dark Theme / Night Mode
+        SystemThemeObserver.init(context)
+        scope.launch {
+            SystemThemeObserver.isDarkTheme.collect { dark ->
+                if (System.currentTimeMillis() >= ignoreDarkModeObserverUntil) {
+                    _isDarkThemeEnabled.value = dark
+                }
+            }
+        }
         try {
             contentResolver.registerContentObserver(
                 Settings.Secure.getUriFor("ui_night_mode"),

@@ -148,6 +148,7 @@ class QuickSettingsOverlayService : Service() {
         isRunning = true
         PanelPreferences.init(this)
         MediaSessionManagerHelper.init(this)
+        com.example.system.SystemThemeObserver.init(this)
         windowManager = getSystemService(Context.WINDOW_SERVICE) as? WindowManager
         createNotificationChannel()
 
@@ -182,6 +183,7 @@ class QuickSettingsOverlayService : Service() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        com.example.system.SystemThemeObserver.onConfigurationChanged(this, newConfig)
         immersiveModeDetector?.checkNow()
         val immersive = isImmersiveModeActive()
         updateTriggerVisibility(immersive)

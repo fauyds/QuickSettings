@@ -53,6 +53,7 @@ class MainActivity : ComponentActivity() {
         com.example.data.PanelPreferences.init(this)
         com.example.data.TileCommandRepository.init(this)
         com.example.service.MediaSessionManagerHelper.init(this)
+        com.example.system.SystemThemeObserver.init(this)
 
         handleTriggerIntent(intent)
 
@@ -79,6 +80,11 @@ class MainActivity : ComponentActivity() {
             }
             viewModel.refreshServiceState()
         }
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        com.example.system.SystemThemeObserver.onConfigurationChanged(this, newConfig)
     }
 
     override fun onNewIntent(intent: Intent) {
