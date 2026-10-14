@@ -25,7 +25,7 @@
 
 <div align="center">
 <img src="screenshots/Screenshot_20261014-204016.png" width="22%" alt="Privileges" />
-<img src="screenshots/1000002456.png" width="22%" alt="Custom Tile Shape SVG" />
+<img src="screenshots/Screenshot_20261014-204026.png" width="22%" alt="Customize" />
 <img src="screenshots/1000002459.png" width="22%" alt="Slider & Progress Styles" />
 <img src="screenshots/1000002467.png" width="22%" alt="Notification Hub & Blacklist" />
 
