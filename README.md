@@ -19,11 +19,6 @@
 <img src="screenshots/Screenshot_20261014-203946.png" width="22%" alt="App Status & Diagnostics" />
 <img src="screenshots/Screenshot_20261014-203953.png" width="22%" alt="Custom Shell Commands" />
 <img src="screenshots/Screenshot_20261014-204007.png" width="22%" alt="Tile Visibility" />
-<p align="center"/>
-</div>
-
-
-<div align="center">
 <img src="screenshots/Screenshot_20261014-204016.png" width="22%" alt="Privileges" />
 <img src="screenshots/Screenshot_20261014-204026.png" width="22%" alt="Customize" />
 <img src="screenshots/Screenshot_20261014-204039.png" width="22%" alt="QS Design" />
