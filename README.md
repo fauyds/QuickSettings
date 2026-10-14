@@ -13,6 +13,22 @@
 
 </div>
 
+## 📷 Screenshots
+<img src="screenshots/1000002444.png" width="22%" alt="Quick Settings Overlay" />
+<img src="screenshots/1000002445.png" width="22%" alt="App Status & Diagnostics" />
+<img src="screenshots/1000002448.png" width="22%" alt="Custom Shell Commands" />
+<img src="screenshots/1000002450.png" width="22%" alt="Execution Privileges Engine" />
+</div>
+
+
+<div align="center">
+<img src="screenshots/1000002452.png" width="22%" alt="Customize Menu" />
+<img src="screenshots/1000002456.png" width="22%" alt="Custom Tile Shape SVG" />
+<img src="screenshots/1000002459.png" width="22%" alt="Slider & Progress Styles" />
+<img src="screenshots/1000002467.png" width="22%" alt="Notification Hub & Blacklist" />
+
+</div>
+
 ---
 
 ## ✨ Key Highlights
