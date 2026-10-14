@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.fauyds.quicksettings.ui.tile.TileRootLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.example.ui.tile.TileRootLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/ll_tile_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -84,4 +84,4 @@
             android:textSize="9.5sp"
             android:clipChildren="false" />
     </LinearLayout>
-</com.fauyds.quicksettings.ui.tile.TileRootLayout>
+</com.example.ui.tile.TileRootLayout>
