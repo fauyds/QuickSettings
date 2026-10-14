@@ -22,13 +22,21 @@ android {
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
+  signingConfigs {
+    create("release") {
+      storeFile = file("fauyds-release-key.jks")
+      storePassword = "WXQLTAZXC1"
+      keyAlias = "fauyds-alias"
+      keyPassword = "WXQLTAZXC1"
+    }
+  }
+
   buildTypes {
     release {
       isCrunchPngs = false
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      // Убираем обязательное требование ключа подписи для автосборки в GitHub Actions
-      signingConfig = signingConfigs.getByName("debug")
+      signingConfig = signingConfigs.getByName("release")
     }
   }
 
@@ -42,7 +50,6 @@ android {
     buildConfig = true
   }
 
-  // Наглухо отключаем падения из-за ошибок Lint Vital
   lint {
     checkReleaseBuilds = false
     abortOnError = false
@@ -65,7 +72,6 @@ secrets {
 googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
 
 dependencies {
-  // Исправление ошибки с FragmentActivity/ActivityResult
   implementation("androidx.fragment:fragment-ktx:1.8.5")
   implementation("androidx.recyclerview:recyclerview:1.4.0")
   implementation("androidx.cardview:cardview:1.0.0")
