@@ -18,7 +18,7 @@
 <img src="screenshots/Screenshot_20261014-203941.png" width="22%" alt="Quick Settings Overlay" />
 <img src="screenshots/Screenshot_20261014-203946.png" width="22%" alt="App Status & Diagnostics" />
 <img src="screenshots/Screenshot_20261014-203953.png" width="22%" alt="Custom Shell Commands" />
-<img src="screenshots/1000002450.png" width="22%" alt="Execution Privileges Engine" />
+<img src="screenshots/Screenshot_20261014-204007.png" width="22%" alt="Tile Visibility" />
 <p align="center"/>
 </div>
 
