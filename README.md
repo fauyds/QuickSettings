@@ -33,8 +33,9 @@
 <img src="screenshots/Screenshot_20261014-204059.png" width="22%" alt="QS Design 4" />
 <img src="screenshots/Screenshot_20261014-204106.png" width="22%" alt="QS Tweaks" />
 <img src="screenshots/Screenshot_20261014-204125.png" width="22%" alt="QS Tweaks 2" />
-<img src="screenshot" width="22%" alt="name" />
-
+<img src="screenshots/Screenshot_20261014-204135.png" width="22%" alt="Trigger" />
+<img src="screenshots/Screenshot_20261014-204145.png" width="22%" alt="Trigger 2" />
+<img src="screenshots/Screenshot_20261014-204202.png" width="22%" alt="Notif Hub" />
 
 </div>
 
