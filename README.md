@@ -26,8 +26,15 @@
 <div align="center">
 <img src="screenshots/Screenshot_20261014-204016.png" width="22%" alt="Privileges" />
 <img src="screenshots/Screenshot_20261014-204026.png" width="22%" alt="Customize" />
-<img src="screenshots/1000002459.png" width="22%" alt="Slider & Progress Styles" />
-<img src="screenshots/1000002467.png" width="22%" alt="Notification Hub & Blacklist" />
+<img src="screenshots/Screenshot_20261014-204039.png" width="22%" alt="QS Design" />
+<img src="screenshots/Screenshot_20261014-204042.png" width="22%" alt="Custom Tile Shape" />
+<img src="screenshots/Screenshot_20261014-204052.png" width="22%" alt="QS Design 2" />
+<img src="screenshots/Screenshot_20261014-204057.png" width="22%" alt="QS Design 3" />
+<img src="screenshots/Screenshot_20261014-204059.png" width="22%" alt="QS Design 4" />
+<img src="screenshots/Screenshot_20261014-204106.png" width="22%" alt="QS Tweaks" />
+<img src="screenshots/Screenshot_20261014-204125.png" width="22%" alt="QS Tweaks 2" />
+<img src="screenshot" width="22%" alt="name" />
+
 
 </div>
 
