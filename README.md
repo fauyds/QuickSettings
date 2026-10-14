@@ -32,7 +32,9 @@
 <img src="screenshots/Screenshot_20261014-204145.png" width="22%" alt="Trigger 2" />
 <img src="screenshots/Screenshot_20261014-204202.png" width="22%" alt="Notif Hub" />
 
+<div align="center">
 [![More Screenshots](https://img.shields.io/badge/More_Screenshots-📁_Folder-24292E?style=for-the-badge&logo=github&logoColor=white)](./screenshots)
+<div align="center"/>
 
 </div>
 
