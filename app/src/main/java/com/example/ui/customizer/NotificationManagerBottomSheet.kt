@@ -82,6 +82,35 @@ import com.example.ui.theme.DarkUiSurfaceVariant
 import com.example.ui.theme.ExpressiveCardShapes
 import com.example.ui.theme.LocalIsDarkTheme
 
+private object QsNotifCardShapes {
+    val OuterCorner = 16.dp
+    val InsideCorner = 5.dp
+
+    val TopCard = RoundedCornerShape(
+        topStart = OuterCorner,
+        topEnd = OuterCorner,
+        bottomStart = InsideCorner,
+        bottomEnd = InsideCorner
+    )
+    val CenterCard = RoundedCornerShape(InsideCorner)
+    val BottomCard = RoundedCornerShape(
+        topStart = InsideCorner,
+        topEnd = InsideCorner,
+        bottomStart = OuterCorner,
+        bottomEnd = OuterCorner
+    )
+    val SingleCard = RoundedCornerShape(OuterCorner)
+
+    fun getShape(index: Int, count: Int): RoundedCornerShape {
+        return when {
+            count <= 1 -> SingleCard
+            index == 0 -> TopCard
+            index == count - 1 -> BottomCard
+            else -> CenterCard
+        }
+    }
+}
+
 /**
  * In-Composition Modal Window / Bottom Sheet for viewing blocked notifications,
  * unhiding them, and viewing/disabling live non-dismissable ongoing notifications.
@@ -142,7 +171,7 @@ fun NotificationManagerBottomSheet(
             // 2. Modal Card Container
             Surface(
                 shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-                color = if (isDark) DarkUiSurface else MaterialTheme.colorScheme.surface,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 tonalElevation = 6.dp,
                 shadowElevation = 16.dp,
                 modifier = Modifier
@@ -157,7 +186,7 @@ fun NotificationManagerBottomSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
                 ) {
                     // Drag pill indicator
                     Box(
@@ -165,10 +194,7 @@ fun NotificationManagerBottomSheet(
                             .align(Alignment.CenterHorizontally)
                             .size(width = 36.dp, height = 4.dp)
                             .clip(CircleShape)
-                            .background(
-                                if (isDark) Color.White.copy(alpha = 0.25f)
-                                else Color.Black.copy(alpha = 0.2f)
-                            )
+                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f))
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -187,13 +213,13 @@ fun NotificationManagerBottomSheet(
                                 modifier = Modifier
                                     .size(34.dp)
                                     .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Tune,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -208,7 +234,7 @@ fun NotificationManagerBottomSheet(
                                 Text(
                                     text = "Manage blocked rules & persistent cards",
                                     fontSize = 11.sp,
-                                    color = if (isDark) Color.LightGray else Color(0xFF666666)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -236,7 +262,7 @@ fun NotificationManagerBottomSheet(
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Close",
-                                    tint = if (isDark) Color.White else Color(0xFF333333),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -248,7 +274,7 @@ fun NotificationManagerBottomSheet(
                     if (!isGranted) {
                         // Permission warning banner
                         Card(
-                            shape = ExpressiveCardShapes.SingleCard,
+                            shape = QsNotifCardShapes.SingleCard,
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.errorContainer
                             ),
@@ -285,7 +311,8 @@ fun NotificationManagerBottomSheet(
                                         QuickPanelNotificationListenerService.openPermissionSettings(context)
                                     },
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.error
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                        contentColor = MaterialTheme.colorScheme.onError
                                     ),
                                     shape = RoundedCornerShape(8.dp),
                                     modifier = Modifier.fillMaxWidth().testTag("grant_notif_perm_btn")
@@ -301,18 +328,13 @@ fun NotificationManagerBottomSheet(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            val tabs = listOf(0, 1)
                             FilterChip(
                                 selected = selectedTab == 0,
                                 onClick = {
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     selectedTab = 0
                                 },
-                                shape = SegmentedButtonShapes.getShape(
-                                    item = 0,
-                                    items = tabs,
-                                    selectedItem = selectedTab
-                                ),
+                                shape = if (selectedTab == 0) CircleShape else RoundedCornerShape(8.dp),
                                 border = null,
                                 label = {
                                     Text(
@@ -321,7 +343,12 @@ fun NotificationManagerBottomSheet(
                                         fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal
                                     )
                                 },
-                                colors = settingsChipColors(),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                ),
                                 modifier = Modifier.weight(1f).testTag("tab_live_ongoing")
                             )
 
@@ -331,11 +358,7 @@ fun NotificationManagerBottomSheet(
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     selectedTab = 1
                                 },
-                                shape = SegmentedButtonShapes.getShape(
-                                    item = 1,
-                                    items = tabs,
-                                    selectedItem = selectedTab
-                                ),
+                                shape = if (selectedTab == 1) CircleShape else RoundedCornerShape(8.dp),
                                 border = null,
                                 label = {
                                     Text(
@@ -344,28 +367,33 @@ fun NotificationManagerBottomSheet(
                                         fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal
                                     )
                                 },
-                                colors = settingsChipColors(),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                ),
                                 modifier = Modifier.weight(1f).testTag("tab_blocked_rules")
                             )
                         }
 
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        // Content List Area (scrollable, height constrained)
+                        // Content List Area (scrollable, height constrained, 4dp card spacing)
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(max = 380.dp)
                                 .verticalScroll(rememberScrollState()),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             if (selectedTab == 0) {
                                 // 1. LIVE ONGOING NOTIFICATIONS LIST
                                 if (liveOngoingList.isEmpty()) {
                                     Card(
-                                        shape = ExpressiveCardShapes.SingleCard,
+                                        shape = QsNotifCardShapes.SingleCard,
                                         colors = CardDefaults.cardColors(
-                                            containerColor = if (isDark) DarkUiSurfaceVariant.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                                         ),
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
@@ -376,7 +404,7 @@ fun NotificationManagerBottomSheet(
                                             Icon(
                                                 imageVector = Icons.Default.NotificationsActive,
                                                 contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                                                tint = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.size(24.dp)
                                             )
                                             Spacer(modifier = Modifier.height(6.dp))
@@ -384,28 +412,30 @@ fun NotificationManagerBottomSheet(
                                                 text = "No active ongoing notifications",
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = if (isDark) Color.White else Color(0xFF333333)
+                                                color = MaterialTheme.colorScheme.onSurface
                                             )
                                             Text(
                                                 text = "All active notifications on this device are standard/clearable.",
                                                 fontSize = 11.sp,
-                                                color = if (isDark) Color.Gray else Color(0xFF777777)
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }
                                 } else {
-                                    liveOngoingList.forEach { item ->
+                                    liveOngoingList.forEachIndexed { index, item ->
                                         val isPkgHidden = hiddenPkgs.contains(item.packageName)
                                         val isChannelHidden = item.channelId != null && hiddenChannels.contains(item.channelId)
                                         val isBlocked = isPkgHidden || isChannelHidden
 
+                                        val cardShape = QsNotifCardShapes.getShape(index, liveOngoingList.size)
+
                                         SettingsCard(
-                                            shape = ExpressiveCardShapes.SingleCard,
+                                            shape = cardShape,
                                             colors = CardDefaults.cardColors(
                                                 containerColor = if (isBlocked) {
-                                                    if (isDark) DarkUiSurfaceVariant.copy(alpha = 0.25f) else MaterialTheme.colorScheme.background
+                                                    MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.5f)
                                                 } else {
-                                                    if (isDark) DarkUiSurfaceVariant else Color.White
+                                                    MaterialTheme.colorScheme.surfaceContainer
                                                 }
                                             ),
                                             modifier = Modifier.fillMaxWidth().testTag("ongoing_item_${item.id}")
@@ -413,7 +443,7 @@ fun NotificationManagerBottomSheet(
                                             Row(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(10.dp),
+                                                    .padding(horizontal = 10.dp, vertical = 3.dp),
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 horizontalArrangement = Arrangement.SpaceBetween
                                             ) {
@@ -441,7 +471,7 @@ fun NotificationManagerBottomSheet(
                                                                 text = item.appName,
                                                                 fontSize = 12.sp,
                                                                 fontWeight = FontWeight.Bold,
-                                                                color = if (isBlocked) Color.Gray else if (isDark) Color.White else Color(0xFF222222),
+                                                                color = if (isBlocked) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface,
                                                                 maxLines = 1,
                                                                 overflow = TextOverflow.Ellipsis,
                                                                 modifier = Modifier.weight(1f, fill = false)
@@ -450,28 +480,28 @@ fun NotificationManagerBottomSheet(
                                                             if (isBlocked) {
                                                                 Surface(
                                                                     shape = RoundedCornerShape(4.dp),
-                                                                    color = Color.Red.copy(alpha = 0.15f)
+                                                                    color = MaterialTheme.colorScheme.errorContainer
                                                                 ) {
                                                                     Text(
                                                                         text = "Blocked",
                                                                         fontSize = 9.sp,
                                                                         fontWeight = FontWeight.Bold,
                                                                         maxLines = 1,
-                                                                        color = Color(0xFFFF5252),
+                                                                        color = MaterialTheme.colorScheme.onErrorContainer,
                                                                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                                                                     )
                                                                 }
                                                             } else {
                                                                 Surface(
                                                                     shape = RoundedCornerShape(4.dp),
-                                                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                                                    color = MaterialTheme.colorScheme.primaryContainer
                                                                 ) {
                                                                     Text(
                                                                         text = "Ongoing",
                                                                         fontSize = 9.sp,
                                                                         fontWeight = FontWeight.Medium,
                                                                         maxLines = 1,
-                                                                        color = MaterialTheme.colorScheme.primary,
+                                                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
                                                                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                                                                     )
                                                                 }
@@ -483,20 +513,26 @@ fun NotificationManagerBottomSheet(
                                                             Text(
                                                                 text = displayTitle,
                                                                 fontSize = 11.sp,
-                                                                color = if (isBlocked) Color.Gray else if (isDark) Color.LightGray else Color(0xFF444444),
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (isBlocked) 0.5f else 0.85f),
                                                                 maxLines = 1,
                                                                 overflow = TextOverflow.Ellipsis
                                                             )
                                                         }
 
                                                         if (!item.channelId.isNullOrBlank()) {
-                                                            Text(
-                                                                text = "Channel: ${item.channelId}",
-                                                                fontSize = 9.sp,
-                                                                color = if (isDark) Color.Gray else Color(0xFF888888),
-                                                                maxLines = 1,
-                                                                overflow = TextOverflow.Ellipsis
-                                                            )
+                                                            Surface(
+                                                                color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f),
+                                                                shape = RoundedCornerShape(4.dp)
+                                                            ) {
+                                                                Text(
+                                                                    text = "Channel: ${item.channelId}",
+                                                                    fontSize = 9.sp,
+                                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                    maxLines = 1,
+                                                                    overflow = TextOverflow.Ellipsis,
+                                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                                )
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -525,12 +561,12 @@ fun NotificationManagerBottomSheet(
                                                         containerColor = if (isBlocked) {
                                                             MaterialTheme.colorScheme.primary
                                                         } else {
-                                                            if (isDark) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.08f)
+                                                            MaterialTheme.colorScheme.errorContainer
                                                         },
                                                         contentColor = if (isBlocked) {
                                                             MaterialTheme.colorScheme.onPrimary
                                                         } else {
-                                                            if (isDark) Color(0xFFFF6B6B) else Color(0xFFD32F2F)
+                                                            MaterialTheme.colorScheme.onErrorContainer
                                                         }
                                                     ),
                                                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
@@ -567,9 +603,9 @@ fun NotificationManagerBottomSheet(
 
                                 if (blacklistRules.isEmpty()) {
                                     Card(
-                                        shape = ExpressiveCardShapes.SingleCard,
+                                        shape = QsNotifCardShapes.SingleCard,
                                         colors = CardDefaults.cardColors(
-                                            containerColor = if (isDark) DarkUiSurfaceVariant.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                                         ),
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
@@ -588,12 +624,12 @@ fun NotificationManagerBottomSheet(
                                                 text = "No blocked notifications",
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = if (isDark) Color.White else Color(0xFF333333)
+                                                color = MaterialTheme.colorScheme.onSurface
                                             )
                                             Text(
                                                 text = "Any notifications you block will appear here for unhiding.",
                                                 fontSize = 11.sp,
-                                                color = if (isDark) Color.Gray else Color(0xFF777777)
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }
@@ -620,18 +656,20 @@ fun NotificationManagerBottomSheet(
                                         }
                                     }
 
-                                    blacklistRules.forEach { (ruleId, isPackage) ->
+                                    blacklistRules.forEachIndexed { index, (ruleId, isPackage) ->
+                                        val cardShape = QsNotifCardShapes.getShape(index, blacklistRules.size)
+
                                         SettingsCard(
-                                            shape = ExpressiveCardShapes.SingleCard,
+                                            shape = cardShape,
                                             colors = CardDefaults.cardColors(
-                                                containerColor = if (isDark) DarkUiSurfaceVariant else Color.White
+                                                containerColor = MaterialTheme.colorScheme.surfaceContainer
                                             ),
                                             modifier = Modifier.fillMaxWidth().testTag("rule_card_$ruleId")
                                         ) {
                                             Row(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(10.dp),
+                                                    .padding(horizontal = 10.dp, vertical = 3.dp),
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 horizontalArrangement = Arrangement.SpaceBetween
                                             ) {
@@ -644,13 +682,13 @@ fun NotificationManagerBottomSheet(
                                                         modifier = Modifier
                                                             .size(30.dp)
                                                             .clip(CircleShape)
-                                                            .background(Color(0xFFFF5252).copy(alpha = 0.15f)),
+                                                            .background(MaterialTheme.colorScheme.errorContainer),
                                                         contentAlignment = Alignment.Center
                                                     ) {
                                                         Icon(
                                                             imageVector = Icons.Default.Block,
                                                             contentDescription = null,
-                                                            tint = Color(0xFFFF5252),
+                                                            tint = MaterialTheme.colorScheme.error,
                                                             modifier = Modifier.size(15.dp)
                                                         )
                                                     }
@@ -662,7 +700,7 @@ fun NotificationManagerBottomSheet(
                                                             text = if (isPackage) "Package: $ruleId" else "Channel: $ruleId",
                                                             fontSize = 12.sp,
                                                             fontWeight = FontWeight.Bold,
-                                                            color = if (isDark) Color.White else Color(0xFF222222),
+                                                            color = MaterialTheme.colorScheme.onSurface,
                                                             maxLines = 1,
                                                             overflow = TextOverflow.Ellipsis
                                                         )
@@ -671,7 +709,7 @@ fun NotificationManagerBottomSheet(
                                                             fontSize = 10.sp,
                                                             maxLines = 1,
                                                             overflow = TextOverflow.Ellipsis,
-                                                            color = if (isDark) Color.Gray else Color(0xFF777777)
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                                         )
                                                     }
                                                 }

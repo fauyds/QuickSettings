@@ -151,8 +151,15 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                 CategoryButton(
                     category = CustomizeCategory.PERFORMANCE,
                     itemCount = 3,
-                    shape = CustomizeCardShapes.BottomCard,
+                    shape = CustomizeCardShapes.CenterCard,
                     onClick = { selectedCategory = CustomizeCategory.PERFORMANCE }
+                )
+
+                CategoryButton(
+                    category = CustomizeCategory.ABOUT,
+                    itemCount = 1,
+                    shape = CustomizeCardShapes.BottomCard,
+                    onClick = { selectedCategory = CustomizeCategory.ABOUT }
                 )
 
                 Spacer(modifier = Modifier.height(48.dp))
@@ -257,6 +264,7 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                     CustomizeCategory.TRIGGER -> TriggerSection()
                     CustomizeCategory.GESTURES -> GesturesSection()
                     CustomizeCategory.PERFORMANCE -> PerformanceSection()
+                    CustomizeCategory.ABOUT -> AboutSection()
                 }
 
                 Spacer(modifier = Modifier.height(48.dp))

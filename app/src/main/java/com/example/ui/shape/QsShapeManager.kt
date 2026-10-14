@@ -96,6 +96,21 @@ class QsPathDrawable(
         }
     }
     private val scaledPath = android.graphics.Path()
+    private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+    }
+
+    var strokeWidth: Float = 0f
+        set(value) {
+            field = value
+            invalidateSelf()
+        }
+
+    var strokeColor: Int = Color.TRANSPARENT
+        set(value) {
+            field = value
+            invalidateSelf()
+        }
 
     fun setColor(color: Int) {
         if (paint.color != color) {
@@ -116,7 +131,14 @@ class QsPathDrawable(
     }
 
     override fun draw(canvas: Canvas) {
-        canvas.drawPath(scaledPath, paint)
+        if (Color.alpha(paint.color) > 0) {
+            canvas.drawPath(scaledPath, paint)
+        }
+        if (strokeWidth > 0f && strokeColor != Color.TRANSPARENT) {
+            strokePaint.strokeWidth = strokeWidth
+            strokePaint.color = strokeColor
+            canvas.drawPath(scaledPath, strokePaint)
+        }
     }
 
     override fun setAlpha(alpha: Int) {
@@ -151,8 +173,8 @@ object QsShapeManager {
         QsShapeItem(
             id = "squircle",
             label = "Squircle",
-            description = "Rounded square with 14dp corners",
-            pathData = "M 32,0 L 68,0 C 85.673,0 100,14.327 100,32 L 100,68 C 100,85.673 85.673,100 68,100 L 32,100 C 14.327,100 0,85.673 0,68 L 0,32 C 0,14.327 14.327,0 32,0 Z",
+            description = "Continuous curvature squircle",
+            pathData = "M50,0 C10,0 0,10 0,50 0,90 10,100 50,100 90,100 100,90 100,50 100,10 90,0 50,0 Z",
             viewportWidth = 100f,
             viewportHeight = 100f,
             drawableRes = R.drawable.qs_shape_squircle
@@ -170,16 +192,16 @@ object QsShapeManager {
             id = "teardrop",
             label = "Teardrop",
             description = "Asymmetric teardrop style",
-            pathData = "M 48,0 L 88,0 C 94.627,0 100,5.373 100,12 L 100,52 C 100,78.51 78.51,100 52,100 L 48,100 C 21.49,100 0,78.51 0,52 L 0,48 C 0,21.49 21.49,0 48,0 Z",
+            pathData = "M50,0A50,50,0,0 1 100,50 L100,85 A15,15,0,0 1 85,100 L50,100 A50,50,0,0 1 50,0z",
             viewportWidth = 100f,
             viewportHeight = 100f,
             drawableRes = R.drawable.qs_shape_teardrop
         ),
         QsShapeItem(
             id = "pill",
-            label = "Pill",
-            description = "Capsule pill shape",
-            pathData = "M 40,0 L 60,0 C 82.091,0 100,17.909 100,40 L 100,60 C 100,82.091 82.091,100 60,100 L 40,100 C 17.909,100 0,82.091 0,60 L 0,40 C 0,17.909 17.909,0 40,0 Z",
+            label = "12dp Square",
+            description = "Square with 12dp rounded corners",
+            pathData = "M 24,0 L 76,0 C 89.255,0 100,10.745 100,24 L 100,76 C 100,89.255 89.255,100 76,100 L 24,100 C 10.745,100 0,89.255 0,76 L 0,24 C 0,10.745 10.745,0 24,0 Z",
             viewportWidth = 100f,
             viewportHeight = 100f,
             drawableRes = R.drawable.qs_shape_pill
@@ -194,15 +216,6 @@ object QsShapeManager {
             drawableRes = R.drawable.qs_shape_custom_1
         ),
         QsShapeItem(
-            id = "custom_2",
-            label = "Inverted Leaf",
-            description = "Inverted diagonal leaf shape",
-            pathData = "M 12,0 L 52,0 C 78.51,0 100,21.49 100,48 L 100,88 C 100,94.627 94.627,100 88,100 L 48,100 C 21.49,100 0,78.51 0,52 L 0,12 C 0,5.373 5.373,0 12,0 Z",
-            viewportWidth = 100f,
-            viewportHeight = 100f,
-            drawableRes = R.drawable.qs_shape_custom_2
-        ),
-        QsShapeItem(
             id = "custom_3",
             label = "Arch",
             description = "Arch / dome with rounded top corners",
@@ -212,49 +225,40 @@ object QsShapeManager {
             drawableRes = R.drawable.qs_shape_custom_3
         ),
         QsShapeItem(
-            id = "custom_4",
-            label = "Inverted Arch",
-            description = "Inverted arch with rounded bottom corners",
-            pathData = "M 12,0 L 88,0 C 94.627,0 100,5.373 100,12 L 100,52 C 100,78.51 78.51,100 52,100 L 48,100 C 21.49,100 0,78.51 0,52 L 0,12 C 0,5.373 5.373,0 12,0 Z",
-            viewportWidth = 100f,
-            viewportHeight = 100f,
-            drawableRes = R.drawable.qs_shape_custom_4
-        ),
-        QsShapeItem(
-            id = "custom_5",
-            label = "Shield",
-            description = "Shield / badge shape",
-            pathData = "M 40,0 L 60,0 C 82.091,0 100,17.909 100,40 L 100,92 C 100,96.418 96.418,100 92,100 L 40,100 C 17.909,100 0,82.091 0,60 L 0,40 C 0,17.909 17.909,0 40,0 Z",
-            viewportWidth = 100f,
-            viewportHeight = 100f,
-            drawableRes = R.drawable.qs_shape_custom_5
-        ),
-        QsShapeItem(
-            id = "custom_6",
-            label = "Pebble",
-            description = "Organic pebble shape",
-            pathData = "M 48,0 L 72,0 C 87.46,0 100,12.54 100,28 L 100,72 C 100,87.46 87.46,100 72,100 L 28,100 C 12.54,100 0,87.46 0,72 L 0,48 C 0,21.49 21.49,0 48,0 Z",
-            viewportWidth = 100f,
-            viewportHeight = 100f,
-            drawableRes = R.drawable.qs_shape_custom_6
-        ),
-        QsShapeItem(
-            id = "custom_7",
-            label = "Flower",
-            description = "Material You 4-petal flower shape",
-            pathData = "M 50,0 C 65,0 75,10 75,25 C 75,35 85,40 95,45 C 100,47 100,53 95,55 C 85,60 75,65 75,75 C 75,90 65,100 50,100 C 35,100 25,90 25,75 C 25,65 15,60 5,55 C 0,53 0,47 5,45 C 15,40 25,35 25,25 C 25,10 35,0 50,0 Z",
-            viewportWidth = 100f,
-            viewportHeight = 100f,
-            drawableRes = R.drawable.qs_shape_custom_7
-        ),
-        QsShapeItem(
             id = "custom_8",
             label = "Hexagon",
-            description = "Rounded hexagon shape",
-            pathData = "M 50,4 C 53,4 56,5.5 58,7 L 90,25.5 C 93.8,27.7 96,31.7 96,36 L 96,64 C 96,68.3 93.8,72.3 90,74.5 L 58,93 C 54,95.3 46,95.3 42,93 L 10,74.5 C 6.2,72.3 4,68.3 4,64 L 4,36 C 4,31.7 6.2,27.7 10,25.5 L 42,7 C 44,5.5 47,4 50,4 Z",
+            description = "Six-sided regular hexagon",
+            pathData = "M4.8 33V67c0 5.8 3 11 8 13.7l29.4 17c4.9 2.7 11 2.7 15.9 0l29.4 -17c4.9 -2.7 8 -8 8 -13.7V33c0 -5.8 -3 -11 -8 -13.7l-29.4 -17c-4.9 -2.7 -11 -2.7 -15.9 0l-29.7 17C7.8 22.2 4.8 27.5 4.8 33z",
             viewportWidth = 100f,
             viewportHeight = 100f,
             drawableRes = R.drawable.qs_shape_custom_8
+        ),
+        QsShapeItem(
+            id = "cloud",
+            label = "Cloud",
+            description = "Fluffy cloud shape with rounded bumps",
+            pathData = "M4,50 C2,45 0,39 0,33 C0,15 15,0 33,0 C39,0 45,2 50,4 C55,2 61,0 67,0 C85,0 100,15 100,33 C100,39 98,45 96,50 C98,55 100,61 100,66 C100,85 85,100 66,100 C61,100 55,98 50,96 C45,98 39,100 33,100 C15,100 0,85 0,66 C0,61 2,55 3,50 Z",
+            viewportWidth = 100f,
+            viewportHeight = 100f,
+            drawableRes = R.drawable.qs_shape_cloud
+        ),
+        QsShapeItem(
+            id = "octagon",
+            label = "Octagon",
+            description = "Eight-sided symmetrical polygon",
+            pathData = "M20,0 80,0 100,20 100,80 80,100 20,100 0,80 0,20 20,0 Z",
+            viewportWidth = 100f,
+            viewportHeight = 100f,
+            drawableRes = R.drawable.qs_shape_octagon
+        ),
+        QsShapeItem(
+            id = "stamp",
+            label = "Stamp",
+            description = "Postage stamp style with scalloped edges",
+            pathData = "M12.97,0 C8.41,0 4.14,2.55 2.21,6.68 -1.03,13.61 -0.71,21.78 3.16,28.46 4.89,31.46 4.89,35.2 3.16,38.2 -1.05,45.48 -1.05,54.52 3.16,61.8 4.89,64.8 4.89,68.54 3.16,71.54 -0.71,78.22 -1.03,86.39 2.21,93.32 4.14,97.45 8.41,100 12.97,100 21.38,100 78.62,100 87.03,100 91.59,100 95.85,97.45 97.79,93.32 101.02,86.39 100.71,78.22 96.84,71.54 95.1,68.54 95.1,64.8 96.84,61.8 101.05,54.52 101.05,45.48 96.84,38.2 95.1,35.2 95.1,31.46 96.84,28.46 100.71,21.78 101.02,13.61 97.79,6.68 95.85,2.55 91.59,0 87.03,0 78.62,0 21.38,0 12.97,0 Z",
+            viewportWidth = 100f,
+            viewportHeight = 100f,
+            drawableRes = R.drawable.qs_shape_stamp
         )
     )
 
@@ -317,6 +321,90 @@ object QsShapeManager {
     }
 
     /**
+     * Generates a standard Android VectorDrawable XML from path data and viewport dimensions.
+     */
+    fun generateVectorXml(pathData: String, viewportWidth: Float = 100f, viewportHeight: Float = 100f): String {
+        return """<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="${viewportWidth.toInt()}dp"
+    android:height="${viewportHeight.toInt()}dp"
+    android:viewportWidth="$viewportWidth"
+    android:viewportHeight="$viewportHeight">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="$pathData" />
+</vector>""".trimIndent()
+    }
+
+    /**
+     * Cleans up pasted path data if the user included attribute wrappers like android:pathData="..." or quotes.
+     */
+    fun cleanPathData(rawInput: String): String {
+        val trimmed = rawInput.trim()
+        val attrRegex = Regex("""(?:android:pathData|pathData|\bd)\s*=\s*["']([^"']+)["']""")
+        val match = attrRegex.find(trimmed)
+        if (match != null) {
+            return match.groupValues[1].trim()
+        }
+        if ((trimmed.startsWith("\"") && trimmed.endsWith("\"")) ||
+            (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+            return trimmed.substring(1, trimmed.length - 1).trim()
+        }
+        return trimmed
+    }
+
+    /**
+     * Parses raw path data (e.g. SVG/Vector path like "M 50,0 C ... Z") into a QsShapeItem.
+     * Computes bounds if default 100x100 is specified but coordinates differ.
+     */
+    fun parsePathData(
+        rawPathData: String,
+        fallbackLabel: String = "Custom Shape",
+        viewportWidth: Float = 100f,
+        viewportHeight: Float = 100f
+    ): QsShapeItem {
+        val clean = cleanPathData(rawPathData)
+        if (clean.isBlank()) {
+            throw IllegalArgumentException("Path data cannot be empty")
+        }
+
+        val path: android.graphics.Path
+        try {
+            path = PathParser.createPathFromPathData(clean)
+        } catch (e: Exception) {
+            throw IllegalArgumentException("Invalid path data syntax: ${e.message}")
+        }
+
+        var finalVpWidth = viewportWidth
+        var finalVpHeight = viewportHeight
+
+        val bounds = android.graphics.RectF()
+        path.computeBounds(bounds, true)
+        if (viewportWidth == 100f && viewportHeight == 100f && bounds.width() > 0 && bounds.height() > 0) {
+            val maxBound = maxOf(bounds.right, bounds.bottom)
+            if (maxBound > 105f || (maxBound in 1f..32f)) {
+                val ceilMax = kotlin.math.ceil(maxBound)
+                finalVpWidth = ceilMax
+                finalVpHeight = ceilMax
+            }
+        }
+
+        val id = "imported_" + System.currentTimeMillis()
+        val rawXml = generateVectorXml(clean, finalVpWidth, finalVpHeight)
+
+        return QsShapeItem(
+            id = id,
+            label = fallbackLabel.trim().ifBlank { "Custom Shape" },
+            description = "User custom path shape",
+            pathData = clean,
+            viewportWidth = finalVpWidth,
+            viewportHeight = finalVpHeight,
+            isCustom = true,
+            rawXml = rawXml
+        )
+    }
+
+    /**
      * Parses an XML Vector Drawable string and returns a QsShapeItem.
      * Throws IllegalArgumentException on invalid XML or missing pathData.
      */
@@ -372,6 +460,46 @@ object QsShapeManager {
         )
     }
 
+    /**
+     * Intelligently parses input that can be either full XML (<vector>) or raw path data ("M 50,0...").
+     */
+    fun parseShapeInput(
+        input: String,
+        fallbackLabel: String = "Custom Shape",
+        defaultVpWidth: Float = 100f,
+        defaultVpHeight: Float = 100f
+    ): QsShapeItem {
+        val trimmed = input.trim()
+        return if (trimmed.startsWith("<") || trimmed.contains("<vector") || trimmed.contains("<path")) {
+            parseXmlDrawable(trimmed, fallbackLabel)
+        } else {
+            parsePathData(trimmed, fallbackLabel, defaultVpWidth, defaultVpHeight)
+        }
+    }
+
+    /**
+     * Imports a shape directly from a raw path string (e.g. SVG path data).
+     */
+    fun importShapeFromPathData(
+        context: Context,
+        pathData: String,
+        customLabel: String? = null,
+        viewportWidth: Float = 100f,
+        viewportHeight: Float = 100f
+    ): Result<QsShapeItem> {
+        return try {
+            val labelToUse = customLabel?.trim()?.takeIf { it.isNotEmpty() } ?: "Custom Shape"
+            val shape = parsePathData(pathData, labelToUse, viewportWidth, viewportHeight)
+            val finalShape = if (!customLabel.isNullOrBlank()) shape.copy(label = customLabel.trim()) else shape
+
+            val currentCustom = _allShapes.value.filter { it.isCustom }
+            saveImportedShapes(context, currentCustom + finalShape)
+            Result.success(finalShape)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     fun importShapeFromXml(
         context: Context,
         xmlContent: String,
@@ -387,6 +515,24 @@ object QsShapeManager {
             Result.success(finalShape)
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    /**
+     * Universal import method: accepts either XML or raw path data.
+     */
+    fun importShape(
+        context: Context,
+        input: String,
+        customLabel: String? = null,
+        viewportWidth: Float = 100f,
+        viewportHeight: Float = 100f
+    ): Result<QsShapeItem> {
+        val trimmed = input.trim()
+        return if (trimmed.startsWith("<") || trimmed.contains("<vector") || trimmed.contains("<path")) {
+            importShapeFromXml(context, trimmed, customLabel)
+        } else {
+            importShapeFromPathData(context, trimmed, customLabel, viewportWidth, viewportHeight)
         }
     }
 
@@ -433,7 +579,19 @@ object QsShapeManager {
 
     fun getShapeItem(shapeId: String?): QsShapeItem {
         val shapes = _allShapes.value
-        return shapes.firstOrNull { it.id.equals(shapeId, ignoreCase = true) }
+        return shapes.firstOrNull { 
+            it.id.equals(shapeId, ignoreCase = true) || 
+            (it.id == "pill" && (
+                shapeId.equals("12dp_square", true) || 
+                shapeId.equals("12dp square", true) ||
+                shapeId.equals("12dp", true) ||
+                shapeId.equals("8dp_square", true) || 
+                shapeId.equals("8dp square", true) ||
+                shapeId.equals("8dp", true) ||
+                shapeId.equals("16dp_square", true) || 
+                shapeId.equals("16dp square", true)
+            ))
+        }
             ?: shapes.firstOrNull { it.id == "circle" }
             ?: BUILT_IN_SHAPES.first()
     }

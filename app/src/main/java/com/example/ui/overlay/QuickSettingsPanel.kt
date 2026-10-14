@@ -85,6 +85,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.wrapContentHeight
 import android.view.View
 import android.view.ViewGroup
@@ -1016,33 +1017,7 @@ fun QsHeaderBar(
                 )
             }
 
-            if (isEditingTiles) {
-                Surface(
-                    onClick = onToggleEditMode,
-                    shape = RoundedCornerShape(16.dp),
-                    color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.testTag("header_done_button")
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Done",
-                            tint = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = "Done",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
-                }
-            } else {
+            if (!isEditingTiles) {
                 if (editButtonPos == EditButtonPosition.HEADER || editButtonPos == EditButtonPosition.BOTH) {
                     IconButton(
                         onClick = onToggleEditMode,
@@ -1197,7 +1172,7 @@ fun EditModeTileStudio(
                     onClick = onDone,
                     shape = RoundedCornerShape(16.dp),
                     color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.testTag("inline_edit_done_button")
+                    modifier = Modifier.testTag("inline_done_button")
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -1208,11 +1183,11 @@ fun EditModeTileStudio(
                             imageVector = Icons.Default.Check,
                             contentDescription = "Done",
                             tint = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                         Text(
                             text = "Done",
-                            fontSize = 12.sp,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary
                         )
@@ -1348,47 +1323,41 @@ fun EditModeTileStudio(
                                         }
                                 ) {
                                     val isHoverTarget = draggedTileId != null && hoveredTargetIndex == slotIndex
+                                    val monetPrimaryColor = androidx.compose.material3.MaterialTheme.colorScheme.primary
+                                    val cardContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
+                                    val availableTilesSolidBg = if (isDark) {
+                                        Color(
+                                            red = (cardContainerColor.red * 0.55f).coerceIn(0f, 1f),
+                                            green = (cardContainerColor.green * 0.55f).coerceIn(0f, 1f),
+                                            blue = (cardContainerColor.blue * 0.55f).coerceIn(0f, 1f),
+                                            alpha = 1f
+                                        )
+                                    } else {
+                                        Color(
+                                            red = (cardContainerColor.red * 0.80f).coerceIn(0f, 1f),
+                                            green = (cardContainerColor.green * 0.80f).coerceIn(0f, 1f),
+                                            blue = (cardContainerColor.blue * 0.80f).coerceIn(0f, 1f),
+                                            alpha = 1f
+                                        )
+                                    }
                                     if (isDragging) {
-                                        // Open slot placeholder while the tile floats in isolated overlay
-                                        Box(
-                                            modifier = Modifier
-                                                .width(targetTileWidth)
-                                                .height(86.dp)
-                                                .clip(RoundedCornerShape(16.dp))
-                                                .background(MonetPrimary.copy(alpha = 0.12f))
-                                                .border(
-                                                    width = 1.5.dp,
-                                                    color = MonetPrimary.copy(alpha = 0.5f),
-                                                    shape = RoundedCornerShape(16.dp)
-                                                ),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.DragIndicator,
-                                                contentDescription = null,
-                                                tint = MonetPrimary.copy(alpha = 0.6f),
-                                                modifier = Modifier.size(24.dp)
-                                            )
-                                        }
+                                        // Hide original drag box
+                                        Spacer(modifier = Modifier.width(targetTileWidth).height(86.dp))
                                     } else {
                                         Box(
                                             modifier = Modifier
                                                 .width(targetTileWidth)
-                                                .then(
-                                                    if (isHoverTarget) {
-                                                        Modifier
-                                                            .clip(RoundedCornerShape(16.dp))
-                                                            .background(MonetPrimary.copy(alpha = 0.22f))
-                                                            .border(
-                                                                width = 2.dp,
-                                                                color = MonetPrimary,
-                                                                shape = RoundedCornerShape(16.dp)
-                                                            )
-                                                    } else {
-                                                        Modifier
-                                                    }
-                                                )
+                                                .height(86.dp),
+                                            contentAlignment = Alignment.Center
                                         ) {
+                                            if (isHoverTarget) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .requiredSize(width = targetTileWidth + 16.dp, height = 102.dp)
+                                                        .clip(RoundedCornerShape(20.dp))
+                                                        .background(availableTilesSolidBg)
+                                                )
+                                            }
                                             CircularQsTile(
                                                 tile = tile,
                                                 morphProgress = 1f,
@@ -1722,42 +1691,7 @@ fun EditModeTileStudio(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
 
-            // Bottom Done Action Button
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    onClick = onDone,
-                    shape = RoundedCornerShape(20.dp),
-                    color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.testTag("edit_mode_done_bottom_button")
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.padding(horizontal = 28.dp, vertical = 10.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Done",
-                            tint = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = "Done Editing",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
-                }
-            }
 
             // Bottom breathing space so buttons and tiles are never squished by system navigation bars
             Spacer(modifier = Modifier.height(48.dp))
@@ -2761,7 +2695,7 @@ fun NotificationItemRow(
     var showMenu by remember(item.key) { mutableStateOf(false) }
 
     val isExpandable = remember(item) {
-        item.actions.isNotEmpty() || !item.subText.isNullOrBlank() || item.text.length > 40 || item.bigPictureBitmap != null
+        item.actions.isNotEmpty() || !item.subText.isNullOrBlank() || item.text.length > 40 || item.bigPictureBitmap != null || item.hasProgress
     }
 
     val resolvedAppName = item.appName.ifBlank { item.packageName }
@@ -2841,8 +2775,13 @@ fun NotificationItemRow(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 modifier = Modifier.weight(1f)
                             ) {
+                                val typeBadge = when {
+                                    item.hasProgress -> " • PROGRESS"
+                                    item.isOngoing -> " • ONGOING"
+                                    else -> ""
+                                }
                                 Text(
-                                    text = resolvedAppName,
+                                    text = "$resolvedAppName$typeBadge",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MonetTertiary,
@@ -2992,6 +2931,34 @@ fun NotificationItemRow(
                                     text = item.subText,
                                     fontSize = 11.sp,
                                     color = MonetTertiary.copy(alpha = 0.9f)
+                                )
+                            }
+                        }
+
+                        // Download / Ongoing Progress Bar
+                        if (item.hasProgress) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            if (item.isIndeterminateProgress) {
+                                androidx.compose.material3.LinearProgressIndicator(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(4.dp)
+                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(2.dp)),
+                                    color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                                    trackColor = androidx.compose.material3.MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                )
+                            } else {
+                                val progressFraction = if (item.progressMax > 0) {
+                                    (item.progress.toFloat() / item.progressMax.toFloat()).coerceIn(0f, 1f)
+                                } else 0f
+                                androidx.compose.material3.LinearProgressIndicator(
+                                    progress = { progressFraction },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(4.dp)
+                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(2.dp)),
+                                    color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                                    trackColor = androidx.compose.material3.MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
                                 )
                             }
                         }
@@ -3246,6 +3213,7 @@ fun CircularQsTile(
     val qqsTileSizeValue by PanelPreferences.qqsTileSize.collectAsState()
     val enabledTileShapeId by PanelPreferences.enabledTileShapeId.collectAsState()
     val disabledTileShapeId by PanelPreferences.disabledTileShapeId.collectAsState()
+    val tileOutlineEnabled by PanelPreferences.tileOutlineEnabled.collectAsState()
     val baseQqsSize = qqsTileSizeValue.dp.coerceIn(36.dp, 64.dp)
 
     val isActive = tile.state == TileState.ACTIVE
@@ -3255,6 +3223,7 @@ fun CircularQsTile(
     val primaryColor = androidx.compose.material3.MaterialTheme.colorScheme.primary
     val onPrimaryColor = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary
     val cardContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
+    val systemOutlineColor = androidx.compose.material3.MaterialTheme.colorScheme.outline
 
     val chosenShapeId = if (isActive) enabledTileShapeId else disabledTileShapeId
 
@@ -3262,12 +3231,20 @@ fun CircularQsTile(
         com.example.ui.shape.QsShapeManager.getComposeShape(chosenShapeId)
     }
 
+    val outlineColor = remember(tile.state, isDark, primaryColor) {
+        when (tile.state) {
+            TileState.ACTIVE -> primaryColor
+            TileState.INACTIVE -> if (isDark) Color(0xFF262B30) else Color.White
+            TileState.UNAVAILABLE -> if (isDark) Color(0xFF1A1D20) else Color.White.copy(alpha = 0.5f)
+        }
+    }
+
     val circleSize = if (morphProgress >= 0.5f) 56.dp else baseQqsSize
     val iconSize = if (morphProgress >= 0.5f) 26.dp else baseQqsSize * 0.46f
     val labelAlpha = morphProgress.coerceIn(0f, 1f)
     val tileHeight = if (morphProgress >= 0.5f) 100.dp else baseQqsSize
 
-    val (backgroundColor, iconColor) = remember(tile.state, isDark, primaryColor, onPrimaryColor, cardContainerColor) {
+    val (backgroundColor, iconColor) = remember(tile.state, isDark, primaryColor, onPrimaryColor, cardContainerColor, tileOutlineEnabled) {
         val inactiveBg = if (isDark) {
             Color(
                 red = (cardContainerColor.red * 0.72f).coerceIn(0f, 1f),
@@ -3282,13 +3259,17 @@ fun CircularQsTile(
         val unavailableBg = inactiveBg.copy(alpha = 0.5f)
         val unavailableText = inactiveText.copy(alpha = 0.4f)
 
-        val bg = when (tile.state) {
-            TileState.ACTIVE -> primaryColor
-            TileState.INACTIVE -> inactiveBg
-            TileState.UNAVAILABLE -> unavailableBg
+        val bg = if (tileOutlineEnabled) {
+            Color.Transparent
+        } else {
+            when (tile.state) {
+                TileState.ACTIVE -> primaryColor
+                TileState.INACTIVE -> inactiveBg
+                TileState.UNAVAILABLE -> unavailableBg
+            }
         }
         val fg = when (tile.state) {
-            TileState.ACTIVE -> onPrimaryColor
+            TileState.ACTIVE -> if (tileOutlineEnabled) primaryColor else onPrimaryColor
             TileState.INACTIVE -> inactiveText
             TileState.UNAVAILABLE -> unavailableText
         }
@@ -3327,6 +3308,13 @@ fun CircularQsTile(
         Box(
             modifier = Modifier
                 .size(circleSize)
+                .then(
+                    if (tileOutlineEnabled) {
+                        Modifier.border(1.2.dp, outlineColor, tileShape)
+                    } else {
+                        Modifier
+                    }
+                )
                 .clip(tileShape)
                 .background(backgroundColor),
             contentAlignment = Alignment.Center
@@ -3642,26 +3630,8 @@ fun InactiveTileItem(
             )
     ) {
         if (isThisDragging) {
-            Box(
-                modifier = Modifier
-                    .width(targetTileWidth)
-                    .height(86.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(MonetPrimary.copy(alpha = 0.12f))
-                    .border(
-                        width = 1.5.dp,
-                        color = MonetPrimary.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(16.dp)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.DragIndicator,
-                    contentDescription = null,
-                    tint = MonetPrimary.copy(alpha = 0.6f),
-                    modifier = Modifier.size(24.dp)
-                )
-            }
+            // Hide original drag box
+            Spacer(modifier = Modifier.width(targetTileWidth).height(86.dp))
         } else {
             Box(modifier = Modifier.width(targetTileWidth)) {
                 CircularQsTile(

@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
@@ -46,7 +47,8 @@ enum class CustomizeCategory(
     DEBUG("Debug", Icons.Default.Terminal, "Diagnostics and developer toggles"),
     TRIGGER("Trigger", Icons.Default.TouchApp, "Status bar gestures & panel interception"),
     GESTURES("Gestures", Icons.Default.VolumeUp, "Hardware key actions & gestures"),
-    PERFORMANCE("Performance", Icons.Default.Speed, "Animations, prime core & speed scales")
+    PERFORMANCE("Performance", Icons.Default.Speed, "Animations, prime core & speed scales"),
+    ABOUT("About", Icons.Default.Info, "Developer info, Telegram channel & app details")
 }
 
 object CustomizeCardShapes {

@@ -220,6 +220,9 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                     old.appName != new.appName ||
                     old.isOngoing != new.isOngoing ||
                     old.isClearable != new.isClearable ||
+                    old.progress != new.progress ||
+                    old.progressMax != new.progressMax ||
+                    old.isIndeterminateProgress != new.isIndeterminateProgress ||
                     old.actions.size != new.actions.size
                 ) {
                     return false
@@ -276,6 +279,10 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                     }
                 }
 
+                val progress = extras.getInt(Notification.EXTRA_PROGRESS, -1)
+                val progressMax = extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0)
+                val isIndeterminateProgress = extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE, false)
+
                 list.add(
                     NotificationItem(
                         key = sbn.key ?: "${sbn.packageName}_${sbn.id}",
@@ -290,7 +297,10 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                         isClearable = sbn.isClearable,
                         isOngoing = true,
                         channelId = channelId,
-                        contentIntent = n.contentIntent
+                        contentIntent = n.contentIntent,
+                        progress = progress,
+                        progressMax = progressMax,
+                        isIndeterminateProgress = isIndeterminateProgress
                     )
                 )
             }
@@ -315,6 +325,20 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
         Log.d(TAG, "Notification listener connected")
         NotificationBlacklistManager.init(this)
         MediaSessionManagerHelper.init(this)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            try {
+                val allFilters = FLAG_FILTER_TYPE_CONVERSATIONS or
+                        FLAG_FILTER_TYPE_ALERTING or
+                        FLAG_FILTER_TYPE_ONGOING or
+                        FLAG_FILTER_TYPE_SILENT
+                migrateNotificationFilter(allFilters, null)
+                Log.d(TAG, "Notification listener filter migrated for ongoing and silent notifications")
+            } catch (e: Throwable) {
+                Log.d(TAG, "Filter migration note: ${e.message}")
+            }
+        }
+
         refreshActiveNotifications()
     }
 
@@ -322,6 +346,16 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
         super.onListenerDisconnected()
         instance = null
         Log.d(TAG, "Notification listener disconnected")
+    }
+
+    override fun onNotificationRankingUpdate(rankingMap: RankingMap?) {
+        super.onNotificationRankingUpdate(rankingMap)
+        refreshActiveNotifications()
+    }
+
+    override fun onNotificationPosted(sbn: StatusBarNotification?, rankingMap: RankingMap?) {
+        super.onNotificationPosted(sbn, rankingMap)
+        // Handled in onNotificationPosted(sbn) which super calls
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -394,6 +428,14 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
 
         val isCallOrAlarm = isAlarm || isCall
 
+        // Ignore group summary container notifications from chat apps (e.g. Telegram, WhatsApp, Gmail).
+        // Alerting on group summaries causes flickering and repeats older conversation summaries.
+        val isGroupSummary = (n.flags and Notification.FLAG_GROUP_SUMMARY != 0)
+        if (isGroupSummary && !isCallOrAlarm) {
+            Log.d(TAG, "Ignoring group summary notification from ${sbn.packageName} for Heads-Up")
+            return
+        }
+
         val isOngoing = (n.flags and Notification.FLAG_ONGOING_EVENT != 0) ||
                 (n.flags and Notification.FLAG_NO_CLEAR != 0) ||
                 !sbn.isClearable
@@ -434,7 +476,10 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
             return
         }
 
-        if (title.isBlank() && text.isBlank() && n.fullScreenIntent == null) {
+        // Extract latest individual message cleanly if MessagingStyle is present
+        val (resolvedTitle, resolvedText) = extractLatestMessageContent(extras, title, text)
+
+        if (resolvedTitle.isBlank() && resolvedText.isBlank() && n.fullScreenIntent == null) {
             return
         }
 
@@ -488,13 +533,15 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
             }
         }
 
+        // Generate content-specific ID so identical internal updates don't reset timers or flicker
+        val contentHash = "${resolvedTitle.hashCode()}_${resolvedText.hashCode()}"
         val headsUpData = HeadsUpOverlayManager.HeadsUpData(
-            id = "${sbn.packageName}_${sbn.id}_${sbn.postTime}",
+            id = "${sbn.key}_$contentHash",
             key = sbn.key,
             packageName = sbn.packageName,
             appName = appName,
-            title = if (title.isNotBlank()) title else appName,
-            text = text,
+            title = if (resolvedTitle.isNotBlank()) resolvedTitle else appName,
+            text = resolvedText,
             subText = subText,
             appIcon = appIcon,
             avatarBitmap = avatarBitmap,
@@ -533,7 +580,9 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
         refreshActiveNotifications()
         if (sbn != null) {
             resetPinnedLock(sbn.key)
-            HeadsUpOverlayManager.dismissIfMatching(sbn.key, sbn.packageName)
+            // Dismiss ONLY if the specific notification key matches (never loosely dismiss by packageName)
+            HeadsUpOverlayManager.dismissIfMatching(sbn.key)
+            HeadsUpOverlayManager.onNotificationKeyRemoved(sbn.key)
         }
     }
 
@@ -570,10 +619,22 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                         ?: ""
                     val subText = extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()
 
-                    // Skip empty notifications
-                    if (title.isBlank() && text.isBlank()) continue
+                    val isOngoing = (n.flags and Notification.FLAG_ONGOING_EVENT != 0) ||
+                            (n.flags and Notification.FLAG_NO_CLEAR != 0) ||
+                            !sbn.isClearable
+
+                    val progress = extras.getInt(Notification.EXTRA_PROGRESS, -1)
+                    val progressMax = extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0)
+                    val isIndeterminateProgress = extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE, false)
+                    val hasProgress = progressMax > 0 || (isIndeterminateProgress && progress >= 0) || isIndeterminateProgress
+
+                    val infoText = extras.getCharSequence(Notification.EXTRA_INFO_TEXT)?.toString()
+                    val summaryText = extras.getCharSequence(Notification.EXTRA_SUMMARY_TEXT)?.toString()
 
                     val conversationTitle = extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE)?.toString()
+
+                    // Skip genuinely empty notifications (never drop ongoing or progress notifications)
+                    if (title.isBlank() && text.isBlank() && !hasProgress && !isOngoing) continue
 
                     // 2. Resolve Human-Readable Application Name (prevent raw package names)
                     val appName = try {
@@ -613,13 +674,23 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                         !conversationTitle.isNullOrBlank() && title.isNotBlank() && !title.contains(conversationTitle) -> "$conversationTitle: $title"
                         !conversationTitle.isNullOrBlank() && title.isBlank() -> conversationTitle
                         title.isNotBlank() -> title
+                        !subText.isNullOrBlank() -> subText
+                        !infoText.isNullOrBlank() -> infoText
+                        hasProgress -> "Downloading"
+                        isOngoing -> appName
                         else -> appName
                     }
 
-                    // 4. Identify ongoing / persistent notifications
-                    val isOngoing = (n.flags and Notification.FLAG_ONGOING_EVENT != 0) ||
-                            (n.flags and Notification.FLAG_NO_CLEAR != 0) ||
-                            !sbn.isClearable
+                    val resolvedText = when {
+                        text.isNotBlank() -> text
+                        !infoText.isNullOrBlank() && resolvedTitle != infoText -> infoText
+                        !subText.isNullOrBlank() && resolvedTitle != subText -> subText
+                        !summaryText.isNullOrBlank() -> summaryText
+                        hasProgress && progressMax > 0 -> "$progress / $progressMax"
+                        hasProgress && isIndeterminateProgress -> "In progress"
+                        isOngoing -> "Running in background"
+                        else -> ""
+                    }
 
                     val actionsList = mutableListOf<NotificationActionModel>()
                     n.actions?.take(3)?.forEach { action ->
@@ -641,7 +712,7 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                             packageName = sbn.packageName,
                             appName = appName,
                             title = resolvedTitle,
-                            text = text,
+                            text = resolvedText,
                             subText = subText,
                             postTime = sbn.postTime,
                             appIcon = appIcon,
@@ -651,7 +722,10 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                             isOngoing = isOngoing,
                             channelId = channelId,
                             contentIntent = n.contentIntent,
-                            actions = actionsList
+                            actions = actionsList,
+                            progress = progress,
+                            progressMax = progressMax,
+                            isIndeterminateProgress = isIndeterminateProgress
                         )
                     )
                 }
@@ -776,6 +850,47 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
         } catch (e: Throwable) {}
 
         return null
+    }
+
+    /**
+     * Extracts the single latest incoming message from a MessagingStyle notification.
+     * Prevents displaying outdated conversation logs, multi-message summaries, or repeated old messages.
+     */
+    private fun extractLatestMessageContent(
+        extras: Bundle,
+        fallbackTitle: String,
+        fallbackText: String
+    ): Pair<String, String> {
+        try {
+            val messages = extras.getParcelableArray(Notification.EXTRA_MESSAGES)
+            if (messages != null && messages.isNotEmpty()) {
+                for (i in messages.indices.reversed()) {
+                    val msgBundle = messages[i] as? Bundle ?: continue
+                    val msgText = msgBundle.getCharSequence("text")?.toString()
+                    if (!msgText.isNullOrBlank()) {
+                        val sender = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                            try {
+                                msgBundle.getParcelable("sender_person", android.app.Person::class.java)?.name?.toString()
+                            } catch (_: Throwable) {
+                                null
+                            }
+                        } else null ?: msgBundle.getCharSequence("sender")?.toString()
+
+                        val convTitle = extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE)?.toString()
+                        val resolvedTitle = when {
+                            !convTitle.isNullOrBlank() && !sender.isNullOrBlank() && convTitle != sender -> "$convTitle ($sender)"
+                            !convTitle.isNullOrBlank() -> convTitle
+                            !sender.isNullOrBlank() -> sender
+                            else -> fallbackTitle
+                        }
+                        return Pair(resolvedTitle, msgText)
+                    }
+                }
+            }
+        } catch (_: Throwable) {
+            // Fallback on standard extras
+        }
+        return Pair(fallbackTitle, fallbackText)
     }
 
     private fun parseBitmapOrIcon(obj: Any?): Bitmap? {

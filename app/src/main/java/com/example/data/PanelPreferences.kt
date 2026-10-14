@@ -1,10 +1,15 @@
 package com.example.data
 
 import android.content.Context
+import android.content.Intent
+import android.provider.Settings
 import com.example.model.QsGridLayout
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 enum class ThemeMode(val id: String, val displayName: String) {
     SYSTEM("system", "System Default"),
@@ -80,19 +85,30 @@ enum class TileShape(val id: String, val label: String, val description: String)
     SQUIRCLE("squircle", "Squircle", "Rounded square with 14dp corners"),
     SQUARE("square", "Square", "Sharp square with 4dp corners"),
     TEARDROP("teardrop", "Teardrop", "Asymmetric teardrop style"),
-    PILL("pill", "Pill", "Capsule pill shape"),
+    PILL("pill", "12dp Square", "Square with 12dp rounded corners"),
     CUSTOM_1("custom_1", "Leaf", "Leaf shape with diagonal rounded corners"),
-    CUSTOM_2("custom_2", "Inverted Leaf", "Inverted diagonal leaf shape"),
     CUSTOM_3("custom_3", "Arch", "Arch / dome with rounded top corners"),
-    CUSTOM_4("custom_4", "Inverted Arch", "Inverted arch with rounded bottom corners"),
-    CUSTOM_5("custom_5", "Shield", "Shield / badge shape"),
-    CUSTOM_6("custom_6", "Pebble", "Organic pebble shape"),
-    CUSTOM_7("custom_7", "Flower", "Material You 4-petal flower shape"),
-    CUSTOM_8("custom_8", "Hexagon", "Rounded hexagon shape");
+    CUSTOM_8("custom_8", "Hexagon", "Six-sided regular hexagon"),
+    CLOUD("cloud", "Cloud", "Fluffy cloud shape with rounded bumps"),
+    OCTAGON("octagon", "Octagon", "Eight-sided symmetrical polygon"),
+    STAMP("stamp", "Stamp", "Postage stamp style with scalloped edges");
 
     companion object {
         fun fromId(id: String?): TileShape =
-            entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: CIRCLE
+            entries.firstOrNull { 
+                it.id.equals(id, ignoreCase = true) || 
+                (it == PILL && (
+                    id.equals("12dp_square", ignoreCase = true) || 
+                    id.equals("12dp square", ignoreCase = true) ||
+                    id.equals("12dp", ignoreCase = true) ||
+                    id.equals("8dp_square", ignoreCase = true) || 
+                    id.equals("8dp square", ignoreCase = true) ||
+                    id.equals("8dp", ignoreCase = true) ||
+                    id.equals("16dp_square", ignoreCase = true) || 
+                    id.equals("16dp square", ignoreCase = true)
+                )) ||
+                (it == CUSTOM_8 && id.equals("hexagon", ignoreCase = true))
+            } ?: CIRCLE
     }
 }
 
@@ -103,7 +119,7 @@ enum class ProgressBarStyle(val id: String, val label: String, val description: 
 
     companion object {
         fun fromId(id: String?): ProgressBarStyle =
-            entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: WAVY
+            entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: DEFAULT
     }
 }
 
@@ -120,6 +136,7 @@ object PanelPreferences {
     private const val KEY_ENABLED_TILE_SHAPE = "enabled_tile_shape"
     private const val KEY_DISABLED_TILE_SHAPE = "disabled_tile_shape"
     private const val KEY_ACTIVE_SQUARE_SHAPE = "active_square_shape"
+    private const val KEY_TILE_OUTLINE_ENABLED = "tile_outline_enabled"
     private const val KEY_HIDE_QQS_DRAG_HANDLE = "hide_qqs_drag_handle"
     private const val KEY_SHOW_CARRIER = "show_carrier"
     private const val KEY_SHOW_CARRIER_DIVIDER = "show_carrier_divider"
@@ -165,6 +182,10 @@ object PanelPreferences {
     val initialSetupCompleted: StateFlow<Boolean> = _initialSetupCompleted.asStateFlow()
 
     // Heads-Up Overlay Preferences
+    private const val KEY_ENABLE_SYSTEM_HEADS_UP = "enable_system_heads_up"
+    private val _enableSystemHeadsUp = MutableStateFlow(true)
+    val enableSystemHeadsUp: StateFlow<Boolean> = _enableSystemHeadsUp.asStateFlow()
+
     private val _enableHeadsUpOverlay = MutableStateFlow(true)
     val enableHeadsUpOverlay: StateFlow<Boolean> = _enableHeadsUpOverlay.asStateFlow()
 
@@ -231,6 +252,9 @@ object PanelPreferences {
     private val _activeSquareShape = MutableStateFlow(false)
     val activeSquareShape: StateFlow<Boolean> = _activeSquareShape.asStateFlow()
 
+    private val _tileOutlineEnabled = MutableStateFlow(false)
+    val tileOutlineEnabled: StateFlow<Boolean> = _tileOutlineEnabled.asStateFlow()
+
     private val _hideQqsDragHandle = MutableStateFlow(false)
     val hideQqsDragHandle: StateFlow<Boolean> = _hideQqsDragHandle.asStateFlow()
 
@@ -252,10 +276,10 @@ object PanelPreferences {
     private val _brightnessInQqs = MutableStateFlow(false)
     val brightnessInQqs: StateFlow<Boolean> = _brightnessInQqs.asStateFlow()
 
-    private val _progressBarStyle = MutableStateFlow(ProgressBarStyle.WAVY)
+    private val _progressBarStyle = MutableStateFlow(ProgressBarStyle.DEFAULT)
     val progressBarStyle: StateFlow<ProgressBarStyle> = _progressBarStyle.asStateFlow()
 
-    private val _wavyProgressBars = MutableStateFlow(true)
+    private val _wavyProgressBars = MutableStateFlow(false)
     val wavyProgressBars: StateFlow<Boolean> = _wavyProgressBars.asStateFlow()
 
     private val _enableContainerBlur = MutableStateFlow(false)
@@ -353,6 +377,7 @@ object PanelPreferences {
             _disabledTileShapeId.value = "circle"
             _disabledTileShape.value = TileShape.CIRCLE
         }
+        _tileOutlineEnabled.value = prefs.getBoolean(KEY_TILE_OUTLINE_ENABLED, false)
         _hideQqsDragHandle.value = prefs.getBoolean(KEY_HIDE_QQS_DRAG_HANDLE, false)
         _dragHandleVerticalOffset.value = prefs.getFloat(KEY_DRAG_HANDLE_VERTICAL_OFFSET, 4f)
         _dragHandleLength.value = prefs.getFloat(KEY_DRAG_HANDLE_LENGTH, 36f)
@@ -365,9 +390,9 @@ object PanelPreferences {
             ProgressBarStyle.fromId(savedStyleId)
         } else {
             if (prefs.contains(KEY_WAVY_PROGRESS_BARS)) {
-                if (prefs.getBoolean(KEY_WAVY_PROGRESS_BARS, true)) ProgressBarStyle.WAVY else ProgressBarStyle.DEFAULT
+                if (prefs.getBoolean(KEY_WAVY_PROGRESS_BARS, false)) ProgressBarStyle.WAVY else ProgressBarStyle.DEFAULT
             } else {
-                ProgressBarStyle.WAVY
+                ProgressBarStyle.DEFAULT
             }
         }
         _progressBarStyle.value = resolvedStyle
@@ -400,6 +425,7 @@ object PanelPreferences {
         }
         _forceShowMediaPreview.value = prefs.getBoolean(KEY_FORCE_SHOW_MEDIA_PREVIEW, false)
         _enableCustomVolumePanel.value = prefs.getBoolean(KEY_ENABLE_CUSTOM_VOLUME_PANEL, true)
+        _enableSystemHeadsUp.value = prefs.getBoolean(KEY_ENABLE_SYSTEM_HEADS_UP, true)
         _enableHeadsUpOverlay.value = prefs.getBoolean(KEY_ENABLE_HEADS_UP_OVERLAY, true)
         _headsUpTimeoutSeconds.value = prefs.getInt(KEY_HEADS_UP_TIMEOUT_SECONDS, 4)
         val hiddenSaved = prefs.getString(KEY_HIDDEN_TILE_IDS, "") ?: ""
@@ -600,6 +626,12 @@ object PanelPreferences {
         setTileShape(context, shape)
     }
 
+    fun setTileOutlineEnabled(context: Context, enabled: Boolean) {
+        _tileOutlineEnabled.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_TILE_OUTLINE_ENABLED, enabled).apply()
+    }
+
     fun setHideQqsDragHandle(context: Context, hide: Boolean) {
         _hideQqsDragHandle.value = hide
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -749,6 +781,35 @@ object PanelPreferences {
         _enableHeadsUpOverlay.value = enabled
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_ENABLE_HEADS_UP_OVERLAY, enabled).apply()
+
+        // When custom heads-up overlay is turned off, if system heads-up is enabled in prefs, ensure system heads-up is active
+        if (!enabled && _enableSystemHeadsUp.value) {
+            setEnableSystemHeadsUp(context, true)
+        }
+    }
+
+    fun setEnableSystemHeadsUp(context: Context, enabled: Boolean) {
+        _enableSystemHeadsUp.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_ENABLE_SYSTEM_HEADS_UP, enabled).apply()
+
+        val nativeMgr = com.example.system.NativeTileManager.instance
+        if (nativeMgr != null) {
+            nativeMgr.setHeadsUpEnabled(enabled)
+        } else {
+            val valInt = if (enabled) 1 else 0
+            try {
+                Settings.Global.putInt(context.contentResolver, "heads_up_notifications_enabled", valInt)
+            } catch (_: Exception) {}
+
+            val engine = com.example.system.PrivilegeEngine(context)
+            if (engine.currentMode.value != com.example.model.PrivilegeMode.STANDARD) {
+                val cmd = "settings put global heads_up_notifications_enabled $valInt"
+                CoroutineScope(Dispatchers.IO).launch {
+                    engine.executeCommand(cmd)
+                }
+            }
+        }
     }
 
     fun setHeadsUpTimeoutSeconds(context: Context, seconds: Int) {

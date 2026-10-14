@@ -137,6 +137,15 @@
                 android:textSize="11sp"
                 android:visibility="gone" />
 
+            <!-- Download / Task Progress Bar -->
+            <ProgressBar
+                android:id="@+id/pb_notif_progress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="6dp"
+                android:layout_marginTop="6dp"
+                android:visibility="gone" />
+
             <!-- BigPicture Attachment Image -->
             <ImageView
                 android:id="@+id/iv_notif_big_picture"

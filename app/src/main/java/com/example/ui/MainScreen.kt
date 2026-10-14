@@ -7,6 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -188,7 +189,8 @@ fun MainScreen(viewModel: MainViewModel) {
                     Triple("Hardware", Icons.Default.Build, 2),
                     Triple("Privileges", Icons.Default.Security, 4),
                     Triple("Customize", Icons.Default.Layers, 5),
-                    Triple("Notif Hub", Icons.Default.NotificationsOff, 8)
+                    Triple("Notif Hub", Icons.Default.NotificationsOff, 8),
+                    Triple("About", Icons.Default.Info, 10)
                 )
                 val visibleNavItems = allNavItems.filter { item ->
                     when (item.third) {
@@ -386,6 +388,18 @@ fun MainScreen(viewModel: MainViewModel) {
                         },
                         onLaunchInitialSetup = { viewModel.openInitialSetup() }
                     )
+                }
+
+                10 -> {
+                    // TAB 10: About Screen
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        com.example.ui.customizer.AboutSection()
+                    }
                 }
             }
         }

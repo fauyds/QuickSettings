@@ -36,12 +36,10 @@ import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -57,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -70,26 +69,54 @@ import com.example.data.ScreenRecordFps
 import com.example.data.ScreenRecordResolution
 import com.example.service.ScreenRecordPromptActivity
 import com.example.service.ScreenRecordService
-import com.example.ui.theme.DarkUiSurface
-import com.example.ui.theme.DarkUiSurfaceVariant
-import com.example.ui.theme.ExpressiveCardShapes
-import com.example.ui.theme.LocalIsDarkTheme
-import com.example.ui.theme.MonetOnPrimary
-import com.example.ui.theme.MonetPrimary
-import com.example.ui.theme.MonetTertiary
 import java.util.Locale
 
 /**
- * In-Composition Bottom Sheet for Screen Recording Configuration.
- * Implemented without android.app.Dialog to be 100% safe and compatible with
- * both Activity UI and Service Overlay Windows (avoiding WindowManager.BadTokenException).
+ * Section Card Shapes for Screen Recording from QS panel ONLY.
+ * Outer corners 16dp, inner 5dp.
+ */
+private object ScreenRecordCardShapes {
+    val OuterCorner = 16.dp
+    val InnerCorner = 5.dp
+
+    val TopCard = RoundedCornerShape(
+        topStart = OuterCorner,
+        topEnd = OuterCorner,
+        bottomStart = InnerCorner,
+        bottomEnd = InnerCorner
+    )
+    val CenterCard = RoundedCornerShape(InnerCorner)
+    val BottomCard = RoundedCornerShape(
+        topStart = InnerCorner,
+        topEnd = InnerCorner,
+        bottomStart = OuterCorner,
+        bottomEnd = OuterCorner
+    )
+    val SingleCard = RoundedCornerShape(OuterCorner)
+}
+
+/**
+ * Option Button Shapes for Screen Recording from QS panel ONLY.
+ * Selected button: round corners (CircleShape).
+ * Unselected button: outer corners 8dp and inner corner 8dp.
+ */
+private object OptionButtonShapes {
+    val SelectedShape = CircleShape
+    val UnselectedShape = RoundedCornerShape(8.dp)
+
+    fun getUnselectedShape(index: Int, count: Int): Shape = UnselectedShape
+    fun getUnselectedHorizontalShape(index: Int, count: Int): Shape = UnselectedShape
+}
+
+/**
+ * In-Composition Bottom Sheet for Screen Recording Configuration from QS Panel.
+ * Safe and compatible with Activity UI & Service Overlay Windows.
  */
 @Composable
 fun ScreenRecordBottomSheet(
     onDismissRequest: () -> Unit
 ) {
     val context = LocalContext.current
-    val isDark = LocalIsDarkTheme.current
 
     val currentResolution by PanelPreferences.screenRecordResolution.collectAsState()
     val currentAudioSource by PanelPreferences.screenRecordAudioSource.collectAsState()
@@ -132,28 +159,29 @@ fun ScreenRecordBottomSheet(
                     )
             )
 
-            // Bottom Sheet Surface Container
+            // Bottom Sheet Surface Container - Monet Surface, Outlines Removed
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                        onClick = { /* Consume clicks inside the sheet */ }
+                        onClick = { /* Consume clicks inside sheet */ }
                     ),
                 shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-                color = if (isDark) DarkUiSurface else Color(0xFFF1F5F9),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 tonalElevation = 8.dp,
-                shadowElevation = 16.dp
+                shadowElevation = 16.dp,
+                border = null
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
-                        .padding(horizontal = 20.dp, vertical = 12.dp)
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
                         .heightIn(max = 620.dp)
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    verticalArrangement = Arrangement.spacedBy(4.dp) // Distance between cards 4dp
                 ) {
                     // Drag handle
                     Box(
@@ -162,12 +190,14 @@ fun ScreenRecordBottomSheet(
                             .padding(bottom = 6.dp)
                             .size(width = 38.dp, height = 4.dp)
                             .clip(CircleShape)
-                            .background(if (isDark) Color.White.copy(alpha = 0.25f) else Color.Black.copy(alpha = 0.2f))
+                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f))
                     )
 
                     // Header Row
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -179,13 +209,16 @@ fun ScreenRecordBottomSheet(
                                 modifier = Modifier
                                     .size(38.dp)
                                     .clip(CircleShape)
-                                    .background(if (isRecording) Color(0xFFEF4444).copy(alpha = 0.2f) else MonetPrimary.copy(alpha = 0.15f)),
+                                    .background(
+                                        if (isRecording) MaterialTheme.colorScheme.errorContainer
+                                        else MaterialTheme.colorScheme.primaryContainer
+                                    ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Videocam,
                                     contentDescription = null,
-                                    tint = if (isRecording) Color(0xFFEF4444) else MonetPrimary,
+                                    tint = if (isRecording) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer,
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
@@ -195,12 +228,12 @@ fun ScreenRecordBottomSheet(
                                     text = "Screen Recording",
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isDark) Color.White else Color(0xFF0F172A)
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = "Configure capture settings & quality",
                                     fontSize = 12.sp,
-                                    color = if (isDark) Color.LightGray else Color(0xFF64748B)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -212,7 +245,7 @@ fun ScreenRecordBottomSheet(
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Close",
-                                tint = if (isDark) Color.LightGray else Color(0xFF475569),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -225,9 +258,9 @@ fun ScreenRecordBottomSheet(
                         val durationFormatted = String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
 
                         Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = Color(0xFFEF4444).copy(alpha = 0.15f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f)),
+                            shape = ScreenRecordCardShapes.SingleCard,
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            border = null,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
@@ -244,7 +277,7 @@ fun ScreenRecordBottomSheet(
                                     Icon(
                                         imageVector = Icons.Default.FiberManualRecord,
                                         contentDescription = null,
-                                        tint = Color(0xFFEF4444),
+                                        tint = MaterialTheme.colorScheme.error,
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Column {
@@ -252,12 +285,12 @@ fun ScreenRecordBottomSheet(
                                             text = "Recording in Progress",
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = Color(0xFFEF4444)
+                                            color = MaterialTheme.colorScheme.onErrorContainer
                                         )
                                         Text(
                                             text = "Elapsed Time: $durationFormatted",
                                             fontSize = 12.sp,
-                                            color = if (isDark) Color.White.copy(alpha = 0.8f) else Color(0xFF1E293B)
+                                            color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f)
                                         )
                                     }
                                 }
@@ -267,8 +300,11 @@ fun ScreenRecordBottomSheet(
                                         ScreenRecordService.stopRecording(context)
                                         onDismissRequest()
                                     },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                        contentColor = MaterialTheme.colorScheme.onError
+                                    ),
+                                    shape = CircleShape,
                                     modifier = Modifier.testTag("sheet_stop_recording_button")
                                 ) {
                                     Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -279,39 +315,47 @@ fun ScreenRecordBottomSheet(
                         }
                     }
 
-                    // 1. Video Resolution Section
+                    // 1. Video Resolution Section Card (Top Card: 16dp outer, 5dp inner)
                     SettingsCard(
-                        shape = ExpressiveCardShapes.TopCard,
+                        shape = ScreenRecordCardShapes.TopCard,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                                .padding(horizontal = 14.dp, vertical = 6.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Icon(Icons.Default.HighQuality, contentDescription = null, tint = MonetPrimary, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.HighQuality, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                                 Text(
                                     text = "VIDEO RESOLUTION",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 1.sp,
-                                    color = MonetPrimary
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             }
 
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                ScreenRecordResolution.entries.forEach { res ->
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                val resolutions = ScreenRecordResolution.entries
+                                resolutions.forEachIndexed { index, res ->
                                     val isSelected = currentResolution == res
+                                    val buttonShape = if (isSelected) {
+                                        OptionButtonShapes.SelectedShape
+                                    } else {
+                                        OptionButtonShapes.getUnselectedShape(index, resolutions.size)
+                                    }
+
                                     OptionItemRow(
                                         title = res.title,
                                         subtitle = res.subtitle,
                                         isSelected = isSelected,
-                                        isDark = isDark,
+                                        shape = buttonShape,
                                         onClick = { PanelPreferences.setScreenRecordResolution(context, res) },
                                         testTag = "resolution_option_${res.id}"
                                     )
@@ -320,33 +364,35 @@ fun ScreenRecordBottomSheet(
                         }
                     }
 
-                    // 2. Audio Source Section
+                    // 2. Audio Source Section Card (Center Card: 5dp inner corners)
                     SettingsCard(
-                        shape = ExpressiveCardShapes.CenterCard,
+                        shape = ScreenRecordCardShapes.CenterCard,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                                .padding(horizontal = 14.dp, vertical = 6.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Icon(Icons.Default.GraphicEq, contentDescription = null, tint = MonetTertiary, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.GraphicEq, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(18.dp))
                                 Text(
                                     text = "AUDIO SOURCE",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 1.sp,
-                                    color = MonetTertiary
+                                    color = MaterialTheme.colorScheme.tertiary
                                 )
                             }
 
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                ScreenRecordAudioSource.entries.forEach { audio ->
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                val audioSources = ScreenRecordAudioSource.entries
+                                audioSources.forEachIndexed { index, audio ->
                                     val isSelected = currentAudioSource == audio
                                     val icon = when (audio) {
                                         ScreenRecordAudioSource.MUTE -> Icons.Default.MicOff
@@ -354,12 +400,18 @@ fun ScreenRecordBottomSheet(
                                         ScreenRecordAudioSource.MIC -> Icons.Default.Mic
                                         ScreenRecordAudioSource.INTERNAL_AND_MIC -> Icons.Default.GraphicEq
                                     }
+                                    val buttonShape = if (isSelected) {
+                                        OptionButtonShapes.SelectedShape
+                                    } else {
+                                        OptionButtonShapes.getUnselectedShape(index, audioSources.size)
+                                    }
+
                                     OptionItemRow(
                                         title = audio.title,
                                         subtitle = audio.subtitle,
                                         isSelected = isSelected,
                                         icon = icon,
-                                        isDark = isDark,
+                                        shape = buttonShape,
                                         onClick = { PanelPreferences.setScreenRecordAudioSource(context, audio) },
                                         testTag = "audio_option_${audio.id}"
                                     )
@@ -368,58 +420,63 @@ fun ScreenRecordBottomSheet(
                         }
                     }
 
-                    // 3. Frame Rate & Show Touches Section
+                    // 3. Frame Rate & Show Touches Section Card (Bottom Card: 5dp inner, 16dp outer)
                     SettingsCard(
-                        shape = ExpressiveCardShapes.BottomCard,
+                        shape = ScreenRecordCardShapes.BottomCard,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                                .padding(horizontal = 14.dp, vertical = 6.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             // Frame Rate
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Icon(Icons.Default.Speed, contentDescription = null, tint = MonetPrimary, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.Speed, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                                 Text(
                                     text = "FRAME RATE",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 1.sp,
-                                    color = MonetPrimary
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             }
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                ScreenRecordFps.entries.forEach { fpsItem ->
+                                val fpsList = ScreenRecordFps.entries
+                                fpsList.forEachIndexed { index, fpsItem ->
                                     val isSelected = currentFps == fpsItem
+                                    val buttonShape = if (isSelected) {
+                                        OptionButtonShapes.SelectedShape
+                                    } else {
+                                        OptionButtonShapes.getUnselectedHorizontalShape(index, fpsList.size)
+                                    }
+
                                     Surface(
                                         onClick = { PanelPreferences.setScreenRecordFps(context, fpsItem) },
-                                        shape = RoundedCornerShape(12.dp),
-                                        color = if (isSelected) MonetPrimary else MaterialTheme.colorScheme.background,
-                                        border = androidx.compose.foundation.BorderStroke(
-                                            width = 1.dp,
-                                            color = if (isSelected) MonetPrimary else if (isDark) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.1f)
-                                        ),
+                                        shape = buttonShape,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f),
+                                        border = null,
                                         modifier = Modifier.weight(1f).testTag("fps_option_${fpsItem.fps}")
                                     ) {
                                         Row(
-                                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 12.dp),
+                                            modifier = Modifier.padding(vertical = 6.dp, horizontal = 12.dp),
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.Center
                                         ) {
                                             Text(
                                                 text = "${fpsItem.fps} FPS",
                                                 fontWeight = FontWeight.Bold,
-                                                fontSize = 13.sp,
-                                                color = if (isSelected) MonetOnPrimary else if (isDark) Color.White else Color(0xFF1E293B)
+                                                fontSize = 12.sp,
+                                                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }
@@ -430,9 +487,9 @@ fun ScreenRecordBottomSheet(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isDark) DarkUiSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.background)
-                                    .padding(12.dp),
+                                    .clip(OptionButtonShapes.getUnselectedShape(0, 1))
+                                    .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.4f))
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
@@ -444,13 +501,16 @@ fun ScreenRecordBottomSheet(
                                         modifier = Modifier
                                             .size(34.dp)
                                             .clip(CircleShape)
-                                            .background(if (showTouches) MonetPrimary.copy(alpha = 0.2f) else if (isDark) Color.White.copy(alpha = 0.06f) else Color.Black.copy(alpha = 0.05f)),
+                                            .background(
+                                                if (showTouches) MaterialTheme.colorScheme.primaryContainer
+                                                else MaterialTheme.colorScheme.surfaceContainerHighest
+                                            ),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.TouchApp,
                                             contentDescription = null,
-                                            tint = if (showTouches) MonetPrimary else if (isDark) Color.Gray else Color(0xFF64748B),
+                                            tint = if (showTouches) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -460,12 +520,12 @@ fun ScreenRecordBottomSheet(
                                             text = "Show Touches",
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = if (isDark) Color.White else Color(0xFF1E293B)
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
                                             text = "Show visual touch indicator on screen",
                                             fontSize = 11.sp,
-                                            color = if (isDark) Color.Gray else Color(0xFF64748B)
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
@@ -474,10 +534,10 @@ fun ScreenRecordBottomSheet(
                                     checked = showTouches,
                                     onCheckedChange = { PanelPreferences.setScreenRecordShowTouches(context, it) },
                                     colors = SwitchDefaults.colors(
-                                        checkedThumbColor = MonetOnPrimary,
-                                        checkedTrackColor = MonetPrimary,
-                                        uncheckedThumbColor = Color.LightGray,
-                                        uncheckedTrackColor = if (isDark) DarkUiSurfaceVariant else Color(0xFFCBD5E1)
+                                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                        uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest
                                     ),
                                     modifier = Modifier.testTag("show_touches_switch")
                                 )
@@ -485,22 +545,31 @@ fun ScreenRecordBottomSheet(
                         }
                     }
 
+                    Spacer(modifier = Modifier.height(6.dp))
+
                     // Bottom Action Controls
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        OutlinedButton(
+                        Surface(
                             onClick = onDismissRequest,
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.weight(1f).height(48.dp).testTag("sheet_cancel_button")
+                            shape = OptionButtonShapes.getUnselectedHorizontalShape(0, 2),
+                            color = MaterialTheme.colorScheme.surfaceContainer,
+                            border = null,
+                            modifier = Modifier.weight(1f).height(42.dp).testTag("sheet_cancel_button")
                         ) {
-                            Text("Close", fontWeight = FontWeight.SemiBold)
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = "Close",
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
 
-                        Button(
+                        Surface(
                             onClick = {
                                 onDismissRequest()
                                 if (isRecording) {
@@ -509,23 +578,30 @@ fun ScreenRecordBottomSheet(
                                     ScreenRecordPromptActivity.start(context)
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isRecording) Color(0xFFEF4444) else MonetPrimary
-                            ),
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.weight(1.5f).height(48.dp).testTag("sheet_primary_record_action_button")
+                            shape = OptionButtonShapes.SelectedShape, // Selected primary action button = round corners!
+                            color = if (isRecording) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                            border = null,
+                            modifier = Modifier.weight(1.5f).height(42.dp).testTag("sheet_primary_record_action_button")
                         ) {
-                            Icon(
-                                imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.Videocam,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (isRecording) "Stop Recording" else "Start Recording",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                Icon(
+                                    imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.Videocam,
+                                    contentDescription = null,
+                                    tint = if (isRecording) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isRecording) "Stop Recording" else "Start Recording",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = if (isRecording) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary
+                                )
+                            }
                         }
                     }
                 }
@@ -540,24 +616,21 @@ private fun OptionItemRow(
     subtitle: String,
     isSelected: Boolean,
     icon: ImageVector? = null,
-    isDark: Boolean,
+    shape: Shape,
     onClick: () -> Unit,
     testTag: String
 ) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) MonetPrimary.copy(alpha = 0.16f) else MaterialTheme.colorScheme.background,
-        border = androidx.compose.foundation.BorderStroke(
-            width = if (isSelected) 1.5.dp else 1.dp,
-            color = if (isSelected) MonetPrimary else if (isDark) Color.White.copy(alpha = 0.06f) else Color.Black.copy(alpha = 0.06f)
-        ),
+        shape = shape,
+        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f),
+        border = null,
         modifier = Modifier.fillMaxWidth().testTag(testTag)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .padding(horizontal = 12.dp, vertical = 3.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -569,7 +642,7 @@ private fun OptionItemRow(
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = if (isSelected) MonetPrimary else if (isDark) Color.Gray else Color(0xFF64748B),
+                        tint = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -578,12 +651,12 @@ private fun OptionItemRow(
                         text = title,
                         fontSize = 13.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) MonetPrimary else if (isDark) Color.White else Color(0xFF1E293B)
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = subtitle,
                         fontSize = 11.sp,
-                        color = if (isDark) Color.Gray else Color(0xFF64748B)
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -593,13 +666,13 @@ private fun OptionItemRow(
                     modifier = Modifier
                         .size(22.dp)
                         .clip(CircleShape)
-                        .background(MonetPrimary),
+                        .background(MaterialTheme.colorScheme.primary),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = "Selected",
-                        tint = MonetOnPrimary,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(14.dp)
                     )
                 }

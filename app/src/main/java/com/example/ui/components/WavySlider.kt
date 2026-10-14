@@ -316,7 +316,7 @@ fun QsProgressSlider(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
-    style: ProgressBarStyle = ProgressBarStyle.WAVY,
+    style: ProgressBarStyle = ProgressBarStyle.DEFAULT,
     isPlaying: Boolean = false,
     activeColor: Color = MaterialTheme.colorScheme.primary,
     inactiveColor: Color = MaterialTheme.colorScheme.surfaceVariant,

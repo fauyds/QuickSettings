@@ -16,11 +16,22 @@ import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import java.util.concurrent.ConcurrentHashMap
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -156,6 +167,43 @@ object HeadsUpOverlayManager {
 
     val displayedHeadsUpKeys: MutableSet<String> = java.util.Collections.synchronizedSet(mutableSetOf<String>())
 
+    data class NotificationAlertRecord(
+        val key: String,
+        val title: String,
+        val text: String,
+        val subText: String?,
+        val postTime: Long,
+        val alertedAtMillis: Long = System.currentTimeMillis()
+    )
+
+    // Tracks recently alerted notifications by key to prevent re-alerting or repeating the same message/thread
+    private val recentlyAlertedMap = ConcurrentHashMap<String, NotificationAlertRecord>()
+
+    private fun recordAlert(data: HeadsUpData) {
+        val key = data.key ?: data.id
+        recentlyAlertedMap[key] = NotificationAlertRecord(
+            key = key,
+            title = data.title,
+            text = data.text,
+            subText = data.subText,
+            postTime = data.postTime
+        )
+    }
+
+    private fun pruneOldAlertRecords() {
+        val cutoff = System.currentTimeMillis() - 300_000L // 5 minutes
+        recentlyAlertedMap.entries.removeIf { it.value.alertedAtMillis < cutoff }
+    }
+
+    fun onNotificationKeyRemoved(key: String?) {
+        if (key == null) return
+        displayedHeadsUpKeys.remove(key)
+        scope.launch {
+            delay(1000)
+            recentlyAlertedMap.remove(key)
+        }
+    }
+
     @Volatile
     var activePinnedKey: String? = null
 
@@ -191,13 +239,13 @@ object HeadsUpOverlayManager {
     }
 
     /**
-     * Dismiss the overlay if it matches the given key or packageName (e.g., when alarm is dismissed elsewhere).
+     * Dismiss the overlay if it matches the given key (e.g., when notification is dismissed or cancelled).
      */
-    fun dismissIfMatching(key: String?, packageName: String?) {
+    fun dismissIfMatching(key: String?, packageName: String? = null) {
         key?.let { displayedHeadsUpKeys.remove(it) }
         val current = _currentDataFlow.value ?: return
-        if ((key != null && current.key == key) || (packageName != null && current.packageName == packageName)) {
-            Log.d(TAG, "Dismissing Heads-Up because matching notification was removed: key=$key, pkg=$packageName")
+        if (key != null && current.key == key) {
+            Log.d(TAG, "Dismissing Heads-Up because matching notification was removed: key=$key")
             dismissHeadsUpAnimated()
         }
     }
@@ -234,24 +282,68 @@ object HeadsUpOverlayManager {
             }
 
             val existing = _currentDataFlow.value
-            val isAlreadyDisplayed = displayedHeadsUpKeys.contains(targetKey) ||
-                    (existing?.packageName == data.packageName && existing?.key == data.key)
+            val isSameNotification = existing != null && (
+                    (data.key != null && existing.key == data.key) ||
+                    (existing.packageName == data.packageName && existing.key == data.key)
+            )
 
-            if (isAlreadyDisplayed || existing != null) {
+            if (isSameNotification && existing != null) {
+                // Check if content is identical (e.g. background ticker, ranking, read-status update)
+                val isIdentical = existing.title == data.title &&
+                        existing.text == data.text &&
+                        existing.subText == data.subText
+
+                if (isIdentical) {
+                    Log.d(TAG, "Identical notification update for key $targetKey ignored — preventing banner flicker.")
+                    return
+                }
+
+                // Genuinely new message in the same conversation thread:
+                // Smoothly update the reactive data flow in-place (WITHOUT recreating or flickering the Window)
                 _currentDataFlow.value = data
                 currentOnTriggerQs = onTriggerQs
                 currentOnActionClick = onActionClick
                 currentNotificationId = data.id
                 displayedHeadsUpKeys.add(targetKey)
-                Log.d(TAG, "In-place smooth update for key $targetKey")
+                recordAlert(data)
+                Log.d(TAG, "In-place smooth update for active conversation key $targetKey: '${data.text}'")
+                return
+            }
+
+            // If a different notification arrives while an existing one is showing:
+            if (existing != null) {
+                _currentDataFlow.value = data
+                currentOnTriggerQs = onTriggerQs
+                currentOnActionClick = onActionClick
+                currentNotificationId = data.id
+                displayedHeadsUpKeys.add(targetKey)
+                recordAlert(data)
+                Log.d(TAG, "Replacing active banner with incoming key $targetKey")
                 return
             }
         }
+
+        // 2. Banner is NOT currently showing. Check if this notification was already alerted recently.
+        // Prevents re-alerting or repeating old messages for already active notification threads.
+        if (!data.isAlarm && !data.isCall) {
+            val previousAlert = recentlyAlertedMap[targetKey]
+            if (previousAlert != null) {
+                val isContentUnchanged = previousAlert.title == data.title && previousAlert.text == data.text
+                if (isContentUnchanged) {
+                    Log.d(TAG, "Notification $targetKey already alerted with identical text. Suppressing duplicate banner.")
+                    return
+                }
+            }
+        }
+
+        // Clean up any stale records older than 5 minutes
+        pruneOldAlertRecords()
 
         // Dismiss any stale views if needed before creating new window
         dismissExistingOverlay()
 
         displayedHeadsUpKeys.add(targetKey)
+        recordAlert(data)
         if (data.isAlarm || data.isCall) {
             activePinnedKey = targetKey
             QuickPanelNotificationListenerService.activePinnedKey = activePinnedKey
@@ -580,7 +672,7 @@ object HeadsUpOverlayManager {
     }
 
     private fun dismissExistingOverlay() {
-        displayedHeadsUpKeys.clear()
+        // Note: Do not clear recentlyAlertedMap so active conversation alert history is preserved
         resetAlarmStateLock()
         _currentDataFlow.value = null
         currentComposeView?.let { view ->
@@ -645,6 +737,20 @@ object HeadsUpOverlayManager {
             DarkUiSurface
         }
 
+        val dismissWithAnimation: () -> Unit = {
+            if (isVisible) {
+                coroutineScope.launch {
+                    isVisible = false
+                    delay(200)
+                    dismissExistingOverlay()
+                }
+            } else {
+                dismissExistingOverlay()
+            }
+        }
+
+        dismissAnimatedCallback = dismissWithAnimation
+
         // Keep Alarm & Call Heads-Up Overlay PINNED until action (no auto-dismiss timer for Alarms or Calls!)
         LaunchedEffect(data.id, data.isAlarm, data.isCall) {
             isVisible = true
@@ -653,17 +759,21 @@ object HeadsUpOverlayManager {
                 delay((autoDismissSeconds * 1000).toLong())
                 if (isVisible) {
                     isVisible = false
+                    delay(200)
                     dismissExistingOverlay()
                 }
             }
         }
 
-        dismissAnimatedCallback = {
-            isVisible = false
-            dismissExistingOverlay()
-        }
-
-        if (isVisible) {
+        AnimatedVisibility(
+            visible = isVisible,
+            enter = slideInVertically(
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioLowBouncy)
+            ) { -it } + fadeIn(tween(200)),
+            exit = slideOutVertically(
+                animationSpec = tween(180)
+            ) { -it } + fadeOut(tween(180))
+        ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -928,30 +1038,39 @@ object HeadsUpOverlayManager {
                                 )
                             }
 
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(2.dp)
-                            ) {
-                                if (data.title.isNotBlank()) {
-                                    Text(
-                                        text = data.title,
-                                        fontSize = if (data.isCall) 14.sp else 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = monetOnSurface,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
+                            AnimatedContent(
+                                targetState = Triple(data.title, data.text, data.subText),
+                                transitionSpec = {
+                                    (fadeIn(animationSpec = tween(220)) + slideInVertically(animationSpec = tween(220)) { it / 4 })
+                                        .togetherWith(fadeOut(animationSpec = tween(140)))
+                                },
+                                label = "HeadsUpMessageContentTransition",
+                                modifier = Modifier.weight(1f)
+                            ) { (currentTitle, currentText, _) ->
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
+                                    if (currentTitle.isNotBlank()) {
+                                        Text(
+                                            text = currentTitle,
+                                            fontSize = if (data.isCall) 14.sp else 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = monetOnSurface,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
 
-                                if (data.text.isNotBlank()) {
-                                    Text(
-                                        text = data.text,
-                                        fontSize = 12.sp,
-                                        color = monetOnSurfaceVariant,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis,
-                                        lineHeight = 15.sp
-                                    )
+                                    if (currentText.isNotBlank()) {
+                                        Text(
+                                            text = currentText,
+                                            fontSize = 12.sp,
+                                            color = monetOnSurfaceVariant,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                            lineHeight = 15.sp
+                                        )
+                                    }
                                 }
                             }
                         }

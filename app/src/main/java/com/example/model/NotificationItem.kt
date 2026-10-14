@@ -28,5 +28,11 @@ data class NotificationItem(
     val isOngoing: Boolean = false,
     val channelId: String? = null,
     val contentIntent: PendingIntent? = null,
-    val actions: List<NotificationActionModel> = emptyList()
-)
+    val actions: List<NotificationActionModel> = emptyList(),
+    val progress: Int = -1,
+    val progressMax: Int = 0,
+    val isIndeterminateProgress: Boolean = false
+) {
+    val hasProgress: Boolean
+        get() = progressMax > 0 || (isIndeterminateProgress && progress >= 0) || isIndeterminateProgress
+}

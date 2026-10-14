@@ -2,6 +2,7 @@ package com.example.ui.notification
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Outline
@@ -17,6 +18,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupMenu
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -147,13 +149,14 @@ class NotificationAdapter(
         private val tvText: TextView = itemView.findViewById(R.id.tv_notif_text)
         private val tvSubtext: TextView = itemView.findViewById(R.id.tv_notif_subtext)
         private val ivBigPicture: ImageView = itemView.findViewById(R.id.iv_notif_big_picture)
+        private val pbProgress: ProgressBar = itemView.findViewById(R.id.pb_notif_progress)
         private val llActions: LinearLayout = itemView.findViewById(R.id.ll_notif_actions)
 
         fun bind(item: NotificationItem, position: Int, totalNotifCount: Int) {
             val context = itemView.context
             val density = context.resources.displayMetrics.density
             val isExpanded = isItemExpanded(item)
-            val isExpandable = item.actions.isNotEmpty() || !item.subText.isNullOrBlank() || item.text.length > 40 || item.bigPictureBitmap != null
+            val isExpandable = item.actions.isNotEmpty() || !item.subText.isNullOrBlank() || item.text.length > 40 || item.bigPictureBitmap != null || item.hasProgress
 
             val isCall = item.channelId?.contains("call", ignoreCase = true) == true ||
                     item.packageName.contains("dialer", ignoreCase = true) ||
@@ -285,6 +288,7 @@ class NotificationAdapter(
             val typeBadge = when {
                 isCall -> " • CALL"
                 isAlarm -> " • ALARM"
+                item.hasProgress -> " • PROGRESS"
                 isOngoing -> " • ONGOING"
                 else -> ""
             }
@@ -362,6 +366,22 @@ class NotificationAdapter(
                 tvSubtext.setTextColor(tertiaryColor)
             } else {
                 tvSubtext.visibility = View.GONE
+            }
+
+            // 9.5 Download / Ongoing Task Progress Bar
+            if (item.hasProgress) {
+                pbProgress.visibility = View.VISIBLE
+                if (item.isIndeterminateProgress) {
+                    pbProgress.isIndeterminate = true
+                } else {
+                    pbProgress.isIndeterminate = false
+                    pbProgress.max = if (item.progressMax > 0) item.progressMax else 100
+                    pbProgress.progress = item.progress.coerceAtLeast(0)
+                }
+                pbProgress.progressTintList = ColorStateList.valueOf(primaryColor)
+                pbProgress.indeterminateTintList = ColorStateList.valueOf(primaryColor)
+            } else {
+                pbProgress.visibility = View.GONE
             }
 
             // 10. BigPicture Attachment (Visible ONLY when expanded)

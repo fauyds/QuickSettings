@@ -283,7 +283,7 @@ fun HiddenNotificationManagerScreen(
                     SettingsCard(
                         shape = cardShape,
                         colors = CardDefaults.cardColors(
-                            containerColor = if (isHidden) screenBg else cardBg
+                            containerColor = if (isHidden) colorScheme.surfaceContainerLowest.copy(alpha = 0.5f) else colorScheme.surfaceContainer
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -306,15 +306,15 @@ fun HiddenNotificationManagerScreen(
                                         .size(38.dp)
                                         .clip(CircleShape)
                                         .background(
-                                            if (isHidden) colorScheme.primary.copy(alpha = 0.35f)
-                                            else colorScheme.primary
+                                            if (isHidden) colorScheme.primaryContainer.copy(alpha = 0.5f)
+                                            else colorScheme.primaryContainer
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.NotificationsActive,
                                         contentDescription = null,
-                                        tint = colorScheme.onPrimary,
+                                        tint = if (isHidden) colorScheme.onPrimaryContainer.copy(alpha = 0.5f) else colorScheme.onPrimaryContainer,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -383,8 +383,8 @@ fun HiddenNotificationManagerScreen(
                                 },
                                 shape = RoundedCornerShape(8.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isHidden) colorScheme.primary else colorScheme.secondaryContainer,
-                                    contentColor = if (isHidden) colorScheme.onPrimary else colorScheme.onSecondaryContainer
+                                    containerColor = if (isHidden) colorScheme.primary else colorScheme.errorContainer,
+                                    contentColor = if (isHidden) colorScheme.onPrimary else colorScheme.onErrorContainer
                                 ),
                                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
                                 modifier = Modifier.height(32.dp)

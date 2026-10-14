@@ -1689,32 +1689,10 @@ class AccessibilityStatusTriggerView(context: Context) : View(context) {
         val h = height.toFloat()
         if (w <= 0 || h <= 0) return
 
-        val density = resources.displayMetrics.density
-
-        // 1. Full-width background across the whole screen width: totally black with transparency
+        // 1. Simplified, highly transparent full-width trigger background without pill or outline
         backgroundPaint.shader = null
-        backgroundPaint.color = if (isPressedState) 0x99000000.toInt() else 0x66000000.toInt()
+        backgroundPaint.color = if (isPressedState) 0x1A000000.toInt() else 0x0D000000.toInt()
         canvas.drawRect(0f, 0f, w, h, backgroundPaint)
-
-        // 2. Subtle bottom border line in transparent black
-        val borderThickness = 1.0f * density
-        bottomBorderPaint.shader = null
-        bottomBorderPaint.color = if (isPressedState) 0xCC000000.toInt() else 0x88000000.toInt()
-        canvas.drawRect(0f, h - borderThickness, w, h, bottomBorderPaint)
-
-        // 3. Subtle centered pull handle in transparent black
-        val pillWidth = (w * 0.25f).coerceIn(48f * density, 96f * density)
-        val pillHeight = 3.0f * density
-        val pillCorner = pillHeight / 2f
-        val pillLeft = (w - pillWidth) / 2f
-        val pillTop = h - pillHeight - borderThickness - (2f * density)
-
-        if (pillTop > 0) {
-            pillRect.set(pillLeft, pillTop, pillLeft + pillWidth, pillTop + pillHeight)
-            centerPillPaint.shader = null
-            centerPillPaint.color = if (isPressedState) 0xCC000000.toInt() else 0x88000000.toInt()
-            canvas.drawRoundRect(pillRect, pillCorner, pillCorner, centerPillPaint)
-        }
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {

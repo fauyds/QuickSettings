@@ -102,14 +102,10 @@ class TileEditAdapter(
 
                 holder.tvTitle.setTextColor(primaryAccent)
                 holder.tvSubtitle.setTextColor(textSecondary)
+                holder.btnDone.visibility = android.view.View.VISIBLE
                 holder.btnDone.background = MonetThemeHelper.createMonetPrimaryPillDrawable(context, isDark, 16f * density)
-                holder.ivDoneIcon.setColorFilter(onPrimary)
                 holder.tvDoneText.setTextColor(onPrimary)
-
-                holder.btnDone.setOnClickListener {
-                    it.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                    onDoneClick()
-                }
+                holder.ivDoneIcon.setColorFilter(onPrimary)
             }
             is InactiveHeaderViewHolder -> {
                 val primaryAccent = MonetThemeHelper.getPrimaryAccent(context, isDark)

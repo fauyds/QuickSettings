@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Security
@@ -61,13 +62,19 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
     val nonGrantedRed = com.example.ui.theme.getNonGrantedRedColor(isDark)
     val colorScheme = MaterialTheme.colorScheme
 
+    val enableSystemHeadsUp by PanelPreferences.enableSystemHeadsUp.collectAsState()
+    val nativeTileManager = com.example.system.NativeTileManager.instance
+    val systemHeadsUpState by (nativeTileManager?.isHeadsUpEnabled ?: androidx.compose.runtime.remember {
+        kotlinx.coroutines.flow.MutableStateFlow(enableSystemHeadsUp)
+    }).collectAsState()
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing)
     ) {
         // 1. Master Toggle Card
         SettingsCard(
-            shape = if (enableHeadsUpOverlay) CustomizeCardShapes.TopCard else CustomizeCardShapes.SingleCard,
+            shape = CustomizeCardShapes.TopCard,
             modifier = Modifier.testTag("heads_up_overlay_engine_card")
         ) {
             Row(
@@ -127,6 +134,75 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
                     ),
                     modifier = Modifier.testTag("enable_heads_up_toggle")
                 )
+            }
+        }
+
+        // 2. System Heads-Up Toggle Card (Visible when custom Heads-Up overlay is disabled)
+        AnimatedVisibility(visible = !enableHeadsUpOverlay) {
+            SettingsCard(
+                shape = CustomizeCardShapes.BottomCard,
+                modifier = Modifier.testTag("system_heads_up_card")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(colorScheme.secondaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = null,
+                                tint = colorScheme.onSecondaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            Text(
+                                text = "Enable System Heads-Up",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 17.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Enable default Android OS floating pop-up banners while custom overlay is turned off.",
+                                fontSize = 11.sp,
+                                lineHeight = 14.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Switch(
+                        checked = systemHeadsUpState,
+                        onCheckedChange = { checked ->
+                            PanelPreferences.setEnableSystemHeadsUp(context, checked)
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = colorScheme.onSecondary,
+                            checkedTrackColor = colorScheme.secondary,
+                            uncheckedThumbColor = colorScheme.outline,
+                            uncheckedTrackColor = screenBg
+                        ),
+                        modifier = Modifier.testTag("enable_system_heads_up_toggle")
+                    )
+                }
             }
         }
 

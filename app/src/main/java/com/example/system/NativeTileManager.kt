@@ -855,7 +855,7 @@ class NativeTileManager(
             "sound_profile" -> Intent(Settings.ACTION_SOUND_SETTINGS)
             "aod" -> Intent("android.settings.LOCK_SCREEN_SETTINGS")
             "ambient_display", "caffeine" -> Intent(Settings.ACTION_DISPLAY_SETTINGS)
-            "heads_up" -> Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+            "heads_up" -> Intent("android.settings.NOTIFICATION_SETTINGS")
             else -> Intent(Settings.ACTION_SETTINGS)
         }
     }
@@ -1159,12 +1159,21 @@ class NativeTileManager(
 
     fun toggleHeadsUp() {
         val target = !_isHeadsUpEnabled.value
-        _isHeadsUpEnabled.value = target
+        setHeadsUpEnabled(target)
+    }
+
+    fun setHeadsUpEnabled(enabled: Boolean) {
+        _isHeadsUpEnabled.value = enabled
+        val valInt = if (enabled) 1 else 0
+        try {
+            Settings.Global.putInt(contentResolver, "heads_up_notifications_enabled", valInt)
+        } catch (_: Exception) {}
+
         scope.launch {
-            val valInt = if (target) 1 else 0
-            val cmd = "settings put global heads_up_notifications_enabled $valInt"
-            val fallback = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-            privilegeEngine.executeCommand(cmd, fallback)
+            if (privilegeEngine.currentMode.value != PrivilegeMode.STANDARD) {
+                val cmd = "settings put global heads_up_notifications_enabled $valInt"
+                privilegeEngine.executeCommand(cmd)
+            }
             kotlinx.coroutines.delay(300)
             refreshAllStates()
         }

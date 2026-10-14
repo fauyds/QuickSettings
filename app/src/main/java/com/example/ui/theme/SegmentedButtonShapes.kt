@@ -11,32 +11,24 @@ import androidx.compose.ui.unit.dp
  * Segmented Button Shapes for selector button rows.
  *
  * Requirements:
- * - Selected buttons: corners rounded (pill / stadium shape).
- * - Non-selected buttons: outer corners round, inner corners 8dp.
+ * - Selected buttons: round corners (CircleShape / pill shape).
+ * - Non-selected buttons: 8dp corners for both outer and inner corners.
  */
 object SegmentedButtonShapes {
-    val InnerCorner: Dp = 8.dp
+    val UnselectedCorner: Dp = 8.dp
 
     fun getShape(
         index: Int,
         count: Int,
         isSelected: Boolean,
-        hasUnselectedNeighborLeft: Boolean,
-        hasUnselectedNeighborRight: Boolean
+        hasUnselectedNeighborLeft: Boolean = false,
+        hasUnselectedNeighborRight: Boolean = false
     ): Shape {
         if (isSelected || count <= 1) {
             return CircleShape
         }
 
-        val startCorner = if (hasUnselectedNeighborLeft) CornerSize(InnerCorner) else CornerSize(50)
-        val endCorner = if (hasUnselectedNeighborRight) CornerSize(InnerCorner) else CornerSize(50)
-
-        return RoundedCornerShape(
-            topStart = startCorner,
-            topEnd = endCorner,
-            bottomEnd = endCorner,
-            bottomStart = startCorner
-        )
+        return RoundedCornerShape(UnselectedCorner)
     }
 
     fun <T> getShape(
@@ -44,20 +36,9 @@ object SegmentedButtonShapes {
         items: List<T>,
         selectedItem: T?
     ): Shape {
-        val index = items.indexOf(item)
-        if (index == -1 || items.size <= 1) return CircleShape
         val isSelected = (item == selectedItem)
-        if (isSelected) return CircleShape
+        if (isSelected || items.size <= 1) return CircleShape
 
-        val hasUnselectedLeft = index > 0 && items[index - 1] != selectedItem
-        val hasUnselectedRight = index < items.size - 1 && items[index + 1] != selectedItem
-
-        return getShape(
-            index = index,
-            count = items.size,
-            isSelected = false,
-            hasUnselectedNeighborLeft = hasUnselectedLeft,
-            hasUnselectedNeighborRight = hasUnselectedRight
-        )
+        return RoundedCornerShape(UnselectedCorner)
     }
 }

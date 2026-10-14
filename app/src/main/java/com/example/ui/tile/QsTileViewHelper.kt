@@ -63,8 +63,10 @@ object QsTileViewHelper {
             }
         }
 
+        val isOutlineEnabled = PanelPreferences.tileOutlineEnabled.value
+
         val fgColor = when (tile.state) {
-            TileState.ACTIVE -> onPrimary
+            TileState.ACTIVE -> if (isOutlineEnabled) primaryAccent else onPrimary
             TileState.INACTIVE -> textPrimary
             TileState.UNAVAILABLE -> {
                 val alpha = 100
@@ -89,7 +91,20 @@ object QsTileViewHelper {
         val disabledShapeId = PanelPreferences.disabledTileShapeId.value
         val chosenShapeId = if (isActive) enabledShapeId else disabledShapeId
 
-        val shapeDrawable = com.example.ui.shape.QsShapeManager.createDrawable(chosenShapeId, bgColor)
+        val shapeDrawable = com.example.ui.shape.QsShapeManager.createDrawable(
+            chosenShapeId,
+            if (isOutlineEnabled) Color.TRANSPARENT else bgColor
+        )
+        if (isOutlineEnabled) {
+            val outlineColor = when (tile.state) {
+                TileState.ACTIVE -> primaryAccent
+                TileState.INACTIVE -> if (isDark) Color.argb(255, 38, 43, 48) else Color.WHITE
+                TileState.UNAVAILABLE -> if (isDark) Color.argb((255 * 0.4f).toInt(), 38, 43, 48) else Color.argb((255 * 0.5f).toInt(), 255, 255, 255)
+            }
+            shapeDrawable.setColor(Color.TRANSPARENT)
+            shapeDrawable.strokeWidth = 1.2f * density
+            shapeDrawable.strokeColor = outlineColor
+        }
         val maskDrawable = com.example.ui.shape.QsShapeManager.createDrawable(chosenShapeId, Color.WHITE)
 
         val rippleColor = if (isDark) Color.parseColor("#44FFFFFF") else Color.parseColor("#33000000")

@@ -1,13 +1,18 @@
 package com.example.service
 
+import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import com.example.data.PanelPreferences
+import com.example.data.ScreenRecordAudioSource
 import com.example.model.PrivilegeMode
 import com.example.system.PrivilegeEngine
 import kotlinx.coroutines.CoroutineScope
@@ -39,17 +44,23 @@ class ScreenRecordPromptActivity : ComponentActivity() {
             Log.w(TAG, "MediaProjection permission denied or canceled: ${result.resultCode}")
         }
         finish()
-        overridePendingTransition(0, 0)
+    }
+
+    private val audioPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        Log.d(TAG, "RECORD_AUDIO permission result: $isGranted")
+        launchMediaProjectionPrompt()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        PanelPreferences.init(this)
 
         // If recording is already in progress, stop it and finish
         if (ScreenRecordService.isRecording.value) {
             ScreenRecordService.stopRecording(this)
             finish()
-            overridePendingTransition(0, 0)
             return
         }
 
@@ -68,10 +79,33 @@ class ScreenRecordPromptActivity : ComponentActivity() {
             }
         }
 
+        // Check if audio recording is requested and request permission if missing
+        val audioSource = PanelPreferences.screenRecordAudioSource.value
+        val needsAudio = audioSource != ScreenRecordAudioSource.MUTE
+        val hasAudioPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+
+        if (needsAudio && !hasAudioPermission) {
+            try {
+                audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to launch audio permission request: ${e.message}")
+                launchMediaProjectionPrompt()
+            }
+        } else {
+            launchMediaProjectionPrompt()
+        }
+    }
+
+    private fun launchMediaProjectionPrompt() {
         val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as? MediaProjectionManager
         if (projectionManager != null) {
-            val captureIntent = projectionManager.createScreenCaptureIntent()
-            projectionLauncher.launch(captureIntent)
+            try {
+                val captureIntent = projectionManager.createScreenCaptureIntent()
+                projectionLauncher.launch(captureIntent)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error launching screen capture intent: ${e.message}", e)
+                finish()
+            }
         } else {
             Log.e(TAG, "MediaProjectionManager is null")
             finish()

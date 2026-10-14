@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -67,22 +68,50 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Draw
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.FileOpen
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.Label
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.UploadFile
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.ui.shape.QsShapeItem
 import com.example.ui.shape.QsShapeManager
 
@@ -93,6 +122,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val qqsTileCount by PanelPreferences.qqsTileCount.collectAsState()
     val currentEnabledTileShapeId by PanelPreferences.enabledTileShapeId.collectAsState()
     val currentDisabledTileShapeId by PanelPreferences.disabledTileShapeId.collectAsState()
+    val tileOutlineEnabled by PanelPreferences.tileOutlineEnabled.collectAsState()
     val allShapes by QsShapeManager.allShapes.collectAsState()
     val showCarrier by PanelPreferences.showCarrier.collectAsState()
     val showCarrierDivider by PanelPreferences.showCarrierDivider.collectAsState()
@@ -271,7 +301,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "All QS shapes are rendered via vector XML drawable paths. You can also import custom XML shapes.",
+                            text = "All QS shapes are rendered via vector XML drawable paths. You can paste path data, XML, or import files.",
                             fontSize = 12.sp,
                             lineHeight = 16.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -285,11 +315,11 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = "Import XML Shape",
+                            contentDescription = "Add Shape",
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
-                            text = "Import XML",
+                            text = "Add Shape",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(start = 4.dp)
@@ -529,7 +559,139 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             )
         }
 
-        // 4. Show SIM Card Carrier Card
+        // 4. 4dp QS Tile Outline Card
+        SettingsCard(
+            shape = CustomizeCardShapes.CenterCard,
+            modifier = Modifier.testTag("tile_outline_card")
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "1.2dp Tile Outline",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Enable a 1.2dp stroke outline on Quick Settings tiles with the inner background hidden.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Switch(
+                        checked = tileOutlineEnabled,
+                        onCheckedChange = { PanelPreferences.setTileOutlineEnabled(context, it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                        ),
+                        modifier = Modifier.testTag("tile_outline_toggle")
+                    )
+                }
+
+                AnimatedVisibility(
+                    visible = tileOutlineEnabled,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    val enabledComposeShape = remember(currentEnabledTileShapeId) {
+                        QsShapeManager.getComposeShape(currentEnabledTileShapeId)
+                    }
+                    val disabledComposeShape = remember(currentDisabledTileShapeId) {
+                        QsShapeManager.getComposeShape(currentDisabledTileShapeId)
+                    }
+                    val isDark = isSystemInDarkTheme()
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                RoundedCornerShape(12.dp)
+                            )
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Active Tile Preview
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(52.dp)
+                                    .border(1.2.dp, MaterialTheme.colorScheme.primary, enabledComposeShape)
+                                    .clip(enabledComposeShape)
+                                    .background(Color.Transparent),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Wifi,
+                                    contentDescription = "Active Tile Preview",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Text(
+                                text = "Active (1.2dp)",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        // Inactive Tile Preview
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            val inactiveOutline = if (isDark) Color(0xFF262B30) else Color.White
+                            val inactiveIconTint = if (isDark) Color.White.copy(alpha = 0.85f) else Color(0xFF1E293B)
+                            Box(
+                                modifier = Modifier
+                                    .size(52.dp)
+                                    .border(1.2.dp, inactiveOutline, disabledComposeShape)
+                                    .clip(disabledComposeShape)
+                                    .background(Color.Transparent),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Wifi,
+                                    contentDescription = "Inactive Tile Preview",
+                                    tint = inactiveIconTint,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Text(
+                                text = "Inactive (1.2dp)",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 5. Show SIM Card Carrier Card
         SettingsCard(
             shape = CustomizeCardShapes.CenterCard
         ) {
@@ -724,7 +886,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Customize the progress bar and slider appearance for media player, volume, and brightness. Choose between the M3 slider, sleek straight bar, or Android 13/14 animated wavy track.",
+                        text = "Customize the progress bar and slider appearance for media player and brightness. Choose between the M3 slider, sleek straight bar, or Android 13/14 animated wavy track.",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -896,10 +1058,16 @@ fun ImportXmlShapeDialog(
     onShapeImported: (QsShapeItem) -> Unit
 ) {
     val context = LocalContext.current
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: Paste XML, 1: Pick File
+    val clipboardManager = LocalClipboardManager.current
+    var selectedTab by remember { mutableIntStateOf(0) } // 0: Paste Path, 1: Paste XML, 2: Pick File
+    var pathInput by remember { mutableStateOf("") }
     var xmlInput by remember { mutableStateOf("") }
     var shapeLabel by remember { mutableStateOf("") }
+    var vpWidthInput by remember { mutableStateOf("100") }
+    var vpHeightInput by remember { mutableStateOf("100") }
+    var showVpSettings by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var pickedFileName by remember { mutableStateOf<String?>(null) }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -917,6 +1085,7 @@ fun ImportXmlShapeDialog(
                             if (nameIdx >= 0) fileName = cursor.getString(nameIdx)
                         }
                     }
+                    pickedFileName = fileName
                     if (shapeLabel.isBlank()) {
                         shapeLabel = fileName?.removeSuffix(".xml")?.replace('_', ' ')?.replace('-', ' ')?.trim()?.split(" ")?.joinToString(" ") { word ->
                             word.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
@@ -931,276 +1100,835 @@ fun ImportXmlShapeDialog(
     }
 
     // Live parsed shape for preview
-    val parsedShape: QsShapeItem? = remember(xmlInput) {
-        if (xmlInput.isNotBlank()) {
-            try {
-                errorMessage = null
-                QsShapeManager.parseXmlDrawable(xmlInput, shapeLabel.ifBlank { "Preview" })
-            } catch (e: Exception) {
-                errorMessage = e.message
-                null
+    val parsedShape: QsShapeItem? = remember(selectedTab, pathInput, xmlInput, vpWidthInput, vpHeightInput, shapeLabel) {
+        val vpW = vpWidthInput.toFloatOrNull() ?: 100f
+        val vpH = vpHeightInput.toFloatOrNull() ?: 100f
+        when (selectedTab) {
+            0 -> {
+                if (pathInput.isNotBlank()) {
+                    try {
+                        errorMessage = null
+                        QsShapeManager.parseShapeInput(pathInput, shapeLabel.ifBlank { "Preview" }, vpW, vpH)
+                    } catch (e: Exception) {
+                        errorMessage = e.message
+                        null
+                    }
+                } else {
+                    errorMessage = null
+                    null
+                }
             }
-        } else {
-            errorMessage = null
-            null
+            else -> {
+                if (xmlInput.isNotBlank()) {
+                    try {
+                        errorMessage = null
+                        QsShapeManager.parseShapeInput(xmlInput, shapeLabel.ifBlank { "Preview" }, vpW, vpH)
+                    } catch (e: Exception) {
+                        errorMessage = e.message
+                        null
+                    }
+                } else {
+                    errorMessage = null
+                    null
+                }
+            }
         }
     }
 
-    AlertDialog(
+    Dialog(
         onDismissRequest = onDismiss,
-        title = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AutoAwesome,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "Import XML Shape",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
-            }
-        },
-        text = {
-            Column(
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.55f))
+                .imePadding()
+                .padding(horizontal = 16.dp, vertical = 20.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                    .widthIn(max = 520.dp)
+                    .heightIn(max = 760.dp),
+                shape = RoundedCornerShape(32.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                tonalElevation = 8.dp,
+                shadowElevation = 20.dp
             ) {
-                Text(
-                    text = "Import any Android XML vector drawable with <path android:pathData=\"...\"> to use as your QS Tile shape.",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                // Tabs: Paste XML / Pick File
-                TabRow(
-                    selectedTabIndex = selectedTab,
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    contentColor = MaterialTheme.colorScheme.primary
+                Column(
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Tab(
-                        selected = selectedTab == 0,
-                        onClick = { selectedTab = 0 },
-                        text = { Text("Paste XML", fontSize = 13.sp) }
-                    )
-                    Tab(
-                        selected = selectedTab == 1,
-                        onClick = { selectedTab = 1 },
-                        text = { Text("Pick File", fontSize = 13.sp) }
-                    )
-                }
-
-                if (selectedTab == 0) {
-                    // Paste XML section
+                    // 1. Material 3 Expressive Header
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 24.dp, end = 16.dp, top = 20.dp, bottom = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Add Custom Tile Shape",
+                                    fontSize = 19.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Vector path & XML drawable styling",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                        thickness = 1.dp
+                    )
+
+                    // 2. Scrollable Body
+                    Column(
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 24.dp, vertical = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Expressive Segmented Pill Switcher
+                        Surface(
+                            shape = RoundedCornerShape(50.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                val tabs = listOf(
+                                    Triple(0, "Paste Path", Icons.Default.Draw),
+                                    Triple(1, "Paste XML", Icons.Default.Code),
+                                    Triple(2, "Pick File", Icons.Default.UploadFile)
+                                )
+                                val tabTags = listOf("tab_paste_path", "tab_paste_xml", "tab_pick_file")
+
+                                tabs.forEachIndexed { index, (tabIndex, title, icon) ->
+                                    val isSelected = selectedTab == tabIndex
+                                    val bgCol by animateColorAsState(
+                                        if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                        label = "tab_bg"
+                                    )
+                                    val contentCol by animateColorAsState(
+                                        if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        label = "tab_content"
+                                    )
+
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(50.dp))
+                                            .background(bgCol)
+                                            .clickable { selectedTab = tabIndex }
+                                            .padding(vertical = 10.dp)
+                                            .testTag(tabTags[index]),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = icon,
+                                                contentDescription = null,
+                                                tint = contentCol,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Text(
+                                                text = title,
+                                                fontSize = 12.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = contentCol
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Tab Content
+                        when (selectedTab) {
+                            0 -> {
+                                // TAB 0: Paste Path
+                                Card(
+                                    shape = RoundedCornerShape(22.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Draw,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                                Text(
+                                                    text = "Vector Path Data",
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                            }
+
+                                            // Viewport Chip toggle
+                                            FilterChip(
+                                                selected = showVpSettings,
+                                                onClick = { showVpSettings = !showVpSettings },
+                                                label = {
+                                                    Text(
+                                                        text = "Viewport: ${vpWidthInput}×${vpHeightInput}",
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.SemiBold
+                                                    )
+                                                },
+                                                leadingIcon = {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Tune,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(13.dp)
+                                                    )
+                                                },
+                                                shape = RoundedCornerShape(50.dp)
+                                            )
+                                        }
+
+                                        // Expandable Viewport Settings
+                                        AnimatedVisibility(visible = showVpSettings) {
+                                            Surface(
+                                                shape = RoundedCornerShape(14.dp),
+                                                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(10.dp),
+                                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                                ) {
+                                                    OutlinedTextField(
+                                                        value = vpWidthInput,
+                                                        onValueChange = { vpWidthInput = it },
+                                                        label = { Text("Viewport Width", fontSize = 11.sp) },
+                                                        modifier = Modifier.weight(1f),
+                                                        singleLine = true,
+                                                        shape = RoundedCornerShape(12.dp),
+                                                        textStyle = TextStyle(fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                                                    )
+                                                    OutlinedTextField(
+                                                        value = vpHeightInput,
+                                                        onValueChange = { vpHeightInput = it },
+                                                        label = { Text("Viewport Height", fontSize = 11.sp) },
+                                                        modifier = Modifier.weight(1f),
+                                                        singleLine = true,
+                                                        shape = RoundedCornerShape(12.dp),
+                                                        textStyle = TextStyle(fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        OutlinedTextField(
+                                            value = pathInput,
+                                            onValueChange = { pathInput = it },
+                                            placeholder = {
+                                                Text(
+                                                    "Paste raw SVG or Vector path data here...\n(e.g., M 50,0 C 77.6,0 100,22.4 100,50 ... Z)",
+                                                    fontSize = 12.sp,
+                                                    fontFamily = FontFamily.Monospace,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                                )
+                                            },
+                                            shape = RoundedCornerShape(16.dp),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .heightIn(min = 100.dp, max = 150.dp)
+                                                .testTag("shape_path_input"),
+                                            textStyle = TextStyle(fontSize = 12.sp, fontFamily = FontFamily.Monospace),
+                                            maxLines = 6
+                                        )
+
+                                        // Helper action buttons (Paste from clipboard & Clear)
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.End,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            if (pathInput.isNotBlank()) {
+                                                TextButton(
+                                                    onClick = { pathInput = "" },
+                                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Clear,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text("Clear", fontSize = 11.sp)
+                                                }
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                            }
+
+                                            FilledTonalButton(
+                                                onClick = {
+                                                    val clipText = clipboardManager.getText()?.text
+                                                    if (!clipText.isNullOrBlank()) {
+                                                        pathInput = clipText
+                                                    } else {
+                                                        Toast.makeText(context, "Clipboard is empty", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                },
+                                                shape = RoundedCornerShape(50.dp),
+                                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.ContentPaste,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text("Paste Clipboard", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            1 -> {
+                                // TAB 1: Paste XML
+                                Card(
+                                    shape = RoundedCornerShape(22.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Code,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                                Text(
+                                                    text = "Vector XML Code",
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                            }
+                                        }
+
+                                        OutlinedTextField(
+                                            value = xmlInput,
+                                            onValueChange = { xmlInput = it },
+                                            placeholder = {
+                                                Text(
+                                                    "<vector xmlns:android=\"...\">\n  <path android:pathData=\"...\" />\n</vector>",
+                                                    fontSize = 12.sp,
+                                                    fontFamily = FontFamily.Monospace,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                                )
+                                            },
+                                            shape = RoundedCornerShape(16.dp),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .heightIn(min = 120.dp, max = 160.dp)
+                                                .testTag("shape_xml_input"),
+                                            textStyle = TextStyle(fontSize = 12.sp, fontFamily = FontFamily.Monospace),
+                                            maxLines = 8
+                                        )
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.End,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            if (xmlInput.isNotBlank()) {
+                                                TextButton(
+                                                    onClick = { xmlInput = "" },
+                                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Clear,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text("Clear", fontSize = 11.sp)
+                                                }
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                            }
+
+                                            FilledTonalButton(
+                                                onClick = {
+                                                    val clipText = clipboardManager.getText()?.text
+                                                    if (!clipText.isNullOrBlank()) {
+                                                        xmlInput = clipText
+                                                    } else {
+                                                        Toast.makeText(context, "Clipboard is empty", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                },
+                                                shape = RoundedCornerShape(50.dp),
+                                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.ContentPaste,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text("Paste Clipboard", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            2 -> {
+                                // TAB 2: Pick File
+                                Card(
+                                    shape = RoundedCornerShape(22.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(22.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(56.dp)
+                                                .clip(RoundedCornerShape(18.dp))
+                                                .background(MaterialTheme.colorScheme.primaryContainer),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.UploadFile,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(28.dp),
+                                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                            )
+                                        }
+
+                                        Text(
+                                            text = "Import Vector Drawable (.xml)",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+
+                                        Text(
+                                            text = "Choose a vector drawable XML file exported from Android Studio or vector tools.",
+                                            fontSize = 12.sp,
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+
+                                        Button(
+                                            onClick = { filePickerLauncher.launch("*/*") },
+                                            shape = RoundedCornerShape(50.dp),
+                                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.FileOpen,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text("Browse XML Files", fontWeight = FontWeight.SemiBold)
+                                        }
+
+                                        if (pickedFileName != null) {
+                                            Surface(
+                                                shape = RoundedCornerShape(50.dp),
+                                                color = MaterialTheme.colorScheme.primaryContainer,
+                                                modifier = Modifier.padding(top = 4.dp)
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Check,
+                                                        contentDescription = null,
+                                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                    Text(
+                                                        text = pickedFileName ?: "file.xml",
+                                                        fontSize = 12.sp,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Shape Label Input
+                        OutlinedTextField(
+                            value = shapeLabel,
+                            onValueChange = { shapeLabel = it },
+                            label = { Text("Shape Name") },
+                            placeholder = { Text("e.g. Hexagon, Star, Diamond, Octagon") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Label,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("shape_name_input")
+                        )
+
+                        // Material 3 Expressive Live Preview Card
+                        Card(
+                            shape = RoundedCornerShape(22.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Visibility,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            text = "Tile Shape Preview",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+
+                                    if (parsedShape != null) {
+                                        Surface(
+                                            shape = RoundedCornerShape(50.dp),
+                                            color = MaterialTheme.colorScheme.primaryContainer
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.CheckCircle,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                    modifier = Modifier.size(12.dp)
+                                                )
+                                                Text(
+                                                    text = "Valid (${parsedShape.viewportWidth.toInt()}×${parsedShape.viewportHeight.toInt()})",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                                )
+                                            }
+                                        }
+                                    } else if (errorMessage != null) {
+                                        Surface(
+                                            shape = RoundedCornerShape(50.dp),
+                                            color = MaterialTheme.colorScheme.errorContainer
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.ErrorOutline,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                                                    modifier = Modifier.size(12.dp)
+                                                )
+                                                Text(
+                                                    text = "Syntax Error",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (parsedShape != null) {
+                                    // Side-by-side Quick Settings tile mockups
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceEvenly,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        val previewShape = remember(parsedShape.pathData, parsedShape.viewportWidth, parsedShape.viewportHeight) {
+                                            com.example.ui.shape.VectorPathShape(
+                                                parsedShape.pathData,
+                                                parsedShape.viewportWidth,
+                                                parsedShape.viewportHeight
+                                            )
+                                        }
+
+                                        // Active tile mockup
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(54.dp)
+                                                    .clip(previewShape)
+                                                    .background(MaterialTheme.colorScheme.primary),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Wifi,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                            }
+                                            Text(
+                                                text = "Active Tile",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(
+                                                text = "On",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+
+                                        // Inactive tile mockup
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(54.dp)
+                                                    .clip(previewShape)
+                                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Wifi,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                            }
+                                            Text(
+                                                text = "Inactive Tile",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(
+                                                text = "Off",
+                                                fontSize = 10.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                } else if (errorMessage != null) {
+                                    Surface(
+                                        shape = RoundedCornerShape(14.dp),
+                                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.ErrorOutline,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.error,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Text(
+                                                text = errorMessage ?: "Invalid path syntax",
+                                                fontSize = 12.sp,
+                                                color = MaterialTheme.colorScheme.onErrorContainer
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 12.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "Enter a vector path or XML above to preview the tile shape in real-time.",
+                                            fontSize = 12.sp,
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                        thickness = 1.dp
+                    )
+
+                    // 3. Material 3 Expressive Action Footer
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Vector XML Code",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        TextButton(
-                            onClick = {
-                                xmlInput = """
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="100dp"
-    android:height="100dp"
-    android:viewportWidth="100"
-    android:viewportHeight="100">
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M 50,2 L 64.5,33.5 L 98.5,38 L 73.5,62 L 79.5,96 L 50,79.5 L 20.5,96 L 26.5,62 L 1.5,38 L 35.5,33.5 Z" />
-</vector>""".trimIndent()
-                                if (shapeLabel.isBlank()) shapeLabel = "Star"
-                            },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        OutlinedButton(
+                            onClick = onDismiss,
+                            shape = RoundedCornerShape(50.dp),
+                            modifier = Modifier.weight(1f)
                         ) {
-                            Text("Insert Star Sample", fontSize = 11.sp)
+                            Text("Cancel", fontWeight = FontWeight.SemiBold)
                         }
-                    }
 
-                    OutlinedTextField(
-                        value = xmlInput,
-                        onValueChange = {
-                            xmlInput = it
-                        },
-                        placeholder = {
-                            Text(
-                                "<vector ...>\n  <path android:pathData=\"...\" />\n</vector>",
-                                fontSize = 12.sp
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 120.dp, max = 180.dp),
-                        textStyle = TextStyle(fontSize = 12.sp),
-                        maxLines = 8
-                    )
-                } else {
-                    // Pick File section
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FileOpen,
-                            contentDescription = null,
-                            modifier = Modifier.size(36.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "Choose an XML vector drawable file (.xml) from your device",
-                            fontSize = 12.sp,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                         Button(
-                            onClick = { filePickerLauncher.launch("*/*") }
+                            onClick = {
+                                val labelToUse = shapeLabel.ifBlank { "Custom Shape" }
+                                val vpW = vpWidthInput.toFloatOrNull() ?: 100f
+                                val vpH = vpHeightInput.toFloatOrNull() ?: 100f
+                                val result = if (selectedTab == 0) {
+                                    QsShapeManager.importShapeFromPathData(context, pathInput, labelToUse, vpW, vpH)
+                                } else {
+                                    QsShapeManager.importShape(context, xmlInput, labelToUse, vpW, vpH)
+                                }
+                                if (result.isSuccess) {
+                                    val imported = result.getOrNull()!!
+                                    Toast.makeText(context, "Shape \"${imported.label}\" saved & applied!", Toast.LENGTH_SHORT).show()
+                                    onShapeImported(imported)
+                                } else {
+                                    errorMessage = result.exceptionOrNull()?.message ?: "Failed to import shape"
+                                }
+                            },
+                            enabled = parsedShape != null,
+                            shape = RoundedCornerShape(50.dp),
+                            modifier = Modifier
+                                .weight(1.5f)
+                                .testTag("save_shape_confirm_button")
                         ) {
-                            Text("Select XML File")
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Save & Apply", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
-
-                // Shape Label Input
-                OutlinedTextField(
-                    value = shapeLabel,
-                    onValueChange = { shapeLabel = it },
-                    label = { Text("Shape Name") },
-                    placeholder = { Text("e.g. Star, Badge, Hexagon") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                // Error Message if invalid
-                if (errorMessage != null) {
-                    Text(
-                        text = errorMessage ?: "",
-                        color = MaterialTheme.colorScheme.error,
-                        fontSize = 12.sp
-                    )
-                }
-
-                // Live Preview Card
-                if (parsedShape != null) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "Live Shape Preview",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Active preview
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                val previewShape = remember(parsedShape.pathData) {
-                                    com.example.ui.shape.VectorPathShape(
-                                        parsedShape.pathData,
-                                        parsedShape.viewportWidth,
-                                        parsedShape.viewportHeight
-                                    )
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .size(48.dp)
-                                        .clip(previewShape)
-                                        .background(MaterialTheme.colorScheme.primary),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.AutoAwesome,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onPrimary,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                                Text("Active Tile", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-
-                            // Inactive preview
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                val previewShape = remember(parsedShape.pathData) {
-                                    com.example.ui.shape.VectorPathShape(
-                                        parsedShape.pathData,
-                                        parsedShape.viewportWidth,
-                                        parsedShape.viewportHeight
-                                    )
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .size(48.dp)
-                                        .clip(previewShape)
-                                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.AutoAwesome,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                                Text("Inactive Tile", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val labelToUse = shapeLabel.ifBlank { "Custom Shape" }
-                    val result = QsShapeManager.importShapeFromXml(context, xmlInput, labelToUse)
-                    if (result.isSuccess) {
-                        val imported = result.getOrNull()!!
-                        Toast.makeText(context, "Shape \"${imported.label}\" imported successfully!", Toast.LENGTH_SHORT).show()
-                        onShapeImported(imported)
-                    } else {
-                        errorMessage = result.exceptionOrNull()?.message ?: "Failed to import shape"
-                    }
-                },
-                enabled = parsedShape != null
-            ) {
-                Text("Save & Apply")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
             }
         }
-    )
+    }
 }
