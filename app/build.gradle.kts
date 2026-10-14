@@ -9,11 +9,11 @@ plugins {
 }
 
 android {
-  namespace = "com.example"
+  namespace = "com.fauyds.quicksettings"
   compileSdk = 36
 
   defaultConfig {
-    applicationId = "com.aistudio.quicksettings.qxptvz"
+    applicationId = "com.fauyds.quicksettings"
     minSdk = 24
     targetSdk = 36
     versionCode = 1

@@ -4,19 +4,19 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <com.example.ui.tile.QuickQuickSettingsView
+    <com.fauyds.quicksettings.ui.tile.QuickQuickSettingsView
         android:id="@+id/view_qqs_panel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:visibility="visible" />
 
-    <com.example.ui.tile.QuickSettingsFullView
+    <com.fauyds.quicksettings.ui.tile.QuickSettingsFullView
         android:id="@+id/view_full_qs_panel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:visibility="gone" />
 
-    <com.example.ui.tile.TileEditStudioView
+    <com.fauyds.quicksettings.ui.tile.TileEditStudioView
         android:id="@+id/view_tile_edit_studio"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
