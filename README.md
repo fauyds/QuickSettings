@@ -1,10 +1,10 @@
 <div align="center">
 
-# ⚡ QuickSettings (v2.5.0)
+# ⚡ QuickSettings (v1.0)
 **A modern, highly customizable Material 3 Control Center & Notification Shade replacement for Android.**
 
 [![Package](https://img.shields.io/badge/Package-com.fauyds.quicksettings-blue?style=for-the-badge&logo=android)](#)
-[![Version](https://img.shields.io/badge/Version-2.5.0-success?style=for-the-badge)](#)
+[![Version](https://img.shields.io/badge/Version-1.0-success?style=for-the-badge)](#)
 
 [![Execution](https://img.shields.io/badge/Engine-Non--Root%20%7C%20Shizuku%20%7C%20Root-orange?style=for-the-badge)](#)
 [![Telegram](https://img.shields.io/badge/Telegram-@allphonecustomization-2CA5E0?style=for-the-badge&logo=telegram)](https://t.me/allphonecustomization)
