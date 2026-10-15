@@ -48,14 +48,29 @@ object MonetThemeHelper {
     }
 
     fun getCardBackground(context: Context, isDark: Boolean): Int {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val isNotifTertiary = com.example.data.PanelPreferences.notifContainerColorTertiary.value
+        val baseColor = if (isNotifTertiary) {
+            getTertiaryAccent(context, isDark)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
                 val resId = if (isDark) android.R.color.system_neutral2_800 else android.R.color.system_neutral2_100
                 val color = ContextCompat.getColor(context, resId)
-                if (color != 0) return color
-            } catch (_: Throwable) {}
+                if (color != 0) color else (if (isDark) Color.parseColor("#2B2930") else Color.parseColor("#F3EDF7"))
+            } catch (_: Throwable) {
+                if (isDark) Color.parseColor("#2B2930") else Color.parseColor("#F3EDF7")
+            }
+        } else {
+            if (isDark) Color.parseColor("#2B2930") else Color.parseColor("#F3EDF7")
         }
-        return if (isDark) Color.parseColor("#2B2930") else Color.parseColor("#F3EDF7")
+
+        if (com.example.data.PanelPreferences.showMonetSurfaceBackground.value && isDark) {
+            val r = (Color.red(baseColor) * 1.50f).toInt().coerceIn(0, 255)
+            val g = (Color.green(baseColor) * 1.50f).toInt().coerceIn(0, 255)
+            val b = (Color.blue(baseColor) * 1.50f).toInt().coerceIn(0, 255)
+            return Color.rgb(r, g, b)
+        }
+
+        return baseColor
     }
 
     fun getCardOutline(context: Context, isDark: Boolean): Int {

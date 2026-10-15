@@ -1,7 +1,9 @@
 package com.example.ui.theme
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.graphics.Color
+import com.example.data.PanelPreferences
 
 // Expressive Dark Palette with rich Monet containers
 val DarkUiBackground = Color.Black.copy(alpha = 0.95f)
@@ -71,12 +73,74 @@ val AccentGradientEnd = Color(0xFFFF85A1)
 // Explicit Decoupled Component Colors
 
 /**
- * 1. Quick Settings Overlay Panel Background (`qsPanelBackgroundColor`).
- * Uses adaptive Monet surfaceVariant in both dark and light modes.
+ * 1. Quick Settings Monet Surface Background (rendered behind cards when enabled).
+ * Uses the same color as the card containers, but 20% darker (8% darker than previous 12%).
  */
 @Composable
+fun getQsMonetSurfaceBackgroundColor(isDark: Boolean): Color {
+    val enableMonetBg = PanelPreferences.showMonetSurfaceBackground.collectAsState().value
+    val surfaceTertiary = PanelPreferences.surfaceBgColorTertiary.collectAsState().value
+    val containerColor = if (surfaceTertiary) {
+        androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer
+    } else {
+        androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
+    }
+    return if (enableMonetBg) {
+        val factor = if (isDark) 0.80f else 0.87f
+        Color(
+            red = (containerColor.red * factor).coerceIn(0f, 1f),
+            green = (containerColor.green * factor).coerceIn(0f, 1f),
+            blue = (containerColor.blue * factor).coerceIn(0f, 1f),
+            alpha = 1.0f
+        )
+    } else {
+        containerColor
+    }
+}
+
+/**
+ * 2. Quick Settings Card Container Color (`getQsCardContainerColor` / `getQsPanelBackgroundColor`).
+ * Restores container colors for cards so cards remain distinct over the Monet surface.
+ */
+@Composable
+fun getQsCardContainerColor(isDark: Boolean): Color {
+    val panelTertiary = PanelPreferences.panelContainerColorTertiary.collectAsState().value
+    return if (panelTertiary) {
+        androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer
+    } else {
+        androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
+    }
+}
+
+@Composable
 fun getQsPanelBackgroundColor(isDark: Boolean): Color {
-    return androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
+    return getQsCardContainerColor(isDark)
+}
+
+/**
+ * 3. Quick Settings Notification Container Color.
+ * When monet on the surface behind everything is enabled in dark mode, lightens the notification containers
+ * so notifications stand out clearly over the background.
+ */
+@Composable
+fun getQsNotificationContainerColor(isDark: Boolean): Color {
+    val enableMonetBg = PanelPreferences.showMonetSurfaceBackground.collectAsState().value
+    val notifTertiary = PanelPreferences.notifContainerColorTertiary.collectAsState().value
+    val baseContainer = if (notifTertiary) {
+        androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer
+    } else {
+        getQsPanelBackgroundColor(isDark)
+    }
+    return if (enableMonetBg && isDark) {
+        Color(
+            red = (baseContainer.red * 1.50f).coerceIn(0f, 1f),
+            green = (baseContainer.green * 1.50f).coerceIn(0f, 1f),
+            blue = (baseContainer.blue * 1.50f).coerceIn(0f, 1f),
+            alpha = 1.0f
+        )
+    } else {
+        baseContainer
+    }
 }
 
 /**

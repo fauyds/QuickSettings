@@ -603,8 +603,52 @@ fun QuickSettingsPanel(
                         clip = false
                         compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
                     }
-                    .padding(horizontal = if (isLandscape) 24.dp else 12.dp, vertical = 6.dp)
         ) {
+            val showCustomHeaderMonetGradient by PanelPreferences.showCustomHeaderMonetGradient.collectAsState()
+            val customHeaderMonetGradientHeight by PanelPreferences.customHeaderMonetGradientHeight.collectAsState()
+            val showMonetSurfaceBackground by PanelPreferences.showMonetSurfaceBackground.collectAsState()
+
+            if (showMonetSurfaceBackground) {
+                val isDark = com.example.ui.theme.LocalIsDarkTheme.current
+                val monetSurfaceBg = com.example.ui.theme.getQsMonetSurfaceBackgroundColor(isDark)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(monetSurfaceBg)
+                )
+            }
+
+            if (showCustomHeaderMonetGradient) {
+                val headerGradientColorTertiary by PanelPreferences.headerGradientColorTertiary.collectAsState()
+                val isDark = com.example.ui.theme.LocalIsDarkTheme.current
+                val gradientStartColor = if (isDark) {
+                    if (headerGradientColorTertiary) {
+                        androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer
+                    } else {
+                        androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer
+                    }
+                } else {
+                    if (headerGradientColorTertiary) {
+                        androidx.compose.material3.MaterialTheme.colorScheme.tertiary
+                    } else {
+                        androidx.compose.material3.MaterialTheme.colorScheme.primary
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(customHeaderMonetGradientHeight.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    gradientStartColor,
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+            }
+
             // Background dismissal backdrop for tapping outside panel
             if (expansionStage != QsExpansionStage.COLLAPSED) {
                 Box(
@@ -623,53 +667,91 @@ fun QuickSettingsPanel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight()
+                    .padding(horizontal = if (isLandscape) 24.dp else 12.dp, vertical = 6.dp)
                     .widthIn(max = if (isLandscape) 920.dp else 640.dp)
                     .align(Alignment.TopCenter)
             ) {
-                // Header Bar (Clock, Date, System Settings, Tile Studio, Battery)
-                Box(modifier = Modifier.fillMaxWidth().then(shadeDragModifier)) {
-                    QsHeaderBar(
-                        currentStage = expansionStage,
-                        isEditingTiles = isEditingTiles,
-                        onHeaderClick = {
-                            if (isEditingTiles) {
-                                saveAndExitEditMode()
-                            } else {
-                                when (expansionStage) {
-                                    QsExpansionStage.COLLAPSED -> onStageChange(QsExpansionStage.QQS)
-                                    QsExpansionStage.QQS -> onStageChange(QsExpansionStage.FULL_QS)
-                                    QsExpansionStage.FULL_QS -> onStageChange(QsExpansionStage.QQS)
+                val showCustomHeaderImage by PanelPreferences.showCustomHeaderImage.collectAsState()
+                val customHeaderImageUri by PanelPreferences.customHeaderImageUri.collectAsState()
+                val customHeaderImageHeight by PanelPreferences.customHeaderImageHeight.collectAsState()
+                val customHeaderImageOpacity by PanelPreferences.customHeaderImageOpacity.collectAsState()
+                val showCustomHeaderMonetGradient by PanelPreferences.showCustomHeaderMonetGradient.collectAsState()
+                val customHeaderMonetGradientHeight by PanelPreferences.customHeaderMonetGradientHeight.collectAsState()
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(
+                            when {
+                                showCustomHeaderImage && customHeaderImageUri.isNotBlank() -> {
+                                    Modifier
+                                         .height(customHeaderImageHeight.dp)
+                                         .clip(RoundedCornerShape(20.dp))
+                                         .background(com.example.ui.theme.getQsPanelBackgroundColor(isDark))
+                                }
+                                else -> {
+                                    Modifier.wrapContentHeight()
                                 }
                             }
-                        },
-                        onTimeClick = {
-                            launchClockApp(context)
-                            onStageChange(QsExpansionStage.COLLAPSED)
-                        },
-                        onDateClick = {
-                            launchCalendarApp(context)
-                            onStageChange(QsExpansionStage.COLLAPSED)
-                        },
-                        onSettingsClick = {
-                            try {
-                                val intent = Intent(Settings.ACTION_SETTINGS).apply {
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (showCustomHeaderImage && customHeaderImageUri.isNotBlank()) {
+                        coil.compose.AsyncImage(
+                            model = customHeaderImageUri,
+                            contentDescription = "Custom Header Image",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer(alpha = customHeaderImageOpacity),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
+                    }
+
+                    // Header Bar (Clock, Date, System Settings, Tile Studio, Battery)
+                    Box(modifier = Modifier.fillMaxWidth().then(shadeDragModifier)) {
+                        QsHeaderBar(
+                            currentStage = expansionStage,
+                            isEditingTiles = isEditingTiles,
+                            onHeaderClick = {
+                                if (isEditingTiles) {
+                                    saveAndExitEditMode()
+                                } else {
+                                    when (expansionStage) {
+                                        QsExpansionStage.COLLAPSED -> onStageChange(QsExpansionStage.QQS)
+                                        QsExpansionStage.QQS -> onStageChange(QsExpansionStage.FULL_QS)
+                                        QsExpansionStage.FULL_QS -> onStageChange(QsExpansionStage.QQS)
+                                    }
                                 }
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                // Ignore
-                            }
-                        },
-                        onToggleEditMode = {
-                            if (isEditingTiles) {
-                                saveAndExitEditMode()
-                            } else {
-                                enterEditMode()
-                                onStageChange(QsExpansionStage.FULL_QS)
-                            }
-                        },
-                        unreadNotificationCount = notifications.size
-                    )
+                            },
+                            onTimeClick = {
+                                launchClockApp(context)
+                                onStageChange(QsExpansionStage.COLLAPSED)
+                            },
+                            onDateClick = {
+                                launchCalendarApp(context)
+                                onStageChange(QsExpansionStage.COLLAPSED)
+                            },
+                            onSettingsClick = {
+                                try {
+                                    val intent = Intent(Settings.ACTION_SETTINGS).apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    // Ignore
+                                }
+                            },
+                            onToggleEditMode = {
+                                if (isEditingTiles) {
+                                    saveAndExitEditMode()
+                                } else {
+                                    enterEditMode()
+                                    onStageChange(QsExpansionStage.FULL_QS)
+                                }
+                            },
+                            unreadNotificationCount = notifications.size
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(6.dp))
@@ -903,6 +985,17 @@ fun QsHeaderBar(
     val editButtonPos by PanelPreferences.editButtonPosition.collectAsState()
     val showDateInQqs by PanelPreferences.showDateInQqsHeader.collectAsState()
     val datePosState by PanelPreferences.datePosition.collectAsState()
+    val showMonetSurfaceBackground by PanelPreferences.showMonetSurfaceBackground.collectAsState()
+    val showCustomHeaderImage by PanelPreferences.showCustomHeaderImage.collectAsState()
+    val customHeaderImageUri by PanelPreferences.customHeaderImageUri.collectAsState()
+
+    val isHeaderImageEnabled = showCustomHeaderImage && customHeaderImageUri.isNotBlank()
+    val useBlackHeaderText = showMonetSurfaceBackground && !isHeaderImageEnabled
+
+    val headerTextColor = if (useBlackHeaderText) Color.Black else Color.White
+    val headerSecondaryTextColor = if (useBlackHeaderText) Color.Black.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.9f)
+    val headerIconTint = if (useBlackHeaderText) Color.Black.copy(alpha = 0.85f) else Color.White.copy(alpha = 0.85f)
+
     val batteryInfo = rememberQqsBatteryState()
 
     val effectiveDatePos = remember(datePosState, showDateInQqs) {
@@ -938,7 +1031,7 @@ fun QsHeaderBar(
                     text = currentTime,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = headerTextColor,
                     modifier = Modifier
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
@@ -952,7 +1045,7 @@ fun QsHeaderBar(
                         text = "•  $currentDate",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color.White,
+                        color = headerTextColor,
                         modifier = Modifier
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
@@ -972,7 +1065,7 @@ fun QsHeaderBar(
                     Text(
                         text = currentDate,
                         fontSize = 12.sp,
-                        color = Color.White,
+                        color = headerTextColor,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier
                             .clickable(
@@ -994,7 +1087,7 @@ fun QsHeaderBar(
                 Text(
                     text = currentDate,
                     fontSize = 13.sp,
-                    color = Color.White.copy(alpha = 0.9f),
+                    color = headerSecondaryTextColor,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier
                         .clickable(
@@ -1018,14 +1111,14 @@ fun QsHeaderBar(
                 Icon(
                     imageVector = if (batteryInfo.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
                     contentDescription = "Battery ${batteryInfo.percentage}%",
-                    tint = if (batteryInfo.isCharging) Color(0xFF4CAF50) else if (batteryInfo.percentage <= 15) Color(0xFFFF5252) else Color.White,
+                    tint = if (batteryInfo.isCharging) Color(0xFF4CAF50) else if (batteryInfo.percentage <= 15) Color(0xFFFF5252) else headerTextColor,
                     modifier = Modifier.size(15.dp)
                 )
                 Text(
                     text = "${batteryInfo.percentage}%",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = headerTextColor
                 )
             }
 
@@ -1038,7 +1131,7 @@ fun QsHeaderBar(
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = "Edit Tiles",
-                            tint = Color.White.copy(alpha = 0.85f),
+                            tint = headerIconTint,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -1052,7 +1145,7 @@ fun QsHeaderBar(
                 Icon(
                     imageVector = Icons.Default.Settings,
                     contentDescription = "System Settings",
-                    tint = Color.White.copy(alpha = 0.85f),
+                    tint = headerIconTint,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -2211,9 +2304,15 @@ fun UnifiedQsPanel(
                                             val positionDiff = kotlin.math.abs(pageIdx - viewPagerScrollPosition)
                                             val progress = (1f - positionDiff).coerceIn(0f, 1f)
                                             val dotSize = androidx.compose.ui.unit.lerp(4.5.dp, 7.dp, progress)
+                                            val miscElementsColorTertiary by PanelPreferences.miscElementsColorTertiary.collectAsState()
+                                            val miscDotColor = if (miscElementsColorTertiary) {
+                                                androidx.compose.material3.MaterialTheme.colorScheme.tertiary
+                                            } else {
+                                                androidx.compose.material3.MaterialTheme.colorScheme.primary
+                                            }
                                             val dotColor = androidx.compose.ui.graphics.lerp(
                                                 footerTint.copy(alpha = 0.35f),
-                                                androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                                                miscDotColor,
                                                 progress
                                             )
                                             Box(
@@ -2356,6 +2455,12 @@ fun UnifiedQsPanel(
             val isMediaExpanded = isFullQs || isLandscape
             val mediaTopGap = 10.dp
             Spacer(modifier = Modifier.height(mediaTopGap))
+            val miscElementsColorTertiary by PanelPreferences.miscElementsColorTertiary.collectAsState()
+            val mediaAccentColor = if (miscElementsColorTertiary) {
+                androidx.compose.material3.MaterialTheme.colorScheme.tertiary
+            } else {
+                androidx.compose.material3.MaterialTheme.colorScheme.primary
+            }
             AdaptiveMediaPlayerCard(
                 mediaState = media,
                 isExpanded = isMediaExpanded,
@@ -2366,7 +2471,7 @@ fun UnifiedQsPanel(
                 },
                 cornerRadius = 18.dp,
                 backgroundColor = if (isDark) Color(0xFF353A3B) else Color(0xFFE2E7EA),
-                accentColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                accentColor = mediaAccentColor,
                 contentColor = if (isDark) Color.White else Color(0xFF222222),
                 onPlayPauseClick = {
                     com.example.service.MediaSessionManagerHelper.playPause()
@@ -2728,6 +2833,8 @@ fun NotificationItemRow(
         format.format(date)
     }
 
+    val notifContainerColor = com.example.ui.theme.getQsNotificationContainerColor(isDark)
+
     if (!isDismissed) {
         val horizontalDraggableState = rememberDraggableState { delta ->
             if (item.isClearable) {
@@ -2755,7 +2862,7 @@ fun NotificationItemRow(
         ) {
             ContainerCard(
                 shape = shape,
-                containerColor = com.example.ui.theme.getQsPanelBackgroundColor(isDark),
+                containerColor = notifContainerColor,
                 onClick = onClick,
                 onLongClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -2960,6 +3067,12 @@ fun NotificationItemRow(
 
                         // Download / Ongoing Progress Bar
                         if (item.hasProgress) {
+                            val slidersColorTertiary by PanelPreferences.slidersColorTertiary.collectAsState()
+                            val notifProgressColor = if (slidersColorTertiary) {
+                                androidx.compose.material3.MaterialTheme.colorScheme.tertiary
+                            } else {
+                                androidx.compose.material3.MaterialTheme.colorScheme.primary
+                            }
                             Spacer(modifier = Modifier.height(4.dp))
                             if (item.isIndeterminateProgress) {
                                 androidx.compose.material3.LinearProgressIndicator(
@@ -2967,8 +3080,8 @@ fun NotificationItemRow(
                                         .fillMaxWidth()
                                         .height(4.dp)
                                         .clip(androidx.compose.foundation.shape.RoundedCornerShape(2.dp)),
-                                    color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                                    trackColor = androidx.compose.material3.MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                    color = notifProgressColor,
+                                    trackColor = notifProgressColor.copy(alpha = 0.2f)
                                 )
                             } else {
                                 val progressFraction = if (item.progressMax > 0) {
@@ -2980,8 +3093,8 @@ fun NotificationItemRow(
                                         .fillMaxWidth()
                                         .height(4.dp)
                                         .clip(androidx.compose.foundation.shape.RoundedCornerShape(2.dp)),
-                                    color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                                    trackColor = androidx.compose.material3.MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                    color = notifProgressColor,
+                                    trackColor = notifProgressColor.copy(alpha = 0.2f)
                                 )
                             }
                         }
@@ -3243,8 +3356,17 @@ fun CircularQsTile(
     val isUnavailable = tile.state == TileState.UNAVAILABLE
 
     val isDark = LocalIsDarkTheme.current
-    val primaryColor = androidx.compose.material3.MaterialTheme.colorScheme.primary
-    val onPrimaryColor = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary
+    val qsTilesColorTertiary by PanelPreferences.qsTilesColorTertiary.collectAsState()
+    val primaryColor = if (qsTilesColorTertiary) {
+        androidx.compose.material3.MaterialTheme.colorScheme.tertiary
+    } else {
+        androidx.compose.material3.MaterialTheme.colorScheme.primary
+    }
+    val onPrimaryColor = if (qsTilesColorTertiary) {
+        androidx.compose.material3.MaterialTheme.colorScheme.onTertiary
+    } else {
+        androidx.compose.material3.MaterialTheme.colorScheme.onPrimary
+    }
     val cardContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
     val systemOutlineColor = androidx.compose.material3.MaterialTheme.colorScheme.outline
 
@@ -3489,6 +3611,13 @@ fun BrightnessSliderRow(
                 )
                 .offset(y = verticalOffset)
         ) {
+            val slidersColorTertiary by PanelPreferences.slidersColorTertiary.collectAsState()
+            val sliderAccentColor = if (slidersColorTertiary) {
+                androidx.compose.material3.MaterialTheme.colorScheme.tertiary
+            } else {
+                androidx.compose.material3.MaterialTheme.colorScheme.primary
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -3498,13 +3627,13 @@ fun BrightnessSliderRow(
                     modifier = Modifier
                         .size(32.dp)
                         .clip(CircleShape)
-                        .background(androidx.compose.material3.MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                        .background(sliderAccentColor.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = if (brightness > 128) Icons.Default.BrightnessMedium else Icons.Default.BrightnessLow,
                         contentDescription = "Brightness",
-                        tint = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                        tint = sliderAccentColor,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -3534,9 +3663,9 @@ fun BrightnessSliderRow(
                     onValueChange = { onBrightnessChange(it.toInt()) },
                     valueRange = 5f..255f,
                     style = progressBarStyle,
-                    activeColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                    activeColor = sliderAccentColor,
                     inactiveColor = inactiveTrackColor,
-                    thumbColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                    thumbColor = sliderAccentColor,
                     modifier = Modifier
                         .weight(1f)
                         .testTag("brightness_slider")

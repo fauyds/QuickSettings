@@ -76,6 +76,7 @@ dependencies {
   implementation("androidx.recyclerview:recyclerview:1.4.0")
   implementation("androidx.cardview:cardview:1.0.0")
   implementation("androidx.viewpager2:viewpager2:1.1.0")
+  implementation("io.coil-kt:coil-compose:2.7.0")
 
   implementation(platform(libs.androidx.compose.bom))
   implementation(platform(libs.firebase.bom))

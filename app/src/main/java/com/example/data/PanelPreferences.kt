@@ -161,6 +161,68 @@ object PanelPreferences {
     private const val KEY_ANIMATION_SPEED_SCALE = "animation_speed_scale"
     private const val KEY_DISABLE_PANEL_ANIMATIONS = "disable_panel_animations"
     private const val KEY_USE_PRIME_CORE_AFFINITY = "use_prime_core_affinity"
+    private const val KEY_SHOW_CUSTOM_HEADER_IMAGE = "show_custom_header_image"
+    private const val KEY_CUSTOM_HEADER_IMAGE_URI = "custom_header_image_uri"
+    private const val KEY_CUSTOM_HEADER_IMAGE_TITLE = "custom_header_image_title"
+    private const val KEY_CUSTOM_HEADER_IMAGE_HEIGHT = "custom_header_image_height"
+    private const val KEY_CUSTOM_HEADER_IMAGE_OPACITY = "custom_header_image_opacity"
+    private const val KEY_SHOW_CUSTOM_HEADER_MONET_GRADIENT = "show_custom_header_monet_gradient"
+    private const val KEY_CUSTOM_HEADER_MONET_GRADIENT_HEIGHT = "custom_header_monet_gradient_height"
+    private const val KEY_SHOW_MONET_SURFACE_BACKGROUND = "show_monet_surface_background"
+
+    private val _showCustomHeaderImage = MutableStateFlow(false)
+    val showCustomHeaderImage: StateFlow<Boolean> = _showCustomHeaderImage.asStateFlow()
+
+    private val _customHeaderImageUri = MutableStateFlow("")
+    val customHeaderImageUri: StateFlow<String> = _customHeaderImageUri.asStateFlow()
+
+    private val _customHeaderImageTitle = MutableStateFlow("Header Banner")
+    val customHeaderImageTitle: StateFlow<String> = _customHeaderImageTitle.asStateFlow()
+
+    private val _customHeaderImageHeight = MutableStateFlow(85f)
+    val customHeaderImageHeight: StateFlow<Float> = _customHeaderImageHeight.asStateFlow()
+
+    private val _customHeaderImageOpacity = MutableStateFlow(1.0f)
+    val customHeaderImageOpacity: StateFlow<Float> = _customHeaderImageOpacity.asStateFlow()
+
+    private val _showCustomHeaderMonetGradient = MutableStateFlow(false)
+    val showCustomHeaderMonetGradient: StateFlow<Boolean> = _showCustomHeaderMonetGradient.asStateFlow()
+
+    private val _customHeaderMonetGradientHeight = MutableStateFlow(85f)
+    val customHeaderMonetGradientHeight: StateFlow<Float> = _customHeaderMonetGradientHeight.asStateFlow()
+
+    private val _showMonetSurfaceBackground = MutableStateFlow(false)
+    val showMonetSurfaceBackground: StateFlow<Boolean> = _showMonetSurfaceBackground.asStateFlow()
+
+    // Per-Element Monet Accent Color Preferences (false = Primary, true = Tertiary)
+    private const val KEY_ELEM_SURFACE_BG_TERTIARY = "elem_surface_bg_tertiary"
+    private const val KEY_ELEM_PANEL_CONTAINER_TERTIARY = "elem_panel_container_tertiary"
+    private const val KEY_ELEM_NOTIF_CONTAINER_TERTIARY = "elem_notif_container_tertiary"
+    private const val KEY_ELEM_HEADER_GRADIENT_TERTIARY = "elem_header_gradient_tertiary"
+    private const val KEY_ELEM_QS_TILES_TERTIARY = "elem_qs_tiles_tertiary"
+    private const val KEY_ELEM_SLIDERS_TERTIARY = "elem_sliders_tertiary"
+    private const val KEY_ELEM_MISC_ELEMENTS_TERTIARY = "elem_misc_elements_tertiary"
+
+    private val _surfaceBgColorTertiary = MutableStateFlow(false)
+    val surfaceBgColorTertiary: StateFlow<Boolean> = _surfaceBgColorTertiary.asStateFlow()
+
+    private val _panelContainerColorTertiary = MutableStateFlow(false)
+    val panelContainerColorTertiary: StateFlow<Boolean> = _panelContainerColorTertiary.asStateFlow()
+
+    private val _notifContainerColorTertiary = MutableStateFlow(false)
+    val notifContainerColorTertiary: StateFlow<Boolean> = _notifContainerColorTertiary.asStateFlow()
+
+    private val _headerGradientColorTertiary = MutableStateFlow(false)
+    val headerGradientColorTertiary: StateFlow<Boolean> = _headerGradientColorTertiary.asStateFlow()
+
+    private val _qsTilesColorTertiary = MutableStateFlow(false)
+    val qsTilesColorTertiary: StateFlow<Boolean> = _qsTilesColorTertiary.asStateFlow()
+
+    private val _slidersColorTertiary = MutableStateFlow(false)
+    val slidersColorTertiary: StateFlow<Boolean> = _slidersColorTertiary.asStateFlow()
+
+    private val _miscElementsColorTertiary = MutableStateFlow(false)
+    val miscElementsColorTertiary: StateFlow<Boolean> = _miscElementsColorTertiary.asStateFlow()
 
     private val _usePrimeCoreAffinity = MutableStateFlow(false)
     val usePrimeCoreAffinity: StateFlow<Boolean> = _usePrimeCoreAffinity.asStateFlow()
@@ -452,6 +514,21 @@ object PanelPreferences {
         _animationSpeedScale.value = prefs.getFloat(KEY_ANIMATION_SPEED_SCALE, sysAnimatorScale)
         _disablePanelAnimations.value = prefs.getBoolean(KEY_DISABLE_PANEL_ANIMATIONS, false)
         _usePrimeCoreAffinity.value = prefs.getBoolean(KEY_USE_PRIME_CORE_AFFINITY, false)
+        _showCustomHeaderImage.value = prefs.getBoolean(KEY_SHOW_CUSTOM_HEADER_IMAGE, false)
+        _customHeaderImageUri.value = prefs.getString(KEY_CUSTOM_HEADER_IMAGE_URI, "") ?: ""
+        _customHeaderImageTitle.value = prefs.getString(KEY_CUSTOM_HEADER_IMAGE_TITLE, "Header Banner") ?: "Header Banner"
+        _customHeaderImageHeight.value = prefs.getFloat(KEY_CUSTOM_HEADER_IMAGE_HEIGHT, 85f)
+        _customHeaderImageOpacity.value = prefs.getFloat(KEY_CUSTOM_HEADER_IMAGE_OPACITY, 1.0f)
+        _showCustomHeaderMonetGradient.value = prefs.getBoolean(KEY_SHOW_CUSTOM_HEADER_MONET_GRADIENT, false)
+        _customHeaderMonetGradientHeight.value = prefs.getFloat(KEY_CUSTOM_HEADER_MONET_GRADIENT_HEIGHT, 85f)
+        _showMonetSurfaceBackground.value = prefs.getBoolean(KEY_SHOW_MONET_SURFACE_BACKGROUND, false)
+        _surfaceBgColorTertiary.value = prefs.getBoolean(KEY_ELEM_SURFACE_BG_TERTIARY, false)
+        _panelContainerColorTertiary.value = prefs.getBoolean(KEY_ELEM_PANEL_CONTAINER_TERTIARY, false)
+        _notifContainerColorTertiary.value = prefs.getBoolean(KEY_ELEM_NOTIF_CONTAINER_TERTIARY, false)
+        _headerGradientColorTertiary.value = prefs.getBoolean(KEY_ELEM_HEADER_GRADIENT_TERTIARY, false)
+        _qsTilesColorTertiary.value = prefs.getBoolean(KEY_ELEM_QS_TILES_TERTIARY, false)
+        _slidersColorTertiary.value = prefs.getBoolean(KEY_ELEM_SLIDERS_TERTIARY, false)
+        _miscElementsColorTertiary.value = prefs.getBoolean(KEY_ELEM_MISC_ELEMENTS_TERTIARY, false)
         _initialSetupCompleted.value = prefs.getBoolean(KEY_INITIAL_SETUP_COMPLETED, false)
         val savedMode = prefs.getString(KEY_PRIVILEGE_MODE, com.example.model.PrivilegeMode.STANDARD.name)
         _privilegeMode.value = try {
@@ -846,5 +923,95 @@ object PanelPreferences {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val saved = prefs.getString(KEY_SAVED_ACTIVE_TILE_IDS, null) ?: return null
         return saved.split(",").filter { it.isNotBlank() }
+    }
+
+    fun setShowCustomHeaderImage(context: Context, enabled: Boolean) {
+        _showCustomHeaderImage.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_SHOW_CUSTOM_HEADER_IMAGE, enabled).apply()
+    }
+
+    fun setCustomHeaderImageUri(context: Context, uri: String) {
+        _customHeaderImageUri.value = uri
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_CUSTOM_HEADER_IMAGE_URI, uri).apply()
+    }
+
+    fun setCustomHeaderImageTitle(context: Context, title: String) {
+        _customHeaderImageTitle.value = title
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_CUSTOM_HEADER_IMAGE_TITLE, title).apply()
+    }
+
+    fun setCustomHeaderImageHeight(context: Context, height: Float) {
+        _customHeaderImageHeight.value = height
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_CUSTOM_HEADER_IMAGE_HEIGHT, height).apply()
+    }
+
+    fun setCustomHeaderImageOpacity(context: Context, opacity: Float) {
+        _customHeaderImageOpacity.value = opacity
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_CUSTOM_HEADER_IMAGE_OPACITY, opacity).apply()
+    }
+
+    fun setShowCustomHeaderMonetGradient(context: Context, enabled: Boolean) {
+        _showCustomHeaderMonetGradient.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_SHOW_CUSTOM_HEADER_MONET_GRADIENT, enabled).apply()
+    }
+
+    fun setCustomHeaderMonetGradientHeight(context: Context, height: Float) {
+        _customHeaderMonetGradientHeight.value = height
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_CUSTOM_HEADER_MONET_GRADIENT_HEIGHT, height).apply()
+    }
+
+    fun setShowMonetSurfaceBackground(context: Context, enabled: Boolean) {
+        _showMonetSurfaceBackground.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_SHOW_MONET_SURFACE_BACKGROUND, enabled).apply()
+    }
+
+    fun setSurfaceBgColorTertiary(context: Context, enabled: Boolean) {
+        _surfaceBgColorTertiary.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_ELEM_SURFACE_BG_TERTIARY, enabled).apply()
+    }
+
+    fun setPanelContainerColorTertiary(context: Context, enabled: Boolean) {
+        _panelContainerColorTertiary.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_ELEM_PANEL_CONTAINER_TERTIARY, enabled).apply()
+    }
+
+    fun setNotifContainerColorTertiary(context: Context, enabled: Boolean) {
+        _notifContainerColorTertiary.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_ELEM_NOTIF_CONTAINER_TERTIARY, enabled).apply()
+    }
+
+    fun setQsTilesColorTertiary(context: Context, enabled: Boolean) {
+        _qsTilesColorTertiary.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_ELEM_QS_TILES_TERTIARY, enabled).apply()
+    }
+
+    fun setSlidersColorTertiary(context: Context, enabled: Boolean) {
+        _slidersColorTertiary.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_ELEM_SLIDERS_TERTIARY, enabled).apply()
+    }
+
+    fun setMiscElementsColorTertiary(context: Context, enabled: Boolean) {
+        _miscElementsColorTertiary.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_ELEM_MISC_ELEMENTS_TERTIARY, enabled).apply()
+    }
+
+    fun setHeaderGradientColorTertiary(context: Context, enabled: Boolean) {
+        _headerGradientColorTertiary.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_ELEM_HEADER_GRADIENT_TERTIARY, enabled).apply()
     }
 }

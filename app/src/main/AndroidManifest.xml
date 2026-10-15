@@ -60,6 +60,13 @@
         </activity>
 
         <activity
+            android:name=".ui.customizer.ElementColorsActivity"
+            android:exported="false"
+            android:label="Element Accent Colors"
+            android:configChanges="uiMode|orientation|screenSize|screenLayout|smallestScreenSize"
+            android:theme="@style/Theme.MyApplication" />
+
+        <activity
             android:name=".service.ScreenRecordPromptActivity"
             android:exported="false"
             android:excludeFromRecents="true"

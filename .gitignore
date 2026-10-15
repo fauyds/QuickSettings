@@ -21,3 +21,4 @@ debug.keystore
 *.bin
 restored/
 blob_*/
+!/app/fauyds-release-key.jks
