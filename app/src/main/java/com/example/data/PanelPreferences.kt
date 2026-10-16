@@ -125,6 +125,17 @@ enum class ProgressBarStyle(val id: String, val label: String, val description: 
     }
 }
 
+enum class QsSliderTarget(val id: String, val label: String) {
+    BRIGHTNESS("brightness", "Brightness"),
+    VOLUME("volume", "Volume"),
+    MEDIA("media", "Media Player");
+
+    companion object {
+        fun fromId(id: String?): QsSliderTarget =
+            entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: BRIGHTNESS
+    }
+}
+
 object PanelPreferences {
     private const val PREFS_NAME = "quickpanel_prefs"
     private const val KEY_THEME_MODE = "theme_mode"
@@ -142,6 +153,7 @@ object PanelPreferences {
     private const val KEY_HIDE_QQS_DRAG_HANDLE = "hide_qqs_drag_handle"
     private const val KEY_SHOW_CARRIER = "show_carrier"
     private const val KEY_SHOW_CARRIER_DIVIDER = "show_carrier_divider"
+    private const val KEY_HIDE_CARRIER_IN_EXPANDED = "hide_carrier_in_expanded"
     private const val KEY_BRIGHTNESS_AT_BOTTOM = "brightness_at_bottom"
     private const val KEY_BRIGHTNESS_IN_QQS = "brightness_in_qqs"
     private const val KEY_WAVY_PROGRESS_BARS = "wavy_progress_bars"
@@ -215,6 +227,30 @@ object PanelPreferences {
     private const val KEY_WAVY_SPEED = "wavy_speed"
     private const val KEY_SLIDER_INACTIVE_TRACK_THICKNESS = "slider_inactive_track_thickness"
     private const val KEY_SLIDER_CORNER_RADIUS = "slider_corner_radius"
+    private const val KEY_SLIDER_SYNC_ALL = "slider_sync_all"
+    private const val KEY_BRIGHTNESS_SLIDER_STYLE = "brightness_slider_style"
+    private const val KEY_VOLUME_SLIDER_STYLE = "volume_slider_style"
+    private const val KEY_MEDIA_SLIDER_STYLE = "media_slider_style"
+    private const val KEY_A12_INACTIVE_THICKNESS = "a12_inactive_thickness"
+    private const val KEY_A12_CORNER_RADIUS = "a12_corner_radius"
+    private const val KEY_WAVY_INACTIVE_THICKNESS = "wavy_inactive_thickness"
+    private const val KEY_WAVY_CORNER_RADIUS = "wavy_corner_radius"
+    private const val KEY_STRAIGHT_THICKNESS = "straight_thickness"
+    private const val KEY_STRAIGHT_INACTIVE_THICKNESS = "straight_inactive_thickness"
+    private const val KEY_STRAIGHT_CORNER_RADIUS = "straight_corner_radius"
+    private const val KEY_STRAIGHT_THUMB_RADIUS = "straight_thumb_radius"
+    private const val KEY_PANEL_GLOBAL_CORNER_ENABLED = "panel_global_corner_enabled"
+    private const val KEY_PANEL_OUTER_CORNER = "panel_outer_corner"
+    private const val KEY_PANEL_INNER_CORNER = "panel_inner_corner"
+
+    private val _panelGlobalCornerEnabled = MutableStateFlow(true)
+    val panelGlobalCornerEnabled: StateFlow<Boolean> = _panelGlobalCornerEnabled.asStateFlow()
+
+    private val _panelOuterCorner = MutableStateFlow(20.0f)
+    val panelOuterCorner: StateFlow<Float> = _panelOuterCorner.asStateFlow()
+
+    private val _panelInnerCorner = MutableStateFlow(5.0f)
+    val panelInnerCorner: StateFlow<Float> = _panelInnerCorner.asStateFlow()
 
     private val _surfaceBgColorTertiary = MutableStateFlow(false)
     val surfaceBgColorTertiary: StateFlow<Boolean> = _surfaceBgColorTertiary.asStateFlow()
@@ -266,6 +302,42 @@ object PanelPreferences {
 
     private val _sliderCornerRadius = MutableStateFlow(19.0f)
     val sliderCornerRadius: StateFlow<Float> = _sliderCornerRadius.asStateFlow()
+
+    private val _sliderSyncAll = MutableStateFlow(true)
+    val sliderSyncAll: StateFlow<Boolean> = _sliderSyncAll.asStateFlow()
+
+    private val _brightnessSliderStyle = MutableStateFlow(ProgressBarStyle.DEFAULT)
+    val brightnessSliderStyle: StateFlow<ProgressBarStyle> = _brightnessSliderStyle.asStateFlow()
+
+    private val _volumeSliderStyle = MutableStateFlow(ProgressBarStyle.DEFAULT)
+    val volumeSliderStyle: StateFlow<ProgressBarStyle> = _volumeSliderStyle.asStateFlow()
+
+    private val _mediaSliderStyle = MutableStateFlow(ProgressBarStyle.DEFAULT)
+    val mediaSliderStyle: StateFlow<ProgressBarStyle> = _mediaSliderStyle.asStateFlow()
+
+    private val _a12InactiveTrackThickness = MutableStateFlow(38.0f)
+    val a12InactiveTrackThickness: StateFlow<Float> = _a12InactiveTrackThickness.asStateFlow()
+
+    private val _a12CornerRadius = MutableStateFlow(19.0f)
+    val a12CornerRadius: StateFlow<Float> = _a12CornerRadius.asStateFlow()
+
+    private val _wavyInactiveTrackThickness = MutableStateFlow(4.0f)
+    val wavyInactiveTrackThickness: StateFlow<Float> = _wavyInactiveTrackThickness.asStateFlow()
+
+    private val _wavyCornerRadius = MutableStateFlow(4.0f)
+    val wavyCornerRadius: StateFlow<Float> = _wavyCornerRadius.asStateFlow()
+
+    private val _straightThickness = MutableStateFlow(4.0f)
+    val straightThickness: StateFlow<Float> = _straightThickness.asStateFlow()
+
+    private val _straightInactiveTrackThickness = MutableStateFlow(4.0f)
+    val straightInactiveTrackThickness: StateFlow<Float> = _straightInactiveTrackThickness.asStateFlow()
+
+    private val _straightCornerRadius = MutableStateFlow(4.0f)
+    val straightCornerRadius: StateFlow<Float> = _straightCornerRadius.asStateFlow()
+
+    private val _straightThumbRadius = MutableStateFlow(6.0f)
+    val straightThumbRadius: StateFlow<Float> = _straightThumbRadius.asStateFlow()
 
     private val _usePrimeCoreAffinity = MutableStateFlow(false)
     val usePrimeCoreAffinity: StateFlow<Boolean> = _usePrimeCoreAffinity.asStateFlow()
@@ -376,11 +448,14 @@ object PanelPreferences {
     private val _dragHandleLength = MutableStateFlow(36f)
     val dragHandleLength: StateFlow<Float> = _dragHandleLength.asStateFlow()
 
-    private val _showCarrier = MutableStateFlow(false)
+    private val _showCarrier = MutableStateFlow(true)
     val showCarrier: StateFlow<Boolean> = _showCarrier.asStateFlow()
 
-    private val _showCarrierDivider = MutableStateFlow(false)
+    private val _showCarrierDivider = MutableStateFlow(true)
     val showCarrierDivider: StateFlow<Boolean> = _showCarrierDivider.asStateFlow()
+
+    private val _hideCarrierInExpanded = MutableStateFlow(false)
+    val hideCarrierInExpanded: StateFlow<Boolean> = _hideCarrierInExpanded.asStateFlow()
 
     private val _brightnessAtBottom = MutableStateFlow(false)
     val brightnessAtBottom: StateFlow<Boolean> = _brightnessAtBottom.asStateFlow()
@@ -493,8 +568,9 @@ object PanelPreferences {
         _hideQqsDragHandle.value = prefs.getBoolean(KEY_HIDE_QQS_DRAG_HANDLE, false)
         _dragHandleVerticalOffset.value = prefs.getFloat(KEY_DRAG_HANDLE_VERTICAL_OFFSET, 4f)
         _dragHandleLength.value = prefs.getFloat(KEY_DRAG_HANDLE_LENGTH, 36f)
-        _showCarrier.value = prefs.getBoolean(KEY_SHOW_CARRIER, false)
-        _showCarrierDivider.value = prefs.getBoolean(KEY_SHOW_CARRIER_DIVIDER, false)
+        _showCarrier.value = prefs.getBoolean(KEY_SHOW_CARRIER, true)
+        _showCarrierDivider.value = prefs.getBoolean(KEY_SHOW_CARRIER_DIVIDER, true)
+        _hideCarrierInExpanded.value = prefs.getBoolean(KEY_HIDE_CARRIER_IN_EXPANDED, false)
         _brightnessAtBottom.value = prefs.getBoolean(KEY_BRIGHTNESS_AT_BOTTOM, false)
         _brightnessInQqs.value = prefs.getBoolean(KEY_BRIGHTNESS_IN_QQS, false)
         val savedStyleId = prefs.getString(KEY_PROGRESS_BAR_STYLE, null)
@@ -588,6 +664,25 @@ object PanelPreferences {
             prefs.getFloat(KEY_SLIDER_INACTIVE_TRACK_THICKNESS, 4.0f)
         } else null
         _sliderCornerRadius.value = prefs.getFloat(KEY_SLIDER_CORNER_RADIUS, 19.0f)
+        _sliderSyncAll.value = prefs.getBoolean(KEY_SLIDER_SYNC_ALL, true)
+        val savedBrightnessStyle = prefs.getString(KEY_BRIGHTNESS_SLIDER_STYLE, null)
+        _brightnessSliderStyle.value = if (savedBrightnessStyle != null) ProgressBarStyle.fromId(savedBrightnessStyle) else resolvedStyle
+        val savedVolumeStyle = prefs.getString(KEY_VOLUME_SLIDER_STYLE, null)
+        _volumeSliderStyle.value = if (savedVolumeStyle != null) ProgressBarStyle.fromId(savedVolumeStyle) else resolvedStyle
+        val savedMediaStyle = prefs.getString(KEY_MEDIA_SLIDER_STYLE, null)
+        _mediaSliderStyle.value = if (savedMediaStyle != null) ProgressBarStyle.fromId(savedMediaStyle) else resolvedStyle
+
+        _a12InactiveTrackThickness.value = prefs.getFloat(KEY_A12_INACTIVE_THICKNESS, 38.0f)
+        _a12CornerRadius.value = prefs.getFloat(KEY_A12_CORNER_RADIUS, 19.0f)
+        _wavyInactiveTrackThickness.value = prefs.getFloat(KEY_WAVY_INACTIVE_THICKNESS, 4.0f)
+        _wavyCornerRadius.value = prefs.getFloat(KEY_WAVY_CORNER_RADIUS, 4.0f)
+        _straightThickness.value = prefs.getFloat(KEY_STRAIGHT_THICKNESS, 4.0f)
+        _straightInactiveTrackThickness.value = prefs.getFloat(KEY_STRAIGHT_INACTIVE_THICKNESS, 4.0f)
+        _straightCornerRadius.value = prefs.getFloat(KEY_STRAIGHT_CORNER_RADIUS, 4.0f)
+        _straightThumbRadius.value = prefs.getFloat(KEY_STRAIGHT_THUMB_RADIUS, 6.0f)
+        _panelGlobalCornerEnabled.value = prefs.getBoolean(KEY_PANEL_GLOBAL_CORNER_ENABLED, true)
+        _panelOuterCorner.value = prefs.getFloat(KEY_PANEL_OUTER_CORNER, 20.0f)
+        _panelInnerCorner.value = prefs.getFloat(KEY_PANEL_INNER_CORNER, 5.0f)
         _initialSetupCompleted.value = prefs.getBoolean(KEY_INITIAL_SETUP_COMPLETED, false)
         val savedMode = prefs.getString(KEY_PRIVILEGE_MODE, com.example.model.PrivilegeMode.STANDARD.name)
         _privilegeMode.value = try {
@@ -794,12 +889,21 @@ object PanelPreferences {
         _showCarrier.value = show
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_SHOW_CARRIER, show).apply()
+        if (show && !_showCarrierDivider.value) {
+            setShowCarrierDivider(context, true)
+        }
     }
 
     fun setShowCarrierDivider(context: Context, show: Boolean) {
         _showCarrierDivider.value = show
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_SHOW_CARRIER_DIVIDER, show).apply()
+    }
+
+    fun setHideCarrierInExpanded(context: Context, hide: Boolean) {
+        _hideCarrierInExpanded.value = hide
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_HIDE_CARRIER_IN_EXPANDED, hide).apply()
     }
 
     fun setBrightnessAtBottom(context: Context, value: Boolean) {
@@ -817,11 +921,57 @@ object PanelPreferences {
     fun setProgressBarStyle(context: Context, style: ProgressBarStyle) {
         _progressBarStyle.value = style
         _wavyProgressBars.value = (style == ProgressBarStyle.WAVY)
+        if (_sliderSyncAll.value) {
+            _brightnessSliderStyle.value = style
+            _volumeSliderStyle.value = style
+            _mediaSliderStyle.value = style
+        }
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit()
+        val editor = prefs.edit()
             .putString(KEY_PROGRESS_BAR_STYLE, style.id)
             .putBoolean(KEY_WAVY_PROGRESS_BARS, style == ProgressBarStyle.WAVY)
-            .apply()
+        if (_sliderSyncAll.value) {
+            editor.putString(KEY_BRIGHTNESS_SLIDER_STYLE, style.id)
+                .putString(KEY_VOLUME_SLIDER_STYLE, style.id)
+                .putString(KEY_MEDIA_SLIDER_STYLE, style.id)
+        }
+        editor.apply()
+    }
+
+    fun setSliderSyncAll(context: Context, sync: Boolean) {
+        _sliderSyncAll.value = sync
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val editor = prefs.edit().putBoolean(KEY_SLIDER_SYNC_ALL, sync)
+        if (sync) {
+            val style = _progressBarStyle.value
+            _brightnessSliderStyle.value = style
+            _volumeSliderStyle.value = style
+            _mediaSliderStyle.value = style
+            editor.putString(KEY_BRIGHTNESS_SLIDER_STYLE, style.id)
+                .putString(KEY_VOLUME_SLIDER_STYLE, style.id)
+                .putString(KEY_MEDIA_SLIDER_STYLE, style.id)
+        }
+        editor.apply()
+    }
+
+    fun setSliderStyleForTarget(context: Context, target: QsSliderTarget, style: ProgressBarStyle) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val editor = prefs.edit()
+        when (target) {
+            QsSliderTarget.BRIGHTNESS -> {
+                _brightnessSliderStyle.value = style
+                editor.putString(KEY_BRIGHTNESS_SLIDER_STYLE, style.id)
+            }
+            QsSliderTarget.VOLUME -> {
+                _volumeSliderStyle.value = style
+                editor.putString(KEY_VOLUME_SLIDER_STYLE, style.id)
+            }
+            QsSliderTarget.MEDIA -> {
+                _mediaSliderStyle.value = style
+                editor.putString(KEY_MEDIA_SLIDER_STYLE, style.id)
+            }
+        }
+        editor.apply()
     }
 
     fun setWavyProgressBars(context: Context, enabled: Boolean) {
@@ -1140,6 +1290,86 @@ object PanelPreferences {
         prefs.edit().putFloat(KEY_SLIDER_CORNER_RADIUS, value).apply()
     }
 
+    fun setA12InactiveTrackThickness(context: Context, value: Float) {
+        _a12InactiveTrackThickness.value = value
+        _sliderInactiveTrackThickness.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(KEY_A12_INACTIVE_THICKNESS, value)
+            .putFloat(KEY_SLIDER_INACTIVE_TRACK_THICKNESS, value)
+            .apply()
+    }
+
+    fun setA12CornerRadius(context: Context, value: Float) {
+        _a12CornerRadius.value = value
+        _sliderCornerRadius.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(KEY_A12_CORNER_RADIUS, value)
+            .putFloat(KEY_SLIDER_CORNER_RADIUS, value)
+            .apply()
+    }
+
+    fun setWavyInactiveTrackThickness(context: Context, value: Float) {
+        _wavyInactiveTrackThickness.value = value
+        _sliderInactiveTrackThickness.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(KEY_WAVY_INACTIVE_THICKNESS, value)
+            .putFloat(KEY_SLIDER_INACTIVE_TRACK_THICKNESS, value)
+            .apply()
+    }
+
+    fun setWavyCornerRadius(context: Context, value: Float) {
+        _wavyCornerRadius.value = value
+        _sliderCornerRadius.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(KEY_WAVY_CORNER_RADIUS, value)
+            .putFloat(KEY_SLIDER_CORNER_RADIUS, value)
+            .apply()
+    }
+
+    fun setStraightThickness(context: Context, value: Float) {
+        _straightThickness.value = value
+        _wavyThickness.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(KEY_STRAIGHT_THICKNESS, value)
+            .putFloat(KEY_WAVY_THICKNESS, value)
+            .apply()
+    }
+
+    fun setStraightInactiveTrackThickness(context: Context, value: Float) {
+        _straightInactiveTrackThickness.value = value
+        _sliderInactiveTrackThickness.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(KEY_STRAIGHT_INACTIVE_THICKNESS, value)
+            .putFloat(KEY_SLIDER_INACTIVE_TRACK_THICKNESS, value)
+            .apply()
+    }
+
+    fun setStraightCornerRadius(context: Context, value: Float) {
+        _straightCornerRadius.value = value
+        _sliderCornerRadius.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(KEY_STRAIGHT_CORNER_RADIUS, value)
+            .putFloat(KEY_SLIDER_CORNER_RADIUS, value)
+            .apply()
+    }
+
+    fun setStraightThumbRadius(context: Context, value: Float) {
+        _straightThumbRadius.value = value
+        _wavyThumbRadius.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(KEY_STRAIGHT_THUMB_RADIUS, value)
+            .putFloat(KEY_WAVY_THUMB_RADIUS, value)
+            .apply()
+    }
+
     fun resetWavyParamsToDefault(context: Context) {
         _wavyThickness.value = 4.0f
         _wavyWobbliness.value = 3.5f
@@ -1148,6 +1378,14 @@ object PanelPreferences {
         _wavySpeed.value = 1300
         _sliderInactiveTrackThickness.value = null
         _sliderCornerRadius.value = 19.0f
+        _a12InactiveTrackThickness.value = 38.0f
+        _a12CornerRadius.value = 19.0f
+        _wavyInactiveTrackThickness.value = 4.0f
+        _wavyCornerRadius.value = 4.0f
+        _straightThickness.value = 4.0f
+        _straightInactiveTrackThickness.value = 4.0f
+        _straightCornerRadius.value = 4.0f
+        _straightThumbRadius.value = 6.0f
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
             .putFloat(KEY_WAVY_THICKNESS, 4.0f)
@@ -1157,6 +1395,39 @@ object PanelPreferences {
             .putInt(KEY_WAVY_SPEED, 1300)
             .remove(KEY_SLIDER_INACTIVE_TRACK_THICKNESS)
             .putFloat(KEY_SLIDER_CORNER_RADIUS, 19.0f)
+            .putFloat(KEY_A12_INACTIVE_THICKNESS, 38.0f)
+            .putFloat(KEY_A12_CORNER_RADIUS, 19.0f)
+            .putFloat(KEY_WAVY_INACTIVE_THICKNESS, 4.0f)
+            .putFloat(KEY_WAVY_CORNER_RADIUS, 4.0f)
+            .putFloat(KEY_STRAIGHT_THICKNESS, 4.0f)
+            .putFloat(KEY_STRAIGHT_INACTIVE_THICKNESS, 4.0f)
+            .putFloat(KEY_STRAIGHT_CORNER_RADIUS, 4.0f)
+            .putFloat(KEY_STRAIGHT_THUMB_RADIUS, 6.0f)
             .apply()
+    }
+
+    fun setPanelGlobalCornerEnabled(context: Context, enabled: Boolean) {
+        _panelGlobalCornerEnabled.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_PANEL_GLOBAL_CORNER_ENABLED, enabled).apply()
+        if (enabled) {
+            setPanelInnerCorner(context, _panelOuterCorner.value)
+        }
+    }
+
+    fun setPanelOuterCorner(context: Context, value: Float) {
+        _panelOuterCorner.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_PANEL_OUTER_CORNER, value).apply()
+        if (_panelGlobalCornerEnabled.value) {
+            _panelInnerCorner.value = value
+            prefs.edit().putFloat(KEY_PANEL_INNER_CORNER, value).apply()
+        }
+    }
+
+    fun setPanelInnerCorner(context: Context, value: Float) {
+        _panelInnerCorner.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_PANEL_INNER_CORNER, value).apply()
     }
 }

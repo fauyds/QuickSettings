@@ -1897,6 +1897,7 @@ fun UnifiedQsPanel(
     val dragHandleLength by PanelPreferences.dragHandleLength.collectAsState()
     val showCarrier by PanelPreferences.showCarrier.collectAsState()
     val showCarrierDivider by PanelPreferences.showCarrierDivider.collectAsState()
+    val hideCarrierInExpanded by PanelPreferences.hideCarrierInExpanded.collectAsState()
     val brightnessAtBottom by PanelPreferences.brightnessAtBottom.collectAsState()
     val brightnessInQqs by PanelPreferences.brightnessInQqs.collectAsState()
     val datePosition by PanelPreferences.datePosition.collectAsState()
@@ -1990,7 +1991,9 @@ fun UnifiedQsPanel(
         label = "qs_morph_progress"
     )
 
-    val isSplitCarrier = showCarrier && showCarrierDivider && morphProgress < 0.5f && !isLandscape && !isEditingTiles
+    val isExpandedQsState = expansionStage == QsExpansionStage.FULL_QS || morphProgress > 0.5f
+    val isCarrierVisible = showCarrier && !(hideCarrierInExpanded && isExpandedQsState)
+    val isSplitCarrier = isCarrierVisible && showCarrierDivider && morphProgress < 0.5f && !isLandscape && !isEditingTiles
 
     val qsCardContent: @Composable () -> Unit = {
         // UNIFIED QS CARD (Morphs between QQS and Full QS, or displays Edit Mode Studio)
@@ -1998,12 +2001,23 @@ fun UnifiedQsPanel(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            val qsCardCorner = 20.dp
+            val panelGlobalCornerEnabled by PanelPreferences.panelGlobalCornerEnabled.collectAsState()
+            val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
+            val panelInnerCorner by PanelPreferences.panelInnerCorner.collectAsState()
+
+            val effectiveOuterCorner = panelOuterCorner.dp
+            val effectiveInnerCorner = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner).dp
+
             ContainerCard(
                 shape = if (isSplitCarrier) {
-                    RoundedCornerShape(topStart = qsCardCorner, topEnd = qsCardCorner, bottomStart = 4.dp, bottomEnd = 4.dp)
+                    RoundedCornerShape(
+                        topStart = effectiveOuterCorner,
+                        topEnd = effectiveOuterCorner,
+                        bottomStart = effectiveInnerCorner,
+                        bottomEnd = effectiveInnerCorner
+                    )
                 } else {
-                    RoundedCornerShape(qsCardCorner)
+                    RoundedCornerShape(effectiveOuterCorner)
                 },
                 containerColor = com.example.ui.theme.getQsPanelBackgroundColor(isDark),
                 modifier = Modifier
@@ -2049,14 +2063,17 @@ fun UnifiedQsPanel(
                     } else {
                         // 0. Very top QQS Row (Date & Carrier above tiles)
                         val hideDateInExpanded by PanelPreferences.hideDateInExpanded.collectAsState()
-                        val isExpandedQs = expansionStage == QsExpansionStage.FULL_QS
-                        val isQqsDate = !(hideDateInExpanded && isExpandedQs) && datePosition == com.example.data.DatePosition.QQS_PANEL && !isSplitCarrier
-                        if (isQqsDate || (showCarrier && !isSplitCarrier)) {
+                        val isExpandedQs = expansionStage == QsExpansionStage.FULL_QS || morphProgress > 0.5f
+                        val isQqsDate = !(hideDateInExpanded && isExpandedQs) && datePosition == com.example.data.DatePosition.QQS_PANEL
+                        val showInlineCarrier = isCarrierVisible && !isSplitCarrier
+                        if (isQqsDate || showInlineCarrier) {
+                            val dateYOffset = if (isExpandedQs) 2.dp else (-4).dp
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(5.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .offset(y = dateYOffset)
                                     .padding(start = 2.dp, bottom = 8.dp)
                                     .clickable(
                                         enabled = isQqsDate,
@@ -2084,7 +2101,7 @@ fun UnifiedQsPanel(
                                         fontWeight = FontWeight.SemiBold,
                                         color = textColor
                                     )
-                                    if (showCarrier && !isSplitCarrier) {
+                                    if (showInlineCarrier) {
                                         Text(
                                             text = "•",
                                             fontSize = 12.sp,
@@ -2092,7 +2109,7 @@ fun UnifiedQsPanel(
                                         )
                                     }
                                 }
-                                if (showCarrier && !isSplitCarrier) {
+                                if (showInlineCarrier) {
                                     Icon(
                                         imageVector = Icons.Default.CellTower,
                                         contentDescription = null,
@@ -2424,8 +2441,20 @@ fun UnifiedQsPanel(
         }
 
         if (isSplitCarrier) {
+            val panelGlobalCornerEnabled by PanelPreferences.panelGlobalCornerEnabled.collectAsState()
+            val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
+            val panelInnerCorner by PanelPreferences.panelInnerCorner.collectAsState()
+
+            val effectiveOuterCorner = panelOuterCorner.dp
+            val effectiveInnerCorner = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner).dp
+
             ContainerCard(
-                shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 20.dp, bottomEnd = 20.dp),
+                shape = RoundedCornerShape(
+                    topStart = effectiveInnerCorner,
+                    topEnd = effectiveInnerCorner,
+                    bottomStart = effectiveOuterCorner,
+                    bottomEnd = effectiveOuterCorner
+                ),
                 containerColor = com.example.ui.theme.getQsPanelBackgroundColor(isDark),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -2498,6 +2527,11 @@ fun UnifiedQsPanel(
             val isMediaExpanded = isFullQs || isLandscape
             val mediaTopGap = 10.dp
             Spacer(modifier = Modifier.height(mediaTopGap))
+            val panelGlobalCornerEnabled by PanelPreferences.panelGlobalCornerEnabled.collectAsState()
+            val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
+            val panelInnerCorner by PanelPreferences.panelInnerCorner.collectAsState()
+            val effectiveInnerCorner = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner).dp
+
             val miscElementsColorTertiary by PanelPreferences.miscElementsColorTertiary.collectAsState()
             val mediaAccentColor = if (miscElementsColorTertiary) {
                 androidx.compose.material3.MaterialTheme.colorScheme.tertiary
@@ -2512,7 +2546,7 @@ fun UnifiedQsPanel(
                 onSelectSession = { index ->
                     com.example.service.MediaSessionManagerHelper.selectSession(index)
                 },
-                cornerRadius = 18.dp,
+                cornerRadius = effectiveInnerCorner,
                 backgroundColor = if (isDark) Color(0xFF353A3B) else Color(0xFFE2E7EA),
                 accentColor = mediaAccentColor,
                 contentColor = if (isDark) Color.White else Color(0xFF222222),
@@ -2878,6 +2912,12 @@ fun NotificationItemRow(
 
     val notifContainerColor = com.example.ui.theme.getQsNotificationContainerColor(isDark)
 
+    val panelGlobalCornerEnabled by PanelPreferences.panelGlobalCornerEnabled.collectAsState()
+    val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
+    val panelInnerCorner by PanelPreferences.panelInnerCorner.collectAsState()
+    val effectiveInnerCorner = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner).dp
+    val effectiveShape = RoundedCornerShape(effectiveInnerCorner)
+
     if (!isDismissed) {
         val horizontalDraggableState = rememberDraggableState { delta ->
             if (item.isClearable) {
@@ -2904,7 +2944,7 @@ fun NotificationItemRow(
                 )
         ) {
             ContainerCard(
-                shape = shape,
+                shape = effectiveShape,
                 containerColor = notifContainerColor,
                 onClick = onClick,
                 onLongClick = {
@@ -3630,12 +3670,11 @@ fun VolumeSliderRow(
             modifier = Modifier.width(68.dp)
         )
 
-        val progressBarStyle by PanelPreferences.progressBarStyle.collectAsState()
         QsProgressSlider(
             value = value,
             onValueChange = onValueChange,
             valueRange = 0f..1f,
-            style = progressBarStyle,
+            sliderTarget = com.example.data.QsSliderTarget.VOLUME,
             activeColor = accentColor,
             inactiveColor = DarkUiSurfaceVariant,
             thumbColor = accentColor,
@@ -3725,12 +3764,11 @@ fun BrightnessSliderRow(
                     )
                 }
 
-                val progressBarStyle by PanelPreferences.progressBarStyle.collectAsState()
                 QsProgressSlider(
                     value = brightness.toFloat(),
                     onValueChange = { onBrightnessChange(it.toInt()) },
                     valueRange = 5f..255f,
-                    style = progressBarStyle,
+                    sliderTarget = com.example.data.QsSliderTarget.BRIGHTNESS,
                     activeColor = sliderAccentColor,
                     inactiveColor = inactiveTrackColor,
                     thumbColor = sliderAccentColor,

@@ -56,6 +56,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import com.example.data.PanelPreferences
+import com.example.data.QsSliderTarget
 import com.example.ui.components.QsProgressSlider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -435,7 +436,7 @@ fun AdaptiveMediaPlayerCard(
                         QsProgressSlider(
                             value = cardMedia.progress.coerceIn(0f, 1f),
                             onValueChange = onSeek,
-                            style = progressBarStyle,
+                            sliderTarget = QsSliderTarget.MEDIA,
                             isPlaying = cardMedia.isPlaying,
                             activeColor = accentColor,
                             inactiveColor = inactiveTrackColor,

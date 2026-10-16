@@ -36,13 +36,16 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.data.QsSliderTarget
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -319,6 +322,7 @@ fun WavyProgressIndicator(
  * Android 12 (S) SystemUI Thick Pill Style Slider Bar.
  * Features a thick pill container track (~38.dp height) with customizable corner radius,
  * filled active progress track, customizable inactive track thickness, and interactive touch drag gesture handling.
+ * At 0% progress, the active progress forms a complete circle (width = height) that never disappears.
  */
 @Composable
 fun Android12Slider(
@@ -339,18 +343,20 @@ fun Android12Slider(
     val effectiveInactiveHeight = inactiveTrackThickness.coerceIn(2.dp, height)
     val effectiveCornerRadius = cornerRadius.coerceAtLeast(0.dp)
 
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
             .height(height)
             .then(
                 if (enabled) {
-                    Modifier.pointerInput(valueRange) {
+                    Modifier.pointerInput(valueRange, height) {
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false)
                             down.consume()
                             val trackW = size.width.toFloat().coerceAtLeast(1f)
-                            val downFraction = (down.position.x / trackW).coerceIn(0f, 1f)
+                            val heightPx = size.height.toFloat()
+                            val travelRange = (trackW - heightPx).coerceAtLeast(1f)
+                            val downFraction = ((down.position.x - heightPx / 2) / travelRange).coerceIn(0f, 1f)
                             val downValue = valueRange.start + downFraction * rangeSpan
                             onValueChange(downValue)
 
@@ -367,7 +373,7 @@ fun Android12Slider(
                                 change.consume()
                                 activePointerId = change.id
                                 val currentTouchX = change.position.x
-                                val currentFraction = (currentTouchX / trackW).coerceIn(0f, 1f)
+                                val currentFraction = ((currentTouchX - heightPx / 2) / travelRange).coerceIn(0f, 1f)
                                 val newValue = valueRange.start + currentFraction * rangeSpan
                                 onValueChange(newValue)
                             }
@@ -377,27 +383,32 @@ fun Android12Slider(
             ),
         contentAlignment = Alignment.CenterStart
     ) {
+        val totalWidth = maxWidth
+
         // Inactive Track Background with customizable thickness and corner radius
         val inactiveCorner = minOf(effectiveCornerRadius, effectiveInactiveHeight / 2)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(effectiveInactiveHeight)
+                .align(Alignment.CenterStart)
                 .clip(RoundedCornerShape(inactiveCorner))
                 .background(inactiveColor)
         )
 
-        // Active Progress Fill (Pill shape with customizable corner radius)
-        if (fraction > 0f) {
-            val activeCorner = minOf(effectiveCornerRadius, height / 2)
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(fraction)
-                    .clip(RoundedCornerShape(activeCorner))
-                    .background(activeColor)
-            )
-        }
+        // Active Progress Fill:
+        // At 0% progress, width is equal to `height`, forming a circular active progress indicator that never disappears!
+        // As fraction grows from 0f to 1f, the width expands towards totalWidth.
+        val activeWidth = height + (totalWidth - height).coerceAtLeast(0.dp) * fraction
+        val activeCorner = if (fraction <= 0.001f) height / 2 else minOf(effectiveCornerRadius, height / 2)
+        Box(
+            modifier = Modifier
+                .width(activeWidth)
+                .fillMaxHeight()
+                .align(Alignment.CenterStart)
+                .clip(RoundedCornerShape(activeCorner))
+                .background(activeColor)
+        )
     }
 }
 
@@ -406,7 +417,8 @@ fun Android12Slider(
  * 1. ProgressBarStyle.DEFAULT: Classic Jetpack Compose Material 3 Slider with standard track.
  * 2. ProgressBarStyle.STRAIGHT: Clean minimal straight progress bar track with smooth thumb.
  * 3. ProgressBarStyle.WAVY: Android 13/14 sinusoidal squiggly progress bar with animated phase.
- * 4. ProgressBarStyle.ANDROID_12: Android 12 thick pill style slider bar.
+ * 4. ProgressBarStyle.ANDROID_12: Android 12 thick pill style slider bar with 0% circle indicator.
+ * Supports separate target configuration (All, Brightness, Volume, Media Player).
  */
 @Composable
 fun QsProgressSlider(
@@ -415,7 +427,8 @@ fun QsProgressSlider(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
-    style: ProgressBarStyle = ProgressBarStyle.DEFAULT,
+    style: ProgressBarStyle? = null,
+    sliderTarget: QsSliderTarget = QsSliderTarget.BRIGHTNESS,
     isPlaying: Boolean = false,
     activeColor: Color = MaterialTheme.colorScheme.primary,
     inactiveColor: Color = MaterialTheme.colorScheme.surfaceVariant,
@@ -426,23 +439,43 @@ fun QsProgressSlider(
     thumbRadius: Dp? = null,
     wavePeriodMillis: Int? = null
 ) {
+    val sliderSyncAll by com.example.data.PanelPreferences.sliderSyncAll.collectAsState()
+    val globalStyle by com.example.data.PanelPreferences.progressBarStyle.collectAsState()
+    val brightnessStyle by com.example.data.PanelPreferences.brightnessSliderStyle.collectAsState()
+    val volumeStyle by com.example.data.PanelPreferences.volumeSliderStyle.collectAsState()
+    val mediaStyle by com.example.data.PanelPreferences.mediaSliderStyle.collectAsState()
+
+    val resolvedStyle = style ?: if (sliderSyncAll) {
+        globalStyle
+    } else {
+        when (sliderTarget) {
+            QsSliderTarget.BRIGHTNESS -> brightnessStyle
+            QsSliderTarget.VOLUME -> volumeStyle
+            QsSliderTarget.MEDIA -> mediaStyle
+        }
+    }
+
+    // Common and per-style preferences
     val wavyThicknessPref by com.example.data.PanelPreferences.wavyThickness.collectAsState()
     val wavyWobblinessPref by com.example.data.PanelPreferences.wavyWobbliness.collectAsState()
     val wavyWavelengthPref by com.example.data.PanelPreferences.wavyWavelength.collectAsState()
     val wavyThumbRadiusPref by com.example.data.PanelPreferences.wavyThumbRadius.collectAsState()
     val wavySpeedPref by com.example.data.PanelPreferences.wavySpeed.collectAsState()
-    val inactiveTrackThicknessPref by com.example.data.PanelPreferences.sliderInactiveTrackThickness.collectAsState()
-    val sliderCornerRadiusPref by com.example.data.PanelPreferences.sliderCornerRadius.collectAsState()
+    val wavyInactiveTrackThicknessPref by com.example.data.PanelPreferences.wavyInactiveTrackThickness.collectAsState()
+    val wavyCornerRadiusPref by com.example.data.PanelPreferences.wavyCornerRadius.collectAsState()
 
-    val effectiveStrokeWidth = strokeWidth ?: wavyThicknessPref.dp
-    val effectiveInactiveStrokeWidth = (inactiveTrackThicknessPref ?: 4f).dp
-    val effectiveCornerRadius = sliderCornerRadiusPref.dp
-    val effectiveAmplitude = amplitude ?: wavyWobblinessPref.dp
-    val effectiveWavelength = wavelength ?: wavyWavelengthPref.dp
-    val effectiveThumbRadius = thumbRadius ?: wavyThumbRadiusPref.dp
-    val effectiveWavePeriodMillis = wavePeriodMillis ?: wavySpeedPref
+    val a12InactiveTrackThicknessPref by com.example.data.PanelPreferences.a12InactiveTrackThickness.collectAsState()
+    val a12CornerRadiusPref by com.example.data.PanelPreferences.a12CornerRadius.collectAsState()
 
-    when (style) {
+    val straightThicknessPref by com.example.data.PanelPreferences.straightThickness.collectAsState()
+    val straightInactiveTrackThicknessPref by com.example.data.PanelPreferences.straightInactiveTrackThickness.collectAsState()
+    val straightCornerRadiusPref by com.example.data.PanelPreferences.straightCornerRadius.collectAsState()
+    val straightThumbRadiusPref by com.example.data.PanelPreferences.straightThumbRadius.collectAsState()
+
+    val fallbackInactiveTrackThickness by com.example.data.PanelPreferences.sliderInactiveTrackThickness.collectAsState()
+    val fallbackCornerRadius by com.example.data.PanelPreferences.sliderCornerRadius.collectAsState()
+
+    when (resolvedStyle) {
         ProgressBarStyle.DEFAULT -> {
             Slider(
                 value = value.coerceIn(valueRange.start, valueRange.endInclusive),
@@ -458,6 +491,10 @@ fun QsProgressSlider(
             )
         }
         ProgressBarStyle.STRAIGHT -> {
+            val effectiveStraightWidth = strokeWidth ?: straightThicknessPref.dp
+            val effectiveStraightInactiveWidth = (straightInactiveTrackThicknessPref ?: fallbackInactiveTrackThickness ?: 4f).dp
+            val effectiveStraightCorner = (straightCornerRadiusPref ?: fallbackCornerRadius ?: 4f).dp
+            val effectiveStraightThumb = (thumbRadius ?: straightThumbRadiusPref.dp)
             WavySlider(
                 value = value,
                 onValueChange = onValueChange,
@@ -469,16 +506,23 @@ fun QsProgressSlider(
                 activeColor = activeColor,
                 inactiveColor = inactiveColor,
                 thumbColor = thumbColor,
-                strokeWidth = effectiveStrokeWidth,
-                inactiveStrokeWidth = effectiveInactiveStrokeWidth,
-                cornerRadius = effectiveCornerRadius,
-                amplitude = effectiveAmplitude,
-                wavelength = effectiveWavelength,
-                thumbRadius = effectiveThumbRadius,
-                wavePeriodMillis = effectiveWavePeriodMillis
+                strokeWidth = effectiveStraightWidth,
+                inactiveStrokeWidth = effectiveStraightInactiveWidth,
+                cornerRadius = effectiveStraightCorner,
+                amplitude = 0.dp,
+                wavelength = 26.dp,
+                thumbRadius = effectiveStraightThumb,
+                wavePeriodMillis = 1300
             )
         }
         ProgressBarStyle.WAVY -> {
+            val effectiveStrokeWidth = strokeWidth ?: wavyThicknessPref.dp
+            val effectiveInactiveStrokeWidth = (wavyInactiveTrackThicknessPref ?: fallbackInactiveTrackThickness ?: 4f).dp
+            val effectiveCornerRadius = (wavyCornerRadiusPref ?: fallbackCornerRadius ?: 4f).dp
+            val effectiveAmplitude = amplitude ?: wavyWobblinessPref.dp
+            val effectiveWavelength = wavelength ?: wavyWavelengthPref.dp
+            val effectiveThumbRadius = thumbRadius ?: wavyThumbRadiusPref.dp
+            val effectiveWavePeriodMillis = wavePeriodMillis ?: wavySpeedPref
             WavySlider(
                 value = value,
                 onValueChange = onValueChange,
@@ -500,6 +544,8 @@ fun QsProgressSlider(
             )
         }
         ProgressBarStyle.ANDROID_12 -> {
+            val effectiveA12InactiveHeight = (a12InactiveTrackThicknessPref ?: fallbackInactiveTrackThickness ?: 38f).dp
+            val effectiveA12Corner = (a12CornerRadiusPref ?: fallbackCornerRadius ?: 19f).dp
             Android12Slider(
                 value = value,
                 onValueChange = onValueChange,
@@ -509,8 +555,8 @@ fun QsProgressSlider(
                 activeColor = activeColor,
                 inactiveColor = inactiveColor,
                 height = 38.dp,
-                inactiveTrackThickness = (inactiveTrackThicknessPref ?: 38f).dp,
-                cornerRadius = effectiveCornerRadius
+                inactiveTrackThickness = effectiveA12InactiveHeight,
+                cornerRadius = effectiveA12Corner
             )
         }
     }

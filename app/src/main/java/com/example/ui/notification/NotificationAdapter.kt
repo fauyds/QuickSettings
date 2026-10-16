@@ -177,9 +177,12 @@ class NotificationAdapter(
             val textPrimaryColor = MonetThemeHelper.getTextPrimary(context, isDark)
             val textSecondaryColor = MonetThemeHelper.getTextSecondary(context, isDark)
 
-            // Dynamic Card Background: Inner corners 4dp, Outer corners 20dp (matching QQS corners)
-            val outerCornerPx = 20f * density
-            val innerCornerPx = 4f * density
+            val panelGlobalCornerEnabled = com.example.data.PanelPreferences.panelGlobalCornerEnabled.value
+            val panelOuterCorner = com.example.data.PanelPreferences.panelOuterCorner.value
+            val panelInnerCorner = com.example.data.PanelPreferences.panelInnerCorner.value
+
+            val outerCornerPx = panelOuterCorner * density
+            val innerCornerPx = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner) * density
 
             val radii = when {
                 totalNotifCount <= 1 -> {
