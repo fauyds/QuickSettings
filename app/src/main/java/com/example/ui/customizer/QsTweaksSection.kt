@@ -48,6 +48,8 @@ import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import androidx.compose.foundation.background
 
+import androidx.compose.material3.HorizontalDivider
+
 @Composable
 fun QsTweaksSection(modifier: Modifier = Modifier) {
     val context = LocalContext.current
@@ -56,6 +58,9 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     val datePosition by PanelPreferences.datePosition.collectAsState()
     val editButtonPosition by PanelPreferences.editButtonPosition.collectAsState()
     val hideQqsDragHandle by PanelPreferences.hideQqsDragHandle.collectAsState()
+    val qsTileLabelFontSize by PanelPreferences.qsTileLabelFontSize.collectAsState()
+    val qsTileSubtitleFontSize by PanelPreferences.qsTileSubtitleFontSize.collectAsState()
+    val hideDateInExpanded by PanelPreferences.hideDateInExpanded.collectAsState()
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -313,7 +318,174 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
             }
         }
 
-        // 5. Hide QQS Drag Handle Card
+        // 5. Tile Label & Subtitle Font Size Card
+        SettingsCard(
+            shape = CustomizeCardShapes.CenterCard,
+            modifier = Modifier.testTag("qs_tile_font_size_card")
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    Text(
+                        text = "Tile Label & Subtitle Font Size",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        lineHeight = 17.sp,
+                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Adjust the typography scale for Quick Settings tile labels and subtitles.",
+                        fontSize = 12.sp,
+                        lineHeight = 15.sp,
+                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // 1. Label Font Size Slider
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Label Font Size",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "${String.format("%.1f", qsTileLabelFontSize)} sp",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    Slider(
+                        value = qsTileLabelFontSize,
+                        onValueChange = { PanelPreferences.setQsTileLabelFontSize(context, it) },
+                        valueRange = 8f..18f,
+                        steps = 19,
+                        modifier = Modifier.fillMaxWidth().testTag("tile_label_font_size_slider"),
+                        colors = SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                            inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                        )
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("8 sp", fontSize = 10.sp, color = Color.Gray)
+                        Text("Default (12 sp)", fontSize = 10.sp, color = Color.Gray)
+                        Text("18 sp", fontSize = 10.sp, color = Color.Gray)
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                // 2. Subtitle Font Size Slider
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Subtitle Font Size",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "${String.format("%.1f", qsTileSubtitleFontSize)} sp",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    Slider(
+                        value = qsTileSubtitleFontSize,
+                        onValueChange = { PanelPreferences.setQsTileSubtitleFontSize(context, it) },
+                        valueRange = 6f..14f,
+                        steps = 15,
+                        modifier = Modifier.fillMaxWidth().testTag("tile_subtitle_font_size_slider"),
+                        colors = SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                            inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                        )
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("6 sp", fontSize = 10.sp, color = Color.Gray)
+                        Text("Default (9 sp)", fontSize = 10.sp, color = Color.Gray)
+                        Text("14 sp", fontSize = 10.sp, color = Color.Gray)
+                    }
+                }
+            }
+        }
+
+        // 6. Hide Date in Expanded QS Card
+        SettingsCard(
+            shape = CustomizeCardShapes.CenterCard
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                ) {
+                    Text(
+                        text = "Hide Date in Expanded QS",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        lineHeight = 17.sp,
+                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Hide the date display when the Quick Settings panel is fully expanded.",
+                        fontSize = 12.sp,
+                        lineHeight = 15.sp,
+                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Switch(
+                    checked = hideDateInExpanded,
+                    onCheckedChange = { PanelPreferences.setHideDateInExpanded(context, it) },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                    ),
+                    modifier = Modifier.testTag("hide_date_in_expanded_toggle")
+                )
+            }
+        }
+
+        // 7. Hide QQS Drag Handle Card
         SettingsCard(
             shape = CustomizeCardShapes.BottomCard
         ) {

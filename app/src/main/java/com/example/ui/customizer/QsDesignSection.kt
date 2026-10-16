@@ -133,6 +133,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val brightnessAtBottom by PanelPreferences.brightnessAtBottom.collectAsState()
     val brightnessInQqs by PanelPreferences.brightnessInQqs.collectAsState()
     val wavyProgressBars by PanelPreferences.wavyProgressBars.collectAsState()
+    val wavyThickness by PanelPreferences.wavyThickness.collectAsState()
+    val wavyWobbliness by PanelPreferences.wavyWobbliness.collectAsState()
+    val wavyWavelength by PanelPreferences.wavyWavelength.collectAsState()
+    val wavyThumbRadius by PanelPreferences.wavyThumbRadius.collectAsState()
+    val wavySpeed by PanelPreferences.wavySpeed.collectAsState()
+    val sliderInactiveTrackThickness by PanelPreferences.sliderInactiveTrackThickness.collectAsState()
+    val sliderCornerRadius by PanelPreferences.sliderCornerRadius.collectAsState()
     val showCustomHeaderImage by PanelPreferences.showCustomHeaderImage.collectAsState()
     val customHeaderImageUri by PanelPreferences.customHeaderImageUri.collectAsState()
     val customHeaderImageHeight by PanelPreferences.customHeaderImageHeight.collectAsState()
@@ -140,6 +147,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val showCustomHeaderMonetGradient by PanelPreferences.showCustomHeaderMonetGradient.collectAsState()
     val customHeaderMonetGradientHeight by PanelPreferences.customHeaderMonetGradientHeight.collectAsState()
     val showMonetSurfaceBackground by PanelPreferences.showMonetSurfaceBackground.collectAsState()
+    val showQsTileGradient by PanelPreferences.showQsTileGradient.collectAsState()
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -708,6 +716,49 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         }
                     }
                 }
+            }
+        }
+
+        // QS Tile Diagonal Gradient Card
+        SettingsCard(
+            shape = CustomizeCardShapes.CenterCard,
+            modifier = Modifier.testTag("qs_tile_gradient_card")
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "QS Tile Diagonal Gradient",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Enable a smooth diagonal gradient from Primary to Tertiary Monet accent color across active tiles.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Switch(
+                    checked = showQsTileGradient,
+                    onCheckedChange = { PanelPreferences.setShowQsTileGradient(context, it) },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                    ),
+                    modifier = Modifier.testTag("qs_tile_gradient_toggle")
+                )
             }
         }
 
@@ -1364,6 +1415,20 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                                 )
                                             }
                                         }
+                                        ProgressBarStyle.ANDROID_12 -> {
+                                            // Mini Android 12 thick pill icon
+                                            Canvas(modifier = Modifier.size(14.dp, 8.dp)) {
+                                                drawRoundRect(
+                                                    color = iconColor.copy(alpha = 0.35f),
+                                                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx(), 4.dp.toPx())
+                                                )
+                                                drawRoundRect(
+                                                    color = iconColor,
+                                                    size = androidx.compose.ui.geometry.Size(size.width * 0.65f, size.height),
+                                                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx(), 4.dp.toPx())
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             },
@@ -1406,6 +1471,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 ProgressBarStyle.DEFAULT -> "M3 Slider"
                                 ProgressBarStyle.STRAIGHT -> "Straight Progress Bar"
                                 ProgressBarStyle.WAVY -> "Squiggly Wave Active"
+                                ProgressBarStyle.ANDROID_12 -> "Android 12 Thick Pill"
                             },
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1424,6 +1490,343 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             .fillMaxWidth()
                             .testTag("wavy_progress_bars_preview_slider")
                     )
+                }
+
+                // Wave & Slider Customization Parameters
+                AnimatedVisibility(
+                    visible = (currentProgressBarStyle != ProgressBarStyle.DEFAULT),
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                        Text(
+                            text = "Wave & Slider Parameters",
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        // 1. Thickness / Track Width
+                        if (currentProgressBarStyle == ProgressBarStyle.WAVY || currentProgressBarStyle == ProgressBarStyle.STRAIGHT) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Active Track Thickness",
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${String.format("%.1f", wavyThickness)} dp",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Slider(
+                                    value = wavyThickness,
+                                    onValueChange = { PanelPreferences.setWavyThickness(context, it) },
+                                    valueRange = 1.0f..10.0f,
+                                    steps = 17,
+                                    modifier = Modifier.fillMaxWidth().testTag("wavy_thickness_slider"),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("1 dp (Thin)", fontSize = 10.sp, color = Color.Gray)
+                                    Text("Default (4 dp)", fontSize = 10.sp, color = Color.Gray)
+                                    Text("10 dp (Thick)", fontSize = 10.sp, color = Color.Gray)
+                                }
+                            }
+                        }
+
+                        // 2. Inactive Track Thickness Slider
+                        val effectiveInactiveThickness = sliderInactiveTrackThickness ?: if (currentProgressBarStyle == ProgressBarStyle.ANDROID_12) 38f else 4f
+                        val maxInactiveRange = if (currentProgressBarStyle == ProgressBarStyle.ANDROID_12) 38f else 16f
+                        val inactiveSteps = if (currentProgressBarStyle == ProgressBarStyle.ANDROID_12) 36 else 14
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Inactive Track Thickness",
+                                    fontSize = 12.5.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "${String.format("%.1f", effectiveInactiveThickness)} dp",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Slider(
+                                value = effectiveInactiveThickness.coerceIn(1.0f, maxInactiveRange),
+                                onValueChange = { PanelPreferences.setSliderInactiveTrackThickness(context, it) },
+                                valueRange = 1.0f..maxInactiveRange,
+                                steps = inactiveSteps,
+                                modifier = Modifier.fillMaxWidth().testTag("slider_inactive_track_thickness_slider"),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary
+                                )
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("1 dp (Thin)", fontSize = 10.sp, color = Color.Gray)
+                                Text(if (currentProgressBarStyle == ProgressBarStyle.ANDROID_12) "Default (38 dp)" else "Default (4 dp)", fontSize = 10.sp, color = Color.Gray)
+                                Text("${maxInactiveRange.toInt()} dp (${if (currentProgressBarStyle == ProgressBarStyle.ANDROID_12) "Full" else "Thick"})", fontSize = 10.sp, color = Color.Gray)
+                            }
+                        }
+
+                        // 3. Slider Corner Radius
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Slider Corner Radius",
+                                    fontSize = 12.5.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "${sliderCornerRadius.toInt()} dp",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Slider(
+                                value = sliderCornerRadius,
+                                onValueChange = { PanelPreferences.setSliderCornerRadius(context, it) },
+                                valueRange = 0.0f..24.0f,
+                                steps = 23,
+                                modifier = Modifier.fillMaxWidth().testTag("slider_corner_radius_slider"),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary
+                                )
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("0 dp (Square)", fontSize = 10.sp, color = Color.Gray)
+                                Text("8 dp (Rounded)", fontSize = 10.sp, color = Color.Gray)
+                                Text("19 dp (Pill)", fontSize = 10.sp, color = Color.Gray)
+                                Text("24 dp (Max)", fontSize = 10.sp, color = Color.Gray)
+                            }
+                        }
+
+                        // 2. Wobbliness (Wave Amplitude)
+                        if (currentProgressBarStyle == ProgressBarStyle.WAVY) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Wobbliness (Wave Amplitude)",
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${String.format("%.1f", wavyWobbliness)} dp",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Slider(
+                                    value = wavyWobbliness,
+                                    onValueChange = { PanelPreferences.setWavyWobbliness(context, it) },
+                                    valueRange = 0.5f..10.0f,
+                                    steps = 18,
+                                    modifier = Modifier.fillMaxWidth().testTag("wavy_wobbliness_slider"),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("0.5 dp (Subtle)", fontSize = 10.sp, color = Color.Gray)
+                                    Text("Default (3.5 dp)", fontSize = 10.sp, color = Color.Gray)
+                                    Text("10 dp (Extreme)", fontSize = 10.sp, color = Color.Gray)
+                                }
+                            }
+
+                            // 3. Wavelength (Cycle Length)
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Wavelength (Cycle Length)",
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${String.format("%.1f", wavyWavelength)} dp",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Slider(
+                                    value = wavyWavelength,
+                                    onValueChange = { PanelPreferences.setWavyWavelength(context, it) },
+                                    valueRange = 10.0f..60.0f,
+                                    steps = 24,
+                                    modifier = Modifier.fillMaxWidth().testTag("wavy_wavelength_slider"),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("10 dp (Dense)", fontSize = 10.sp, color = Color.Gray)
+                                    Text("Default (26 dp)", fontSize = 10.sp, color = Color.Gray)
+                                    Text("60 dp (Wide)", fontSize = 10.sp, color = Color.Gray)
+                                }
+                            }
+                        }
+
+                        // 4. Thumb Size (Radius)
+                        if (currentProgressBarStyle == ProgressBarStyle.WAVY || currentProgressBarStyle == ProgressBarStyle.STRAIGHT) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Thumb Size (Radius)",
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${String.format("%.1f", wavyThumbRadius)} dp",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Slider(
+                                    value = wavyThumbRadius,
+                                    onValueChange = { PanelPreferences.setWavyThumbRadius(context, it) },
+                                    valueRange = 2.0f..12.0f,
+                                    steps = 19,
+                                    modifier = Modifier.fillMaxWidth().testTag("wavy_thumb_radius_slider"),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("2 dp (Tiny)", fontSize = 10.sp, color = Color.Gray)
+                                    Text("Default (6 dp)", fontSize = 10.sp, color = Color.Gray)
+                                    Text("12 dp (Large)", fontSize = 10.sp, color = Color.Gray)
+                                }
+                            }
+                        }
+
+                        // 5. Ripple Speed (Animation Period)
+                        if (currentProgressBarStyle == ProgressBarStyle.WAVY) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Wave Ripple Speed",
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${wavySpeed} ms",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Slider(
+                                    value = wavySpeed.toFloat(),
+                                    onValueChange = { PanelPreferences.setWavySpeed(context, it.toInt()) },
+                                    valueRange = 300f..3000f,
+                                    steps = 26,
+                                    modifier = Modifier.fillMaxWidth().testTag("wavy_speed_slider"),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("300 ms (Fast)", fontSize = 10.sp, color = Color.Gray)
+                                    Text("1300 ms (Default)", fontSize = 10.sp, color = Color.Gray)
+                                    Text("3000 ms (Slow)", fontSize = 10.sp, color = Color.Gray)
+                                }
+                            }
+                        }
+
+                        // Reset to Defaults Button
+                        TextButton(
+                            onClick = { PanelPreferences.resetWavyParamsToDefault(context) },
+                            modifier = Modifier
+                                .align(Alignment.End)
+                                .testTag("reset_wavy_params_button")
+                        ) {
+                            Text(
+                                text = "Reset to Defaults",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
             }
         }

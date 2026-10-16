@@ -90,11 +90,21 @@ object QsTileViewHelper {
         val enabledShapeId = PanelPreferences.enabledTileShapeId.value
         val disabledShapeId = PanelPreferences.disabledTileShapeId.value
         val chosenShapeId = if (isActive) enabledShapeId else disabledShapeId
+        val showQsTileGradient = PanelPreferences.showQsTileGradient.value
+        val tertiaryAccent = MonetThemeHelper.getTertiaryAccent(context, isDark)
 
-        val shapeDrawable = com.example.ui.shape.QsShapeManager.createDrawable(
-            chosenShapeId,
-            if (isOutlineEnabled) Color.TRANSPARENT else bgColor
-        )
+        val shapeDrawable = if (showQsTileGradient && isActive && !isOutlineEnabled) {
+            com.example.ui.shape.QsShapeManager.createGradientDrawable(
+                chosenShapeId,
+                primaryAccent,
+                tertiaryAccent
+            )
+        } else {
+            com.example.ui.shape.QsShapeManager.createDrawable(
+                chosenShapeId,
+                if (isOutlineEnabled) Color.TRANSPARENT else bgColor
+            )
+        }
         if (isOutlineEnabled) {
             val outlineColor = when (tile.state) {
                 TileState.ACTIVE -> primaryAccent
@@ -104,6 +114,9 @@ object QsTileViewHelper {
             shapeDrawable.setColor(Color.TRANSPARENT)
             shapeDrawable.strokeWidth = 1.2f * density
             shapeDrawable.strokeColor = outlineColor
+            if (showQsTileGradient && isActive) {
+                shapeDrawable.gradientColors = intArrayOf(primaryAccent, tertiaryAccent)
+            }
         }
         val maskDrawable = com.example.ui.shape.QsShapeManager.createDrawable(chosenShapeId, Color.WHITE)
 
@@ -125,9 +138,13 @@ object QsTileViewHelper {
 
         android.util.Log.d("TileDebug", "QsTileViewHelper.bindTile: tile='${tile.label}', subtitle='${tile.subtitle}', tvSubtitle=$tvSubtitle")
 
+        val labelFontSize = PanelPreferences.qsTileLabelFontSize.value
+        val subtitleFontSize = PanelPreferences.qsTileSubtitleFontSize.value
+
         tvLabel.includeFontPadding = false
         tvLabel.text = tile.label
         tvLabel.setTextColor(textPrimary)
+        tvLabel.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, labelFontSize)
         if (tileIndex == 1) {
             tvLabel.translationY = -8f * density
         } else {
@@ -144,7 +161,7 @@ object QsTileViewHelper {
             tvSubtitle.setTextColor(textSecondary)
             tvSubtitle.maxLines = 1
             tvSubtitle.ellipsize = android.text.TextUtils.TruncateAt.END
-            tvSubtitle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 8.5f)
+            tvSubtitle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, subtitleFontSize)
             if (tileIndex == 1) {
                 tvSubtitle.translationY = -8f * density
             } else {

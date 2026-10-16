@@ -72,6 +72,7 @@ enum class DatePosition(val id: String, val label: String) {
     NEXT_TO_TIME("inline", "Next to Time"),
     BELOW_TIME("below", "Below Time"),
     HEADER_RIGHT("right", "Header Right"),
+    QQS_PANEL("qqs_panel", "QQS Panel"),
     HIDDEN("hidden", "Hidden");
 
     companion object {
@@ -115,7 +116,8 @@ enum class TileShape(val id: String, val label: String, val description: String)
 enum class ProgressBarStyle(val id: String, val label: String, val description: String) {
     DEFAULT("default", "M3", "Standard Material 3 slider"),
     STRAIGHT("straight", "Straight", "Clean minimal straight progress bar"),
-    WAVY("wavy", "Wavy", "Android 13/14 squiggly wave progress bar");
+    WAVY("wavy", "Wavy", "Android 13/14 squiggly wave progress bar"),
+    ANDROID_12("android_12", "Android 12", "Android 12 thick pill style slider bar");
 
     companion object {
         fun fromId(id: String?): ProgressBarStyle =
@@ -202,6 +204,17 @@ object PanelPreferences {
     private const val KEY_ELEM_QS_TILES_TERTIARY = "elem_qs_tiles_tertiary"
     private const val KEY_ELEM_SLIDERS_TERTIARY = "elem_sliders_tertiary"
     private const val KEY_ELEM_MISC_ELEMENTS_TERTIARY = "elem_misc_elements_tertiary"
+    private const val KEY_SHOW_QS_TILE_GRADIENT = "show_qs_tile_gradient"
+    private const val KEY_QS_TILE_LABEL_FONT_SIZE = "qs_tile_label_font_size"
+    private const val KEY_QS_TILE_SUBTITLE_FONT_SIZE = "qs_tile_subtitle_font_size"
+    private const val KEY_HIDE_DATE_IN_EXPANDED = "hide_date_in_expanded"
+    private const val KEY_WAVY_THICKNESS = "wavy_thickness"
+    private const val KEY_WAVY_WOBBLINESS = "wavy_wobbliness"
+    private const val KEY_WAVY_WAVELENGTH = "wavy_wavelength"
+    private const val KEY_WAVY_THUMB_RADIUS = "wavy_thumb_radius"
+    private const val KEY_WAVY_SPEED = "wavy_speed"
+    private const val KEY_SLIDER_INACTIVE_TRACK_THICKNESS = "slider_inactive_track_thickness"
+    private const val KEY_SLIDER_CORNER_RADIUS = "slider_corner_radius"
 
     private val _surfaceBgColorTertiary = MutableStateFlow(false)
     val surfaceBgColorTertiary: StateFlow<Boolean> = _surfaceBgColorTertiary.asStateFlow()
@@ -223,6 +236,36 @@ object PanelPreferences {
 
     private val _miscElementsColorTertiary = MutableStateFlow(false)
     val miscElementsColorTertiary: StateFlow<Boolean> = _miscElementsColorTertiary.asStateFlow()
+
+    private val _showQsTileGradient = MutableStateFlow(false)
+    val showQsTileGradient: StateFlow<Boolean> = _showQsTileGradient.asStateFlow()
+
+    private val _qsTileLabelFontSize = MutableStateFlow(12.0f)
+    val qsTileLabelFontSize: StateFlow<Float> = _qsTileLabelFontSize.asStateFlow()
+
+    private val _qsTileSubtitleFontSize = MutableStateFlow(9.0f)
+    val qsTileSubtitleFontSize: StateFlow<Float> = _qsTileSubtitleFontSize.asStateFlow()
+
+    private val _wavyThickness = MutableStateFlow(4.0f)
+    val wavyThickness: StateFlow<Float> = _wavyThickness.asStateFlow()
+
+    private val _wavyWobbliness = MutableStateFlow(3.5f)
+    val wavyWobbliness: StateFlow<Float> = _wavyWobbliness.asStateFlow()
+
+    private val _wavyWavelength = MutableStateFlow(26.0f)
+    val wavyWavelength: StateFlow<Float> = _wavyWavelength.asStateFlow()
+
+    private val _wavyThumbRadius = MutableStateFlow(6.0f)
+    val wavyThumbRadius: StateFlow<Float> = _wavyThumbRadius.asStateFlow()
+
+    private val _wavySpeed = MutableStateFlow(1300)
+    val wavySpeed: StateFlow<Int> = _wavySpeed.asStateFlow()
+
+    private val _sliderInactiveTrackThickness = MutableStateFlow<Float?>(null)
+    val sliderInactiveTrackThickness: StateFlow<Float?> = _sliderInactiveTrackThickness.asStateFlow()
+
+    private val _sliderCornerRadius = MutableStateFlow(19.0f)
+    val sliderCornerRadius: StateFlow<Float> = _sliderCornerRadius.asStateFlow()
 
     private val _usePrimeCoreAffinity = MutableStateFlow(false)
     val usePrimeCoreAffinity: StateFlow<Boolean> = _usePrimeCoreAffinity.asStateFlow()
@@ -296,6 +339,9 @@ object PanelPreferences {
 
     private val _showDateInQqsHeader = MutableStateFlow(false)
     val showDateInQqsHeader: StateFlow<Boolean> = _showDateInQqsHeader.asStateFlow()
+
+    private val _hideDateInExpanded = MutableStateFlow(false)
+    val hideDateInExpanded: StateFlow<Boolean> = _hideDateInExpanded.asStateFlow()
 
     private val _datePosition = MutableStateFlow(DatePosition.BELOW_TIME)
     val datePosition: StateFlow<DatePosition> = _datePosition.asStateFlow()
@@ -529,6 +575,19 @@ object PanelPreferences {
         _qsTilesColorTertiary.value = prefs.getBoolean(KEY_ELEM_QS_TILES_TERTIARY, false)
         _slidersColorTertiary.value = prefs.getBoolean(KEY_ELEM_SLIDERS_TERTIARY, false)
         _miscElementsColorTertiary.value = prefs.getBoolean(KEY_ELEM_MISC_ELEMENTS_TERTIARY, false)
+        _showQsTileGradient.value = prefs.getBoolean(KEY_SHOW_QS_TILE_GRADIENT, false)
+        _qsTileLabelFontSize.value = prefs.getFloat(KEY_QS_TILE_LABEL_FONT_SIZE, 12.0f)
+        _qsTileSubtitleFontSize.value = prefs.getFloat(KEY_QS_TILE_SUBTITLE_FONT_SIZE, 9.0f)
+        _hideDateInExpanded.value = prefs.getBoolean(KEY_HIDE_DATE_IN_EXPANDED, false)
+        _wavyThickness.value = prefs.getFloat(KEY_WAVY_THICKNESS, 4.0f)
+        _wavyWobbliness.value = prefs.getFloat(KEY_WAVY_WOBBLINESS, 3.5f)
+        _wavyWavelength.value = prefs.getFloat(KEY_WAVY_WAVELENGTH, 26.0f)
+        _wavyThumbRadius.value = prefs.getFloat(KEY_WAVY_THUMB_RADIUS, 6.0f)
+        _wavySpeed.value = prefs.getInt(KEY_WAVY_SPEED, 1300)
+        _sliderInactiveTrackThickness.value = if (prefs.contains(KEY_SLIDER_INACTIVE_TRACK_THICKNESS)) {
+            prefs.getFloat(KEY_SLIDER_INACTIVE_TRACK_THICKNESS, 4.0f)
+        } else null
+        _sliderCornerRadius.value = prefs.getFloat(KEY_SLIDER_CORNER_RADIUS, 19.0f)
         _initialSetupCompleted.value = prefs.getBoolean(KEY_INITIAL_SETUP_COMPLETED, false)
         val savedMode = prefs.getString(KEY_PRIVILEGE_MODE, com.example.model.PrivilegeMode.STANDARD.name)
         _privilegeMode.value = try {
@@ -1013,5 +1072,91 @@ object PanelPreferences {
         _headerGradientColorTertiary.value = enabled
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_ELEM_HEADER_GRADIENT_TERTIARY, enabled).apply()
+    }
+
+    fun setShowQsTileGradient(context: Context, enabled: Boolean) {
+        _showQsTileGradient.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_SHOW_QS_TILE_GRADIENT, enabled).apply()
+    }
+
+    fun setQsTileLabelFontSize(context: Context, size: Float) {
+        _qsTileLabelFontSize.value = size
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_QS_TILE_LABEL_FONT_SIZE, size).apply()
+    }
+
+    fun setQsTileSubtitleFontSize(context: Context, size: Float) {
+        _qsTileSubtitleFontSize.value = size
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_QS_TILE_SUBTITLE_FONT_SIZE, size).apply()
+    }
+
+    fun setHideDateInExpanded(context: Context, hide: Boolean) {
+        _hideDateInExpanded.value = hide
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_HIDE_DATE_IN_EXPANDED, hide).apply()
+    }
+
+    fun setWavyThickness(context: Context, value: Float) {
+        _wavyThickness.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_WAVY_THICKNESS, value).apply()
+    }
+
+    fun setWavyWobbliness(context: Context, value: Float) {
+        _wavyWobbliness.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_WAVY_WOBBLINESS, value).apply()
+    }
+
+    fun setWavyWavelength(context: Context, value: Float) {
+        _wavyWavelength.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_WAVY_WAVELENGTH, value).apply()
+    }
+
+    fun setWavyThumbRadius(context: Context, value: Float) {
+        _wavyThumbRadius.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_WAVY_THUMB_RADIUS, value).apply()
+    }
+
+    fun setWavySpeed(context: Context, value: Int) {
+        _wavySpeed.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(KEY_WAVY_SPEED, value).apply()
+    }
+
+    fun setSliderInactiveTrackThickness(context: Context, value: Float) {
+        _sliderInactiveTrackThickness.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_SLIDER_INACTIVE_TRACK_THICKNESS, value).apply()
+    }
+
+    fun setSliderCornerRadius(context: Context, value: Float) {
+        _sliderCornerRadius.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_SLIDER_CORNER_RADIUS, value).apply()
+    }
+
+    fun resetWavyParamsToDefault(context: Context) {
+        _wavyThickness.value = 4.0f
+        _wavyWobbliness.value = 3.5f
+        _wavyWavelength.value = 26.0f
+        _wavyThumbRadius.value = 6.0f
+        _wavySpeed.value = 1300
+        _sliderInactiveTrackThickness.value = null
+        _sliderCornerRadius.value = 19.0f
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(KEY_WAVY_THICKNESS, 4.0f)
+            .putFloat(KEY_WAVY_WOBBLINESS, 3.5f)
+            .putFloat(KEY_WAVY_WAVELENGTH, 26.0f)
+            .putFloat(KEY_WAVY_THUMB_RADIUS, 6.0f)
+            .putInt(KEY_WAVY_SPEED, 1300)
+            .remove(KEY_SLIDER_INACTIVE_TRACK_THICKNESS)
+            .putFloat(KEY_SLIDER_CORNER_RADIUS, 19.0f)
+            .apply()
     }
 }

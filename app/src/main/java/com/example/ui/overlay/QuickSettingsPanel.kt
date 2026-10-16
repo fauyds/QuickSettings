@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.runtime.mutableStateMapOf
 import kotlinx.coroutines.Dispatchers
@@ -996,10 +997,13 @@ fun QsHeaderBar(
     val headerSecondaryTextColor = if (useBlackHeaderText) Color.Black.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.9f)
     val headerIconTint = if (useBlackHeaderText) Color.Black.copy(alpha = 0.85f) else Color.White.copy(alpha = 0.85f)
 
+    val hideDateInExpanded by PanelPreferences.hideDateInExpanded.collectAsState()
     val batteryInfo = rememberQqsBatteryState()
 
-    val effectiveDatePos = remember(datePosState, showDateInQqs) {
-        if (showDateInQqs && datePosState == com.example.data.DatePosition.BELOW_TIME) {
+    val effectiveDatePos = remember(datePosState, showDateInQqs, hideDateInExpanded, currentStage) {
+        if (hideDateInExpanded && currentStage == QsExpansionStage.FULL_QS) {
+            com.example.data.DatePosition.HIDDEN
+        } else if (showDateInQqs && datePosState == com.example.data.DatePosition.BELOW_TIME) {
             com.example.data.DatePosition.NEXT_TO_TIME
         } else {
             datePosState
@@ -1895,6 +1899,7 @@ fun UnifiedQsPanel(
     val showCarrierDivider by PanelPreferences.showCarrierDivider.collectAsState()
     val brightnessAtBottom by PanelPreferences.brightnessAtBottom.collectAsState()
     val brightnessInQqs by PanelPreferences.brightnessInQqs.collectAsState()
+    val datePosition by PanelPreferences.datePosition.collectAsState()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val disablePanelAnimations by PanelPreferences.disablePanelAnimations.collectAsState()
@@ -2042,6 +2047,68 @@ fun UnifiedQsPanel(
                             onDone = onToggleEditMode
                         )
                     } else {
+                        // 0. Very top QQS Row (Date & Carrier above tiles)
+                        val hideDateInExpanded by PanelPreferences.hideDateInExpanded.collectAsState()
+                        val isExpandedQs = expansionStage == QsExpansionStage.FULL_QS
+                        val isQqsDate = !(hideDateInExpanded && isExpandedQs) && datePosition == com.example.data.DatePosition.QQS_PANEL && !isSplitCarrier
+                        if (isQqsDate || (showCarrier && !isSplitCarrier)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 2.dp, bottom = 8.dp)
+                                    .clickable(
+                                        enabled = isQqsDate,
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        onClick = { launchCalendarApp(context) }
+                                    )
+                                    .testTag("qqs_panel_date_top")
+                            ) {
+                                val textColor = if (isDark) Color.LightGray.copy(alpha = 0.9f) else Color(0xFF333333)
+                                if (isQqsDate) {
+                                    val currentDate = remember {
+                                        val sdf = SimpleDateFormat("EEE, MMM d", Locale.getDefault())
+                                        sdf.format(Date())
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Default.CalendarToday,
+                                        contentDescription = "Date",
+                                        tint = textColor,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Text(
+                                        text = currentDate,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = textColor
+                                    )
+                                    if (showCarrier && !isSplitCarrier) {
+                                        Text(
+                                            text = "•",
+                                            fontSize = 12.sp,
+                                            color = textColor.copy(alpha = 0.6f)
+                                        )
+                                    }
+                                }
+                                if (showCarrier && !isSplitCarrier) {
+                                    Icon(
+                                        imageVector = Icons.Default.CellTower,
+                                        contentDescription = null,
+                                        tint = textColor,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Text(
+                                        text = carrierName,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = textColor
+                                    )
+                                }
+                            }
+                        }
+
                         // 1. Brightness Slider (if not moved to bottom)
                         val showTopSlider = !brightnessAtBottom && (brightnessInQqs || isFullQs)
                         AnimatedVisibility(
@@ -2218,34 +2285,10 @@ fun UnifiedQsPanel(
                                         .fillMaxWidth()
                                         .graphicsLayer { alpha = qqsFooterAlpha }
                                 ) {
-                                    if (showCarrier && !isSplitCarrier) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(5.dp),
-                                            modifier = Modifier
-                                                .align(Alignment.CenterStart)
-                                                .padding(start = 9.dp, top = if (brightnessAtBottom && showCarrier) 9.dp else 12.dp, bottom = 6.dp)
-                                        ) {
-                                            val carrierColor = if (isDark) Color.LightGray.copy(alpha = 0.9f) else Color(0xFF333333)
-                                            Icon(
-                                                imageVector = Icons.Default.CellTower,
-                                                contentDescription = null,
-                                                tint = carrierColor,
-                                                modifier = Modifier.size(14.dp)
-                                            )
-                                            Text(
-                                                text = carrierName,
-                                                fontSize = 14.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = carrierColor
-                                            )
-                                        }
-                                    }
-
                                     if (!hideQqsDragHandle && !isSplitCarrier) {
                                         Box(
                                             modifier = Modifier
-                                                .align(if (!showCarrier) Alignment.Center else Alignment.BottomCenter)
+                                                .align(Alignment.Center)
                                                 .padding(bottom = 0.dp)
                                                 .offset(y = 3.dp)
                                                 .clip(RoundedCornerShape(8.dp))
@@ -3421,6 +3464,18 @@ fun CircularQsTile(
         Pair(bg, fg)
     }
 
+    val showQsTileGradient by PanelPreferences.showQsTileGradient.collectAsState()
+    val primaryThemeColor = androidx.compose.material3.MaterialTheme.colorScheme.primary
+    val tertiaryThemeColor = androidx.compose.material3.MaterialTheme.colorScheme.tertiary
+
+    val tileGradientBrush = remember(primaryThemeColor, tertiaryThemeColor) {
+        Brush.linearGradient(
+            colors = listOf(primaryThemeColor, tertiaryThemeColor),
+            start = androidx.compose.ui.geometry.Offset.Zero,
+            end = androidx.compose.ui.geometry.Offset.Infinite
+        )
+    }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
@@ -3455,13 +3510,23 @@ fun CircularQsTile(
                 .size(circleSize)
                 .then(
                     if (tileOutlineEnabled) {
-                        Modifier.border(1.2.dp, outlineColor, tileShape)
+                        if (isActive && showQsTileGradient) {
+                            Modifier.border(1.2.dp, tileGradientBrush, tileShape)
+                        } else {
+                            Modifier.border(1.2.dp, outlineColor, tileShape)
+                        }
                     } else {
                         Modifier
                     }
                 )
                 .clip(tileShape)
-                .background(backgroundColor),
+                .then(
+                    if (isActive && showQsTileGradient && !tileOutlineEnabled) {
+                        Modifier.background(tileGradientBrush)
+                    } else {
+                        Modifier.background(backgroundColor)
+                    }
+                ),
             contentAlignment = Alignment.Center
         ) {
             val isThirdParty = tile.isExternal || tile.category == TileCategory.THIRD_PARTY || tile.category == TileCategory.EXTERNAL || tile.id.contains("/")
@@ -3496,12 +3561,15 @@ fun CircularQsTile(
         if (labelAlpha > 0.02f) {
             Spacer(modifier = Modifier.height(4.dp))
 
+            val qsTileLabelFontSize by PanelPreferences.qsTileLabelFontSize.collectAsState()
+            val qsTileSubtitleFontSize by PanelPreferences.qsTileSubtitleFontSize.collectAsState()
+
             val tileLabelColor = if (isDark) Color(0xFFCCCCCC) else Color(0xFF333333)
             val tileSubtitleColor = if (isActive) androidx.compose.material3.MaterialTheme.colorScheme.primary.copy(alpha = 0.8f) else if (isDark) Color.Gray else Color(0xFF333333).copy(alpha = 0.8f)
 
             Text(
                 text = tile.label,
-                fontSize = 12.sp,
+                fontSize = qsTileLabelFontSize.sp,
                 fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
                 color = tileLabelColor,
                 textAlign = TextAlign.Center,
@@ -3511,7 +3579,7 @@ fun CircularQsTile(
 
             Text(
                 text = tile.subtitle,
-                fontSize = 9.sp,
+                fontSize = qsTileSubtitleFontSize.sp,
                 color = tileSubtitleColor,
                 textAlign = TextAlign.Center,
                 maxLines = 1,

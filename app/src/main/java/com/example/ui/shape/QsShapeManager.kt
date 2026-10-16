@@ -119,6 +119,12 @@ class QsPathDrawable(
         }
     }
 
+    var gradientColors: IntArray? = null
+        set(value) {
+            field = value
+            invalidateSelf()
+        }
+
     override fun onBoundsChange(bounds: Rect) {
         super.onBoundsChange(bounds)
         if (bounds.width() > 0 && bounds.height() > 0) {
@@ -127,6 +133,21 @@ class QsPathDrawable(
             matrix.setScale(bounds.width().toFloat() / viewportWidth, bounds.height().toFloat() / viewportHeight)
             basePath.transform(matrix, scaledPath)
             scaledPath.offset(bounds.left.toFloat(), bounds.top.toFloat())
+
+            val colors = gradientColors
+            if (colors != null && colors.size >= 2) {
+                paint.shader = android.graphics.LinearGradient(
+                    bounds.left.toFloat(),
+                    bounds.top.toFloat(),
+                    bounds.right.toFloat(),
+                    bounds.bottom.toFloat(),
+                    colors,
+                    null,
+                    android.graphics.Shader.TileMode.CLAMP
+                )
+            } else {
+                paint.shader = null
+            }
         }
     }
 
@@ -606,5 +627,12 @@ object QsShapeManager {
     fun createDrawable(shapeId: String?, color: Int = Color.WHITE): QsPathDrawable {
         val item = getShapeItem(shapeId)
         return QsPathDrawable(item.pathData, item.viewportWidth, item.viewportHeight, color)
+    }
+
+    fun createGradientDrawable(shapeId: String?, startColor: Int, endColor: Int): QsPathDrawable {
+        val item = getShapeItem(shapeId)
+        val drawable = QsPathDrawable(item.pathData, item.viewportWidth, item.viewportHeight, startColor)
+        drawable.gradientColors = intArrayOf(startColor, endColor)
+        return drawable
     }
 }
