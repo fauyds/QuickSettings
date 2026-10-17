@@ -37,6 +37,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,7 +61,6 @@ import com.example.data.PanelPreferences
 import com.example.data.ProgressBarStyle
 import com.example.data.QsSliderTarget
 import com.example.data.TileShape
-import com.example.ui.components.WavySlider
 import com.example.ui.components.QsProgressSlider
 import com.example.ui.theme.ExpressiveCardShapes
 import com.example.ui.theme.SegmentedButtonShapes
@@ -71,7 +71,6 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Spacer
@@ -84,26 +83,33 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Draw
-import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.FileOpen
-import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.UploadFile
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.CropFree
+import androidx.compose.material.icons.filled.Gradient
+import androidx.compose.material.icons.filled.SimCard
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.HorizontalRule
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.VerticalAlignBottom
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.RoundedCorner
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -137,14 +143,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val hideCarrierInExpanded by PanelPreferences.hideCarrierInExpanded.collectAsState()
     val brightnessAtBottom by PanelPreferences.brightnessAtBottom.collectAsState()
     val brightnessInQqs by PanelPreferences.brightnessInQqs.collectAsState()
-    val wavyProgressBars by PanelPreferences.wavyProgressBars.collectAsState()
-    val wavyThickness by PanelPreferences.wavyThickness.collectAsState()
-    val wavyWobbliness by PanelPreferences.wavyWobbliness.collectAsState()
-    val wavyWavelength by PanelPreferences.wavyWavelength.collectAsState()
-    val wavyThumbRadius by PanelPreferences.wavyThumbRadius.collectAsState()
-    val wavySpeed by PanelPreferences.wavySpeed.collectAsState()
-    val sliderInactiveTrackThickness by PanelPreferences.sliderInactiveTrackThickness.collectAsState()
-    val sliderCornerRadius by PanelPreferences.sliderCornerRadius.collectAsState()
     val showCustomHeaderImage by PanelPreferences.showCustomHeaderImage.collectAsState()
     val customHeaderImageUri by PanelPreferences.customHeaderImageUri.collectAsState()
     val customHeaderImageHeight by PanelPreferences.customHeaderImageHeight.collectAsState()
@@ -153,6 +151,15 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val customHeaderMonetGradientHeight by PanelPreferences.customHeaderMonetGradientHeight.collectAsState()
     val showMonetSurfaceBackground by PanelPreferences.showMonetSurfaceBackground.collectAsState()
     val showQsTileGradient by PanelPreferences.showQsTileGradient.collectAsState()
+    val panelGlobalCornerEnabled by PanelPreferences.panelGlobalCornerEnabled.collectAsState()
+    val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
+    val panelInnerCorner by PanelPreferences.panelInnerCorner.collectAsState()
+    val collapseExpandOptions by PanelPreferences.collapseExpandOptions.collectAsState()
+
+    var tileShapesExpanded by rememberSaveable { mutableStateOf(false) }
+    var progressBarSliderExpanded by rememberSaveable { mutableStateOf(false) }
+    var panelCornersExpanded by rememberSaveable { mutableStateOf(false) }
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -163,10 +170,18 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         }
     }
 
+    var showImportDialog by remember { mutableStateOf(false) }
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)
     ) {
+        // --- 1. TILE SHAPES & LAYOUT ---
+        CollapsibleSubheaderSection(
+            title = "Tile Shapes & Layout",
+            icon = Icons.Default.Apps
+        ) {
+
         // 1. QQS Icon Size Card
         SettingsCard(
             shape = CustomizeCardShapes.TopCard
@@ -183,14 +198,33 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "QQS Icon Size",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Tune,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Text(
+                                text = "QQS Icon Size",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 17.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                         Text(
                             text = "$qqsTileSizeValue dp",
                             fontSize = 13.sp,
@@ -251,14 +285,33 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "QQS Icon Quantity",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Apps,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Text(
+                                text = "QQS Icon Quantity",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 17.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                         Text(
                             text = "$qqsTileCount icons",
                             fontSize = 13.sp,
@@ -304,9 +357,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             }
         }
 
-        var showImportDialog by remember { mutableStateOf(false) }
-
-        // 3. Tile Shape Customization (Enabled / Disabled) backed by XML drawables with path
+        // 3. Tile Shape Customization (XML Paths) -> Moved to Tile Shapes & Layout!
         SettingsCard(
             shape = CustomizeCardShapes.CenterCard,
             modifier = Modifier.testTag("tile_shape_selection_card")
@@ -317,53 +368,103 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Header with Import Action
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .then(
+                                if (collapseExpandOptions) Modifier.clickable { tileShapesExpanded = !tileShapesExpanded } else Modifier
+                            )
                     ) {
-                        Text(
-                            text = "Tile Shapes (XML Paths)",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "All QS shapes are rendered via vector XML drawable paths. You can paste path data, XML, or import files.",
-                            fontSize = 12.sp,
-                            lineHeight = 16.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Palette,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = "Tile Shapes (XML Paths)",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "All QS shapes are rendered via vector XML drawable paths. You can paste path data, XML, or import files.",
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
-                    OutlinedButton(
-                        onClick = { showImportDialog = true },
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                        modifier = Modifier.testTag("import_xml_shape_button")
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Add Shape",
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = "Add Shape",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 4.dp)
-                        )
+                        OutlinedButton(
+                            onClick = { showImportDialog = true },
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.testTag("import_xml_shape_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Add Shape",
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Add Shape",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(start = 4.dp)
+                            )
+                        }
+
+                        if (collapseExpandOptions) {
+                            IconButton(
+                                onClick = { tileShapesExpanded = !tileShapesExpanded },
+                                modifier = Modifier.size(36.dp).testTag("toggle_expand_tile_shapes")
+                            ) {
+                                Icon(
+                                    imageVector = if (tileShapesExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = if (tileShapesExpanded) "Collapse" else "Expand",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                AnimatedVisibility(
+                    visible = !collapseExpandOptions || tileShapesExpanded,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                // Enabled Tile Shape
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Enabled Tile Shape
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
                             text = "Enabled Tile Shape",
@@ -579,20 +680,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         }
                     }
                 }
+                    }
+                }
             }
         }
 
-        if (showImportDialog) {
-            ImportXmlShapeDialog(
-                onDismiss = { showImportDialog = false },
-                onShapeImported = { importedItem ->
-                    PanelPreferences.setEnabledTileShapeId(context, importedItem.id)
-                    showImportDialog = false
-                }
-            )
-        }
-
-        // 4. 4dp QS Tile Outline Card
+        // 4. 1.2dp Tile Outline Card
         SettingsCard(
             shape = CustomizeCardShapes.CenterCard,
             modifier = Modifier.testTag("tile_outline_card")
@@ -608,21 +701,42 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
+                    Row(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "1.2dp Tile Outline",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Enable a 1.2dp stroke outline on Quick Settings tiles with the inner background hidden.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CropFree,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "1.2dp Tile Outline",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Enable a 1.2dp stroke outline on Quick Settings tiles with the inner background hidden.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
                     Switch(
@@ -724,9 +838,9 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             }
         }
 
-        // QS Tile Diagonal Gradient Card
+        // 5. QS Tile Diagonal Gradient Card
         SettingsCard(
-            shape = CustomizeCardShapes.CenterCard,
+            shape = CustomizeCardShapes.BottomCard,
             modifier = Modifier.testTag("qs_tile_gradient_card")
         ) {
             Row(
@@ -736,21 +850,42 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
+                Row(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "QS Tile Diagonal Gradient",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Enable a smooth diagonal gradient from Primary to Tertiary Monet accent color across active tiles.",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Gradient,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "QS Tile Diagonal Gradient",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Enable a smooth diagonal gradient from Primary to Tertiary Monet accent color across active tiles.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
                 Switch(
@@ -767,9 +902,18 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             }
         }
 
-        // 5. Show SIM Card Carrier Card
+
+        }
+
+        // --- 2. SIM CARD CARRIER ---
+        CollapsibleSubheaderSection(
+            title = "SIM Card Carrier",
+            icon = Icons.Default.SimCard
+        ) {
+
+        // Show SIM Card Carrier Card
         SettingsCard(
-            shape = CustomizeCardShapes.CenterCard
+            shape = if (showCarrier) CustomizeCardShapes.TopCard else CustomizeCardShapes.SingleCard
         ) {
             Row(
                 modifier = Modifier
@@ -778,21 +922,42 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
+                Row(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Show SIM Card Carrier",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Show the dynamic SIM card network operator name on the bottom left of the QQS container.",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SimCard,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "Show SIM Card Carrier",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Show the dynamic SIM card network operator name on the bottom left of the QQS container.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
                 Switch(
@@ -809,9 +974,153 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             }
         }
 
+        // Divider Between Carrier & QQS Tiles Card
+        AnimatedVisibility(
+            visible = showCarrier,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)) {
+                SettingsCard(
+                    shape = CustomizeCardShapes.CenterCard,
+                    modifier = Modifier.testTag("carrier_divider_card")
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.HorizontalRule,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = "Divider Between Carrier & QQS Tiles",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Show a divider line separating the SIM card carrier name and QQS tiles",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Switch(
+                            checked = showCarrierDivider,
+                            onCheckedChange = { PanelPreferences.setShowCarrierDivider(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("show_carrier_divider_toggle")
+                        )
+                    }
+                }
+
+                SettingsCard(
+                    shape = CustomizeCardShapes.BottomCard,
+                    modifier = Modifier.testTag("hide_carrier_in_expanded_card")
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.VisibilityOff,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = "Hide Carrier in Expanded QS",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Hide the SIM card carrier label when Quick Settings is fully expanded",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Switch(
+                            checked = hideCarrierInExpanded,
+                            onCheckedChange = { PanelPreferences.setHideCarrierInExpanded(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("hide_carrier_in_expanded_toggle")
+                        )
+                    }
+                }
+            }
+        }
+
+
+        }
+
+        // --- 3. HEADER & BACKGROUNDS ---
+        CollapsibleSubheaderSection(
+            title = "Header & Backgrounds",
+            icon = Icons.Default.Image
+        ) {
+
         // Custom Header Image Banner Card
         SettingsCard(
-            shape = CustomizeCardShapes.CenterCard,
+            shape = CustomizeCardShapes.TopCard,
             modifier = Modifier.testTag("custom_header_image_card")
         ) {
             Column(
@@ -825,21 +1134,42 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
+                    Row(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Custom Header Image Card",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Display a custom image banner card at the top of the Quick Settings panel.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Image,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "Custom Header Image Card",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Display a custom image banner card at the top of the Quick Settings panel.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
                     Switch(
@@ -863,7 +1193,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     Column(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -1000,21 +1329,42 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
+                    Row(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Header Monet Gradient",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Add a dynamic Monet color gradient background to the header.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "Header Monet Gradient",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Add a dynamic Monet color gradient background to the header.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
                     Switch(
@@ -1109,7 +1459,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
         // Per-Element Monet Accent Colors Preference Card
         SettingsCard(
-            shape = CustomizeCardShapes.CenterCard,
+            shape = CustomizeCardShapes.BottomCard,
             onClick = {
                 val intent = Intent(context, ElementColorsActivity::class.java)
                 context.startActivity(intent)
@@ -1167,102 +1517,18 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             }
         }
 
-        // 5. Divider Between Carrier & QQS Tiles Card
-        AnimatedVisibility(
-            visible = showCarrier,
-            enter = expandVertically() + fadeIn(),
-            exit = shrinkVertically() + fadeOut()
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)) {
-                SettingsCard(
-                    shape = CustomizeCardShapes.CenterCard,
-                    modifier = Modifier.testTag("carrier_divider_card")
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = "Divider Between Carrier & QQS Tiles",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Show a divider line separating the SIM card carrier name and QQS tiles",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
 
-                        Switch(
-                            checked = showCarrierDivider,
-                            onCheckedChange = { PanelPreferences.setShowCarrierDivider(context, it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
-                            ),
-                            modifier = Modifier.testTag("show_carrier_divider_toggle")
-                        )
-                    }
-                }
-
-                SettingsCard(
-                    shape = CustomizeCardShapes.CenterCard,
-                    modifier = Modifier.testTag("hide_carrier_in_expanded_card")
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = "Hide Carrier in Expanded QS",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Hide the SIM card carrier label when Quick Settings is fully expanded",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        Switch(
-                            checked = hideCarrierInExpanded,
-                            onCheckedChange = { PanelPreferences.setHideCarrierInExpanded(context, it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
-                            ),
-                            modifier = Modifier.testTag("hide_carrier_in_expanded_toggle")
-                        )
-                    }
-                }
-            }
         }
 
-        // 6. Move Brightness to Bottom Card
+        // --- 3. BRIGHTNESS & SLIDERS ---
+        CollapsibleSubheaderSection(
+            title = "Brightness & Sliders",
+            icon = Icons.Default.BrightnessMedium
+        ) {
+
+        // Move Brightness to Bottom Card
         SettingsCard(
-            shape = CustomizeCardShapes.CenterCard
+            shape = CustomizeCardShapes.TopCard
         ) {
             Row(
                 modifier = Modifier
@@ -1271,21 +1537,42 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
+                Row(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Move Brightness to Bottom",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Move the brightness slider bar to the bottom of the QS panel (just above the footer).",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.VerticalAlignBottom,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "Move Brightness to Bottom",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Move the brightness slider bar to the bottom of the QS panel (just above the footer).",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
                 Switch(
@@ -1302,7 +1589,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             }
         }
 
-        // 7. Show Brightness Slider in QQS Card
+        // Show Brightness Slider in QQS Card
         SettingsCard(
             shape = CustomizeCardShapes.CenterCard
         ) {
@@ -1313,21 +1600,42 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
+                Row(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Show Brightness Slider in QQS",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Show the brightness slider inside the compact QQS container view (always visible).",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.BrightnessMedium,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "Show Brightness Slider in QQS",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Show the brightness slider inside the compact QQS container view (always visible).",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
                 Switch(
@@ -1344,7 +1652,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             }
         }
 
-        // 8. Progress Bar Style Card (Previous M3, Straight, Wavy, Android 12)
+        // Progress Bar & Slider Style Card
         var previewSliderValue by remember { mutableFloatStateOf(0.65f) }
         var selectedSliderTarget by remember { mutableStateOf(QsSliderTarget.BRIGHTNESS) }
 
@@ -1385,22 +1693,78 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = "Progress Bar & Slider Style",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Customize the progress bar and slider appearance for Brightness, Volume, and Media Player. Configure all sliders together or customize each slider separately.",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .then(
+                                if (collapseExpandOptions) Modifier.clickable { progressBarSliderExpanded = !progressBarSliderExpanded } else Modifier
+                            ),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.GraphicEq,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "Progress Bar & Slider Style",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Customize the progress bar and slider appearance for Brightness, Volume, and Media Player. Configure all sliders together or customize each slider separately.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    if (collapseExpandOptions) {
+                        IconButton(
+                            onClick = { progressBarSliderExpanded = !progressBarSliderExpanded },
+                            modifier = Modifier.size(36.dp).testTag("toggle_expand_progress_bar_slider")
+                        ) {
+                            Icon(
+                                imageVector = if (progressBarSliderExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                contentDescription = if (progressBarSliderExpanded) "Collapse" else "Expand",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
 
-                // Target Selector (All Sliders, Brightness, Volume, Media Player)
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                AnimatedVisibility(
+                    visible = !collapseExpandOptions || progressBarSliderExpanded,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        // Target Selector
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1464,9 +1828,11 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                     )
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
+                                    containerColor = com.example.ui.theme.getSettingsScreenBackgroundColor(isSystemInDarkTheme()),
                                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                                     selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    labelColor = MaterialTheme.colorScheme.onSurface
                                 )
                             )
                         }
@@ -1485,7 +1851,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
 
-                // Style Selector Row (M3, Straight, Wavy, Android 12)
+                // Style Selector Row
                 val allStyles = ProgressBarStyle.entries
                 Row(
                     modifier = Modifier
@@ -1526,7 +1892,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                     val iconColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
                                     when (style) {
                                         ProgressBarStyle.DEFAULT -> {
-                                            // Mini classic M3 rounded slider
                                             Canvas(modifier = Modifier.size(14.dp, 8.dp)) {
                                                 drawRoundRect(
                                                     color = iconColor.copy(alpha = 0.35f),
@@ -1545,7 +1910,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                             }
                                         }
                                         ProgressBarStyle.STRAIGHT -> {
-                                            // Mini straight line with thumb
                                             Canvas(modifier = Modifier.size(14.dp, 8.dp)) {
                                                 drawLine(
                                                     color = iconColor.copy(alpha = 0.35f),
@@ -1569,7 +1933,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                             }
                                         }
                                         ProgressBarStyle.WAVY -> {
-                                            // Mini wavy path
                                             Canvas(modifier = Modifier.size(14.dp, 8.dp)) {
                                                 val wavePath = Path()
                                                 val cy = size.height / 2f
@@ -1587,7 +1950,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                             }
                                         }
                                         ProgressBarStyle.ANDROID_12 -> {
-                                            // Mini Android 12 thick pill icon
                                             Canvas(modifier = Modifier.size(14.dp, 8.dp)) {
                                                 drawRoundRect(
                                                     color = iconColor.copy(alpha = 0.35f),
@@ -1610,13 +1972,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 containerColor = MaterialTheme.colorScheme.background,
                                 labelColor = MaterialTheme.colorScheme.onSurface
                             ),
-                            modifier = Modifier
-                                .testTag("progress_bar_style_${style.id}")
+                            modifier = Modifier.testTag("progress_bar_style_${style.id}")
                         )
                     }
                 }
 
-                // 3. Interactive live preview inside card
+                // Interactive live preview
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1663,7 +2024,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     )
                 }
 
-                // 4. Wave & Slider Customization Parameters
+                // Wave & Slider Customization Parameters
                 AnimatedVisibility(
                     visible = (currentProgressBarStyle != ProgressBarStyle.DEFAULT),
                     enter = expandVertically() + fadeIn(),
@@ -1689,9 +2050,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             color = MaterialTheme.colorScheme.primary
                         )
 
-                        // ANDROID 12 SPECIFIC PARAMETERS
                         if (currentProgressBarStyle == ProgressBarStyle.ANDROID_12) {
-                            // Inactive Track Thickness (2dp..38dp)
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -1732,7 +2091,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 }
                             }
 
-                            // Slider Corner Radius (0dp..24dp)
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -1775,9 +2133,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             }
                         }
 
-                        // WAVY SPECIFIC PARAMETERS
                         if (currentProgressBarStyle == ProgressBarStyle.WAVY) {
-                            // Active Track Thickness
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -1818,7 +2174,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 }
                             }
 
-                            // Inactive Track Thickness
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -1859,7 +2214,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 }
                             }
 
-                            // Slider Corner Radius
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -1901,7 +2255,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 }
                             }
 
-                            // Wobbliness (Wave Amplitude)
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -1942,7 +2295,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 }
                             }
 
-                            // Wavelength (Cycle Length)
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -1983,7 +2335,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 }
                             }
 
-                            // Thumb Size (Radius)
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -2024,7 +2375,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 }
                             }
 
-                            // Ripple Speed (Animation Period)
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -2066,9 +2416,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             }
                         }
 
-                        // STRAIGHT SPECIFIC PARAMETERS
                         if (currentProgressBarStyle == ProgressBarStyle.STRAIGHT) {
-                            // Active Track Thickness
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -2109,7 +2457,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 }
                             }
 
-                            // Inactive Track Thickness
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -2150,7 +2497,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 }
                             }
 
-                            // Corner Radius
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -2191,7 +2537,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 }
                             }
 
-                            // Thumb Size (Radius)
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -2233,7 +2578,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             }
                         }
 
-                        // Reset to Defaults Button
                         TextButton(
                             onClick = {
                                 PanelPreferences.resetWavyParamsToDefault(context)
@@ -2252,14 +2596,21 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         }
                     }
                 }
+                    }
+                }
             }
         }
 
-        // 9. QS, QQS & Notifications Panel Corners Card
-        val panelGlobalCornerEnabled by PanelPreferences.panelGlobalCornerEnabled.collectAsState()
-        val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
-        val panelInnerCorner by PanelPreferences.panelInnerCorner.collectAsState()
 
+        }
+
+        // --- 4. PANEL CORNER STYLING ---
+        CollapsibleSubheaderSection(
+            title = "Panel Corner Styling",
+            icon = Icons.Default.RoundedCorner
+        ) {
+
+        // QS, QQS & Notifications Panel Corners Card
         SettingsCard(
             shape = CustomizeCardShapes.SingleCard
         ) {
@@ -2269,21 +2620,77 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = "QS, QQS & Notifications Panel Corners",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Customize inner and outer corner radii and toggle global panel corner sizing for Quick Settings, QQS and notification panels only.",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .then(
+                                if (collapseExpandOptions) Modifier.clickable { panelCornersExpanded = !panelCornersExpanded } else Modifier
+                            ),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.RoundedCorner,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "QS, QQS & Notifications Panel Corners",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Customize inner and outer corner radii and toggle global panel corner sizing for Quick Settings, QQS and notification panels only.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    if (collapseExpandOptions) {
+                        IconButton(
+                            onClick = { panelCornersExpanded = !panelCornersExpanded },
+                            modifier = Modifier.size(36.dp).testTag("toggle_expand_panel_corners")
+                        ) {
+                            Icon(
+                                imageVector = if (panelCornersExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                contentDescription = if (panelCornersExpanded) "Collapse" else "Expand",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
 
-                // Global Panel Corner Size Toggle
+                AnimatedVisibility(
+                    visible = !collapseExpandOptions || panelCornersExpanded,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -2321,7 +2728,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 ) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
 
-                    // Outer Corner Slider (0dp..36dp)
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -2362,7 +2768,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         }
                     }
 
-                    // Inner Corner Slider (0dp..36dp)
                     if (panelGlobalCornerEnabled) {
                         Text(
                             text = "Inner corner size is synced to outer corner size (${panelOuterCorner.toInt()} dp)",
@@ -2412,8 +2817,21 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         }
                     }
                 }
+                    }
+                }
             }
         }
+    }
+}
+
+    if (showImportDialog) {
+        ImportXmlShapeDialog(
+            onDismiss = { showImportDialog = false },
+            onShapeImported = { importedItem ->
+                PanelPreferences.setEnabledTileShapeId(context, importedItem.id)
+                showImportDialog = false
+            }
+        )
     }
 }
 
@@ -2424,7 +2842,7 @@ fun ImportXmlShapeDialog(
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: Paste Path, 1: Paste XML, 2: Pick File
+    var selectedTab by remember { mutableIntStateOf(0) }
     var pathInput by remember { mutableStateOf("") }
     var xmlInput by remember { mutableStateOf("") }
     var shapeLabel by remember { mutableStateOf("") }
@@ -2464,7 +2882,6 @@ fun ImportXmlShapeDialog(
         }
     }
 
-    // Live parsed shape for preview
     val parsedShape: QsShapeItem? = remember(selectedTab, pathInput, xmlInput, vpWidthInput, vpHeightInput, shapeLabel) {
         val vpW = vpWidthInput.toFloatOrNull() ?: 100f
         val vpH = vpHeightInput.toFloatOrNull() ?: 100f
@@ -2525,7 +2942,6 @@ fun ImportXmlShapeDialog(
                 Column(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // 1. Material 3 Expressive Header
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -2587,7 +3003,6 @@ fun ImportXmlShapeDialog(
                         thickness = 1.dp
                     )
 
-                    // 2. Scrollable Body
                     Column(
                         modifier = Modifier
                             .weight(1f, fill = false)
@@ -2595,7 +3010,6 @@ fun ImportXmlShapeDialog(
                             .padding(horizontal = 24.dp, vertical = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // Expressive Segmented Pill Switcher
                         Surface(
                             shape = RoundedCornerShape(50.dp),
                             color = MaterialTheme.colorScheme.surfaceContainerHighest,
@@ -2657,10 +3071,8 @@ fun ImportXmlShapeDialog(
                             }
                         }
 
-                        // Tab Content
                         when (selectedTab) {
                             0 -> {
-                                // TAB 0: Paste Path
                                 Card(
                                     shape = RoundedCornerShape(22.dp),
                                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -2695,7 +3107,6 @@ fun ImportXmlShapeDialog(
                                                 )
                                             }
 
-                                            // Viewport Chip toggle
                                             FilterChip(
                                                 selected = showVpSettings,
                                                 onClick = { showVpSettings = !showVpSettings },
@@ -2717,7 +3128,6 @@ fun ImportXmlShapeDialog(
                                             )
                                         }
 
-                                        // Expandable Viewport Settings
                                         AnimatedVisibility(visible = showVpSettings) {
                                             Surface(
                                                 shape = RoundedCornerShape(14.dp),
@@ -2772,7 +3182,6 @@ fun ImportXmlShapeDialog(
                                             maxLines = 6
                                         )
 
-                                        // Helper action buttons (Paste from clipboard & Clear)
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.End,
@@ -2819,7 +3228,6 @@ fun ImportXmlShapeDialog(
                                 }
                             }
                             1 -> {
-                                // TAB 1: Paste XML
                                 Card(
                                     shape = RoundedCornerShape(22.dp),
                                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -2860,7 +3268,7 @@ fun ImportXmlShapeDialog(
                                             onValueChange = { xmlInput = it },
                                             placeholder = {
                                                 Text(
-                                                    "<vector xmlns:android=\"...\">\n  <path android:pathData=\"...\" />\n</vector>",
+                                                    "Paste full <vector> XML or <path android:pathData=\"...\" /> here...",
                                                     fontSize = 12.sp,
                                                     fontFamily = FontFamily.Monospace,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
@@ -2869,10 +3277,10 @@ fun ImportXmlShapeDialog(
                                             shape = RoundedCornerShape(16.dp),
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .heightIn(min = 120.dp, max = 160.dp)
+                                                .heightIn(min = 100.dp, max = 150.dp)
                                                 .testTag("shape_xml_input"),
                                             textStyle = TextStyle(fontSize = 12.sp, fontFamily = FontFamily.Monospace),
-                                            maxLines = 8
+                                            maxLines = 6
                                         )
 
                                         Row(
@@ -2920,8 +3328,7 @@ fun ImportXmlShapeDialog(
                                     }
                                 }
                             }
-                            2 -> {
-                                // TAB 2: Pick File
+                            else -> {
                                 Card(
                                     shape = RoundedCornerShape(22.dp),
                                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -2930,78 +3337,49 @@ fun ImportXmlShapeDialog(
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(22.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                            .padding(16.dp),
                                         verticalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(56.dp)
-                                                .clip(RoundedCornerShape(18.dp))
-                                                .background(MaterialTheme.colorScheme.primaryContainer),
-                                            contentAlignment = Alignment.Center
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.UploadFile,
                                                 contentDescription = null,
-                                                modifier = Modifier.size(28.dp),
-                                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                            )
-                                        }
-
-                                        Text(
-                                            text = "Import Vector Drawable (.xml)",
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-
-                                        Text(
-                                            text = "Choose a vector drawable XML file exported from Android Studio or vector tools.",
-                                            fontSize = 12.sp,
-                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-
-                                        Button(
-                                            onClick = { filePickerLauncher.launch("*/*") },
-                                            shape = RoundedCornerShape(50.dp),
-                                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.FileOpen,
-                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.size(18.dp)
                                             )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text("Browse XML Files", fontWeight = FontWeight.SemiBold)
+                                            Text(
+                                                text = "Import XML Drawable File",
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
                                         }
 
-                                        if (pickedFileName != null) {
-                                            Surface(
-                                                shape = RoundedCornerShape(50.dp),
-                                                color = MaterialTheme.colorScheme.primaryContainer,
-                                                modifier = Modifier.padding(top = 4.dp)
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.Check,
-                                                        contentDescription = null,
-                                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                        modifier = Modifier.size(14.dp)
-                                                    )
-                                                    Text(
-                                                        text = pickedFileName ?: "file.xml",
-                                                        fontSize = 12.sp,
-                                                        fontWeight = FontWeight.SemiBold,
-                                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                                    )
-                                                }
-                                            }
+                                        OutlinedButton(
+                                            onClick = { filePickerLauncher.launch("*/*") },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .testTag("pick_xml_file_button"),
+                                            shape = RoundedCornerShape(14.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.UploadFile,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(pickedFileName ?: "Choose XML File (.xml)")
+                                        }
+
+                                        if (xmlInput.isNotBlank()) {
+                                            Text(
+                                                text = "Loaded ${xmlInput.length} characters of XML data.",
+                                                fontSize = 11.sp,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
                                         }
                                     }
                                 }
@@ -3012,229 +3390,74 @@ fun ImportXmlShapeDialog(
                         OutlinedTextField(
                             value = shapeLabel,
                             onValueChange = { shapeLabel = it },
-                            label = { Text("Shape Name") },
-                            placeholder = { Text("e.g. Hexagon, Star, Diamond, Octagon") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Label,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            },
+                            label = { Text("Shape Name / Label") },
+                            placeholder = { Text("e.g. Hexagon, Shield, Star") },
                             singleLine = true,
                             shape = RoundedCornerShape(16.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .testTag("shape_name_input")
+                                .testTag("shape_label_input"),
+                            textStyle = TextStyle(fontSize = 13.sp)
                         )
 
-                        // Material 3 Expressive Live Preview Card
-                        Card(
-                            shape = RoundedCornerShape(22.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(14.dp)
+                        // Live Preview Card
+                        if (parsedShape != null) {
+                            Card(
+                                shape = RoundedCornerShape(20.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
                             ) {
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Visibility,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Text(
-                                            text = "Tile Shape Preview",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
-
-                                    if (parsedShape != null) {
-                                        Surface(
-                                            shape = RoundedCornerShape(50.dp),
-                                            color = MaterialTheme.colorScheme.primaryContainer
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.CheckCircle,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                    modifier = Modifier.size(12.dp)
-                                                )
-                                                Text(
-                                                    text = "Valid (${parsedShape.viewportWidth.toInt()}×${parsedShape.viewportHeight.toInt()})",
-                                                    fontSize = 11.sp,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                                )
-                                            }
-                                        }
-                                    } else if (errorMessage != null) {
-                                        Surface(
-                                            shape = RoundedCornerShape(50.dp),
-                                            color = MaterialTheme.colorScheme.errorContainer
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.ErrorOutline,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.onErrorContainer,
-                                                    modifier = Modifier.size(12.dp)
-                                                )
-                                                Text(
-                                                    text = "Syntax Error",
-                                                    fontSize = 11.sp,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = MaterialTheme.colorScheme.onErrorContainer
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-
-                                if (parsedShape != null) {
-                                    // Side-by-side Quick Settings tile mockups
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceEvenly,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        val previewShape = remember(parsedShape.pathData, parsedShape.viewportWidth, parsedShape.viewportHeight) {
-                                            com.example.ui.shape.VectorPathShape(
-                                                parsedShape.pathData,
-                                                parsedShape.viewportWidth,
-                                                parsedShape.viewportHeight
+                                        val previewComposeShape = remember(parsedShape.id) {
+                                            QsShapeManager.getComposeShape(parsedShape.id)
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(previewComposeShape)
+                                                .background(MaterialTheme.colorScheme.primary),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onPrimary,
+                                                modifier = Modifier.size(18.dp)
                                             )
                                         }
-
-                                        // Active tile mockup
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(54.dp)
-                                                    .clip(previewShape)
-                                                    .background(MaterialTheme.colorScheme.primary),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Wifi,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                                    modifier = Modifier.size(24.dp)
-                                                )
-                                            }
+                                        Column {
                                             Text(
-                                                text = "Active Tile",
-                                                fontSize = 11.sp,
+                                                text = shapeLabel.ifBlank { "Custom Shape" },
+                                                fontSize = 13.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = MaterialTheme.colorScheme.onSurface
                                             )
                                             Text(
-                                                text = "On",
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.SemiBold,
+                                                text = "Valid Path • Viewport ${parsedShape.viewportWidth.toInt()}×${parsedShape.viewportHeight.toInt()}",
+                                                fontSize = 11.sp,
                                                 color = MaterialTheme.colorScheme.primary
                                             )
                                         }
-
-                                        // Inactive tile mockup
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(54.dp)
-                                                    .clip(previewShape)
-                                                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Wifi,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    modifier = Modifier.size(24.dp)
-                                                )
-                                            }
-                                            Text(
-                                                text = "Inactive Tile",
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Text(
-                                                text = "Off",
-                                                fontSize = 10.sp,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    }
-                                } else if (errorMessage != null) {
-                                    Surface(
-                                        shape = RoundedCornerShape(14.dp),
-                                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(12.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.ErrorOutline,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.error,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                            Text(
-                                                text = errorMessage ?: "Invalid path syntax",
-                                                fontSize = 12.sp,
-                                                color = MaterialTheme.colorScheme.onErrorContainer
-                                            )
-                                        }
-                                    }
-                                } else {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 12.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = "Enter a vector path or XML above to preview the tile shape in real-time.",
-                                            fontSize = 12.sp,
-                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
                                     }
                                 }
                             }
+                        }
+
+                        if (errorMessage != null) {
+                            Text(
+                                text = errorMessage ?: "",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.error
+                            )
                         }
                     }
 
@@ -3243,53 +3466,49 @@ fun ImportXmlShapeDialog(
                         thickness = 1.dp
                     )
 
-                    // 3. Material 3 Expressive Action Footer
+                    // Footer actions
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            .padding(horizontal = 24.dp, vertical = 16.dp),
+                        horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OutlinedButton(
+                        TextButton(
                             onClick = onDismiss,
-                            shape = RoundedCornerShape(50.dp),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.testTag("cancel_import_shape_button")
                         ) {
-                            Text("Cancel", fontWeight = FontWeight.SemiBold)
+                            Text("Cancel")
                         }
-
+                        Spacer(modifier = Modifier.width(8.dp))
                         Button(
                             onClick = {
-                                val labelToUse = shapeLabel.ifBlank { "Custom Shape" }
-                                val vpW = vpWidthInput.toFloatOrNull() ?: 100f
-                                val vpH = vpHeightInput.toFloatOrNull() ?: 100f
-                                val result = if (selectedTab == 0) {
-                                    QsShapeManager.importShapeFromPathData(context, pathInput, labelToUse, vpW, vpH)
+                                if (parsedShape != null) {
+                                    val result = QsShapeManager.importShape(
+                                        context,
+                                        parsedShape.pathData,
+                                        parsedShape.label,
+                                        parsedShape.viewportWidth,
+                                        parsedShape.viewportHeight
+                                    )
+                                    if (result.isSuccess) {
+                                        val importedItem = result.getOrNull()!!
+                                        onShapeImported(importedItem)
+                                        Toast.makeText(context, "Successfully added custom shape \"${importedItem.label}\"", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        errorMessage = "Failed to save shape: ${result.exceptionOrNull()?.message}"
+                                    }
                                 } else {
-                                    QsShapeManager.importShape(context, xmlInput, labelToUse, vpW, vpH)
-                                }
-                                if (result.isSuccess) {
-                                    val imported = result.getOrNull()!!
-                                    Toast.makeText(context, "Shape \"${imported.label}\" saved & applied!", Toast.LENGTH_SHORT).show()
-                                    onShapeImported(imported)
-                                } else {
-                                    errorMessage = result.exceptionOrNull()?.message ?: "Failed to import shape"
+                                    errorMessage = "Please enter valid path data or XML first."
                                 }
                             },
-                            enabled = parsedShape != null,
+                            enabled = (parsedShape != null),
                             shape = RoundedCornerShape(50.dp),
-                            modifier = Modifier
-                                .weight(1.5f)
-                                .testTag("save_shape_confirm_button")
+                            modifier = Modifier.testTag("save_custom_shape_button")
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
+                            Icon(imageVector = Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Save & Apply", fontWeight = FontWeight.Bold)
+                            Text("Save Shape")
                         }
                     }
                 }

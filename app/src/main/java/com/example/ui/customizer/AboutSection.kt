@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -23,13 +22,10 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -61,11 +57,15 @@ fun AboutSection(modifier: Modifier = Modifier) {
             .padding(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing)
     ) {
-        // 1. APP HEADER & BRANDING CARD
-        SettingsCard(
-            shape = CustomizeCardShapes.TopCard,
-            modifier = Modifier.testTag("about_app_header_card")
+        CollapsibleSubheaderSection(
+            title = "App Information",
+            icon = Icons.Default.Info
         ) {
+            // 1. APP HEADER & BRANDING CARD
+            SettingsCard(
+                shape = CustomizeCardShapes.SingleCard,
+                modifier = Modifier.testTag("about_app_header_card")
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -124,12 +124,17 @@ fun AboutSection(modifier: Modifier = Modifier) {
                 )
             }
         }
+    }
 
-        // 2. DEVELOPER & CREATOR CARD
-        SettingsCard(
-            shape = CustomizeCardShapes.CenterCard,
-            modifier = Modifier.testTag("about_developer_card")
+        CollapsibleSubheaderSection(
+            title = "Developer & Creator",
+            icon = Icons.Default.Person
         ) {
+            // 2. DEVELOPER & CREATOR CARD
+            SettingsCard(
+                shape = CustomizeCardShapes.SingleCard,
+                modifier = Modifier.testTag("about_developer_card")
+            ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -180,12 +185,17 @@ fun AboutSection(modifier: Modifier = Modifier) {
                 }
             }
         }
+    }
 
-        // 3. TELEGRAM COMMUNITY CARD
-        SettingsCard(
-            shape = CustomizeCardShapes.CenterCard,
-            modifier = Modifier.testTag("about_telegram_card")
+        CollapsibleSubheaderSection(
+            title = "Community & Support",
+            icon = Icons.Default.Send
         ) {
+            // 3. TELEGRAM COMMUNITY CARD
+            SettingsCard(
+                shape = CustomizeCardShapes.SingleCard,
+                modifier = Modifier.testTag("about_telegram_card")
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -284,12 +294,17 @@ fun AboutSection(modifier: Modifier = Modifier) {
                 }
             }
         }
+    }
 
-        // 4. HIGHLIGHTED FEATURES CARD
-        SettingsCard(
-            shape = CustomizeCardShapes.BottomCard,
-            modifier = Modifier.testTag("about_features_card")
+        CollapsibleSubheaderSection(
+            title = "Features Overview",
+            icon = Icons.Default.Star
         ) {
+            // 4. HIGHLIGHTED FEATURES CARD
+            SettingsCard(
+                shape = CustomizeCardShapes.SingleCard,
+                modifier = Modifier.testTag("about_features_card")
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -335,3 +350,6 @@ fun AboutSection(modifier: Modifier = Modifier) {
         }
     }
 }
+}
+
+

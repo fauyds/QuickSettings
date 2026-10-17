@@ -16,12 +16,14 @@ import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -48,11 +50,13 @@ enum class CustomizeCategory(
     BASIC("Basic Settings", Icons.Default.Settings, "Theme mode & basic appearance"),
     QS_DESIGN("Quick Settings Design", Icons.Default.Apps, "Tile shapes, sizes, carrier & sliders"),
     QS_TWEAKS("Quick Settings Tweaks", Icons.Default.Tune, "Grid layout, drag handle & header options"),
+    THEMES("Themes", Icons.Default.Palette, "Save and restore custom settings profiles"),
+    MISCELLANEOUS("Miscellaneous", Icons.Default.Widgets, "Performance, gestures, triggers & debug options"),
+    ABOUT("About", Icons.Default.Info, "Developer info, Telegram channel & app details"),
     DEBUG("Debug", Icons.Default.Terminal, "Diagnostics and developer toggles"),
     TRIGGER("Trigger", Icons.Default.TouchApp, "Status bar gestures & panel interception"),
     GESTURES("Gestures", Icons.Default.VolumeUp, "Hardware key actions & gestures"),
-    PERFORMANCE("Performance", Icons.Default.Speed, "Animations, prime core & speed scales"),
-    ABOUT("About", Icons.Default.Info, "Developer info, Telegram channel & app details")
+    PERFORMANCE("Performance", Icons.Default.Speed, "Animations, prime core & speed scales")
 }
 
 object CustomizeCardShapes {

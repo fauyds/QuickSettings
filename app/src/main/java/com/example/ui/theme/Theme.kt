@@ -123,13 +123,7 @@ fun QuickPanelTheme(
                     surface = base.surface,
                     surfaceVariant = base.surfaceVariant
                 )
-            } else {
-                base.copy(
-                    background = Color(0xFFEBF3F2),
-                    surface = base.surfaceContainerLow,
-                    surfaceVariant = base.surfaceVariant
-                )
-            }
+            } else base
         }
         isDark -> ExpressiveDarkColorScheme
         else -> ExpressiveLightColorScheme

@@ -137,7 +137,7 @@ enum class QsSliderTarget(val id: String, val label: String) {
 }
 
 object PanelPreferences {
-    private const val PREFS_NAME = "quickpanel_prefs"
+    const val PREFS_NAME = "quickpanel_prefs"
     private const val KEY_THEME_MODE = "theme_mode"
     private const val KEY_GRID_LAYOUT = "qs_grid_layout"
     private const val KEY_QQS_TILE_SIZE = "qqs_tile_size"
@@ -183,9 +183,17 @@ object PanelPreferences {
     private const val KEY_SHOW_CUSTOM_HEADER_MONET_GRADIENT = "show_custom_header_monet_gradient"
     private const val KEY_CUSTOM_HEADER_MONET_GRADIENT_HEIGHT = "custom_header_monet_gradient_height"
     private const val KEY_SHOW_MONET_SURFACE_BACKGROUND = "show_monet_surface_background"
+    private const val KEY_COLLAPSE_EXPAND_OPTIONS = "collapse_expand_options"
+    private const val KEY_COLLAPSE_EXPAND_SUBHEADERS = "collapse_expand_subheaders"
 
     private val _showCustomHeaderImage = MutableStateFlow(false)
     val showCustomHeaderImage: StateFlow<Boolean> = _showCustomHeaderImage.asStateFlow()
+
+    private val _collapseExpandOptions = MutableStateFlow(false)
+    val collapseExpandOptions: StateFlow<Boolean> = _collapseExpandOptions.asStateFlow()
+
+    private val _collapseExpandSubheaders = MutableStateFlow(false)
+    val collapseExpandSubheaders: StateFlow<Boolean> = _collapseExpandSubheaders.asStateFlow()
 
     private val _customHeaderImageUri = MutableStateFlow("")
     val customHeaderImageUri: StateFlow<String> = _customHeaderImageUri.asStateFlow()
@@ -243,7 +251,7 @@ object PanelPreferences {
     private const val KEY_PANEL_OUTER_CORNER = "panel_outer_corner"
     private const val KEY_PANEL_INNER_CORNER = "panel_inner_corner"
 
-    private val _panelGlobalCornerEnabled = MutableStateFlow(true)
+    private val _panelGlobalCornerEnabled = MutableStateFlow(false)
     val panelGlobalCornerEnabled: StateFlow<Boolean> = _panelGlobalCornerEnabled.asStateFlow()
 
     private val _panelOuterCorner = MutableStateFlow(20.0f)
@@ -644,6 +652,8 @@ object PanelPreferences {
         _showCustomHeaderMonetGradient.value = prefs.getBoolean(KEY_SHOW_CUSTOM_HEADER_MONET_GRADIENT, false)
         _customHeaderMonetGradientHeight.value = prefs.getFloat(KEY_CUSTOM_HEADER_MONET_GRADIENT_HEIGHT, 85f)
         _showMonetSurfaceBackground.value = prefs.getBoolean(KEY_SHOW_MONET_SURFACE_BACKGROUND, false)
+        _collapseExpandOptions.value = prefs.getBoolean(KEY_COLLAPSE_EXPAND_OPTIONS, false)
+        _collapseExpandSubheaders.value = prefs.getBoolean(KEY_COLLAPSE_EXPAND_SUBHEADERS, false)
         _surfaceBgColorTertiary.value = prefs.getBoolean(KEY_ELEM_SURFACE_BG_TERTIARY, false)
         _panelContainerColorTertiary.value = prefs.getBoolean(KEY_ELEM_PANEL_CONTAINER_TERTIARY, false)
         _notifContainerColorTertiary.value = prefs.getBoolean(KEY_ELEM_NOTIF_CONTAINER_TERTIARY, false)
@@ -680,7 +690,7 @@ object PanelPreferences {
         _straightInactiveTrackThickness.value = prefs.getFloat(KEY_STRAIGHT_INACTIVE_THICKNESS, 4.0f)
         _straightCornerRadius.value = prefs.getFloat(KEY_STRAIGHT_CORNER_RADIUS, 4.0f)
         _straightThumbRadius.value = prefs.getFloat(KEY_STRAIGHT_THUMB_RADIUS, 6.0f)
-        _panelGlobalCornerEnabled.value = prefs.getBoolean(KEY_PANEL_GLOBAL_CORNER_ENABLED, true)
+        _panelGlobalCornerEnabled.value = prefs.getBoolean(KEY_PANEL_GLOBAL_CORNER_ENABLED, false)
         _panelOuterCorner.value = prefs.getFloat(KEY_PANEL_OUTER_CORNER, 20.0f)
         _panelInnerCorner.value = prefs.getFloat(KEY_PANEL_INNER_CORNER, 5.0f)
         _initialSetupCompleted.value = prefs.getBoolean(KEY_INITIAL_SETUP_COMPLETED, false)
@@ -690,6 +700,7 @@ object PanelPreferences {
         } catch (_: Exception) {
             com.example.model.PrivilegeMode.STANDARD
         }
+        ThemeManager.init(context)
     }
 
     fun setInitialSetupCompleted(context: Context, completed: Boolean) {
@@ -1182,6 +1193,18 @@ object PanelPreferences {
         prefs.edit().putBoolean(KEY_SHOW_MONET_SURFACE_BACKGROUND, enabled).apply()
     }
 
+    fun setCollapseExpandOptions(context: Context, enabled: Boolean) {
+        _collapseExpandOptions.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_COLLAPSE_EXPAND_OPTIONS, enabled).apply()
+    }
+
+    fun setCollapseExpandSubheaders(context: Context, enabled: Boolean) {
+        _collapseExpandSubheaders.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_COLLAPSE_EXPAND_SUBHEADERS, enabled).apply()
+    }
+
     fun setSurfaceBgColorTertiary(context: Context, enabled: Boolean) {
         _surfaceBgColorTertiary.value = enabled
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -1429,5 +1452,60 @@ object PanelPreferences {
         _panelInnerCorner.value = value
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putFloat(KEY_PANEL_INNER_CORNER, value).apply()
+    }
+
+    fun exportSettingsJson(context: Context): String {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val json = org.json.JSONObject()
+        val all = prefs.all
+        for ((key, value) in all) {
+            when (value) {
+                is Boolean -> json.put(key, value)
+                is Int -> json.put(key, value)
+                is Long -> json.put(key, value)
+                is Float -> json.put(key, value.toDouble())
+                is String -> json.put(key, value)
+                is Set<*> -> {
+                    val array = org.json.JSONArray()
+                    value.forEach { array.put(it) }
+                    json.put(key, array)
+                }
+            }
+        }
+        return json.toString(2)
+    }
+
+    fun importSettingsJson(context: Context, jsonString: String): Boolean {
+        return try {
+            val json = org.json.JSONObject(jsonString)
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val editor = prefs.edit()
+            val keys = json.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                if (json.isNull(key)) continue
+                val value = json.get(key)
+                when (value) {
+                    is Boolean -> editor.putBoolean(key, value)
+                    is Int -> editor.putInt(key, value)
+                    is Long -> editor.putLong(key, value)
+                    is Double -> editor.putFloat(key, value.toFloat())
+                    is String -> editor.putString(key, value)
+                    is org.json.JSONArray -> {
+                        val set = mutableSetOf<String>()
+                        for (i in 0 until value.length()) {
+                            set.add(value.getString(i))
+                        }
+                        editor.putStringSet(key, set)
+                    }
+                }
+            }
+            editor.apply()
+            init(context)
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
     }
 }

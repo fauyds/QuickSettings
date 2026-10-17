@@ -247,4 +247,149 @@ class ExampleRobolectricTest {
         com.example.data.PanelPreferences.setTileOutlineEnabled(context, false)
         assertEquals(false, com.example.data.PanelPreferences.tileOutlineEnabled.value)
     }
+
+    @Test
+    fun `verify panel global corner enabled defaults to false`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        // Clear prefs to check true default initialization
+        context.getSharedPreferences("quickpanel_prefs", Context.MODE_PRIVATE).edit().clear().apply()
+        com.example.data.PanelPreferences.init(context)
+
+        // Default should be false
+        assertEquals(false, com.example.data.PanelPreferences.panelGlobalCornerEnabled.value)
+        assertEquals(20.0f, com.example.data.PanelPreferences.panelOuterCorner.value, 0.001f)
+        assertEquals(5.0f, com.example.data.PanelPreferences.panelInnerCorner.value, 0.001f)
+
+        // Enable global corner sync
+        com.example.data.PanelPreferences.setPanelGlobalCornerEnabled(context, true)
+        assertEquals(true, com.example.data.PanelPreferences.panelGlobalCornerEnabled.value)
+
+        // When enabled, changing outer corner should sync inner corner
+        com.example.data.PanelPreferences.setPanelOuterCorner(context, 16.0f)
+        assertEquals(16.0f, com.example.data.PanelPreferences.panelOuterCorner.value, 0.001f)
+        assertEquals(16.0f, com.example.data.PanelPreferences.panelInnerCorner.value, 0.001f)
+
+        // Disable global corner again
+        com.example.data.PanelPreferences.setPanelGlobalCornerEnabled(context, false)
+        assertEquals(false, com.example.data.PanelPreferences.panelGlobalCornerEnabled.value)
+
+        // Independent inner corner can now be set without mutating outer corner
+        com.example.data.PanelPreferences.setPanelInnerCorner(context, 8.0f)
+        assertEquals(16.0f, com.example.data.PanelPreferences.panelOuterCorner.value, 0.001f)
+        assertEquals(8.0f, com.example.data.PanelPreferences.panelInnerCorner.value, 0.001f)
+    }
+
+    @Test
+    fun `verify collapse expand subheaders preference toggle`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        com.example.data.PanelPreferences.init(context)
+
+        // Default should be false
+        com.example.data.PanelPreferences.setCollapseExpandSubheaders(context, false)
+        assertEquals(false, com.example.data.PanelPreferences.collapseExpandSubheaders.value)
+
+        // Enable collapse/expand for list subheaders
+        com.example.data.PanelPreferences.setCollapseExpandSubheaders(context, true)
+        assertEquals(true, com.example.data.PanelPreferences.collapseExpandSubheaders.value)
+
+        // Re-read preference from storage
+        val prefs = context.getSharedPreferences("quickpanel_prefs", Context.MODE_PRIVATE)
+        assertEquals(true, prefs.getBoolean("collapse_expand_subheaders", false))
+
+        // Disable again
+        com.example.data.PanelPreferences.setCollapseExpandSubheaders(context, false)
+        assertEquals(false, com.example.data.PanelPreferences.collapseExpandSubheaders.value)
+    }
+
+    @Test
+    fun `verify miscellaneous category and options integration`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        com.example.data.PanelPreferences.init(context)
+
+        // Verify MISCELLANEOUS category definition
+        val misc = com.example.ui.customizer.CustomizeCategory.MISCELLANEOUS
+        assertEquals("Miscellaneous", misc.title)
+        assertNotNull(misc.icon)
+        assertEquals("Performance, gestures, triggers & debug options", misc.description)
+
+        // Verify Performance options
+        com.example.data.PanelPreferences.setDisablePanelAnimations(context, true)
+        assertEquals(true, com.example.data.PanelPreferences.disablePanelAnimations.value)
+
+        // Verify Gestures options
+        com.example.data.PanelPreferences.setEnableCustomVolumePanel(context, true)
+        assertEquals(true, com.example.data.PanelPreferences.enableCustomVolumePanel.value)
+
+        // Verify Trigger options
+        com.example.data.PanelPreferences.setInvisibleStatusBarTrigger(context, true)
+        assertEquals(true, com.example.data.PanelPreferences.invisibleStatusBarTrigger.value)
+        com.example.data.PanelPreferences.setAutoSystemPanelClosing(context, true)
+        assertEquals(true, com.example.data.PanelPreferences.autoSystemPanelClosing.value)
+        com.example.data.PanelPreferences.setPanelReplacementDelayMs(context, 150)
+        assertEquals(150, com.example.data.PanelPreferences.panelReplacementDelayMs.value)
+        com.example.data.PanelPreferences.setOverrideSystemQs(context, true)
+        assertEquals(true, com.example.data.PanelPreferences.overrideSystemQs.value)
+
+        // Verify Debug options
+        com.example.data.PanelPreferences.setForceShowMediaPreview(context, true)
+        assertEquals(true, com.example.data.PanelPreferences.forceShowMediaPreview.value)
+    }
+
+    @Test
+    fun `verify themes section exists and has no preset themes by default`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        // Clear prefs to check initial state
+        context.getSharedPreferences("quickpanel_saved_themes_store", Context.MODE_PRIVATE).edit().clear().apply()
+        com.example.data.ThemeManager.init(context)
+
+        // 1. Verify THEMES category definition
+        val themesCategory = com.example.ui.customizer.CustomizeCategory.THEMES
+        assertEquals("Themes", themesCategory.title)
+        assertNotNull(themesCategory.icon)
+        assertEquals("Save and restore custom settings profiles", themesCategory.description)
+
+        // 2. CRITICAL: Verify there are NO preset themes by default
+        val initialThemes = com.example.data.ThemeManager.savedThemes.value
+        assertEquals("Themes must NOT contain preset themes by default", 0, initialThemes.size)
+
+        // 3. Save current settings as a new theme
+        com.example.data.PanelPreferences.setDisablePanelAnimations(context, true)
+        com.example.data.PanelPreferences.setInvisibleStatusBarTrigger(context, true)
+        val savedTheme = com.example.data.ThemeManager.saveCurrentSettingsAsTheme(context, "Test Dark Minimalist")
+        assertEquals("Test Dark Minimalist", savedTheme.name)
+        assertEquals(1, com.example.data.ThemeManager.savedThemes.value.size)
+        org.junit.Assert.assertTrue(savedTheme.settingsCount > 0)
+
+        // Verify basic preview data extraction
+        val preview = savedTheme.previewData
+        assertNotNull(preview.themeMode)
+        assertNotNull(preview.enabledTileShapeId)
+        assertNotNull(preview.shapeLabel)
+        org.junit.Assert.assertTrue(preview.panelOuterCorner > 0)
+
+        // 4. Change settings and apply saved theme to verify restoration
+        com.example.data.PanelPreferences.setDisablePanelAnimations(context, false)
+        com.example.data.PanelPreferences.setInvisibleStatusBarTrigger(context, false)
+        assertEquals(false, com.example.data.PanelPreferences.disablePanelAnimations.value)
+        assertEquals(false, com.example.data.PanelPreferences.invisibleStatusBarTrigger.value)
+
+        val applied = com.example.data.ThemeManager.applyTheme(context, savedTheme)
+        assertEquals(true, applied)
+        assertEquals(true, com.example.data.PanelPreferences.disablePanelAnimations.value)
+        assertEquals(true, com.example.data.PanelPreferences.invisibleStatusBarTrigger.value)
+
+        // 5. Rename theme
+        com.example.data.ThemeManager.renameTheme(context, savedTheme.id, "Renamed Profile")
+        assertEquals("Renamed Profile", com.example.data.ThemeManager.savedThemes.value[0].name)
+
+        // 6. Export and import
+        val json = com.example.data.ThemeManager.exportThemeToJson(com.example.data.ThemeManager.savedThemes.value[0])
+        org.junit.Assert.assertTrue(json.contains("Renamed Profile"))
+
+        // 7. Delete theme
+        com.example.data.ThemeManager.deleteTheme(context, savedTheme.id)
+        assertEquals(0, com.example.data.ThemeManager.savedThemes.value.size)
+    }
 }
+
+

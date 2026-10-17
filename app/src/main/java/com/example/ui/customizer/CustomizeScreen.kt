@@ -128,31 +128,17 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                 )
 
                 CategoryButton(
-                    category = CustomizeCategory.DEBUG,
-                    itemCount = 1,
+                    category = CustomizeCategory.THEMES,
+                    itemCount = 0,
                     shape = CustomizeCardShapes.CenterCard,
-                    onClick = { selectedCategory = CustomizeCategory.DEBUG }
+                    onClick = { selectedCategory = CustomizeCategory.THEMES }
                 )
 
                 CategoryButton(
-                    category = CustomizeCategory.TRIGGER,
-                    itemCount = 5,
+                    category = CustomizeCategory.MISCELLANEOUS,
+                    itemCount = 8,
                     shape = CustomizeCardShapes.CenterCard,
-                    onClick = { selectedCategory = CustomizeCategory.TRIGGER }
-                )
-
-                CategoryButton(
-                    category = CustomizeCategory.GESTURES,
-                    itemCount = 1,
-                    shape = CustomizeCardShapes.CenterCard,
-                    onClick = { selectedCategory = CustomizeCategory.GESTURES }
-                )
-
-                CategoryButton(
-                    category = CustomizeCategory.PERFORMANCE,
-                    itemCount = 3,
-                    shape = CustomizeCardShapes.CenterCard,
-                    onClick = { selectedCategory = CustomizeCategory.PERFORMANCE }
+                    onClick = { selectedCategory = CustomizeCategory.MISCELLANEOUS }
                 )
 
                 CategoryButton(
@@ -253,21 +239,26 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
                     .verticalScroll(categoryScrollState),
-                verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing) // 4dp padding
+                verticalArrangement = if (activeCategory == CustomizeCategory.BASIC) Arrangement.Center else Arrangement.spacedBy(CustomizeCardShapes.CardSpacing),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 when (activeCategory) {
                     CustomizeCategory.HEADS_UP -> HeadsUpSection()
                     CustomizeCategory.BASIC -> BasicSettingsSection()
                     CustomizeCategory.QS_DESIGN -> QsDesignSection()
                     CustomizeCategory.QS_TWEAKS -> QsTweaksSection()
-                    CustomizeCategory.DEBUG -> DebugSection()
-                    CustomizeCategory.TRIGGER -> TriggerSection()
-                    CustomizeCategory.GESTURES -> GesturesSection()
-                    CustomizeCategory.PERFORMANCE -> PerformanceSection()
+                    CustomizeCategory.THEMES -> ThemesSection()
+                    CustomizeCategory.MISCELLANEOUS -> MiscellaneousSection()
                     CustomizeCategory.ABOUT -> AboutSection()
+                    CustomizeCategory.DEBUG -> MiscellaneousSection()
+                    CustomizeCategory.TRIGGER -> MiscellaneousSection()
+                    CustomizeCategory.GESTURES -> MiscellaneousSection()
+                    CustomizeCategory.PERFORMANCE -> MiscellaneousSection()
                 }
 
-                Spacer(modifier = Modifier.height(48.dp))
+                if (activeCategory != CustomizeCategory.BASIC) {
+                    Spacer(modifier = Modifier.height(48.dp))
+                }
             }
         }
     }
