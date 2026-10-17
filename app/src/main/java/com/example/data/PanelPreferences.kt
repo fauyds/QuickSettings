@@ -224,6 +224,7 @@ object PanelPreferences {
     private const val KEY_ELEM_QS_TILES_TERTIARY = "elem_qs_tiles_tertiary"
     private const val KEY_ELEM_SLIDERS_TERTIARY = "elem_sliders_tertiary"
     private const val KEY_ELEM_MISC_ELEMENTS_TERTIARY = "elem_misc_elements_tertiary"
+    private const val KEY_QS_BACKGROUND_COLOR = "qs_background_color"
     private const val KEY_SHOW_QS_TILE_GRADIENT = "show_qs_tile_gradient"
     private const val KEY_QS_TILE_LABEL_FONT_SIZE = "qs_tile_label_font_size"
     private const val KEY_QS_TILE_SUBTITLE_FONT_SIZE = "qs_tile_subtitle_font_size"
@@ -250,6 +251,7 @@ object PanelPreferences {
     private const val KEY_PANEL_GLOBAL_CORNER_ENABLED = "panel_global_corner_enabled"
     private const val KEY_PANEL_OUTER_CORNER = "panel_outer_corner"
     private const val KEY_PANEL_INNER_CORNER = "panel_inner_corner"
+    private const val KEY_QS_BACKGROUND_CORNER = "qs_background_corner"
 
     private val _panelGlobalCornerEnabled = MutableStateFlow(false)
     val panelGlobalCornerEnabled: StateFlow<Boolean> = _panelGlobalCornerEnabled.asStateFlow()
@@ -259,6 +261,12 @@ object PanelPreferences {
 
     private val _panelInnerCorner = MutableStateFlow(5.0f)
     val panelInnerCorner: StateFlow<Float> = _panelInnerCorner.asStateFlow()
+
+    private val _qsBackgroundCorner = MutableStateFlow(20.0f)
+    val qsBackgroundCorner: StateFlow<Float> = _qsBackgroundCorner.asStateFlow()
+
+    private val _qsBackgroundColor = MutableStateFlow<Int?>(null)
+    val qsBackgroundColor: StateFlow<Int?> = _qsBackgroundColor.asStateFlow()
 
     private val _surfaceBgColorTertiary = MutableStateFlow(false)
     val surfaceBgColorTertiary: StateFlow<Boolean> = _surfaceBgColorTertiary.asStateFlow()
@@ -1507,5 +1515,23 @@ object PanelPreferences {
             e.printStackTrace()
             false
         }
+    }
+
+    fun setQsBackgroundCorner(context: Context, corner: Float) {
+        _qsBackgroundCorner.value = corner
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_QS_BACKGROUND_CORNER, corner).apply()
+    }
+
+    fun setQsBackgroundColor(context: Context, color: Int?) {
+        _qsBackgroundColor.value = color
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val editor = prefs.edit()
+        if (color != null) {
+            editor.putInt(KEY_QS_BACKGROUND_COLOR, color)
+        } else {
+            editor.remove(KEY_QS_BACKGROUND_COLOR)
+        }
+        editor.apply()
     }
 }

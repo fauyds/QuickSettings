@@ -17,6 +17,7 @@ import com.example.R
 import com.example.model.NotificationActionModel
 import com.example.model.NotificationItem
 import com.example.ui.overlay.QsExpansionStage
+import com.example.data.PanelPreferences
 
 class NotificationListView @JvmOverloads constructor(
     context: Context,
@@ -469,7 +470,7 @@ class NotificationListView @JvmOverloads constructor(
         ivSettingsBtn.setColorFilter(primaryAccent)
 
         // 3. Style Permission Banner Card
-        flPermissionCard.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, 20f * density)
+        flPermissionCard.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, PanelPreferences.qsBackgroundCorner.value * density)
         ivPermissionIcon.setColorFilter(MonetThemeHelper.getTertiaryAccent(context, isDark))
         tvPermissionTitle.setTextColor(textPrimary)
         tvPermissionSub.setTextColor(textSecondary)
@@ -477,7 +478,12 @@ class NotificationListView @JvmOverloads constructor(
         btnEnablePermission.setTextColor(onPrimary)
 
         // 4. Style Empty State Card
-        flEmptyCard.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, 20f * density)
+        flEmptyCard.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, PanelPreferences.qsBackgroundCorner.value * density)
+        // Apply custom color to background cards if set
+        PanelPreferences.qsBackgroundColor.value?.let { customColor ->
+            (flPermissionCard.background as? android.graphics.drawable.RippleDrawable)?.setColor(android.content.res.ColorStateList.valueOf(customColor))
+            (flEmptyCard.background as? android.graphics.drawable.RippleDrawable)?.setColor(android.content.res.ColorStateList.valueOf(customColor))
+        }
         ivEmptyIcon.setColorFilter(textSecondary)
         tvEmptyText.setTextColor(textSecondary)
 

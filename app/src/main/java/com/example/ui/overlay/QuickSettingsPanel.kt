@@ -678,6 +678,8 @@ fun QuickSettingsPanel(
                 val customHeaderImageOpacity by PanelPreferences.customHeaderImageOpacity.collectAsState()
                 val showCustomHeaderMonetGradient by PanelPreferences.showCustomHeaderMonetGradient.collectAsState()
                 val customHeaderMonetGradientHeight by PanelPreferences.customHeaderMonetGradientHeight.collectAsState()
+                val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
+                val effectiveOuterCorner = panelOuterCorner.dp
 
                 Box(
                     modifier = Modifier
@@ -687,7 +689,7 @@ fun QuickSettingsPanel(
                                 showCustomHeaderImage && customHeaderImageUri.isNotBlank() -> {
                                     Modifier
                                          .height(customHeaderImageHeight.dp)
-                                         .clip(RoundedCornerShape(20.dp))
+                                         .clip(RoundedCornerShape(effectiveOuterCorner))
                                          .background(com.example.ui.theme.getQsPanelBackgroundColor(isDark))
                                 }
                                 else -> {
@@ -2547,7 +2549,7 @@ fun UnifiedQsPanel(
                 onSelectSession = { index ->
                     com.example.service.MediaSessionManagerHelper.selectSession(index)
                 },
-                cornerRadius = effectiveInnerCorner,
+                cornerRadius = panelOuterCorner.dp,
                 backgroundColor = if (isDark) Color(0xFF353A3B) else Color(0xFFE2E7EA),
                 accentColor = mediaAccentColor,
                 contentColor = if (isDark) Color.White else Color(0xFF222222),
