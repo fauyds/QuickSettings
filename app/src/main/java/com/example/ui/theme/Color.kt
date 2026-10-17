@@ -86,7 +86,7 @@ fun getQsMonetSurfaceBackgroundColor(isDark: Boolean): Color {
         androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
     }
     return if (enableMonetBg) {
-        val factor = if (isDark) 0.80f else 0.87f
+        val factor = if (isDark) 0.90f else 0.87f
         Color(
             red = (containerColor.red * factor).coerceIn(0f, 1f),
             green = (containerColor.green * factor).coerceIn(0f, 1f),
@@ -125,12 +125,7 @@ fun getQsPanelBackgroundColor(isDark: Boolean): Color {
 @Composable
 fun getQsNotificationContainerColor(isDark: Boolean): Color {
     val enableMonetBg = PanelPreferences.showMonetSurfaceBackground.collectAsState().value
-    val notifTertiary = PanelPreferences.notifContainerColorTertiary.collectAsState().value
-    val baseContainer = if (notifTertiary) {
-        androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer
-    } else {
-        getQsPanelBackgroundColor(isDark)
-    }
+    val baseContainer = getQsPanelBackgroundColor(isDark)
     return if (enableMonetBg && isDark) {
         Color(
             red = (baseContainer.red * 1.50f).coerceIn(0f, 1f),

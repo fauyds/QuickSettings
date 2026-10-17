@@ -983,6 +983,7 @@ fun QsHeaderBar(
     onToggleEditMode: () -> Unit = {},
     unreadNotificationCount: Int = 0
 ) {
+    val isDark = LocalIsDarkTheme.current
     val editButtonPos by PanelPreferences.editButtonPosition.collectAsState()
     val showDateInQqs by PanelPreferences.showDateInQqsHeader.collectAsState()
     val datePosState by PanelPreferences.datePosition.collectAsState()
@@ -991,7 +992,7 @@ fun QsHeaderBar(
     val customHeaderImageUri by PanelPreferences.customHeaderImageUri.collectAsState()
 
     val isHeaderImageEnabled = showCustomHeaderImage && customHeaderImageUri.isNotBlank()
-    val useBlackHeaderText = showMonetSurfaceBackground && !isHeaderImageEnabled
+    val useBlackHeaderText = showMonetSurfaceBackground && !isDark && !isHeaderImageEnabled
 
     val headerTextColor = if (useBlackHeaderText) Color.Black else Color.White
     val headerSecondaryTextColor = if (useBlackHeaderText) Color.Black.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.9f)

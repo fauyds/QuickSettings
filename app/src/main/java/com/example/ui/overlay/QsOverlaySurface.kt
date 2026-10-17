@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -29,6 +30,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -258,7 +261,7 @@ fun QsOverlaySurface(
         MaterialTheme.colorScheme.surfaceVariant
     }
 
-    val monetFactor = if (isPanelDark) 0.80f else 0.87f
+    val monetFactor = if (isPanelDark) 0.90f else 0.87f
     val monetSurfaceBg = if (config.showMonetSurfaceBackground) {
         Color(
             red = (surfaceContainerColor.red * monetFactor).coerceIn(0f, 1f),
@@ -762,7 +765,7 @@ private fun SharedQsTileView(
             )
         }
 
-        Spacer(modifier = Modifier.height(5.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         // Tile Label Centered
         Text(
@@ -772,7 +775,11 @@ private fun SharedQsTileView(
             color = contentColor,
             maxLines = 1,
             textAlign = TextAlign.Center,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            style = TextStyle(
+                platformStyle = PlatformTextStyle(includeFontPadding = false)
+            ),
+            modifier = Modifier.offset(y = (-1).dp)
         )
 
         // Tile Subtitle Centered
@@ -782,7 +789,11 @@ private fun SharedQsTileView(
             color = subtextColor,
             maxLines = 1,
             textAlign = TextAlign.Center,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            style = TextStyle(
+                platformStyle = PlatformTextStyle(includeFontPadding = false)
+            ),
+            modifier = Modifier.offset(y = (-1).dp)
         )
     }
 }

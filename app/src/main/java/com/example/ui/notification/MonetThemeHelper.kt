@@ -48,8 +48,8 @@ object MonetThemeHelper {
     }
 
     fun getCardBackground(context: Context, isDark: Boolean): Int {
-        val isNotifTertiary = com.example.data.PanelPreferences.notifContainerColorTertiary.value
-        val baseColor = if (isNotifTertiary) {
+        val isPanelTertiary = com.example.data.PanelPreferences.panelContainerColorTertiary.value
+        val baseColor = if (isPanelTertiary) {
             getTertiaryAccent(context, isDark)
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {

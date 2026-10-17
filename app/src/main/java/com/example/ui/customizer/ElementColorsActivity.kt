@@ -48,7 +48,6 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
 
     val surfaceBgColorTertiary by PanelPreferences.surfaceBgColorTertiary.collectAsState()
     val panelContainerColorTertiary by PanelPreferences.panelContainerColorTertiary.collectAsState()
-    val notifContainerColorTertiary by PanelPreferences.notifContainerColorTertiary.collectAsState()
     val headerGradientColorTertiary by PanelPreferences.headerGradientColorTertiary.collectAsState()
     val qsTilesColorTertiary by PanelPreferences.qsTilesColorTertiary.collectAsState()
     val slidersColorTertiary by PanelPreferences.slidersColorTertiary.collectAsState()
@@ -138,29 +137,19 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                     testTag = "activity_surface_bg_tertiary_toggle"
                 )
 
-                // 2. Panel containers
+                // 2. Panel containers & notifications
                 ElementColorPreferenceCard(
-                    title = "2. Panel Containers",
-                    subtitle = "Main Quick Settings card panels and sections",
+                    title = "2. Panel Containers & Notifications",
+                    subtitle = "Main Quick Settings card panels, sections, and notification cards",
                     isTertiary = panelContainerColorTertiary,
                     onCheckedChange = { PanelPreferences.setPanelContainerColorTertiary(context, it) },
                     shape = CustomizeCardShapes.CenterCard,
                     testTag = "activity_panel_container_tertiary_toggle"
                 )
 
-                // 3. Notification containers
+                // 3. Header Gradient
                 ElementColorPreferenceCard(
-                    title = "3. Notification Containers",
-                    subtitle = "Notification cards and stack elements",
-                    isTertiary = notifContainerColorTertiary,
-                    onCheckedChange = { PanelPreferences.setNotifContainerColorTertiary(context, it) },
-                    shape = CustomizeCardShapes.CenterCard,
-                    testTag = "activity_notif_container_tertiary_toggle"
-                )
-
-                // 4. Header Gradient
-                ElementColorPreferenceCard(
-                    title = "4. Header Gradient",
+                    title = "3. Header Gradient",
                     subtitle = "Top Monet gradient background accent layer",
                     isTertiary = headerGradientColorTertiary,
                     onCheckedChange = { PanelPreferences.setHeaderGradientColorTertiary(context, it) },
@@ -168,9 +157,9 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                     testTag = "activity_header_gradient_tertiary_toggle"
                 )
 
-                // 5. QS/QQS Tiles
+                // 4. QS/QQS Tiles
                 ElementColorPreferenceCard(
-                    title = "5. QS/QQS Tiles",
+                    title = "4. QS/QQS Tiles",
                     subtitle = "Quick settings active tiles and icons",
                     isTertiary = qsTilesColorTertiary,
                     onCheckedChange = { PanelPreferences.setQsTilesColorTertiary(context, it) },
@@ -178,9 +167,9 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                     testTag = "activity_qs_tiles_tertiary_toggle"
                 )
 
-                // 6. Sliders/progress bars
+                // 5. Sliders/progress bars
                 ElementColorPreferenceCard(
-                    title = "6. Sliders / Progress Bars",
+                    title = "5. Sliders / Progress Bars",
                     subtitle = "Brightness, volume sliders and progress tracks",
                     isTertiary = slidersColorTertiary,
                     onCheckedChange = { PanelPreferences.setSlidersColorTertiary(context, it) },
@@ -188,9 +177,9 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                     testTag = "activity_sliders_tertiary_toggle"
                 )
 
-                // 7. Misc elements
+                // 6. Misc elements
                 ElementColorPreferenceCard(
-                    title = "7. Misc Elements",
+                    title = "6. Misc Elements",
                     subtitle = "Page indicators, footer buttons, and status icons",
                     isTertiary = miscElementsColorTertiary,
                     onCheckedChange = { PanelPreferences.setMiscElementsColorTertiary(context, it) },
