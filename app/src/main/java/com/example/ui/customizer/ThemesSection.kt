@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Share
@@ -113,18 +114,10 @@ fun ThemesSection(modifier: Modifier = Modifier) {
     var showImportDialog by remember { mutableStateOf(false) }
     var importJsonText by remember { mutableStateOf("") }
 
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing)
-    ) {
-        // ==========================================
-        // 1. SAVE THEME SUBHEADER
-        // ==========================================
-        CollapsibleSubheaderSection(
-            title = "Save Configuration",
-            icon = Icons.Default.BookmarkAdd
-        ) {
-            // Save Current Settings Card (TopCard)
+    val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.THEMES, context).collectAsState()
+
+    val saveThemeCard = @Composable {
+        PinnableCardWrapper("save_theme_card", CustomizeCategory.THEMES) {
             SettingsCard(
                 shape = CustomizeCardShapes.TopCard,
                 modifier = Modifier.testTag("save_theme_card")
@@ -230,8 +223,11 @@ fun ThemesSection(modifier: Modifier = Modifier) {
                     }
                 }
             }
+        }
+    }
 
-            // Backup & Import Card (BottomCard)
+    val themeTransferCard = @Composable {
+        PinnableCardWrapper("theme_transfer_card", CustomizeCategory.THEMES) {
             SettingsCard(
                 shape = CustomizeCardShapes.BottomCard,
                 modifier = Modifier.testTag("theme_transfer_card")
@@ -323,11 +319,79 @@ fun ThemesSection(modifier: Modifier = Modifier) {
                 }
             }
         }
+    }
 
-        // ==========================================
-        // 2. SAVED THEMES SUBHEADER
-        // ==========================================
-        var collapseAllTrigger by remember { mutableStateOf(false) }
+    var collapseAllTrigger by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing)
+    ) {
+        // 1. Pinned Cards at the very top of Themes
+        val pinnedCards = mutableListOf<@Composable () -> Unit>()
+        if (pinnedIds.contains("save_theme_card")) pinnedCards.add(saveThemeCard)
+        if (pinnedIds.contains("theme_transfer_card")) pinnedCards.add(themeTransferCard)
+        savedThemes.forEach { theme ->
+            if (pinnedIds.contains("saved_theme_${theme.id}")) {
+                pinnedCards.add {
+                    SavedThemeCard(
+                        theme = theme,
+                        shape = CustomizeCardShapes.SingleCard,
+                        activeThemeId = activeThemeId,
+                        collapseAllTrigger = collapseAllTrigger,
+                        onApply = {
+                            val ok = ThemeManager.applyTheme(context, theme)
+                            if (ok) {
+                                Toast.makeText(context, "Applied \"${theme.name}\"!", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "Failed to apply theme", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        onUpdate = {
+                            ThemeManager.updateThemeWithCurrentSettings(context, theme.id)
+                            Toast.makeText(context, "Updated \"${theme.name}\" with current settings!", Toast.LENGTH_SHORT).show()
+                        },
+                        onRename = {
+                            renameThemeTarget = theme
+                            renameInput = theme.name
+                        },
+                        onExport = {
+                            val json = ThemeManager.exportThemeToJson(theme)
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clip = ClipData.newPlainText("QuickSettings Theme", json)
+                            clipboard.setPrimaryClip(clip)
+                            Toast.makeText(context, "Copied \"${theme.name}\" JSON to clipboard!", Toast.LENGTH_SHORT).show()
+                        },
+                        onDelete = {
+                            deleteThemeTarget = theme
+                        }
+                    )
+                }
+            }
+        }
+
+        if (pinnedCards.isNotEmpty()) {
+            ListSubheader(
+                text = "Pinned",
+                icon = androidx.compose.material.icons.Icons.Default.PushPin
+            )
+            pinnedCards.forEach { card -> card() }
+        }
+
+        // Unpinned Save Configuration subheader
+        if (!pinnedIds.contains("save_theme_card") || !pinnedIds.contains("theme_transfer_card")) {
+            CollapsibleSubheaderSection(
+                title = "Save Configuration",
+                icon = Icons.Default.BookmarkAdd
+            ) {
+                if (!pinnedIds.contains("save_theme_card")) {
+                    saveThemeCard()
+                }
+                if (!pinnedIds.contains("theme_transfer_card")) {
+                    themeTransferCard()
+                }
+            }
+        }
 
         Row(
             modifier = Modifier
@@ -377,56 +441,59 @@ fun ThemesSection(modifier: Modifier = Modifier) {
         ) {
             if (savedThemes.isEmpty()) {
                 // Empty state card (SingleCard)
-                SettingsCard(
-                    shape = CustomizeCardShapes.SingleCard,
-                    modifier = Modifier.testTag("empty_themes_card")
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(28.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                PinnableCardWrapper("empty_themes_card", CustomizeCategory.THEMES) {
+                    SettingsCard(
+                        shape = CustomizeCardShapes.SingleCard,
+                        modifier = Modifier.testTag("empty_themes_card")
                     ) {
-                        Box(
+                        Column(
                             modifier = Modifier
-                                .size(56.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer),
-                            contentAlignment = Alignment.Center
+                                .fillMaxWidth()
+                                .padding(28.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Palette,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.size(30.dp)
+                            Box(
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Palette,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(30.dp)
+                                )
+                            }
+
+                            Text(
+                                text = "No Saved Themes",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+
+                            Text(
+                                text = "You haven't saved any themes yet. Use the Save Configuration card above to save your current settings profile. Preset themes are not included.",
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
                             )
                         }
-
-                        Text(
-                            text = "No Saved Themes",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-
-                        Text(
-                            text = "You haven't saved any themes yet. Use the Save Configuration card above to save your current settings profile. Preset themes are not included.",
-                            fontSize = 12.sp,
-                            lineHeight = 16.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
                     }
                 }
             } else {
+                val unpinnedThemes = savedThemes.filter { !pinnedIds.contains("saved_theme_${it.id}") }
                 // List of user-saved themes with custom preview and proper card corners
-                savedThemes.forEachIndexed { index, theme ->
-                    val shape = if (savedThemes.size == 1) {
+                unpinnedThemes.forEachIndexed { index, theme ->
+                    val shape = if (unpinnedThemes.size == 1) {
                         CustomizeCardShapes.SingleCard
                     } else when (index) {
                         0 -> CustomizeCardShapes.TopCard
-                        savedThemes.size - 1 -> CustomizeCardShapes.BottomCard
+                        unpinnedThemes.size - 1 -> CustomizeCardShapes.BottomCard
                         else -> CustomizeCardShapes.CenterCard
                     }
 
@@ -604,10 +671,14 @@ private fun SavedThemeCard(
     onExport: () -> Unit,
     onDelete: () -> Unit
 ) {
-    SettingsCard(
-        shape = shape,
-        modifier = Modifier.fillMaxWidth().testTag("saved_theme_card_${theme.id}")
+    PinnableCardWrapper(
+        cardId = "saved_theme_${theme.id}",
+        category = CustomizeCategory.THEMES
     ) {
+        SettingsCard(
+            shape = shape,
+            modifier = Modifier.fillMaxWidth().testTag("saved_theme_card_${theme.id}")
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -785,6 +856,7 @@ private fun SavedThemeCard(
             }
         }
     }
+}
 }
 
 @Composable

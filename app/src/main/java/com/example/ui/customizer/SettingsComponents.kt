@@ -5,9 +5,12 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -18,19 +21,24 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SelectableChipColors
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -39,6 +47,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
@@ -53,7 +64,9 @@ import com.example.data.PanelPreferences
  * Requirements:
  * - Container color is pure white (Color.White) in light theme (!isSystemInDarkTheme()).
  * - Container color is default surface (MaterialTheme.colorScheme.surface) in dark theme.
+ * - By holding (long-pressing) any option card, a drop-down menu appears with a "Pin" (or "Unpin") button.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SettingsCard(
     modifier: Modifier = Modifier,
@@ -62,23 +75,100 @@ fun SettingsCard(
         containerColor = com.example.ui.theme.getSettingsCardBackgroundColor(isSystemInDarkTheme())
     ),
     onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
+    feature: FavoriteFeature? = null,
+    featureId: String? = feature?.id,
+    featureTitle: String? = feature?.title,
+    canPin: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    if (onClick != null) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    var showDropdown by remember { mutableStateOf(false) }
+
+    val resolvedId = featureId ?: feature?.id ?: featureTitle?.let { title ->
+        FavoriteFeature.entries.firstOrNull { it.title.equals(title, ignoreCase = true) }?.id
+            ?: ("feature_" + title.lowercase().replace("[^a-z0-9]+".toRegex(), "_").trim('_'))
+    } ?: rememberSaveable { "option_" + java.util.UUID.randomUUID().toString().take(8) }
+
+    val effectiveFeatureId = resolvedId
+
+    val pinnedIds by PanelPreferences.pinnedFeatures.collectAsState()
+    val isPinned = pinnedIds.contains(effectiveFeatureId)
+
+    Box(modifier = modifier) {
         Card(
-            onClick = onClick,
-            modifier = modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = { onClick?.invoke() },
+                    onLongClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onLongClick?.invoke()
+                        if (canPin) {
+                            showDropdown = true
+                        }
+                    }
+                ),
             shape = shape,
             colors = colors,
             content = content
         )
-    } else {
-        Card(
-            modifier = modifier.fillMaxWidth(),
-            shape = shape,
-            colors = colors,
-            content = content
-        )
+
+
+
+        if (canPin) {
+            DropdownMenu(
+                expanded = showDropdown,
+                onDismissRequest = { showDropdown = false },
+                modifier = Modifier.testTag("dropdown_menu_$effectiveFeatureId")
+            ) {
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = if (isPinned) "Unpin" else "Pin",
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 14.sp
+                            )
+                            if (isPinned) {
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer
+                                ) {
+                                    Text(
+                                        text = "PINNED",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.PushPin,
+                            contentDescription = if (isPinned) "Unpin" else "Pin",
+                            tint = if (isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    onClick = {
+                        showDropdown = false
+                        val isNowPinned = PanelPreferences.toggleFeaturePinned(context, effectiveFeatureId)
+                        val title = featureTitle ?: FavoriteFeature.fromId(effectiveFeatureId)?.title ?: "Option"
+                        val msg = if (isNowPinned) "$title moved to top (Pinned)" else "$title unpinned"
+                        android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.testTag("dropdown_pin_button")
+                )
+            }
+        }
     }
 }
 

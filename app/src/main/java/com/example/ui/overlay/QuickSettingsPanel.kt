@@ -2208,7 +2208,9 @@ fun UnifiedQsPanel(
                                     val maxRows = effectiveRows
                                     val columns = effectiveColumns
                                     val compositionContext = rememberCompositionContext()
-                                    val viewPagerHeightDp = (100.dp * maxRows) + (10.dp * (maxRows - 1).coerceAtLeast(0))
+                                    val disableLabelsInExpanded by PanelPreferences.disableLabelsInExpanded.collectAsState()
+                                    val tileRowHeight = if (disableLabelsInExpanded) 76.dp else 100.dp
+                                    val viewPagerHeightDp = (tileRowHeight * maxRows) + (10.dp * (maxRows - 1).coerceAtLeast(0))
 
                                     AndroidView(
                                         factory = { ctx ->
@@ -2761,15 +2763,20 @@ private fun TilePageGrid(
         3 -> 106.dp
         else -> 74.dp
     }
+    val disableLabelsInExpanded by PanelPreferences.disableLabelsInExpanded.collectAsState()
+    val isCompactColumns = columns == 3 || columns == 4
 
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(if (disableLabelsInExpanded && isCompactColumns) 12.dp else 10.dp)
     ) {
         for (rowIndex in 0 until maxRows) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (disableLabelsInExpanded && isCompactColumns) Modifier.height(72.dp) else Modifier),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = if (disableLabelsInExpanded && isCompactColumns) Alignment.CenterVertically else Alignment.Top
             ) {
                 if (rowIndex < rows.size) {
                     val rowTiles = rows[rowIndex]
@@ -2779,6 +2786,7 @@ private fun TilePageGrid(
                                 tile = tile,
                                 morphProgress = 1f,
                                 tileWidth = targetTileWidth,
+                                columns = columns,
                                 onClick = { onTileClick(tile) },
                                 onLongClick = { onTileLongClick(tile) }
                             )
@@ -2793,6 +2801,7 @@ private fun TilePageGrid(
                                 tile = placeholderTile,
                                 morphProgress = 1f,
                                 tileWidth = targetTileWidth,
+                                columns = columns,
                                 isInteractive = false
                             )
                         }
@@ -2807,6 +2816,7 @@ private fun TilePageGrid(
                                 tile = placeholderTile,
                                 morphProgress = 1f,
                                 tileWidth = targetTileWidth,
+                                columns = columns,
                                 isInteractive = false
                             )
                         }
@@ -2836,6 +2846,8 @@ fun NotificationsCard(
 ) {
     val isDark = LocalIsDarkTheme.current
     val primaryColor = androidx.compose.material3.MaterialTheme.colorScheme.primary.toArgb()
+    val notifBgColor = com.example.ui.theme.getQsNotificationContainerColor(isDark)
+    val notifBgColorInt = notifBgColor.toArgb()
     val hostView = androidx.compose.ui.platform.LocalView.current
     val panelRootView = remember(hostView) {
         var parent = hostView.parent
@@ -2873,7 +2885,8 @@ fun NotificationsCard(
                 notifications = notifications,
                 isPermissionGranted = isPermissionGranted,
                 isDark = isDark,
-                primaryColor = primaryColor
+                primaryColor = primaryColor,
+                panelCardBackgroundColor = notifBgColorInt
             )
         },
         modifier = Modifier
@@ -3153,12 +3166,7 @@ fun NotificationItemRow(
 
                         // Download / Ongoing Progress Bar
                         if (item.hasProgress) {
-                            val slidersColorTertiary by PanelPreferences.slidersColorTertiary.collectAsState()
-                            val notifProgressColor = if (slidersColorTertiary) {
-                                androidx.compose.material3.MaterialTheme.colorScheme.tertiary
-                            } else {
-                                androidx.compose.material3.MaterialTheme.colorScheme.primary
-                            }
+                            val notifProgressColor = com.example.ui.theme.getSlidersElementColor(isDark)
                             Spacer(modifier = Modifier.height(4.dp))
                             if (item.isIndeterminateProgress) {
                                 androidx.compose.material3.LinearProgressIndicator(
@@ -3427,6 +3435,7 @@ fun CircularQsTile(
     morphProgress: Float = 1f,
     tileWidth: Dp = if (morphProgress >= 0.5f) 88.dp else 48.dp,
     isInteractive: Boolean = true,
+    columns: Int = 3,
     onClick: () -> Unit = {},
     onLongClick: () -> Unit = {}
 ) {
@@ -3443,11 +3452,7 @@ fun CircularQsTile(
 
     val isDark = LocalIsDarkTheme.current
     val qsTilesColorTertiary by PanelPreferences.qsTilesColorTertiary.collectAsState()
-    val primaryColor = if (qsTilesColorTertiary) {
-        androidx.compose.material3.MaterialTheme.colorScheme.tertiary
-    } else {
-        androidx.compose.material3.MaterialTheme.colorScheme.primary
-    }
+    val primaryColor = com.example.ui.theme.getQsTilesElementColor(isDark)
     val onPrimaryColor = if (qsTilesColorTertiary) {
         androidx.compose.material3.MaterialTheme.colorScheme.onTertiary
     } else {
@@ -3462,30 +3467,50 @@ fun CircularQsTile(
         com.example.ui.shape.QsShapeManager.getComposeShape(chosenShapeId)
     }
 
-    val outlineColor = remember(tile.state, isDark, primaryColor) {
+    val inactiveTileColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
+
+    val outlineColor = remember(tile.state, isDark, primaryColor, inactiveTileColor) {
         when (tile.state) {
             TileState.ACTIVE -> primaryColor
-            TileState.INACTIVE -> if (isDark) Color(0xFF262B30) else Color.White
-            TileState.UNAVAILABLE -> if (isDark) Color(0xFF1A1D20) else Color.White.copy(alpha = 0.5f)
+            TileState.INACTIVE -> inactiveTileColor
+            TileState.UNAVAILABLE -> inactiveTileColor.copy(alpha = 0.5f)
         }
     }
 
-    val circleSize = if (morphProgress >= 0.5f) 56.dp else baseQqsSize
-    val iconSize = if (morphProgress >= 0.5f) 26.dp else baseQqsSize * 0.46f
-    val labelAlpha = morphProgress.coerceIn(0f, 1f)
-    val tileHeight = if (morphProgress >= 0.5f) 100.dp else baseQqsSize
+    val disableLabelsInExpanded by PanelPreferences.disableLabelsInExpanded.collectAsState()
+    val isExpanded = morphProgress >= 0.5f
+    val hideLabels = isExpanded && disableLabelsInExpanded
+    val isCompactColumns = columns == 3 || columns == 4
 
-    val (backgroundColor, iconColor) = remember(tile.state, isDark, primaryColor, onPrimaryColor, cardContainerColor, tileOutlineEnabled) {
-        val inactiveBg = if (isDark) {
-            Color(
-                red = (cardContainerColor.red * 0.72f).coerceIn(0f, 1f),
-                green = (cardContainerColor.green * 0.72f).coerceIn(0f, 1f),
-                blue = (cardContainerColor.blue * 0.72f).coerceIn(0f, 1f),
-                alpha = cardContainerColor.alpha
-            )
+    val circleSize = if (isExpanded) {
+        if (hideLabels) {
+            if (columns == 4) {
+                (tileWidth * 0.94f).coerceIn(62.dp, 72.dp)
+            } else if (columns == 3) {
+                (tileWidth * 0.78f).coerceIn(56.dp, 76.dp)
+            } else {
+                (tileWidth * 0.72f).coerceIn(56.dp, 84.dp)
+            }
         } else {
-            Color.White
+            56.dp
         }
+    } else {
+        baseQqsSize
+    }
+    val iconSize = if (isExpanded) {
+        if (hideLabels) circleSize * 0.46f else 26.dp
+    } else {
+        baseQqsSize * 0.46f
+    }
+    val labelAlpha = if (hideLabels) 0f else morphProgress.coerceIn(0f, 1f)
+    val tileHeight = if (isExpanded) {
+        if (hideLabels) circleSize + 6.dp else 100.dp
+    } else {
+        baseQqsSize
+    }
+
+    val (backgroundColor, iconColor) = remember(tile.state, isDark, primaryColor, onPrimaryColor, cardContainerColor, tileOutlineEnabled, inactiveTileColor) {
+        val inactiveBg = inactiveTileColor
         val inactiveText = if (isDark) Color.White.copy(alpha = 0.90f) else Color(0xFF1E293B)
         val unavailableBg = inactiveBg.copy(alpha = 0.5f)
         val unavailableText = inactiveText.copy(alpha = 0.4f)
@@ -3521,9 +3546,10 @@ fun CircularQsTile(
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = if (isCompactColumns && hideLabels) Arrangement.Center else Arrangement.Top,
         modifier = Modifier
             .width(tileWidth)
-            .wrapContentHeight()
+            .then(if (isCompactColumns && hideLabels) Modifier.height(72.dp).wrapContentHeight(Alignment.CenterVertically) else Modifier.wrapContentHeight())
             .graphicsLayer {
                 compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
             }
@@ -3706,6 +3732,7 @@ fun BrightnessSliderRow(
     isAtBottom: Boolean = false,
     verticalOffset: androidx.compose.ui.unit.Dp = 0.dp
 ) {
+    val isDark = LocalIsDarkTheme.current
     if (sliderAlpha > 0.01f) {
         Box(
             modifier = Modifier
@@ -3721,12 +3748,7 @@ fun BrightnessSliderRow(
                 )
                 .offset(y = verticalOffset)
         ) {
-            val slidersColorTertiary by PanelPreferences.slidersColorTertiary.collectAsState()
-            val sliderAccentColor = if (slidersColorTertiary) {
-                androidx.compose.material3.MaterialTheme.colorScheme.tertiary
-            } else {
-                androidx.compose.material3.MaterialTheme.colorScheme.primary
-            }
+            val sliderAccentColor = com.example.ui.theme.getSlidersElementColor(isDark)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -3748,24 +3770,8 @@ fun BrightnessSliderRow(
                     )
                 }
 
-                val cardContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
                 val isDark = LocalIsDarkTheme.current
-                val inactiveTrackColor = if (isDark) {
-                    Color(
-                        red = (cardContainerColor.red * 0.85f).coerceIn(0f, 1f),
-                        green = (cardContainerColor.green * 0.85f).coerceIn(0f, 1f),
-                        blue = (cardContainerColor.blue * 0.85f).coerceIn(0f, 1f),
-                        alpha = cardContainerColor.alpha
-                    )
-                } else {
-                    // Same color as inactive tiles in light mode (30% lighter than container color)
-                    Color(
-                        red = (cardContainerColor.red + (1f - cardContainerColor.red) * 0.3f).coerceIn(0f, 1f),
-                        green = (cardContainerColor.green + (1f - cardContainerColor.green) * 0.3f).coerceIn(0f, 1f),
-                        blue = (cardContainerColor.blue + (1f - cardContainerColor.blue) * 0.3f).coerceIn(0f, 1f),
-                        alpha = cardContainerColor.alpha
-                    )
-                }
+                val inactiveTrackColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
 
                 QsProgressSlider(
                     value = brightness.toFloat(),

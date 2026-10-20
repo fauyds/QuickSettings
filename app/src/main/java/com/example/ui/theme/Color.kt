@@ -45,10 +45,10 @@ val MonetSecondary = Color(0xFF7DD3FC)
 val MonetOnSecondary = Color(0xFF003548)
 val MonetSecondaryContainer = Color(0xFF004D67)
 
-val MonetTertiary = Color(0xFFFF85A1)
-val MonetOnTertiary = Color(0xFF5D0026)
-val MonetTertiaryContainer = Color(0xFF830038)
-val MonetOnTertiaryContainer = Color(0xFFFFD9E1)
+val MonetTertiary = Color(0xFFCF889A)
+val MonetOnTertiary = Color(0xFF4A1828)
+val MonetTertiaryContainer = Color(0xFF4A2330)
+val MonetOnTertiaryContainer = Color(0xFFF2D3DC)
 
 // Functional indicators - Dark Mode
 val TileActiveBg = Color(0xFF4EE3D0)
@@ -73,38 +73,85 @@ val AccentGradientEnd = Color(0xFFFF85A1)
 // Explicit Decoupled Component Colors
 
 /**
+ * Helper to brighten a Color by 10% in dark mode, and 5% in light mode.
+ */
+fun brightenMonetPanelColor(color: Color, isDark: Boolean): Color {
+    val percent = if (isDark) 0.10f else 0.05f
+    val factor = 1f + percent
+    val scaledR = (color.red * factor).coerceIn(0f, 1f)
+    val scaledG = (color.green * factor).coerceIn(0f, 1f)
+    val scaledB = (color.blue * factor).coerceIn(0f, 1f)
+    val blendR = (color.red + (1f - color.red) * percent).coerceIn(0f, 1f)
+    val blendG = (color.green + (1f - color.green) * percent).coerceIn(0f, 1f)
+    val blendB = (color.blue + (1f - color.blue) * percent).coerceIn(0f, 1f)
+    return Color(
+        red = maxOf(scaledR, blendR),
+        green = maxOf(scaledG, blendG),
+        blue = maxOf(scaledB, blendB),
+        alpha = color.alpha
+    )
+}
+
+fun applyHsvAdjustments(color: Color, hueShift: Float, satScale: Float, brightScale: Float): Color {
+    if (hueShift == 0f && satScale == 1f && brightScale == 1f) return color
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(
+        android.graphics.Color.argb(
+            (color.alpha * 255).toInt().coerceIn(0, 255),
+            (color.red * 255).toInt().coerceIn(0, 255),
+            (color.green * 255).toInt().coerceIn(0, 255),
+            (color.blue * 255).toInt().coerceIn(0, 255)
+        ),
+        hsv
+    )
+    hsv[0] = (hsv[0] + hueShift).let { h ->
+        var mod = h % 360f
+        if (mod < 0) mod += 360f
+        mod
+    }
+    hsv[1] = (hsv[1] * satScale).coerceIn(0f, 1f)
+    hsv[2] = (hsv[2] * brightScale).coerceIn(0f, 1f)
+    val intColor = android.graphics.Color.HSVToColor((color.alpha * 255).toInt().coerceIn(0, 255), hsv)
+    return Color(intColor)
+}
+
+/**
  * 1. Quick Settings Monet Surface Background (rendered behind cards when enabled).
- * Uses the same color as the card containers, but 20% darker (8% darker than previous 12%).
+ */
+/**
+ * 1. Quick Settings Monet Surface Background (rendered behind cards when enabled).
  */
 @Composable
 fun getQsMonetSurfaceBackgroundColor(isDark: Boolean): Color {
-    val enableMonetBg = PanelPreferences.showMonetSurfaceBackground.collectAsState().value
-    val surfaceTertiary = PanelPreferences.surfaceBgColorTertiary.collectAsState().value
-    val containerColor = if (surfaceTertiary) {
+    val customColor = PanelPreferences.qsPanelBackgroundColor.collectAsState().value
+        ?: PanelPreferences.qsBackgroundColor.collectAsState().value
+    val surfaceTertiary = PanelPreferences.getSurfaceBgColorTertiary(isDark).collectAsState().value
+    val baseColor = if (customColor != null) {
+        Color(customColor)
+    } else if (surfaceTertiary) {
         androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer
     } else {
         androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
     }
-    return if (enableMonetBg) {
-        val factor = if (isDark) 0.90f else 0.87f
-        Color(
-            red = (containerColor.red * factor).coerceIn(0f, 1f),
-            green = (containerColor.green * factor).coerceIn(0f, 1f),
-            blue = (containerColor.blue * factor).coerceIn(0f, 1f),
-            alpha = 1.0f
-        )
-    } else {
-        containerColor
-    }
+    val factor = if (isDark) 0.90f else 0.87f
+    val solidBg = Color(
+        red = (baseColor.red * factor).coerceIn(0f, 1f),
+        green = (baseColor.green * factor).coerceIn(0f, 1f),
+        blue = (baseColor.blue * factor).coerceIn(0f, 1f),
+        alpha = 1.0f
+    )
+    val hue = PanelPreferences.getSurfaceBgHue(isDark).collectAsState().value
+    val sat = PanelPreferences.getSurfaceBgSat(isDark).collectAsState().value
+    val valFactor = PanelPreferences.getSurfaceBgVal(isDark).collectAsState().value
+    return applyHsvAdjustments(solidBg, hue, sat, valFactor)
 }
 
 /**
  * 2. Quick Settings Card Container Color (`getQsCardContainerColor` / `getQsPanelBackgroundColor`).
- * Restores container colors for cards so cards remain distinct over the Monet surface.
  */
 @Composable
 fun getQsCardContainerColor(isDark: Boolean): Color {
-    val panelTertiary = PanelPreferences.panelContainerColorTertiary.collectAsState().value
+    val panelTertiary = PanelPreferences.getPanelContainerColorTertiary(isDark).collectAsState().value
     return if (panelTertiary) {
         androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer
     } else {
@@ -112,30 +159,123 @@ fun getQsCardContainerColor(isDark: Boolean): Color {
     }
 }
 
+/**
+ * Quick Settings Panel Background Color (the panel itself).
+ * When "Solid Monet Surface" is enabled, brightened 10% in dark mode and 5% in light mode.
+ */
 @Composable
 fun getQsPanelBackgroundColor(isDark: Boolean): Color {
-    return getQsCardContainerColor(isDark)
+    val customColor = PanelPreferences.qsPanelBackgroundColor.collectAsState().value
+        ?: PanelPreferences.qsBackgroundColor.collectAsState().value
+    val baseColor = if (customColor != null) {
+        Color(customColor)
+    } else {
+        getQsCardContainerColor(isDark)
+    }
+    val isSolidMonet = PanelPreferences.showMonetSurfaceBackground.collectAsState().value
+    val panelColor = if (isSolidMonet) {
+        brightenMonetPanelColor(baseColor, isDark)
+    } else {
+        baseColor
+    }
+    val hue = PanelPreferences.getPanelContainerHue(isDark).collectAsState().value
+    val sat = PanelPreferences.getPanelContainerSat(isDark).collectAsState().value
+    val valFactor = PanelPreferences.getPanelContainerVal(isDark).collectAsState().value
+    return applyHsvAdjustments(panelColor, hue, sat, valFactor)
 }
 
 /**
  * 3. Quick Settings Notification Container Color.
- * When monet on the surface behind everything is enabled in dark mode, lightens the notification containers
- * so notifications stand out clearly over the background.
+ * Exact same color as the panel itself (brightened 10% in dark mode and 5% in light mode
+ * when "Solid Monet Surface" is enabled).
  */
 @Composable
 fun getQsNotificationContainerColor(isDark: Boolean): Color {
-    val enableMonetBg = PanelPreferences.showMonetSurfaceBackground.collectAsState().value
-    val baseContainer = getQsPanelBackgroundColor(isDark)
-    return if (enableMonetBg && isDark) {
+    return getQsPanelBackgroundColor(isDark)
+}
+
+@Composable
+fun getQsTilesElementColor(isDark: Boolean): Color {
+    val isTertiary = PanelPreferences.getQsTilesColorTertiary(isDark).collectAsState().value
+    val baseColor = if (isTertiary) {
+        androidx.compose.material3.MaterialTheme.colorScheme.tertiary
+    } else {
+        androidx.compose.material3.MaterialTheme.colorScheme.primary
+    }
+    val hue = PanelPreferences.getQsTilesHue(isDark).collectAsState().value
+    val sat = PanelPreferences.getQsTilesSat(isDark).collectAsState().value
+    val valFactor = PanelPreferences.getQsTilesVal(isDark).collectAsState().value
+    return applyHsvAdjustments(baseColor, hue, sat, valFactor)
+}
+
+@Composable
+fun getInactiveTilesElementColor(isDark: Boolean): Color {
+    val isPrimary = PanelPreferences.getInactiveTilesColorPrimary(isDark).collectAsState().value
+    val isTertiary = PanelPreferences.getInactiveTilesColorTertiary(isDark).collectAsState().value
+    val cardContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
+    val defaultInactiveBg = if (isDark) {
         Color(
-            red = (baseContainer.red * 1.50f).coerceIn(0f, 1f),
-            green = (baseContainer.green * 1.50f).coerceIn(0f, 1f),
-            blue = (baseContainer.blue * 1.50f).coerceIn(0f, 1f),
-            alpha = 1.0f
+            red = (cardContainerColor.red * 0.72f).coerceIn(0f, 1f),
+            green = (cardContainerColor.green * 0.72f).coerceIn(0f, 1f),
+            blue = (cardContainerColor.blue * 0.72f).coerceIn(0f, 1f),
+            alpha = cardContainerColor.alpha
         )
     } else {
-        baseContainer
+        Color.White
     }
+    val baseColor = when {
+        isTertiary -> androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer
+        isPrimary -> androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer
+        else -> defaultInactiveBg
+    }
+    val hue = PanelPreferences.getInactiveTilesHue(isDark).collectAsState().value
+    val sat = PanelPreferences.getInactiveTilesSat(isDark).collectAsState().value
+    val valFactor = PanelPreferences.getInactiveTilesVal(isDark).collectAsState().value
+    return applyHsvAdjustments(baseColor, hue, sat, valFactor)
+}
+
+@Composable
+fun getSlidersElementColor(isDark: Boolean): Color {
+    val isTertiary = PanelPreferences.getSlidersColorTertiary(isDark).collectAsState().value
+    val baseColor = if (isTertiary) {
+        androidx.compose.material3.MaterialTheme.colorScheme.tertiary
+    } else {
+        androidx.compose.material3.MaterialTheme.colorScheme.primary
+    }
+    val hue = PanelPreferences.getSlidersHue(isDark).collectAsState().value
+    val sat = PanelPreferences.getSlidersSat(isDark).collectAsState().value
+    val valFactor = PanelPreferences.getSlidersVal(isDark).collectAsState().value
+    return applyHsvAdjustments(baseColor, hue, sat, valFactor)
+}
+
+@Composable
+fun getHeaderGradientElementColor(isDark: Boolean): Color {
+    val isTertiary = PanelPreferences.getHeaderGradientColorTertiary(isDark).collectAsState().value
+    val baseColor = if (isDark) {
+        if (isTertiary) androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer
+        else androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer
+    } else {
+        if (isTertiary) androidx.compose.material3.MaterialTheme.colorScheme.tertiary
+        else androidx.compose.material3.MaterialTheme.colorScheme.primary
+    }
+    val hue = PanelPreferences.getHeaderGradientHue(isDark).collectAsState().value
+    val sat = PanelPreferences.getHeaderGradientSat(isDark).collectAsState().value
+    val valFactor = PanelPreferences.getHeaderGradientVal(isDark).collectAsState().value
+    return applyHsvAdjustments(baseColor, hue, sat, valFactor)
+}
+
+@Composable
+fun getMiscElementColor(isDark: Boolean): Color {
+    val isTertiary = PanelPreferences.getMiscElementsColorTertiary(isDark).collectAsState().value
+    val baseColor = if (isTertiary) {
+        androidx.compose.material3.MaterialTheme.colorScheme.tertiary
+    } else {
+        androidx.compose.material3.MaterialTheme.colorScheme.primary
+    }
+    val hue = PanelPreferences.getMiscElementsHue(isDark).collectAsState().value
+    val sat = PanelPreferences.getMiscElementsSat(isDark).collectAsState().value
+    val valFactor = PanelPreferences.getMiscElementsVal(isDark).collectAsState().value
+    return applyHsvAdjustments(baseColor, hue, sat, valFactor)
 }
 
 /**

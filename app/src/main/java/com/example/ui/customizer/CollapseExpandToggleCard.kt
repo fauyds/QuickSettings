@@ -46,7 +46,8 @@ fun CollapseExpandToggleCard(
 
     SettingsCard(
         shape = shape,
-        modifier = Modifier.testTag("collapse_expand_options_card")
+        modifier = Modifier.testTag("collapse_expand_options_card"),
+        featureId = FavoriteFeature.BASIC_COLLAPSE_OPTIONS.id
     ) {
         Row(
             modifier = Modifier
@@ -119,7 +120,8 @@ fun CollapseExpandSubheadersCard(
 
     SettingsCard(
         shape = shape,
-        modifier = modifier.testTag("collapse_expand_subheaders_card")
+        modifier = modifier.testTag("collapse_expand_subheaders_card"),
+        featureId = FavoriteFeature.BASIC_COLLAPSE_SUBHEADERS.id
     ) {
         Row(
             modifier = Modifier

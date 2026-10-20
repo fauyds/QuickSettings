@@ -48,7 +48,9 @@ class NotificationAdapter(
 
     var isDark: Boolean = true
     var customPrimaryColor: Int? = null
+    var customCardBackgroundColor: Int? = null
     var showFooter: Boolean = false
+    var disableMonetNotifText: Boolean = false
 
     private val expandedStateMap = mutableMapOf<String, Boolean>()
 
@@ -124,7 +126,11 @@ class NotificationAdapter(
         fun bind() {
             val context = itemView.context
             val density = context.resources.displayMetrics.density
-            val onPrimary = MonetThemeHelper.getOnPrimaryText(context, isDark)
+            val onPrimary = if (disableMonetNotifText) {
+                if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
+            } else {
+                MonetThemeHelper.getOnPrimaryText(context, isDark)
+            }
 
             btnClearAll.background = MonetThemeHelper.createMonetPrimaryPillDrawable(context, isDark, 14f * density)
             tvClearAllText.setTextColor(onPrimary)
@@ -174,8 +180,39 @@ class NotificationAdapter(
             val primaryColor = customPrimaryColor ?: MonetThemeHelper.getPrimaryAccent(context, isDark)
             val secondaryColor = MonetThemeHelper.getSecondaryAccent(context, isDark)
             val tertiaryColor = MonetThemeHelper.getTertiaryAccent(context, isDark)
-            val textPrimaryColor = MonetThemeHelper.getTextPrimary(context, isDark)
-            val textSecondaryColor = MonetThemeHelper.getTextSecondary(context, isDark)
+
+            val disableNotifMonet = disableMonetNotifText
+            val showMonetSurface = com.example.data.PanelPreferences.showMonetSurfaceBackground.value
+            val textPrimaryColor = if (disableNotifMonet) {
+                if (!showMonetSurface) android.graphics.Color.WHITE else (if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK)
+            } else {
+                MonetThemeHelper.getTextPrimary(context, isDark)
+            }
+            val textSecondaryColor = if (disableNotifMonet) {
+                if (!showMonetSurface) android.graphics.Color.WHITE else (if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK)
+            } else {
+                MonetThemeHelper.getTextSecondary(context, isDark)
+            }
+            val headerColor = if (disableNotifMonet) {
+                if (!showMonetSurface) android.graphics.Color.WHITE else (if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK)
+            } else {
+                when {
+                    isCall -> primaryColor
+                    isAlarm -> tertiaryColor
+                    isOngoing -> secondaryColor
+                    else -> tertiaryColor
+                }
+            }
+            val subtextColor = if (disableNotifMonet) {
+                if (!showMonetSurface) android.graphics.Color.WHITE else (if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK)
+            } else {
+                tertiaryColor
+            }
+            val actionTextColor = if (disableNotifMonet) {
+                if (!showMonetSurface) android.graphics.Color.WHITE else (if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK)
+            } else {
+                primaryColor
+            }
 
             val panelGlobalCornerEnabled = com.example.data.PanelPreferences.panelGlobalCornerEnabled.value
             val panelOuterCorner = com.example.data.PanelPreferences.panelOuterCorner.value
@@ -209,7 +246,8 @@ class NotificationAdapter(
                 }
             }
 
-            flRoot.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, radii)
+            val cardBg = customCardBackgroundColor ?: MonetThemeHelper.getCardBackground(context, isDark)
+            flRoot.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, radii, customBgColor = cardBg)
 
             // Outline provider for crisp clipping to the dynamic shape
             flRoot.outlineProvider = object : ViewOutlineProvider() {
@@ -296,12 +334,6 @@ class NotificationAdapter(
                 else -> ""
             }
             tvAppName.text = "$resolvedAppName$typeBadge"
-            val headerColor = when {
-                isCall -> primaryColor
-                isAlarm -> tertiaryColor
-                isOngoing -> secondaryColor
-                else -> tertiaryColor
-            }
             tvAppName.setTextColor(headerColor)
 
             val timeFormat = DateFormat.getTimeFormat(context)
@@ -366,7 +398,7 @@ class NotificationAdapter(
             if (isExpanded && !item.subText.isNullOrBlank()) {
                 tvSubtext.visibility = View.VISIBLE
                 tvSubtext.text = item.subText
-                tvSubtext.setTextColor(tertiaryColor)
+                tvSubtext.setTextColor(subtextColor)
             } else {
                 tvSubtext.visibility = View.GONE
             }
@@ -416,7 +448,7 @@ class NotificationAdapter(
                     val btn = TextView(context).apply {
                         text = action.title
                         textSize = 11f
-                        setTextColor(primaryColor)
+                        setTextColor(actionTextColor)
                         background = MonetThemeHelper.createMonetActionButtonDrawable(context, isDark, 8f * density)
                         setPadding(
                             (12 * density).toInt(),

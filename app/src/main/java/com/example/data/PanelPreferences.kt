@@ -222,13 +222,124 @@ object PanelPreferences {
     private const val KEY_ELEM_NOTIF_CONTAINER_TERTIARY = "elem_notif_container_tertiary"
     private const val KEY_ELEM_HEADER_GRADIENT_TERTIARY = "elem_header_gradient_tertiary"
     private const val KEY_ELEM_QS_TILES_TERTIARY = "elem_qs_tiles_tertiary"
+    private const val KEY_ELEM_INACTIVE_TILES_TERTIARY = "elem_inactive_tiles_tertiary"
+    private const val KEY_ELEM_INACTIVE_TILES_PRIMARY = "elem_inactive_tiles_primary"
     private const val KEY_ELEM_SLIDERS_TERTIARY = "elem_sliders_tertiary"
     private const val KEY_ELEM_MISC_ELEMENTS_TERTIARY = "elem_misc_elements_tertiary"
+    private const val KEY_DISABLE_MONET_NOTIF_TEXT = "disable_monet_notif_text"
+
+    private const val KEY_ELEM_SURFACE_BG_HUE = "elem_surface_bg_hue"
+    private const val KEY_ELEM_SURFACE_BG_SAT = "elem_surface_bg_sat"
+    private const val KEY_ELEM_SURFACE_BG_VAL = "elem_surface_bg_val"
+
+    private const val KEY_ELEM_PANEL_CONTAINER_HUE = "elem_panel_container_hue"
+    private const val KEY_ELEM_PANEL_CONTAINER_SAT = "elem_panel_container_sat"
+    private const val KEY_ELEM_PANEL_CONTAINER_VAL = "elem_panel_container_val"
+
+    private const val KEY_ELEM_HEADER_GRADIENT_HUE = "elem_header_gradient_hue"
+    private const val KEY_ELEM_HEADER_GRADIENT_SAT = "elem_header_gradient_sat"
+    private const val KEY_ELEM_HEADER_GRADIENT_VAL = "elem_header_gradient_val"
+
+    private const val KEY_ELEM_QS_TILES_HUE = "elem_qs_tiles_hue"
+    private const val KEY_ELEM_QS_TILES_SAT = "elem_qs_tiles_sat"
+    private const val KEY_ELEM_QS_TILES_VAL = "elem_qs_tiles_val"
+
+    private const val KEY_ELEM_INACTIVE_TILES_HUE = "elem_inactive_tiles_hue"
+    private const val KEY_ELEM_INACTIVE_TILES_SAT = "elem_inactive_tiles_sat"
+    private const val KEY_ELEM_INACTIVE_TILES_VAL = "elem_inactive_tiles_val"
+
+    private const val KEY_ELEM_SLIDERS_HUE = "elem_sliders_hue"
+    private const val KEY_ELEM_SLIDERS_SAT = "elem_sliders_sat"
+    private const val KEY_ELEM_SLIDERS_VAL = "elem_sliders_val"
+
+    private const val KEY_ELEM_MISC_ELEMENTS_HUE = "elem_misc_elements_hue"
+    private const val KEY_ELEM_MISC_ELEMENTS_SAT = "elem_misc_elements_sat"
+    private const val KEY_ELEM_MISC_ELEMENTS_VAL = "elem_misc_elements_val"
+
+    // Per-mode keys: Light mode
+    private const val KEY_ELEM_SURFACE_BG_TERTIARY_LIGHT = "elem_surface_bg_tertiary_light"
+    private const val KEY_ELEM_PANEL_CONTAINER_TERTIARY_LIGHT = "elem_panel_container_tertiary_light"
+    private const val KEY_ELEM_HEADER_GRADIENT_TERTIARY_LIGHT = "elem_header_gradient_tertiary_light"
+    private const val KEY_ELEM_QS_TILES_TERTIARY_LIGHT = "elem_qs_tiles_tertiary_light"
+    private const val KEY_ELEM_INACTIVE_TILES_TERTIARY_LIGHT = "elem_inactive_tiles_tertiary_light"
+    private const val KEY_ELEM_INACTIVE_TILES_PRIMARY_LIGHT = "elem_inactive_tiles_primary_light"
+    private const val KEY_ELEM_SLIDERS_TERTIARY_LIGHT = "elem_sliders_tertiary_light"
+    private const val KEY_ELEM_MISC_ELEMENTS_TERTIARY_LIGHT = "elem_misc_elements_tertiary_light"
+
+    private const val KEY_ELEM_SURFACE_BG_HUE_LIGHT = "elem_surface_bg_hue_light"
+    private const val KEY_ELEM_SURFACE_BG_SAT_LIGHT = "elem_surface_bg_sat_light"
+    private const val KEY_ELEM_SURFACE_BG_VAL_LIGHT = "elem_surface_bg_val_light"
+
+    private const val KEY_ELEM_PANEL_CONTAINER_HUE_LIGHT = "elem_panel_container_hue_light"
+    private const val KEY_ELEM_PANEL_CONTAINER_SAT_LIGHT = "elem_panel_container_sat_light"
+    private const val KEY_ELEM_PANEL_CONTAINER_VAL_LIGHT = "elem_panel_container_val_light"
+
+    private const val KEY_ELEM_HEADER_GRADIENT_HUE_LIGHT = "elem_header_gradient_hue_light"
+    private const val KEY_ELEM_HEADER_GRADIENT_SAT_LIGHT = "elem_header_gradient_sat_light"
+    private const val KEY_ELEM_HEADER_GRADIENT_VAL_LIGHT = "elem_header_gradient_val_light"
+
+    private const val KEY_ELEM_QS_TILES_HUE_LIGHT = "elem_qs_tiles_hue_light"
+    private const val KEY_ELEM_QS_TILES_SAT_LIGHT = "elem_qs_tiles_sat_light"
+    private const val KEY_ELEM_QS_TILES_VAL_LIGHT = "elem_qs_tiles_val_light"
+
+    private const val KEY_ELEM_INACTIVE_TILES_HUE_LIGHT = "elem_inactive_tiles_hue_light"
+    private const val KEY_ELEM_INACTIVE_TILES_SAT_LIGHT = "elem_inactive_tiles_sat_light"
+    private const val KEY_ELEM_INACTIVE_TILES_VAL_LIGHT = "elem_inactive_tiles_val_light"
+
+    private const val KEY_ELEM_SLIDERS_HUE_LIGHT = "elem_sliders_hue_light"
+    private const val KEY_ELEM_SLIDERS_SAT_LIGHT = "elem_sliders_sat_light"
+    private const val KEY_ELEM_SLIDERS_VAL_LIGHT = "elem_sliders_val_light"
+
+    private const val KEY_ELEM_MISC_ELEMENTS_HUE_LIGHT = "elem_misc_elements_hue_light"
+    private const val KEY_ELEM_MISC_ELEMENTS_SAT_LIGHT = "elem_misc_elements_sat_light"
+    private const val KEY_ELEM_MISC_ELEMENTS_VAL_LIGHT = "elem_misc_elements_val_light"
+
+    // Per-mode keys: Dark mode
+    private const val KEY_ELEM_SURFACE_BG_TERTIARY_DARK = "elem_surface_bg_tertiary_dark"
+    private const val KEY_ELEM_PANEL_CONTAINER_TERTIARY_DARK = "elem_panel_container_tertiary_dark"
+    private const val KEY_ELEM_HEADER_GRADIENT_TERTIARY_DARK = "elem_header_gradient_tertiary_dark"
+    private const val KEY_ELEM_QS_TILES_TERTIARY_DARK = "elem_qs_tiles_tertiary_dark"
+    private const val KEY_ELEM_INACTIVE_TILES_TERTIARY_DARK = "elem_inactive_tiles_tertiary_dark"
+    private const val KEY_ELEM_INACTIVE_TILES_PRIMARY_DARK = "elem_inactive_tiles_primary_dark"
+    private const val KEY_ELEM_SLIDERS_TERTIARY_DARK = "elem_sliders_tertiary_dark"
+    private const val KEY_ELEM_MISC_ELEMENTS_TERTIARY_DARK = "elem_misc_elements_tertiary_dark"
+
+    private const val KEY_ELEM_SURFACE_BG_HUE_DARK = "elem_surface_bg_hue_dark"
+    private const val KEY_ELEM_SURFACE_BG_SAT_DARK = "elem_surface_bg_sat_dark"
+    private const val KEY_ELEM_SURFACE_BG_VAL_DARK = "elem_surface_bg_val_dark"
+
+    private const val KEY_ELEM_PANEL_CONTAINER_HUE_DARK = "elem_panel_container_hue_dark"
+    private const val KEY_ELEM_PANEL_CONTAINER_SAT_DARK = "elem_panel_container_sat_dark"
+    private const val KEY_ELEM_PANEL_CONTAINER_VAL_DARK = "elem_panel_container_val_dark"
+
+    private const val KEY_ELEM_HEADER_GRADIENT_HUE_DARK = "elem_header_gradient_hue_dark"
+    private const val KEY_ELEM_HEADER_GRADIENT_SAT_DARK = "elem_header_gradient_sat_dark"
+    private const val KEY_ELEM_HEADER_GRADIENT_VAL_DARK = "elem_header_gradient_val_dark"
+
+    private const val KEY_ELEM_QS_TILES_HUE_DARK = "elem_qs_tiles_hue_dark"
+    private const val KEY_ELEM_QS_TILES_SAT_DARK = "elem_qs_tiles_sat_dark"
+    private const val KEY_ELEM_QS_TILES_VAL_DARK = "elem_qs_tiles_val_dark"
+
+    private const val KEY_ELEM_INACTIVE_TILES_HUE_DARK = "elem_inactive_tiles_hue_dark"
+    private const val KEY_ELEM_INACTIVE_TILES_SAT_DARK = "elem_inactive_tiles_sat_dark"
+    private const val KEY_ELEM_INACTIVE_TILES_VAL_DARK = "elem_inactive_tiles_val_dark"
+
+    private const val KEY_ELEM_SLIDERS_HUE_DARK = "elem_sliders_hue_dark"
+    private const val KEY_ELEM_SLIDERS_SAT_DARK = "elem_sliders_sat_dark"
+    private const val KEY_ELEM_SLIDERS_VAL_DARK = "elem_sliders_val_dark"
+
+    private const val KEY_ELEM_MISC_ELEMENTS_HUE_DARK = "elem_misc_elements_hue_dark"
+    private const val KEY_ELEM_MISC_ELEMENTS_SAT_DARK = "elem_misc_elements_sat_dark"
+    private const val KEY_ELEM_MISC_ELEMENTS_VAL_DARK = "elem_misc_elements_val_dark"
     private const val KEY_QS_BACKGROUND_COLOR = "qs_background_color"
+    private const val KEY_QS_PANEL_BACKGROUND_COLOR = "qs_panel_background_color"
+    private const val KEY_QS_BACKGROUND_CORNER = "qs_background_corner"
     private const val KEY_SHOW_QS_TILE_GRADIENT = "show_qs_tile_gradient"
     private const val KEY_QS_TILE_LABEL_FONT_SIZE = "qs_tile_label_font_size"
     private const val KEY_QS_TILE_SUBTITLE_FONT_SIZE = "qs_tile_subtitle_font_size"
     private const val KEY_HIDE_DATE_IN_EXPANDED = "hide_date_in_expanded"
+    private const val KEY_DISABLE_LABELS_IN_EXPANDED = "disable_labels_in_expanded"
+    private const val KEY_PINNED_FEATURES = "pinned_features"
     private const val KEY_WAVY_THICKNESS = "wavy_thickness"
     private const val KEY_WAVY_WOBBLINESS = "wavy_wobbliness"
     private const val KEY_WAVY_WAVELENGTH = "wavy_wavelength"
@@ -251,7 +362,6 @@ object PanelPreferences {
     private const val KEY_PANEL_GLOBAL_CORNER_ENABLED = "panel_global_corner_enabled"
     private const val KEY_PANEL_OUTER_CORNER = "panel_outer_corner"
     private const val KEY_PANEL_INNER_CORNER = "panel_inner_corner"
-    private const val KEY_QS_BACKGROUND_CORNER = "qs_background_corner"
 
     private val _panelGlobalCornerEnabled = MutableStateFlow(false)
     val panelGlobalCornerEnabled: StateFlow<Boolean> = _panelGlobalCornerEnabled.asStateFlow()
@@ -268,6 +378,9 @@ object PanelPreferences {
     private val _qsBackgroundColor = MutableStateFlow<Int?>(null)
     val qsBackgroundColor: StateFlow<Int?> = _qsBackgroundColor.asStateFlow()
 
+    private val _qsPanelBackgroundColor = MutableStateFlow<Int?>(null)
+    val qsPanelBackgroundColor: StateFlow<Int?> = _qsPanelBackgroundColor.asStateFlow()
+
     private val _surfaceBgColorTertiary = MutableStateFlow(false)
     val surfaceBgColorTertiary: StateFlow<Boolean> = _surfaceBgColorTertiary.asStateFlow()
 
@@ -283,11 +396,210 @@ object PanelPreferences {
     private val _qsTilesColorTertiary = MutableStateFlow(false)
     val qsTilesColorTertiary: StateFlow<Boolean> = _qsTilesColorTertiary.asStateFlow()
 
+    private val _inactiveTilesColorTertiary = MutableStateFlow(false)
+    val inactiveTilesColorTertiary: StateFlow<Boolean> = _inactiveTilesColorTertiary.asStateFlow()
+
+    private val _inactiveTilesColorPrimary = MutableStateFlow(false)
+    val inactiveTilesColorPrimary: StateFlow<Boolean> = _inactiveTilesColorPrimary.asStateFlow()
+
     private val _slidersColorTertiary = MutableStateFlow(false)
     val slidersColorTertiary: StateFlow<Boolean> = _slidersColorTertiary.asStateFlow()
 
     private val _miscElementsColorTertiary = MutableStateFlow(false)
     val miscElementsColorTertiary: StateFlow<Boolean> = _miscElementsColorTertiary.asStateFlow()
+
+    // Surface Bg HSB
+    private val _surfaceBgHue = MutableStateFlow(0f)
+    val surfaceBgHue: StateFlow<Float> = _surfaceBgHue.asStateFlow()
+    private val _surfaceBgSat = MutableStateFlow(1f)
+    val surfaceBgSat: StateFlow<Float> = _surfaceBgSat.asStateFlow()
+    private val _surfaceBgVal = MutableStateFlow(1f)
+    val surfaceBgVal: StateFlow<Float> = _surfaceBgVal.asStateFlow()
+
+    // Panel Container HSB
+    private val _panelContainerHue = MutableStateFlow(0f)
+    val panelContainerHue: StateFlow<Float> = _panelContainerHue.asStateFlow()
+    private val _panelContainerSat = MutableStateFlow(1f)
+    val panelContainerSat: StateFlow<Float> = _panelContainerSat.asStateFlow()
+    private val _panelContainerVal = MutableStateFlow(1f)
+    val panelContainerVal: StateFlow<Float> = _panelContainerVal.asStateFlow()
+
+    // Header Gradient HSB
+    private val _headerGradientHue = MutableStateFlow(0f)
+    val headerGradientHue: StateFlow<Float> = _headerGradientHue.asStateFlow()
+    private val _headerGradientSat = MutableStateFlow(1f)
+    val headerGradientSat: StateFlow<Float> = _headerGradientSat.asStateFlow()
+    private val _headerGradientVal = MutableStateFlow(1f)
+    val headerGradientVal: StateFlow<Float> = _headerGradientVal.asStateFlow()
+
+    // QS Tiles HSB
+    private val _qsTilesHue = MutableStateFlow(0f)
+    val qsTilesHue: StateFlow<Float> = _qsTilesHue.asStateFlow()
+    private val _qsTilesSat = MutableStateFlow(1f)
+    val qsTilesSat: StateFlow<Float> = _qsTilesSat.asStateFlow()
+    private val _qsTilesVal = MutableStateFlow(1f)
+    val qsTilesVal: StateFlow<Float> = _qsTilesVal.asStateFlow()
+
+    // Inactive Tiles HSB
+    private val _inactiveTilesHue = MutableStateFlow(0f)
+    val inactiveTilesHue: StateFlow<Float> = _inactiveTilesHue.asStateFlow()
+    private val _inactiveTilesSat = MutableStateFlow(1f)
+    val inactiveTilesSat: StateFlow<Float> = _inactiveTilesSat.asStateFlow()
+    private val _inactiveTilesVal = MutableStateFlow(1f)
+    val inactiveTilesVal: StateFlow<Float> = _inactiveTilesVal.asStateFlow()
+
+    // Sliders HSB
+    private val _slidersHue = MutableStateFlow(0f)
+    val slidersHue: StateFlow<Float> = _slidersHue.asStateFlow()
+    private val _slidersSat = MutableStateFlow(1f)
+    val slidersSat: StateFlow<Float> = _slidersSat.asStateFlow()
+    private val _slidersVal = MutableStateFlow(1f)
+    val slidersVal: StateFlow<Float> = _slidersVal.asStateFlow()
+
+    // Misc Elements HSB
+    private val _miscElementsHue = MutableStateFlow(0f)
+    val miscElementsHue: StateFlow<Float> = _miscElementsHue.asStateFlow()
+    private val _miscElementsSat = MutableStateFlow(1f)
+    val miscElementsSat: StateFlow<Float> = _miscElementsSat.asStateFlow()
+    private val _miscElementsVal = MutableStateFlow(1f)
+    val miscElementsVal: StateFlow<Float> = _miscElementsVal.asStateFlow()
+
+    private val _disableMonetNotifText = MutableStateFlow(false)
+    val disableMonetNotifText: StateFlow<Boolean> = _disableMonetNotifText.asStateFlow()
+
+    // Per-mode state flows: Light Mode
+    private val _surfaceBgColorTertiaryLight = MutableStateFlow(false)
+    val surfaceBgColorTertiaryLight: StateFlow<Boolean> = _surfaceBgColorTertiaryLight.asStateFlow()
+    private val _panelContainerColorTertiaryLight = MutableStateFlow(false)
+    val panelContainerColorTertiaryLight: StateFlow<Boolean> = _panelContainerColorTertiaryLight.asStateFlow()
+    private val _headerGradientColorTertiaryLight = MutableStateFlow(false)
+    val headerGradientColorTertiaryLight: StateFlow<Boolean> = _headerGradientColorTertiaryLight.asStateFlow()
+    private val _qsTilesColorTertiaryLight = MutableStateFlow(false)
+    val qsTilesColorTertiaryLight: StateFlow<Boolean> = _qsTilesColorTertiaryLight.asStateFlow()
+    private val _inactiveTilesColorTertiaryLight = MutableStateFlow(false)
+    val inactiveTilesColorTertiaryLight: StateFlow<Boolean> = _inactiveTilesColorTertiaryLight.asStateFlow()
+    private val _inactiveTilesColorPrimaryLight = MutableStateFlow(false)
+    val inactiveTilesColorPrimaryLight: StateFlow<Boolean> = _inactiveTilesColorPrimaryLight.asStateFlow()
+    private val _slidersColorTertiaryLight = MutableStateFlow(false)
+    val slidersColorTertiaryLight: StateFlow<Boolean> = _slidersColorTertiaryLight.asStateFlow()
+    private val _miscElementsColorTertiaryLight = MutableStateFlow(false)
+    val miscElementsColorTertiaryLight: StateFlow<Boolean> = _miscElementsColorTertiaryLight.asStateFlow()
+
+    private val _surfaceBgHueLight = MutableStateFlow(0f)
+    val surfaceBgHueLight: StateFlow<Float> = _surfaceBgHueLight.asStateFlow()
+    private val _surfaceBgSatLight = MutableStateFlow(1f)
+    val surfaceBgSatLight: StateFlow<Float> = _surfaceBgSatLight.asStateFlow()
+    private val _surfaceBgValLight = MutableStateFlow(1f)
+    val surfaceBgValLight: StateFlow<Float> = _surfaceBgValLight.asStateFlow()
+
+    private val _panelContainerHueLight = MutableStateFlow(0f)
+    val panelContainerHueLight: StateFlow<Float> = _panelContainerHueLight.asStateFlow()
+    private val _panelContainerSatLight = MutableStateFlow(1f)
+    val panelContainerSatLight: StateFlow<Float> = _panelContainerSatLight.asStateFlow()
+    private val _panelContainerValLight = MutableStateFlow(1f)
+    val panelContainerValLight: StateFlow<Float> = _panelContainerValLight.asStateFlow()
+
+    private val _headerGradientHueLight = MutableStateFlow(0f)
+    val headerGradientHueLight: StateFlow<Float> = _headerGradientHueLight.asStateFlow()
+    private val _headerGradientSatLight = MutableStateFlow(1f)
+    val headerGradientSatLight: StateFlow<Float> = _headerGradientSatLight.asStateFlow()
+    private val _headerGradientValLight = MutableStateFlow(1f)
+    val headerGradientValLight: StateFlow<Float> = _headerGradientValLight.asStateFlow()
+
+    private val _qsTilesHueLight = MutableStateFlow(0f)
+    val qsTilesHueLight: StateFlow<Float> = _qsTilesHueLight.asStateFlow()
+    private val _qsTilesSatLight = MutableStateFlow(1f)
+    val qsTilesSatLight: StateFlow<Float> = _qsTilesSatLight.asStateFlow()
+    private val _qsTilesValLight = MutableStateFlow(1f)
+    val qsTilesValLight: StateFlow<Float> = _qsTilesValLight.asStateFlow()
+
+    private val _inactiveTilesHueLight = MutableStateFlow(0f)
+    val inactiveTilesHueLight: StateFlow<Float> = _inactiveTilesHueLight.asStateFlow()
+    private val _inactiveTilesSatLight = MutableStateFlow(1f)
+    val inactiveTilesSatLight: StateFlow<Float> = _inactiveTilesSatLight.asStateFlow()
+    private val _inactiveTilesValLight = MutableStateFlow(1f)
+    val inactiveTilesValLight: StateFlow<Float> = _inactiveTilesValLight.asStateFlow()
+
+    private val _slidersHueLight = MutableStateFlow(0f)
+    val slidersHueLight: StateFlow<Float> = _slidersHueLight.asStateFlow()
+    private val _slidersSatLight = MutableStateFlow(1f)
+    val slidersSatLight: StateFlow<Float> = _slidersSatLight.asStateFlow()
+    private val _slidersValLight = MutableStateFlow(1f)
+    val slidersValLight: StateFlow<Float> = _slidersValLight.asStateFlow()
+
+    private val _miscElementsHueLight = MutableStateFlow(0f)
+    val miscElementsHueLight: StateFlow<Float> = _miscElementsHueLight.asStateFlow()
+    private val _miscElementsSatLight = MutableStateFlow(1f)
+    val miscElementsSatLight: StateFlow<Float> = _miscElementsSatLight.asStateFlow()
+    private val _miscElementsValLight = MutableStateFlow(1f)
+    val miscElementsValLight: StateFlow<Float> = _miscElementsValLight.asStateFlow()
+
+    // Per-mode state flows: Dark Mode
+    private val _surfaceBgColorTertiaryDark = MutableStateFlow(false)
+    val surfaceBgColorTertiaryDark: StateFlow<Boolean> = _surfaceBgColorTertiaryDark.asStateFlow()
+    private val _panelContainerColorTertiaryDark = MutableStateFlow(false)
+    val panelContainerColorTertiaryDark: StateFlow<Boolean> = _panelContainerColorTertiaryDark.asStateFlow()
+    private val _headerGradientColorTertiaryDark = MutableStateFlow(false)
+    val headerGradientColorTertiaryDark: StateFlow<Boolean> = _headerGradientColorTertiaryDark.asStateFlow()
+    private val _qsTilesColorTertiaryDark = MutableStateFlow(false)
+    val qsTilesColorTertiaryDark: StateFlow<Boolean> = _qsTilesColorTertiaryDark.asStateFlow()
+    private val _inactiveTilesColorTertiaryDark = MutableStateFlow(false)
+    val inactiveTilesColorTertiaryDark: StateFlow<Boolean> = _inactiveTilesColorTertiaryDark.asStateFlow()
+    private val _inactiveTilesColorPrimaryDark = MutableStateFlow(false)
+    val inactiveTilesColorPrimaryDark: StateFlow<Boolean> = _inactiveTilesColorPrimaryDark.asStateFlow()
+    private val _slidersColorTertiaryDark = MutableStateFlow(false)
+    val slidersColorTertiaryDark: StateFlow<Boolean> = _slidersColorTertiaryDark.asStateFlow()
+    private val _miscElementsColorTertiaryDark = MutableStateFlow(false)
+    val miscElementsColorTertiaryDark: StateFlow<Boolean> = _miscElementsColorTertiaryDark.asStateFlow()
+
+    private val _surfaceBgHueDark = MutableStateFlow(0f)
+    val surfaceBgHueDark: StateFlow<Float> = _surfaceBgHueDark.asStateFlow()
+    private val _surfaceBgSatDark = MutableStateFlow(1f)
+    val surfaceBgSatDark: StateFlow<Float> = _surfaceBgSatDark.asStateFlow()
+    private val _surfaceBgValDark = MutableStateFlow(1f)
+    val surfaceBgValDark: StateFlow<Float> = _surfaceBgValDark.asStateFlow()
+
+    private val _panelContainerHueDark = MutableStateFlow(0f)
+    val panelContainerHueDark: StateFlow<Float> = _panelContainerHueDark.asStateFlow()
+    private val _panelContainerSatDark = MutableStateFlow(1f)
+    val panelContainerSatDark: StateFlow<Float> = _panelContainerSatDark.asStateFlow()
+    private val _panelContainerValDark = MutableStateFlow(1f)
+    val panelContainerValDark: StateFlow<Float> = _panelContainerValDark.asStateFlow()
+
+    private val _headerGradientHueDark = MutableStateFlow(0f)
+    val headerGradientHueDark: StateFlow<Float> = _headerGradientHueDark.asStateFlow()
+    private val _headerGradientSatDark = MutableStateFlow(1f)
+    val headerGradientSatDark: StateFlow<Float> = _headerGradientSatDark.asStateFlow()
+    private val _headerGradientValDark = MutableStateFlow(1f)
+    val headerGradientValDark: StateFlow<Float> = _headerGradientValDark.asStateFlow()
+
+    private val _qsTilesHueDark = MutableStateFlow(0f)
+    val qsTilesHueDark: StateFlow<Float> = _qsTilesHueDark.asStateFlow()
+    private val _qsTilesSatDark = MutableStateFlow(1f)
+    val qsTilesSatDark: StateFlow<Float> = _qsTilesSatDark.asStateFlow()
+    private val _qsTilesValDark = MutableStateFlow(1f)
+    val qsTilesValDark: StateFlow<Float> = _qsTilesValDark.asStateFlow()
+
+    private val _inactiveTilesHueDark = MutableStateFlow(0f)
+    val inactiveTilesHueDark: StateFlow<Float> = _inactiveTilesHueDark.asStateFlow()
+    private val _inactiveTilesSatDark = MutableStateFlow(1f)
+    val inactiveTilesSatDark: StateFlow<Float> = _inactiveTilesSatDark.asStateFlow()
+    private val _inactiveTilesValDark = MutableStateFlow(1f)
+    val inactiveTilesValDark: StateFlow<Float> = _inactiveTilesValDark.asStateFlow()
+
+    private val _slidersHueDark = MutableStateFlow(0f)
+    val slidersHueDark: StateFlow<Float> = _slidersHueDark.asStateFlow()
+    private val _slidersSatDark = MutableStateFlow(1f)
+    val slidersSatDark: StateFlow<Float> = _slidersSatDark.asStateFlow()
+    private val _slidersValDark = MutableStateFlow(1f)
+    val slidersValDark: StateFlow<Float> = _slidersValDark.asStateFlow()
+
+    private val _miscElementsHueDark = MutableStateFlow(0f)
+    val miscElementsHueDark: StateFlow<Float> = _miscElementsHueDark.asStateFlow()
+    private val _miscElementsSatDark = MutableStateFlow(1f)
+    val miscElementsSatDark: StateFlow<Float> = _miscElementsSatDark.asStateFlow()
+    private val _miscElementsValDark = MutableStateFlow(1f)
+    val miscElementsValDark: StateFlow<Float> = _miscElementsValDark.asStateFlow()
 
     private val _showQsTileGradient = MutableStateFlow(false)
     val showQsTileGradient: StateFlow<Boolean> = _showQsTileGradient.asStateFlow()
@@ -430,6 +742,12 @@ object PanelPreferences {
 
     private val _hideDateInExpanded = MutableStateFlow(false)
     val hideDateInExpanded: StateFlow<Boolean> = _hideDateInExpanded.asStateFlow()
+
+    private val _disableLabelsInExpanded = MutableStateFlow(false)
+    val disableLabelsInExpanded: StateFlow<Boolean> = _disableLabelsInExpanded.asStateFlow()
+
+    private val _pinnedFeatures = MutableStateFlow<Set<String>>(emptySet())
+    val pinnedFeatures: StateFlow<Set<String>> = _pinnedFeatures.asStateFlow()
 
     private val _datePosition = MutableStateFlow(DatePosition.BELOW_TIME)
     val datePosition: StateFlow<DatePosition> = _datePosition.asStateFlow()
@@ -667,12 +985,148 @@ object PanelPreferences {
         _notifContainerColorTertiary.value = prefs.getBoolean(KEY_ELEM_NOTIF_CONTAINER_TERTIARY, false)
         _headerGradientColorTertiary.value = prefs.getBoolean(KEY_ELEM_HEADER_GRADIENT_TERTIARY, false)
         _qsTilesColorTertiary.value = prefs.getBoolean(KEY_ELEM_QS_TILES_TERTIARY, false)
+        _inactiveTilesColorTertiary.value = prefs.getBoolean(KEY_ELEM_INACTIVE_TILES_TERTIARY, false)
+        _inactiveTilesColorPrimary.value = prefs.getBoolean(KEY_ELEM_INACTIVE_TILES_PRIMARY, false)
         _slidersColorTertiary.value = prefs.getBoolean(KEY_ELEM_SLIDERS_TERTIARY, false)
         _miscElementsColorTertiary.value = prefs.getBoolean(KEY_ELEM_MISC_ELEMENTS_TERTIARY, false)
+
+        _surfaceBgHue.value = prefs.getFloat(KEY_ELEM_SURFACE_BG_HUE, 0f)
+        _surfaceBgSat.value = prefs.getFloat(KEY_ELEM_SURFACE_BG_SAT, 1f)
+        _surfaceBgVal.value = prefs.getFloat(KEY_ELEM_SURFACE_BG_VAL, 1f)
+
+        _panelContainerHue.value = prefs.getFloat(KEY_ELEM_PANEL_CONTAINER_HUE, 0f)
+        _panelContainerSat.value = prefs.getFloat(KEY_ELEM_PANEL_CONTAINER_SAT, 1f)
+        _panelContainerVal.value = prefs.getFloat(KEY_ELEM_PANEL_CONTAINER_VAL, 1f)
+
+        _headerGradientHue.value = prefs.getFloat(KEY_ELEM_HEADER_GRADIENT_HUE, 0f)
+        _headerGradientSat.value = prefs.getFloat(KEY_ELEM_HEADER_GRADIENT_SAT, 1f)
+        _headerGradientVal.value = prefs.getFloat(KEY_ELEM_HEADER_GRADIENT_VAL, 1f)
+
+        _qsTilesHue.value = prefs.getFloat(KEY_ELEM_QS_TILES_HUE, 0f)
+        _qsTilesSat.value = prefs.getFloat(KEY_ELEM_QS_TILES_SAT, 1f)
+        _qsTilesVal.value = prefs.getFloat(KEY_ELEM_QS_TILES_VAL, 1f)
+
+        _inactiveTilesHue.value = prefs.getFloat(KEY_ELEM_INACTIVE_TILES_HUE, 0f)
+        _inactiveTilesSat.value = prefs.getFloat(KEY_ELEM_INACTIVE_TILES_SAT, 1f)
+        _inactiveTilesVal.value = prefs.getFloat(KEY_ELEM_INACTIVE_TILES_VAL, 1f)
+
+        _slidersHue.value = prefs.getFloat(KEY_ELEM_SLIDERS_HUE, 0f)
+        _slidersSat.value = prefs.getFloat(KEY_ELEM_SLIDERS_SAT, 1f)
+        _slidersVal.value = prefs.getFloat(KEY_ELEM_SLIDERS_VAL, 1f)
+
+        _miscElementsHue.value = prefs.getFloat(KEY_ELEM_MISC_ELEMENTS_HUE, 0f)
+        _miscElementsSat.value = prefs.getFloat(KEY_ELEM_MISC_ELEMENTS_SAT, 1f)
+        _miscElementsVal.value = prefs.getFloat(KEY_ELEM_MISC_ELEMENTS_VAL, 1f)
+
+        // Initialize Light & Dark mode settings
+        val defSurfaceBgTertiary = _surfaceBgColorTertiary.value
+        _surfaceBgColorTertiaryLight.value = prefs.getBoolean(KEY_ELEM_SURFACE_BG_TERTIARY_LIGHT, defSurfaceBgTertiary)
+        _surfaceBgColorTertiaryDark.value = prefs.getBoolean(KEY_ELEM_SURFACE_BG_TERTIARY_DARK, defSurfaceBgTertiary)
+
+        val defPanelContainerTertiary = _panelContainerColorTertiary.value
+        _panelContainerColorTertiaryLight.value = prefs.getBoolean(KEY_ELEM_PANEL_CONTAINER_TERTIARY_LIGHT, defPanelContainerTertiary)
+        _panelContainerColorTertiaryDark.value = prefs.getBoolean(KEY_ELEM_PANEL_CONTAINER_TERTIARY_DARK, defPanelContainerTertiary)
+
+        val defHeaderGradientTertiary = _headerGradientColorTertiary.value
+        _headerGradientColorTertiaryLight.value = prefs.getBoolean(KEY_ELEM_HEADER_GRADIENT_TERTIARY_LIGHT, defHeaderGradientTertiary)
+        _headerGradientColorTertiaryDark.value = prefs.getBoolean(KEY_ELEM_HEADER_GRADIENT_TERTIARY_DARK, defHeaderGradientTertiary)
+
+        val defQsTilesTertiary = _qsTilesColorTertiary.value
+        _qsTilesColorTertiaryLight.value = prefs.getBoolean(KEY_ELEM_QS_TILES_TERTIARY_LIGHT, defQsTilesTertiary)
+        _qsTilesColorTertiaryDark.value = prefs.getBoolean(KEY_ELEM_QS_TILES_TERTIARY_DARK, defQsTilesTertiary)
+
+        val defInactiveTilesTertiary = _inactiveTilesColorTertiary.value
+        _inactiveTilesColorTertiaryLight.value = prefs.getBoolean(KEY_ELEM_INACTIVE_TILES_TERTIARY_LIGHT, defInactiveTilesTertiary)
+        _inactiveTilesColorTertiaryDark.value = prefs.getBoolean(KEY_ELEM_INACTIVE_TILES_TERTIARY_DARK, defInactiveTilesTertiary)
+
+        val defInactiveTilesPrimary = _inactiveTilesColorPrimary.value
+        _inactiveTilesColorPrimaryLight.value = prefs.getBoolean(KEY_ELEM_INACTIVE_TILES_PRIMARY_LIGHT, defInactiveTilesPrimary)
+        _inactiveTilesColorPrimaryDark.value = prefs.getBoolean(KEY_ELEM_INACTIVE_TILES_PRIMARY_DARK, defInactiveTilesPrimary)
+
+        val defSlidersTertiary = _slidersColorTertiary.value
+        _slidersColorTertiaryLight.value = prefs.getBoolean(KEY_ELEM_SLIDERS_TERTIARY_LIGHT, defSlidersTertiary)
+        _slidersColorTertiaryDark.value = prefs.getBoolean(KEY_ELEM_SLIDERS_TERTIARY_DARK, defSlidersTertiary)
+
+        val defMiscElementsTertiary = _miscElementsColorTertiary.value
+        _miscElementsColorTertiaryLight.value = prefs.getBoolean(KEY_ELEM_MISC_ELEMENTS_TERTIARY_LIGHT, defMiscElementsTertiary)
+        _miscElementsColorTertiaryDark.value = prefs.getBoolean(KEY_ELEM_MISC_ELEMENTS_TERTIARY_DARK, defMiscElementsTertiary)
+
+        val defSurfaceBgHue = _surfaceBgHue.value
+        val defSurfaceBgSat = _surfaceBgSat.value
+        val defSurfaceBgVal = _surfaceBgVal.value
+        _surfaceBgHueLight.value = prefs.getFloat(KEY_ELEM_SURFACE_BG_HUE_LIGHT, defSurfaceBgHue)
+        _surfaceBgSatLight.value = prefs.getFloat(KEY_ELEM_SURFACE_BG_SAT_LIGHT, defSurfaceBgSat)
+        _surfaceBgValLight.value = prefs.getFloat(KEY_ELEM_SURFACE_BG_VAL_LIGHT, defSurfaceBgVal)
+        _surfaceBgHueDark.value = prefs.getFloat(KEY_ELEM_SURFACE_BG_HUE_DARK, defSurfaceBgHue)
+        _surfaceBgSatDark.value = prefs.getFloat(KEY_ELEM_SURFACE_BG_SAT_DARK, defSurfaceBgSat)
+        _surfaceBgValDark.value = prefs.getFloat(KEY_ELEM_SURFACE_BG_VAL_DARK, defSurfaceBgVal)
+
+        val defPanelContainerHue = _panelContainerHue.value
+        val defPanelContainerSat = _panelContainerSat.value
+        val defPanelContainerVal = _panelContainerVal.value
+        _panelContainerHueLight.value = prefs.getFloat(KEY_ELEM_PANEL_CONTAINER_HUE_LIGHT, defPanelContainerHue)
+        _panelContainerSatLight.value = prefs.getFloat(KEY_ELEM_PANEL_CONTAINER_SAT_LIGHT, defPanelContainerSat)
+        _panelContainerValLight.value = prefs.getFloat(KEY_ELEM_PANEL_CONTAINER_VAL_LIGHT, defPanelContainerVal)
+        _panelContainerHueDark.value = prefs.getFloat(KEY_ELEM_PANEL_CONTAINER_HUE_DARK, defPanelContainerHue)
+        _panelContainerSatDark.value = prefs.getFloat(KEY_ELEM_PANEL_CONTAINER_SAT_DARK, defPanelContainerSat)
+        _panelContainerValDark.value = prefs.getFloat(KEY_ELEM_PANEL_CONTAINER_VAL_DARK, defPanelContainerVal)
+
+        val defHeaderGradientHue = _headerGradientHue.value
+        val defHeaderGradientSat = _headerGradientSat.value
+        val defHeaderGradientVal = _headerGradientVal.value
+        _headerGradientHueLight.value = prefs.getFloat(KEY_ELEM_HEADER_GRADIENT_HUE_LIGHT, defHeaderGradientHue)
+        _headerGradientSatLight.value = prefs.getFloat(KEY_ELEM_HEADER_GRADIENT_SAT_LIGHT, defHeaderGradientSat)
+        _headerGradientValLight.value = prefs.getFloat(KEY_ELEM_HEADER_GRADIENT_VAL_LIGHT, defHeaderGradientVal)
+        _headerGradientHueDark.value = prefs.getFloat(KEY_ELEM_HEADER_GRADIENT_HUE_DARK, defHeaderGradientHue)
+        _headerGradientSatDark.value = prefs.getFloat(KEY_ELEM_HEADER_GRADIENT_SAT_DARK, defHeaderGradientSat)
+        _headerGradientValDark.value = prefs.getFloat(KEY_ELEM_HEADER_GRADIENT_VAL_DARK, defHeaderGradientVal)
+
+        val defQsTilesHue = _qsTilesHue.value
+        val defQsTilesSat = _qsTilesSat.value
+        val defQsTilesVal = _qsTilesVal.value
+        _qsTilesHueLight.value = prefs.getFloat(KEY_ELEM_QS_TILES_HUE_LIGHT, defQsTilesHue)
+        _qsTilesSatLight.value = prefs.getFloat(KEY_ELEM_QS_TILES_SAT_LIGHT, defQsTilesSat)
+        _qsTilesValLight.value = prefs.getFloat(KEY_ELEM_QS_TILES_VAL_LIGHT, defQsTilesVal)
+        _qsTilesHueDark.value = prefs.getFloat(KEY_ELEM_QS_TILES_HUE_DARK, defQsTilesHue)
+        _qsTilesSatDark.value = prefs.getFloat(KEY_ELEM_QS_TILES_SAT_DARK, defQsTilesSat)
+        _qsTilesValDark.value = prefs.getFloat(KEY_ELEM_QS_TILES_VAL_DARK, defQsTilesVal)
+
+        val defInactiveTilesHue = _inactiveTilesHue.value
+        val defInactiveTilesSat = _inactiveTilesSat.value
+        val defInactiveTilesVal = _inactiveTilesVal.value
+        _inactiveTilesHueLight.value = prefs.getFloat(KEY_ELEM_INACTIVE_TILES_HUE_LIGHT, defInactiveTilesHue)
+        _inactiveTilesSatLight.value = prefs.getFloat(KEY_ELEM_INACTIVE_TILES_SAT_LIGHT, defInactiveTilesSat)
+        _inactiveTilesValLight.value = prefs.getFloat(KEY_ELEM_INACTIVE_TILES_VAL_LIGHT, defInactiveTilesVal)
+        _inactiveTilesHueDark.value = prefs.getFloat(KEY_ELEM_INACTIVE_TILES_HUE_DARK, defInactiveTilesHue)
+        _inactiveTilesSatDark.value = prefs.getFloat(KEY_ELEM_INACTIVE_TILES_SAT_DARK, defInactiveTilesSat)
+        _inactiveTilesValDark.value = prefs.getFloat(KEY_ELEM_INACTIVE_TILES_VAL_DARK, defInactiveTilesVal)
+
+        val defSlidersHue = _slidersHue.value
+        val defSlidersSat = _slidersSat.value
+        val defSlidersVal = _slidersVal.value
+        _slidersHueLight.value = prefs.getFloat(KEY_ELEM_SLIDERS_HUE_LIGHT, defSlidersHue)
+        _slidersSatLight.value = prefs.getFloat(KEY_ELEM_SLIDERS_SAT_LIGHT, defSlidersSat)
+        _slidersValLight.value = prefs.getFloat(KEY_ELEM_SLIDERS_VAL_LIGHT, defSlidersVal)
+        _slidersHueDark.value = prefs.getFloat(KEY_ELEM_SLIDERS_HUE_DARK, defSlidersHue)
+        _slidersSatDark.value = prefs.getFloat(KEY_ELEM_SLIDERS_SAT_DARK, defSlidersSat)
+        _slidersValDark.value = prefs.getFloat(KEY_ELEM_SLIDERS_VAL_DARK, defSlidersVal)
+
+        val defMiscElementsHue = _miscElementsHue.value
+        val defMiscElementsSat = _miscElementsSat.value
+        val defMiscElementsVal = _miscElementsVal.value
+        _miscElementsHueLight.value = prefs.getFloat(KEY_ELEM_MISC_ELEMENTS_HUE_LIGHT, defMiscElementsHue)
+        _miscElementsSatLight.value = prefs.getFloat(KEY_ELEM_MISC_ELEMENTS_SAT_LIGHT, defMiscElementsSat)
+        _miscElementsValLight.value = prefs.getFloat(KEY_ELEM_MISC_ELEMENTS_VAL_LIGHT, defMiscElementsVal)
+        _miscElementsHueDark.value = prefs.getFloat(KEY_ELEM_MISC_ELEMENTS_HUE_DARK, defMiscElementsHue)
+        _miscElementsSatDark.value = prefs.getFloat(KEY_ELEM_MISC_ELEMENTS_SAT_DARK, defMiscElementsSat)
+        _miscElementsValDark.value = prefs.getFloat(KEY_ELEM_MISC_ELEMENTS_VAL_DARK, defMiscElementsVal)
+        _disableMonetNotifText.value = prefs.getBoolean(KEY_DISABLE_MONET_NOTIF_TEXT, false)
         _showQsTileGradient.value = prefs.getBoolean(KEY_SHOW_QS_TILE_GRADIENT, false)
         _qsTileLabelFontSize.value = prefs.getFloat(KEY_QS_TILE_LABEL_FONT_SIZE, 12.0f)
         _qsTileSubtitleFontSize.value = prefs.getFloat(KEY_QS_TILE_SUBTITLE_FONT_SIZE, 9.0f)
         _hideDateInExpanded.value = prefs.getBoolean(KEY_HIDE_DATE_IN_EXPANDED, false)
+        _disableLabelsInExpanded.value = prefs.getBoolean(KEY_DISABLE_LABELS_IN_EXPANDED, false)
+        _pinnedFeatures.value = prefs.getStringSet(KEY_PINNED_FEATURES, emptySet()) ?: emptySet()
         _wavyThickness.value = prefs.getFloat(KEY_WAVY_THICKNESS, 4.0f)
         _wavyWobbliness.value = prefs.getFloat(KEY_WAVY_WOBBLINESS, 3.5f)
         _wavyWavelength.value = prefs.getFloat(KEY_WAVY_WAVELENGTH, 26.0f)
@@ -701,6 +1155,9 @@ object PanelPreferences {
         _panelGlobalCornerEnabled.value = prefs.getBoolean(KEY_PANEL_GLOBAL_CORNER_ENABLED, false)
         _panelOuterCorner.value = prefs.getFloat(KEY_PANEL_OUTER_CORNER, 20.0f)
         _panelInnerCorner.value = prefs.getFloat(KEY_PANEL_INNER_CORNER, 5.0f)
+        _qsBackgroundCorner.value = prefs.getFloat(KEY_QS_BACKGROUND_CORNER, 20.0f)
+        _qsBackgroundColor.value = if (prefs.contains(KEY_QS_BACKGROUND_COLOR)) prefs.getInt(KEY_QS_BACKGROUND_COLOR, 0) else null
+        _qsPanelBackgroundColor.value = if (prefs.contains(KEY_QS_PANEL_BACKGROUND_COLOR)) prefs.getInt(KEY_QS_PANEL_BACKGROUND_COLOR, 0) else null
         _initialSetupCompleted.value = prefs.getBoolean(KEY_INITIAL_SETUP_COMPLETED, false)
         val savedMode = prefs.getString(KEY_PRIVILEGE_MODE, com.example.model.PrivilegeMode.STANDARD.name)
         _privilegeMode.value = try {
@@ -1255,6 +1712,349 @@ object PanelPreferences {
         prefs.edit().putBoolean(KEY_ELEM_HEADER_GRADIENT_TERTIARY, enabled).apply()
     }
 
+    fun setSurfaceBgHsb(context: Context, hue: Float, sat: Float, valFactor: Float) {
+        _surfaceBgHue.value = hue
+        _surfaceBgSat.value = sat
+        _surfaceBgVal.value = valFactor
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_ELEM_SURFACE_BG_HUE, hue).putFloat(KEY_ELEM_SURFACE_BG_SAT, sat).putFloat(KEY_ELEM_SURFACE_BG_VAL, valFactor).apply()
+    }
+
+    fun setPanelContainerHsb(context: Context, hue: Float, sat: Float, valFactor: Float) {
+        _panelContainerHue.value = hue
+        _panelContainerSat.value = sat
+        _panelContainerVal.value = valFactor
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_ELEM_PANEL_CONTAINER_HUE, hue).putFloat(KEY_ELEM_PANEL_CONTAINER_SAT, sat).putFloat(KEY_ELEM_PANEL_CONTAINER_VAL, valFactor).apply()
+    }
+
+    fun setHeaderGradientHsb(context: Context, hue: Float, sat: Float, valFactor: Float) {
+        _headerGradientHue.value = hue
+        _headerGradientSat.value = sat
+        _headerGradientVal.value = valFactor
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_ELEM_HEADER_GRADIENT_HUE, hue).putFloat(KEY_ELEM_HEADER_GRADIENT_SAT, sat).putFloat(KEY_ELEM_HEADER_GRADIENT_VAL, valFactor).apply()
+    }
+
+    fun setQsTilesHsb(context: Context, hue: Float, sat: Float, valFactor: Float) {
+        _qsTilesHue.value = hue
+        _qsTilesSat.value = sat
+        _qsTilesVal.value = valFactor
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_ELEM_QS_TILES_HUE, hue).putFloat(KEY_ELEM_QS_TILES_SAT, sat).putFloat(KEY_ELEM_QS_TILES_VAL, valFactor).apply()
+    }
+
+    fun setSlidersHsb(context: Context, hue: Float, sat: Float, valFactor: Float) {
+        _slidersHue.value = hue
+        _slidersSat.value = sat
+        _slidersVal.value = valFactor
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_ELEM_SLIDERS_HUE, hue).putFloat(KEY_ELEM_SLIDERS_SAT, sat).putFloat(KEY_ELEM_SLIDERS_VAL, valFactor).apply()
+    }
+
+    fun setMiscElementsHsb(context: Context, hue: Float, sat: Float, valFactor: Float) {
+        _miscElementsHue.value = hue
+        _miscElementsSat.value = sat
+        _miscElementsVal.value = valFactor
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_ELEM_MISC_ELEMENTS_HUE, hue).putFloat(KEY_ELEM_MISC_ELEMENTS_SAT, sat).putFloat(KEY_ELEM_MISC_ELEMENTS_VAL, valFactor).apply()
+    }
+
+    fun setDisableMonetNotifText(context: Context, enabled: Boolean) {
+        _disableMonetNotifText.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_DISABLE_MONET_NOTIF_TEXT, enabled).apply()
+    }
+
+    fun setSurfaceBgColorTertiary(context: Context, isDark: Boolean, enabled: Boolean) {
+        if (isDark) {
+            _surfaceBgColorTertiaryDark.value = enabled
+        } else {
+            _surfaceBgColorTertiaryLight.value = enabled
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(
+            if (isDark) KEY_ELEM_SURFACE_BG_TERTIARY_DARK else KEY_ELEM_SURFACE_BG_TERTIARY_LIGHT,
+            enabled
+        ).apply()
+    }
+
+    fun setPanelContainerColorTertiary(context: Context, isDark: Boolean, enabled: Boolean) {
+        if (isDark) {
+            _panelContainerColorTertiaryDark.value = enabled
+        } else {
+            _panelContainerColorTertiaryLight.value = enabled
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(
+            if (isDark) KEY_ELEM_PANEL_CONTAINER_TERTIARY_DARK else KEY_ELEM_PANEL_CONTAINER_TERTIARY_LIGHT,
+            enabled
+        ).apply()
+    }
+
+    fun setHeaderGradientColorTertiary(context: Context, isDark: Boolean, enabled: Boolean) {
+        if (isDark) {
+            _headerGradientColorTertiaryDark.value = enabled
+        } else {
+            _headerGradientColorTertiaryLight.value = enabled
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(
+            if (isDark) KEY_ELEM_HEADER_GRADIENT_TERTIARY_DARK else KEY_ELEM_HEADER_GRADIENT_TERTIARY_LIGHT,
+            enabled
+        ).apply()
+    }
+
+    fun setQsTilesColorTertiary(context: Context, isDark: Boolean, enabled: Boolean) {
+        if (isDark) {
+            _qsTilesColorTertiaryDark.value = enabled
+        } else {
+            _qsTilesColorTertiaryLight.value = enabled
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(
+            if (isDark) KEY_ELEM_QS_TILES_TERTIARY_DARK else KEY_ELEM_QS_TILES_TERTIARY_LIGHT,
+            enabled
+        ).apply()
+    }
+
+    fun setInactiveTilesColorTertiary(context: Context, isDark: Boolean, enabled: Boolean) {
+        if (isDark) {
+            _inactiveTilesColorTertiaryDark.value = enabled
+        } else {
+            _inactiveTilesColorTertiaryLight.value = enabled
+        }
+        _inactiveTilesColorTertiary.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(
+            if (isDark) KEY_ELEM_INACTIVE_TILES_TERTIARY_DARK else KEY_ELEM_INACTIVE_TILES_TERTIARY_LIGHT,
+            enabled
+        ).apply()
+    }
+
+    fun setInactiveTilesColorPrimary(context: Context, isDark: Boolean, enabled: Boolean) {
+        if (isDark) {
+            _inactiveTilesColorPrimaryDark.value = enabled
+        } else {
+            _inactiveTilesColorPrimaryLight.value = enabled
+        }
+        _inactiveTilesColorPrimary.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(
+            if (isDark) KEY_ELEM_INACTIVE_TILES_PRIMARY_DARK else KEY_ELEM_INACTIVE_TILES_PRIMARY_LIGHT,
+            enabled
+        ).apply()
+    }
+
+    fun setSlidersColorTertiary(context: Context, isDark: Boolean, enabled: Boolean) {
+        if (isDark) {
+            _slidersColorTertiaryDark.value = enabled
+        } else {
+            _slidersColorTertiaryLight.value = enabled
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(
+            if (isDark) KEY_ELEM_SLIDERS_TERTIARY_DARK else KEY_ELEM_SLIDERS_TERTIARY_LIGHT,
+            enabled
+        ).apply()
+    }
+
+    fun setMiscElementsColorTertiary(context: Context, isDark: Boolean, enabled: Boolean) {
+        if (isDark) {
+            _miscElementsColorTertiaryDark.value = enabled
+        } else {
+            _miscElementsColorTertiaryLight.value = enabled
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(
+            if (isDark) KEY_ELEM_MISC_ELEMENTS_TERTIARY_DARK else KEY_ELEM_MISC_ELEMENTS_TERTIARY_LIGHT,
+            enabled
+        ).apply()
+    }
+
+    fun setSurfaceBgHsb(context: Context, isDark: Boolean, hue: Float, sat: Float, valFactor: Float) {
+        if (isDark) {
+            _surfaceBgHueDark.value = hue
+            _surfaceBgSatDark.value = sat
+            _surfaceBgValDark.value = valFactor
+        } else {
+            _surfaceBgHueLight.value = hue
+            _surfaceBgSatLight.value = sat
+            _surfaceBgValLight.value = valFactor
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(if (isDark) KEY_ELEM_SURFACE_BG_HUE_DARK else KEY_ELEM_SURFACE_BG_HUE_LIGHT, hue)
+            .putFloat(if (isDark) KEY_ELEM_SURFACE_BG_SAT_DARK else KEY_ELEM_SURFACE_BG_SAT_LIGHT, sat)
+            .putFloat(if (isDark) KEY_ELEM_SURFACE_BG_VAL_DARK else KEY_ELEM_SURFACE_BG_VAL_LIGHT, valFactor)
+            .apply()
+    }
+
+    fun setPanelContainerHsb(context: Context, isDark: Boolean, hue: Float, sat: Float, valFactor: Float) {
+        if (isDark) {
+            _panelContainerHueDark.value = hue
+            _panelContainerSatDark.value = sat
+            _panelContainerValDark.value = valFactor
+        } else {
+            _panelContainerHueLight.value = hue
+            _panelContainerSatLight.value = sat
+            _panelContainerValLight.value = valFactor
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(if (isDark) KEY_ELEM_PANEL_CONTAINER_HUE_DARK else KEY_ELEM_PANEL_CONTAINER_HUE_LIGHT, hue)
+            .putFloat(if (isDark) KEY_ELEM_PANEL_CONTAINER_SAT_DARK else KEY_ELEM_PANEL_CONTAINER_SAT_LIGHT, sat)
+            .putFloat(if (isDark) KEY_ELEM_PANEL_CONTAINER_VAL_DARK else KEY_ELEM_PANEL_CONTAINER_VAL_LIGHT, valFactor)
+            .apply()
+    }
+
+    fun setHeaderGradientHsb(context: Context, isDark: Boolean, hue: Float, sat: Float, valFactor: Float) {
+        if (isDark) {
+            _headerGradientHueDark.value = hue
+            _headerGradientSatDark.value = sat
+            _headerGradientValDark.value = valFactor
+        } else {
+            _headerGradientHueLight.value = hue
+            _headerGradientSatLight.value = sat
+            _headerGradientValLight.value = valFactor
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(if (isDark) KEY_ELEM_HEADER_GRADIENT_HUE_DARK else KEY_ELEM_HEADER_GRADIENT_HUE_LIGHT, hue)
+            .putFloat(if (isDark) KEY_ELEM_HEADER_GRADIENT_SAT_DARK else KEY_ELEM_HEADER_GRADIENT_SAT_LIGHT, sat)
+            .putFloat(if (isDark) KEY_ELEM_HEADER_GRADIENT_VAL_DARK else KEY_ELEM_HEADER_GRADIENT_VAL_LIGHT, valFactor)
+            .apply()
+    }
+
+    fun setQsTilesHsb(context: Context, isDark: Boolean, hue: Float, sat: Float, valFactor: Float) {
+        if (isDark) {
+            _qsTilesHueDark.value = hue
+            _qsTilesSatDark.value = sat
+            _qsTilesValDark.value = valFactor
+        } else {
+            _qsTilesHueLight.value = hue
+            _qsTilesSatLight.value = sat
+            _qsTilesValLight.value = valFactor
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(if (isDark) KEY_ELEM_QS_TILES_HUE_DARK else KEY_ELEM_QS_TILES_HUE_LIGHT, hue)
+            .putFloat(if (isDark) KEY_ELEM_QS_TILES_SAT_DARK else KEY_ELEM_QS_TILES_SAT_LIGHT, sat)
+            .putFloat(if (isDark) KEY_ELEM_QS_TILES_VAL_DARK else KEY_ELEM_QS_TILES_VAL_LIGHT, valFactor)
+            .apply()
+    }
+
+    fun setInactiveTilesHsb(context: Context, isDark: Boolean, hue: Float, sat: Float, valFactor: Float) {
+        if (isDark) {
+            _inactiveTilesHueDark.value = hue
+            _inactiveTilesSatDark.value = sat
+            _inactiveTilesValDark.value = valFactor
+        } else {
+            _inactiveTilesHueLight.value = hue
+            _inactiveTilesSatLight.value = sat
+            _inactiveTilesValLight.value = valFactor
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(if (isDark) KEY_ELEM_INACTIVE_TILES_HUE_DARK else KEY_ELEM_INACTIVE_TILES_HUE_LIGHT, hue)
+            .putFloat(if (isDark) KEY_ELEM_INACTIVE_TILES_SAT_DARK else KEY_ELEM_INACTIVE_TILES_SAT_LIGHT, sat)
+            .putFloat(if (isDark) KEY_ELEM_INACTIVE_TILES_VAL_DARK else KEY_ELEM_INACTIVE_TILES_VAL_LIGHT, valFactor)
+            .apply()
+    }
+
+    fun setSlidersHsb(context: Context, isDark: Boolean, hue: Float, sat: Float, valFactor: Float) {
+        if (isDark) {
+            _slidersHueDark.value = hue
+            _slidersSatDark.value = sat
+            _slidersValDark.value = valFactor
+        } else {
+            _slidersHueLight.value = hue
+            _slidersSatLight.value = sat
+            _slidersValLight.value = valFactor
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(if (isDark) KEY_ELEM_SLIDERS_HUE_DARK else KEY_ELEM_SLIDERS_HUE_LIGHT, hue)
+            .putFloat(if (isDark) KEY_ELEM_SLIDERS_SAT_DARK else KEY_ELEM_SLIDERS_SAT_LIGHT, sat)
+            .putFloat(if (isDark) KEY_ELEM_SLIDERS_VAL_DARK else KEY_ELEM_SLIDERS_VAL_LIGHT, valFactor)
+            .apply()
+    }
+
+    fun setMiscElementsHsb(context: Context, isDark: Boolean, hue: Float, sat: Float, valFactor: Float) {
+        if (isDark) {
+            _miscElementsHueDark.value = hue
+            _miscElementsSatDark.value = sat
+            _miscElementsValDark.value = valFactor
+        } else {
+            _miscElementsHueLight.value = hue
+            _miscElementsSatLight.value = sat
+            _miscElementsValLight.value = valFactor
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(if (isDark) KEY_ELEM_MISC_ELEMENTS_HUE_DARK else KEY_ELEM_MISC_ELEMENTS_HUE_LIGHT, hue)
+            .putFloat(if (isDark) KEY_ELEM_MISC_ELEMENTS_SAT_DARK else KEY_ELEM_MISC_ELEMENTS_SAT_LIGHT, sat)
+            .putFloat(if (isDark) KEY_ELEM_MISC_ELEMENTS_VAL_DARK else KEY_ELEM_MISC_ELEMENTS_VAL_LIGHT, valFactor)
+            .apply()
+    }
+
+    fun getSurfaceBgColorTertiary(isDark: Boolean): StateFlow<Boolean> = if (isDark) surfaceBgColorTertiaryDark else surfaceBgColorTertiaryLight
+    fun getPanelContainerColorTertiary(isDark: Boolean): StateFlow<Boolean> = if (isDark) panelContainerColorTertiaryDark else panelContainerColorTertiaryLight
+    fun getHeaderGradientColorTertiary(isDark: Boolean): StateFlow<Boolean> = if (isDark) headerGradientColorTertiaryDark else headerGradientColorTertiaryLight
+    fun getQsTilesColorTertiary(isDark: Boolean): StateFlow<Boolean> = if (isDark) qsTilesColorTertiaryDark else qsTilesColorTertiaryLight
+    fun getInactiveTilesColorTertiary(isDark: Boolean): StateFlow<Boolean> = if (isDark) inactiveTilesColorTertiaryDark else inactiveTilesColorTertiaryLight
+    fun getInactiveTilesColorPrimary(isDark: Boolean): StateFlow<Boolean> = if (isDark) inactiveTilesColorPrimaryDark else inactiveTilesColorPrimaryLight
+    fun getSlidersColorTertiary(isDark: Boolean): StateFlow<Boolean> = if (isDark) slidersColorTertiaryDark else slidersColorTertiaryLight
+    fun getMiscElementsColorTertiary(isDark: Boolean): StateFlow<Boolean> = if (isDark) miscElementsColorTertiaryDark else miscElementsColorTertiaryLight
+
+    fun getSurfaceBgHue(isDark: Boolean): StateFlow<Float> = if (isDark) surfaceBgHueDark else surfaceBgHueLight
+    fun getSurfaceBgSat(isDark: Boolean): StateFlow<Float> = if (isDark) surfaceBgSatDark else surfaceBgSatLight
+    fun getSurfaceBgVal(isDark: Boolean): StateFlow<Float> = if (isDark) surfaceBgValDark else surfaceBgValLight
+
+    fun getPanelContainerHue(isDark: Boolean): StateFlow<Float> = if (isDark) panelContainerHueDark else panelContainerHueLight
+    fun getPanelContainerSat(isDark: Boolean): StateFlow<Float> = if (isDark) panelContainerSatDark else panelContainerSatLight
+    fun getPanelContainerVal(isDark: Boolean): StateFlow<Float> = if (isDark) panelContainerValDark else panelContainerValLight
+
+    fun getHeaderGradientHue(isDark: Boolean): StateFlow<Float> = if (isDark) headerGradientHueDark else headerGradientHueLight
+    fun getHeaderGradientSat(isDark: Boolean): StateFlow<Float> = if (isDark) headerGradientSatDark else headerGradientSatLight
+    fun getHeaderGradientVal(isDark: Boolean): StateFlow<Float> = if (isDark) headerGradientValDark else headerGradientValLight
+
+    fun getQsTilesHue(isDark: Boolean): StateFlow<Float> = if (isDark) qsTilesHueDark else qsTilesHueLight
+    fun getQsTilesSat(isDark: Boolean): StateFlow<Float> = if (isDark) qsTilesSatDark else qsTilesSatLight
+    fun getQsTilesVal(isDark: Boolean): StateFlow<Float> = if (isDark) qsTilesValDark else qsTilesValLight
+
+    fun getInactiveTilesHue(isDark: Boolean): StateFlow<Float> = if (isDark) inactiveTilesHueDark else inactiveTilesHueLight
+    fun getInactiveTilesSat(isDark: Boolean): StateFlow<Float> = if (isDark) inactiveTilesSatDark else inactiveTilesSatLight
+    fun getInactiveTilesVal(isDark: Boolean): StateFlow<Float> = if (isDark) inactiveTilesValDark else inactiveTilesValLight
+
+    fun getSlidersHue(isDark: Boolean): StateFlow<Float> = if (isDark) slidersHueDark else slidersHueLight
+    fun getSlidersSat(isDark: Boolean): StateFlow<Float> = if (isDark) slidersSatDark else slidersSatLight
+    fun getSlidersVal(isDark: Boolean): StateFlow<Float> = if (isDark) slidersValDark else slidersValLight
+
+    fun getMiscElementsHue(isDark: Boolean): StateFlow<Float> = if (isDark) miscElementsHueDark else miscElementsHueLight
+    fun getMiscElementsSat(isDark: Boolean): StateFlow<Float> = if (isDark) miscElementsSatDark else miscElementsSatLight
+    fun getMiscElementsVal(isDark: Boolean): StateFlow<Float> = if (isDark) miscElementsValDark else miscElementsValLight
+
+    fun syncElementColors(context: Context, fromDark: Boolean) {
+        val toDark = !fromDark
+        setSurfaceBgColorTertiary(context, toDark, getSurfaceBgColorTertiary(fromDark).value)
+        setPanelContainerColorTertiary(context, toDark, getPanelContainerColorTertiary(fromDark).value)
+        setHeaderGradientColorTertiary(context, toDark, getHeaderGradientColorTertiary(fromDark).value)
+        setQsTilesColorTertiary(context, toDark, getQsTilesColorTertiary(fromDark).value)
+        setInactiveTilesColorTertiary(context, toDark, getInactiveTilesColorTertiary(fromDark).value)
+        setInactiveTilesColorPrimary(context, toDark, getInactiveTilesColorPrimary(fromDark).value)
+        setSlidersColorTertiary(context, toDark, getSlidersColorTertiary(fromDark).value)
+        setMiscElementsColorTertiary(context, toDark, getMiscElementsColorTertiary(fromDark).value)
+
+        setSurfaceBgHsb(context, toDark, getSurfaceBgHue(fromDark).value, getSurfaceBgSat(fromDark).value, getSurfaceBgVal(fromDark).value)
+        setPanelContainerHsb(context, toDark, getPanelContainerHue(fromDark).value, getPanelContainerSat(fromDark).value, getPanelContainerVal(fromDark).value)
+        setHeaderGradientHsb(context, toDark, getHeaderGradientHue(fromDark).value, getHeaderGradientSat(fromDark).value, getHeaderGradientVal(fromDark).value)
+        setQsTilesHsb(context, toDark, getQsTilesHue(fromDark).value, getQsTilesSat(fromDark).value, getQsTilesVal(fromDark).value)
+        setInactiveTilesHsb(context, toDark, getInactiveTilesHue(fromDark).value, getInactiveTilesSat(fromDark).value, getInactiveTilesVal(fromDark).value)
+        setSlidersHsb(context, toDark, getSlidersHue(fromDark).value, getSlidersSat(fromDark).value, getSlidersVal(fromDark).value)
+        setMiscElementsHsb(context, toDark, getMiscElementsHue(fromDark).value, getMiscElementsSat(fromDark).value, getMiscElementsVal(fromDark).value)
+    }
+
     fun setShowQsTileGradient(context: Context, enabled: Boolean) {
         _showQsTileGradient.value = enabled
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -1277,6 +2077,35 @@ object PanelPreferences {
         _hideDateInExpanded.value = hide
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_HIDE_DATE_IN_EXPANDED, hide).apply()
+    }
+
+    fun setDisableLabelsInExpanded(context: Context, disabled: Boolean) {
+        _disableLabelsInExpanded.value = disabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_DISABLE_LABELS_IN_EXPANDED, disabled).apply()
+    }
+
+    fun isFeaturePinned(featureId: String): Boolean = _pinnedFeatures.value.contains(featureId)
+
+    fun toggleFeaturePinned(context: Context, featureId: String): Boolean {
+        val current = _pinnedFeatures.value.toMutableSet()
+        val isNowPinned = if (current.contains(featureId)) {
+            current.remove(featureId)
+            false
+        } else {
+            current.add(featureId)
+            true
+        }
+        _pinnedFeatures.value = current
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putStringSet(KEY_PINNED_FEATURES, current).apply()
+        return isNowPinned
+    }
+
+    fun setPinnedFeatures(context: Context, featureIds: Set<String>) {
+        _pinnedFeatures.value = featureIds
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putStringSet(KEY_PINNED_FEATURES, featureIds).apply()
     }
 
     fun setWavyThickness(context: Context, value: Float) {
@@ -1517,12 +2346,6 @@ object PanelPreferences {
         }
     }
 
-    fun setQsBackgroundCorner(context: Context, corner: Float) {
-        _qsBackgroundCorner.value = corner
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putFloat(KEY_QS_BACKGROUND_CORNER, corner).apply()
-    }
-
     fun setQsBackgroundColor(context: Context, color: Int?) {
         _qsBackgroundColor.value = color
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -1533,5 +2356,23 @@ object PanelPreferences {
             editor.remove(KEY_QS_BACKGROUND_COLOR)
         }
         editor.apply()
+    }
+
+    fun setQsPanelBackgroundColor(context: Context, color: Int?) {
+        _qsPanelBackgroundColor.value = color
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val editor = prefs.edit()
+        if (color != null) {
+            editor.putInt(KEY_QS_PANEL_BACKGROUND_COLOR, color)
+        } else {
+            editor.remove(KEY_QS_PANEL_BACKGROUND_COLOR)
+        }
+        editor.apply()
+    }
+
+    fun setQsBackgroundCorner(context: Context, corner: Float) {
+        _qsBackgroundCorner.value = corner
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_QS_BACKGROUND_CORNER, corner).apply()
     }
 }

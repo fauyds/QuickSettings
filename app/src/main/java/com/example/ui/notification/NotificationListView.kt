@@ -451,26 +451,60 @@ class NotificationListView @JvmOverloads constructor(
         notifications: List<NotificationItem>,
         isPermissionGranted: Boolean,
         isDark: Boolean,
-        primaryColor: Int? = null
+        primaryColor: Int? = null,
+        panelCardBackgroundColor: Int? = null
     ) {
         val density = context.resources.displayMetrics.density
 
+        val disableNotifMonet = PanelPreferences.disableMonetNotifText.value
+
+        val showMonetSurface = PanelPreferences.showMonetSurfaceBackground.value
+
         // 1. Resolve Monet Dynamic Colors
         val primaryAccent = primaryColor ?: MonetThemeHelper.getPrimaryAccent(context, isDark)
-        val textPrimary = MonetThemeHelper.getTextPrimary(context, isDark)
-        val textSecondary = MonetThemeHelper.getTextSecondary(context, isDark)
+        val textPrimary = if (disableNotifMonet) {
+            if (!showMonetSurface) {
+                android.graphics.Color.WHITE
+            } else {
+                if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
+            }
+        } else {
+            MonetThemeHelper.getTextPrimary(context, isDark)
+        }
+        val textSecondary = if (disableNotifMonet) {
+            if (!showMonetSurface) {
+                android.graphics.Color.WHITE
+            } else {
+                if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
+            }
+        } else {
+            MonetThemeHelper.getTextSecondary(context, isDark)
+        }
         val onPrimary = MonetThemeHelper.getOnPrimaryText(context, isDark)
 
         adapter?.isDark = isDark
         adapter?.customPrimaryColor = primaryAccent
+        adapter?.customCardBackgroundColor = panelCardBackgroundColor
+        adapter?.disableMonetNotifText = disableNotifMonet
 
-        // 2. Style Header Row
-        tvHeaderTitle.setTextColor(primaryAccent)
-        ivHeaderIcon.setColorFilter(primaryAccent)
-        ivSettingsBtn.setColorFilter(primaryAccent)
+        // 2. Style Header Row ("Notifications" section label)
+        val headerLabelColor = if (disableNotifMonet) {
+            if (!showMonetSurface) {
+                android.graphics.Color.WHITE
+            } else {
+                if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
+            }
+        } else {
+            primaryAccent
+        }
+        tvHeaderTitle.setTextColor(headerLabelColor)
+        ivHeaderIcon.setColorFilter(headerLabelColor)
+        ivSettingsBtn.setColorFilter(headerLabelColor)
 
         // 3. Style Permission Banner Card
-        flPermissionCard.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, PanelPreferences.qsBackgroundCorner.value * density)
+        val cardRadius = PanelPreferences.qsBackgroundCorner.value * density
+        val cardBg = panelCardBackgroundColor ?: MonetThemeHelper.getCardBackground(context, isDark)
+        flPermissionCard.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, cardRadius, customBgColor = cardBg)
         ivPermissionIcon.setColorFilter(MonetThemeHelper.getTertiaryAccent(context, isDark))
         tvPermissionTitle.setTextColor(textPrimary)
         tvPermissionSub.setTextColor(textSecondary)
@@ -478,12 +512,7 @@ class NotificationListView @JvmOverloads constructor(
         btnEnablePermission.setTextColor(onPrimary)
 
         // 4. Style Empty State Card
-        flEmptyCard.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, PanelPreferences.qsBackgroundCorner.value * density)
-        // Apply custom color to background cards if set
-        PanelPreferences.qsBackgroundColor.value?.let { customColor ->
-            (flPermissionCard.background as? android.graphics.drawable.RippleDrawable)?.setColor(android.content.res.ColorStateList.valueOf(customColor))
-            (flEmptyCard.background as? android.graphics.drawable.RippleDrawable)?.setColor(android.content.res.ColorStateList.valueOf(customColor))
-        }
+        flEmptyCard.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, cardRadius, customBgColor = cardBg)
         ivEmptyIcon.setColorFilter(textSecondary)
         tvEmptyText.setTextColor(textSecondary)
 

@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
 import android.os.Build
+import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.ContextCompat
 
 /**
@@ -36,41 +37,78 @@ object MonetThemeHelper {
         return if (isDark) Color.parseColor("#CCC2DC") else Color.parseColor("#625B71")
     }
 
+    fun desaturateAndSoften(colorInt: Int, isDark: Boolean): Int {
+        val hsv = FloatArray(3)
+        Color.colorToHSV(colorInt, hsv)
+        hsv[1] = (hsv[1] * 0.50f).coerceIn(0f, 1f)
+        if (isDark) {
+            hsv[2] = hsv[2].coerceAtMost(0.78f)
+        } else {
+            hsv[2] = (hsv[2] * 0.90f).coerceIn(0f, 1f)
+        }
+        return Color.HSVToColor(Color.alpha(colorInt), hsv)
+    }
+
     fun getTertiaryAccent(context: Context, isDark: Boolean): Int {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
                 val resId = if (isDark) android.R.color.system_accent3_200 else android.R.color.system_accent3_600
                 val color = ContextCompat.getColor(context, resId)
-                if (color != 0) return color
+                if (color != 0) return desaturateAndSoften(color, isDark)
             } catch (_: Throwable) {}
         }
-        return if (isDark) Color.parseColor("#EFB8C8") else Color.parseColor("#7D5260")
+        val fallback = if (isDark) Color.parseColor("#CF889A") else Color.parseColor("#7D4E62")
+        return desaturateAndSoften(fallback, isDark)
+    }
+
+    fun brightenColor(colorInt: Int, isDark: Boolean): Int {
+        val percent = if (isDark) 0.10f else 0.05f
+        val r = Color.red(colorInt) / 255f
+        val g = Color.green(colorInt) / 255f
+        val b = Color.blue(colorInt) / 255f
+        val factor = 1f + percent
+        val scaledR = (r * factor).coerceIn(0f, 1f)
+        val scaledG = (g * factor).coerceIn(0f, 1f)
+        val scaledB = (b * factor).coerceIn(0f, 1f)
+        val blendR = (r + (1f - r) * percent).coerceIn(0f, 1f)
+        val blendG = (g + (1f - g) * percent).coerceIn(0f, 1f)
+        val blendB = (b + (1f - b) * percent).coerceIn(0f, 1f)
+        val newR = (Math.max(scaledR, blendR) * 255f).toInt().coerceIn(0, 255)
+        val newG = (Math.max(scaledG, blendG) * 255f).toInt().coerceIn(0, 255)
+        val newB = (Math.max(scaledB, blendB) * 255f).toInt().coerceIn(0, 255)
+        val a = Color.alpha(colorInt)
+        return Color.argb(a, newR, newG, newB)
     }
 
     fun getCardBackground(context: Context, isDark: Boolean): Int {
+        val customColor = com.example.data.PanelPreferences.qsPanelBackgroundColor.value
+            ?: com.example.data.PanelPreferences.qsBackgroundColor.value
         val isPanelTertiary = com.example.data.PanelPreferences.panelContainerColorTertiary.value
-        val baseColor = if (isPanelTertiary) {
-            getTertiaryAccent(context, isDark)
+        val baseColor = if (customColor != null) {
+            customColor
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
-                val resId = if (isDark) android.R.color.system_neutral2_800 else android.R.color.system_neutral2_100
-                val color = ContextCompat.getColor(context, resId)
-                if (color != 0) color else (if (isDark) Color.parseColor("#2B2930") else Color.parseColor("#F3EDF7"))
+                val scheme = if (isDark) androidx.compose.material3.dynamicDarkColorScheme(context)
+                else androidx.compose.material3.dynamicLightColorScheme(context)
+                val color = if (isPanelTertiary) desaturateAndSoften(scheme.tertiaryContainer.toArgb(), isDark) else scheme.surfaceVariant.toArgb()
+                color
             } catch (_: Throwable) {
-                if (isDark) Color.parseColor("#2B2930") else Color.parseColor("#F3EDF7")
+                val scheme = if (isDark) com.example.ui.theme.ExpressiveDarkColorScheme else com.example.ui.theme.ExpressiveLightColorScheme
+                val color = if (isPanelTertiary) desaturateAndSoften(scheme.tertiaryContainer.toArgb(), isDark) else scheme.surfaceVariant.toArgb()
+                color
             }
         } else {
-            if (isDark) Color.parseColor("#2B2930") else Color.parseColor("#F3EDF7")
+            val scheme = if (isDark) com.example.ui.theme.ExpressiveDarkColorScheme else com.example.ui.theme.ExpressiveLightColorScheme
+            val color = if (isPanelTertiary) desaturateAndSoften(scheme.tertiaryContainer.toArgb(), isDark) else scheme.surfaceVariant.toArgb()
+            color
         }
 
-        if (com.example.data.PanelPreferences.showMonetSurfaceBackground.value && isDark) {
-            val r = (Color.red(baseColor) * 1.50f).toInt().coerceIn(0, 255)
-            val g = (Color.green(baseColor) * 1.50f).toInt().coerceIn(0, 255)
-            val b = (Color.blue(baseColor) * 1.50f).toInt().coerceIn(0, 255)
-            return Color.rgb(r, g, b)
+        val isSolidMonet = com.example.data.PanelPreferences.showMonetSurfaceBackground.value
+        return if (isSolidMonet) {
+            brightenColor(baseColor, isDark)
+        } else {
+            baseColor
         }
-
-        return baseColor
     }
 
     fun getCardOutline(context: Context, isDark: Boolean): Int {
@@ -147,9 +185,10 @@ object MonetThemeHelper {
         context: Context,
         isDark: Boolean,
         radii: FloatArray,
-        showStroke: Boolean = false
+        showStroke: Boolean = false,
+        customBgColor: Int? = null
     ): RippleDrawable {
-        val bgColor = getCardBackground(context, isDark)
+        val bgColor = customBgColor ?: getCardBackground(context, isDark)
         val outlineColor = getCardOutline(context, isDark)
         val rippleColor = if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#22000000")
 
@@ -178,10 +217,11 @@ object MonetThemeHelper {
         context: Context,
         isDark: Boolean,
         cornerRadiusPx: Float,
-        showStroke: Boolean = false
+        showStroke: Boolean = false,
+        customBgColor: Int? = null
     ): RippleDrawable {
         val radii = FloatArray(8) { cornerRadiusPx }
-        return createMonetCardDrawable(context, isDark, radii, showStroke)
+        return createMonetCardDrawable(context, isDark, radii, showStroke, customBgColor)
     }
 
     /**

@@ -88,6 +88,17 @@ data class QsOverlaySurfaceConfig(
     val showMonetSurfaceBackground: Boolean = false,
     val headerGradientColorTertiary: Boolean = false,
     val slidersColorTertiary: Boolean = false,
+    val slidersColorTertiaryLight: Boolean = false,
+    val slidersColorTertiaryDark: Boolean = false,
+    val slidersHue: Float = 0f,
+    val slidersSat: Float = 1f,
+    val slidersVal: Float = 1f,
+    val slidersHueLight: Float = 0f,
+    val slidersSatLight: Float = 1f,
+    val slidersValLight: Float = 1f,
+    val slidersHueDark: Float = 0f,
+    val slidersSatDark: Float = 1f,
+    val slidersValDark: Float = 1f,
     val qsTilesColorTertiary: Boolean = false,
     val surfaceBgColorTertiary: Boolean = false,
     val panelContainerColorTertiary: Boolean = false,
@@ -98,8 +109,23 @@ data class QsOverlaySurfaceConfig(
     val straightCornerRadius: Float = 4f,
     val straightThumbRadius: Float = 6f,
     val a12InactiveThickness: Float = 16f,
-    val a12CornerRadius: Float = 8f
+    val a12CornerRadius: Float = 8f,
+    val qsPanelBackgroundColor: Int? = null
 ) {
+    @Composable
+    fun getSliderElementColor(isDark: Boolean): Color {
+        val isTertiary = if (isDark) slidersColorTertiaryDark else slidersColorTertiaryLight
+        val baseColor = if (isTertiary) {
+            MaterialTheme.colorScheme.tertiary
+        } else {
+            MaterialTheme.colorScheme.primary
+        }
+        val hue = if (isDark) slidersHueDark else slidersHueLight
+        val sat = if (isDark) slidersSatDark else slidersSatLight
+        val valFactor = if (isDark) slidersValDark else slidersValLight
+        return com.example.ui.theme.applyHsvAdjustments(baseColor, hue, sat, valFactor)
+    }
+
     companion object {
         @Composable
         fun collectFromCurrentState(): QsOverlaySurfaceConfig {
@@ -128,6 +154,18 @@ data class QsOverlaySurfaceConfig(
 
             val headerGradTertiary by PanelPreferences.headerGradientColorTertiary.collectAsState()
             val slidersTertiary by PanelPreferences.slidersColorTertiary.collectAsState()
+            val slidersTertiaryLight by PanelPreferences.slidersColorTertiaryLight.collectAsState()
+            val slidersTertiaryDark by PanelPreferences.slidersColorTertiaryDark.collectAsState()
+            val slidersHue by PanelPreferences.slidersHue.collectAsState()
+            val slidersSat by PanelPreferences.slidersSat.collectAsState()
+            val slidersVal by PanelPreferences.slidersVal.collectAsState()
+            val slidersHueLight by PanelPreferences.slidersHueLight.collectAsState()
+            val slidersSatLight by PanelPreferences.slidersSatLight.collectAsState()
+            val slidersValLight by PanelPreferences.slidersValLight.collectAsState()
+            val slidersHueDark by PanelPreferences.slidersHueDark.collectAsState()
+            val slidersSatDark by PanelPreferences.slidersSatDark.collectAsState()
+            val slidersValDark by PanelPreferences.slidersValDark.collectAsState()
+
             val qsTilesTertiary by PanelPreferences.qsTilesColorTertiary.collectAsState()
             val surfaceBgTertiary by PanelPreferences.surfaceBgColorTertiary.collectAsState()
             val panelContainerTertiary by PanelPreferences.panelContainerColorTertiary.collectAsState()
@@ -142,6 +180,7 @@ data class QsOverlaySurfaceConfig(
 
             val a12InactThick by PanelPreferences.a12InactiveTrackThickness.collectAsState()
             val a12Corner by PanelPreferences.a12CornerRadius.collectAsState()
+            val qsPanelBg by PanelPreferences.qsPanelBackgroundColor.collectAsState()
 
             return QsOverlaySurfaceConfig(
                 themeMode = themeMode.id,
@@ -166,6 +205,17 @@ data class QsOverlaySurfaceConfig(
                 showMonetSurfaceBackground = showMonetSurf,
                 headerGradientColorTertiary = headerGradTertiary,
                 slidersColorTertiary = slidersTertiary,
+                slidersColorTertiaryLight = slidersTertiaryLight,
+                slidersColorTertiaryDark = slidersTertiaryDark,
+                slidersHue = slidersHue,
+                slidersSat = slidersSat,
+                slidersVal = slidersVal,
+                slidersHueLight = slidersHueLight,
+                slidersSatLight = slidersSatLight,
+                slidersValLight = slidersValLight,
+                slidersHueDark = slidersHueDark,
+                slidersSatDark = slidersSatDark,
+                slidersValDark = slidersValDark,
                 qsTilesColorTertiary = qsTilesTertiary,
                 surfaceBgColorTertiary = surfaceBgTertiary,
                 panelContainerColorTertiary = panelContainerTertiary,
@@ -176,7 +226,8 @@ data class QsOverlaySurfaceConfig(
                 straightCornerRadius = straightCorner,
                 straightThumbRadius = straightThumb,
                 a12InactiveThickness = a12InactThick,
-                a12CornerRadius = a12Corner
+                a12CornerRadius = a12Corner,
+                qsPanelBackgroundColor = qsPanelBg
             )
         }
 
@@ -214,6 +265,17 @@ data class QsOverlaySurfaceConfig(
                     showMonetSurfaceBackground = json.optBoolean("show_monet_surface_background", false),
                     headerGradientColorTertiary = json.optBoolean("elem_header_gradient_tertiary", false),
                     slidersColorTertiary = json.optBoolean("elem_sliders_tertiary", false),
+                    slidersColorTertiaryLight = json.optBoolean("elem_sliders_tertiary_light", json.optBoolean("elem_sliders_tertiary", false)),
+                    slidersColorTertiaryDark = json.optBoolean("elem_sliders_tertiary_dark", json.optBoolean("elem_sliders_tertiary", false)),
+                    slidersHue = json.optDouble("elem_sliders_hue", 0.0).toFloat(),
+                    slidersSat = json.optDouble("elem_sliders_sat", 1.0).toFloat(),
+                    slidersVal = json.optDouble("elem_sliders_val", 1.0).toFloat(),
+                    slidersHueLight = json.optDouble("elem_sliders_hue_light", json.optDouble("elem_sliders_hue", 0.0)).toFloat(),
+                    slidersSatLight = json.optDouble("elem_sliders_sat_light", json.optDouble("elem_sliders_sat", 1.0)).toFloat(),
+                    slidersValLight = json.optDouble("elem_sliders_val_light", json.optDouble("elem_sliders_val", 1.0)).toFloat(),
+                    slidersHueDark = json.optDouble("elem_sliders_hue_dark", json.optDouble("elem_sliders_hue", 0.0)).toFloat(),
+                    slidersSatDark = json.optDouble("elem_sliders_sat_dark", json.optDouble("elem_sliders_sat", 1.0)).toFloat(),
+                    slidersValDark = json.optDouble("elem_sliders_val_dark", json.optDouble("elem_sliders_val", 1.0)).toFloat(),
                     qsTilesColorTertiary = json.optBoolean("elem_qs_tiles_tertiary", false),
                     surfaceBgColorTertiary = json.optBoolean("elem_surface_bg_tertiary", false),
                     panelContainerColorTertiary = json.optBoolean("elem_panel_container_tertiary", false),
@@ -254,26 +316,34 @@ fun QsOverlaySurface(
     }
 
     // Panel & Surface Colors matching QuickSettingsPanel.kt & Color.kt
-    val basePanelBg = if (isPanelDark) Color(0xFF14171A) else Color(0xFFF3F4F6)
+    val basePanelBg = config.qsPanelBackgroundColor?.let { Color(it) } ?: if (isPanelDark) Color(0xFF14171A) else Color(0xFFF3F4F6)
     val surfaceContainerColor = if (config.surfaceBgColorTertiary) {
         MaterialTheme.colorScheme.tertiaryContainer
     } else {
         MaterialTheme.colorScheme.surfaceVariant
     }
 
-    val monetFactor = if (isPanelDark) 0.90f else 0.87f
+    val baseMonetColor = config.qsPanelBackgroundColor?.let { Color(it) } ?: surfaceContainerColor
     val monetSurfaceBg = if (config.showMonetSurfaceBackground) {
+        val scaledR = (baseMonetColor.red * 1.10f).coerceIn(0f, 1f)
+        val scaledG = (baseMonetColor.green * 1.10f).coerceIn(0f, 1f)
+        val scaledB = (baseMonetColor.blue * 1.10f).coerceIn(0f, 1f)
+        val blendR = (baseMonetColor.red + (1f - baseMonetColor.red) * 0.10f).coerceIn(0f, 1f)
+        val blendG = (baseMonetColor.green + (1f - baseMonetColor.green) * 0.10f).coerceIn(0f, 1f)
+        val blendB = (baseMonetColor.blue + (1f - baseMonetColor.blue) * 0.10f).coerceIn(0f, 1f)
         Color(
-            red = (surfaceContainerColor.red * monetFactor).coerceIn(0f, 1f),
-            green = (surfaceContainerColor.green * monetFactor).coerceIn(0f, 1f),
-            blue = (surfaceContainerColor.blue * monetFactor).coerceIn(0f, 1f),
-            alpha = 1.0f
+            red = maxOf(scaledR, blendR),
+            green = maxOf(scaledG, blendG),
+            blue = maxOf(scaledB, blendB),
+            alpha = baseMonetColor.alpha
         )
     } else {
         basePanelBg
     }
 
-    val cardContainerBg = if (config.panelContainerColorTertiary) {
+    val cardContainerBg = config.qsPanelBackgroundColor?.let { Color(it) } ?: if (config.showMonetSurfaceBackground) {
+        monetSurfaceBg
+    } else if (config.panelContainerColorTertiary) {
         MaterialTheme.colorScheme.tertiaryContainer
     } else {
         if (isPanelDark) {
@@ -290,27 +360,9 @@ fun QsOverlaySurface(
     val subtextColor = if (isPanelDark) Color(0xFF94A3B8) else Color(0xFF64748B)
 
     // Slider settings & colors following QuickSettingsPanel.kt
-    val sliderAccentColor = if (config.slidersColorTertiary) {
-        MaterialTheme.colorScheme.tertiary
-    } else {
-        MaterialTheme.colorScheme.primary
-    }
+    val sliderAccentColor = config.getSliderElementColor(isPanelDark)
 
-    val sliderInactiveColor = if (isPanelDark) {
-        Color(
-            red = (MaterialTheme.colorScheme.surfaceVariant.red * 0.85f).coerceIn(0f, 1f),
-            green = (MaterialTheme.colorScheme.surfaceVariant.green * 0.85f).coerceIn(0f, 1f),
-            blue = (MaterialTheme.colorScheme.surfaceVariant.blue * 0.85f).coerceIn(0f, 1f),
-            alpha = 1.0f
-        )
-    } else {
-        Color(
-            red = (MaterialTheme.colorScheme.surfaceVariant.red + (1f - MaterialTheme.colorScheme.surfaceVariant.red) * 0.3f).coerceIn(0f, 1f),
-            green = (MaterialTheme.colorScheme.surfaceVariant.green + (1f - MaterialTheme.colorScheme.surfaceVariant.green) * 0.3f).coerceIn(0f, 1f),
-            blue = (MaterialTheme.colorScheme.surfaceVariant.blue + (1f - MaterialTheme.colorScheme.surfaceVariant.blue) * 0.3f).coerceIn(0f, 1f),
-            alpha = 1.0f
-        )
-    }
+    val sliderInactiveColor = com.example.ui.theme.getInactiveTilesElementColor(isPanelDark)
 
     val resolvedSliderStyle = if (config.sliderSyncAll) config.progressBarStyle else config.brightnessSliderStyle
 
@@ -715,7 +767,7 @@ private fun SharedQsTileView(
     subtextColor: Color,
     modifier: Modifier = Modifier
 ) {
-    val inactiveBg = if (isPanelDark) Color(0xFF262C34) else Color(0xFFEBF0F6)
+    val inactiveBg = com.example.ui.theme.getInactiveTilesElementColor(isPanelDark)
     val inactiveIconTint = if (isPanelDark) Color.White.copy(alpha = 0.90f) else Color(0xFF1E293B)
 
     val gradientBrush = remember(tileAccentColor, tertiaryColor) {

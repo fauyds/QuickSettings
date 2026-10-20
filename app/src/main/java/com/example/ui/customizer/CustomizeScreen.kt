@@ -38,6 +38,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.animation.animateContentSize
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,12 +70,30 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
             // ==========================================
             // SCREEN 1: CATEGORY BUTTONS HUB (NO TABS)
             // ==========================================
+            val pinnedIds by com.example.data.PanelPreferences.pinnedFeatures.collectAsState()
+            val allCategories = listOf(
+                CustomizeCategory.HEADS_UP,
+                CustomizeCategory.BASIC,
+                CustomizeCategory.QS_DESIGN,
+                CustomizeCategory.QS_TWEAKS,
+                CustomizeCategory.THEMES,
+                CustomizeCategory.MISCELLANEOUS,
+                CustomizeCategory.ABOUT
+            )
+            val pinnedCategories = remember(pinnedIds) {
+                allCategories.filter { pinnedIds.contains("cat_${it.name.lowercase()}") }
+            }
+            val unpinnedCategories = remember(pinnedIds) {
+                allCategories.filter { !pinnedIds.contains("cat_${it.name.lowercase()}") }
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing) // 4dp padding between cards
+                    .verticalScroll(rememberScrollState())
+                    .animateContentSize(),
+                verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing)
             ) {
                 // Header
                 Column(
@@ -91,62 +111,54 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "Select a category to customize Quick Settings",
+                        text = "Select a category to customize Quick Settings (Hold any category or option to pin it)",
                         fontSize = 13.sp,
                         lineHeight = 18.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
-                // 8 Category Cards with 4dp spacing & 5dp inside corners
-                CategoryButton(
-                    category = CustomizeCategory.HEADS_UP,
-                    itemCount = 1,
-                    shape = CustomizeCardShapes.TopCard,
-                    onClick = { selectedCategory = CustomizeCategory.HEADS_UP }
-                )
+                if (pinnedCategories.isNotEmpty()) {
+                    Text(
+                        text = "PINNED CATEGORIES",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.1.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp, start = 4.dp)
+                    )
+                    pinnedCategories.forEachIndexed { index, category ->
+                        val cardShape = CustomizeCardShapes.getShapeForIndex(index, pinnedCategories.size)
+                        CategoryButton(
+                            category = category,
+                            itemCount = 1,
+                            shape = cardShape,
+                            onClick = { selectedCategory = category }
+                        )
+                    }
+                }
 
-                CategoryButton(
-                    category = CustomizeCategory.BASIC,
-                    itemCount = 1,
-                    shape = CustomizeCardShapes.CenterCard,
-                    onClick = { selectedCategory = CustomizeCategory.BASIC }
-                )
-
-                CategoryButton(
-                    category = CustomizeCategory.QS_DESIGN,
-                    itemCount = 7,
-                    shape = CustomizeCardShapes.CenterCard,
-                    onClick = { selectedCategory = CustomizeCategory.QS_DESIGN }
-                )
-
-                CategoryButton(
-                    category = CustomizeCategory.QS_TWEAKS,
-                    itemCount = 5,
-                    shape = CustomizeCardShapes.CenterCard,
-                    onClick = { selectedCategory = CustomizeCategory.QS_TWEAKS }
-                )
-
-                CategoryButton(
-                    category = CustomizeCategory.THEMES,
-                    itemCount = 0,
-                    shape = CustomizeCardShapes.CenterCard,
-                    onClick = { selectedCategory = CustomizeCategory.THEMES }
-                )
-
-                CategoryButton(
-                    category = CustomizeCategory.MISCELLANEOUS,
-                    itemCount = 8,
-                    shape = CustomizeCardShapes.CenterCard,
-                    onClick = { selectedCategory = CustomizeCategory.MISCELLANEOUS }
-                )
-
-                CategoryButton(
-                    category = CustomizeCategory.ABOUT,
-                    itemCount = 1,
-                    shape = CustomizeCardShapes.BottomCard,
-                    onClick = { selectedCategory = CustomizeCategory.ABOUT }
-                )
+                if (unpinnedCategories.isNotEmpty()) {
+                    if (pinnedCategories.isNotEmpty()) {
+                        Text(
+                            text = "ALL CATEGORIES",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.1.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 10.dp, bottom = 2.dp, start = 4.dp)
+                        )
+                    }
+                    unpinnedCategories.forEachIndexed { index, category ->
+                        val cardShape = CustomizeCardShapes.getShapeForIndex(index, unpinnedCategories.size)
+                        CategoryButton(
+                            category = category,
+                            itemCount = 1,
+                            shape = cardShape,
+                            onClick = { selectedCategory = category }
+                        )
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(48.dp))
             }
@@ -276,16 +288,13 @@ fun CategoryButton(
     modifier: Modifier = Modifier,
     shape: Shape = CustomizeCardShapes.SingleCard
 ) {
-    val isDark = com.example.ui.theme.LocalIsDarkTheme.current
-    Card(
-        onClick = onClick,
+    val categoryId = "cat_${category.name.lowercase()}"
+    SettingsCard(
         shape = shape,
-        colors = CardDefaults.cardColors(
-            containerColor = com.example.ui.theme.getSettingsCardBackgroundColor(isDark)
-        ),
-        modifier = modifier
-            .fillMaxWidth()
-            .testTag("category_btn_${category.name.lowercase()}")
+        onClick = onClick,
+        featureId = categoryId,
+        featureTitle = category.title,
+        modifier = modifier.testTag("category_btn_${category.name.lowercase()}")
     ) {
         Row(
             modifier = Modifier
@@ -294,7 +303,7 @@ fun CategoryButton(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Icon in circle on the left reverted back
+            // Icon in circle on the left
             Box(
                 modifier = Modifier
                     .size(42.dp)

@@ -36,7 +36,50 @@ object NoOpIndication : IndicationNodeFactory {
     override fun hashCode(): Int = System.identityHashCode(this)
 }
 
-private val ExpressiveDarkColorScheme = darkColorScheme(
+/**
+ * Desaturates and softens tertiary accent colors so they are elegant, non-glaring, and pleasant.
+ */
+fun softenTertiaryColor(color: Color, isDark: Boolean): Color {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(
+        android.graphics.Color.argb(
+            (color.alpha * 255).toInt().coerceIn(0, 255),
+            (color.red * 255).toInt().coerceIn(0, 255),
+            (color.green * 255).toInt().coerceIn(0, 255),
+            (color.blue * 255).toInt().coerceIn(0, 255)
+        ),
+        hsv
+    )
+    hsv[1] = (hsv[1] * 0.50f).coerceIn(0f, 1f)
+    if (isDark) {
+        hsv[2] = hsv[2].coerceAtMost(0.78f)
+    } else {
+        hsv[2] = (hsv[2] * 0.90f).coerceIn(0f, 1f)
+    }
+    return Color(android.graphics.Color.HSVToColor((color.alpha * 255).toInt().coerceIn(0, 255), hsv))
+}
+
+fun softenTertiaryContainerColor(color: Color, isDark: Boolean): Color {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(
+        android.graphics.Color.argb(
+            (color.alpha * 255).toInt().coerceIn(0, 255),
+            (color.red * 255).toInt().coerceIn(0, 255),
+            (color.green * 255).toInt().coerceIn(0, 255),
+            (color.blue * 255).toInt().coerceIn(0, 255)
+        ),
+        hsv
+    )
+    hsv[1] = (hsv[1] * 0.45f).coerceIn(0f, 1f)
+    if (isDark) {
+        hsv[2] = hsv[2].coerceIn(0.18f, 0.32f)
+    } else {
+        hsv[2] = hsv[2].coerceIn(0.84f, 0.92f)
+    }
+    return Color(android.graphics.Color.HSVToColor((color.alpha * 255).toInt().coerceIn(0, 255), hsv))
+}
+
+internal val ExpressiveDarkColorScheme = darkColorScheme(
     primary = DarkMonetPrimary,
     onPrimary = DarkMonetOnPrimary,
     primaryContainer = DarkMonetPrimaryContainer,
@@ -61,7 +104,7 @@ private val ExpressiveDarkColorScheme = darkColorScheme(
     outlineVariant = Color(0xFF2D3748)
 )
 
-private val ExpressiveLightColorScheme = lightColorScheme(
+internal val ExpressiveLightColorScheme = lightColorScheme(
     primary = LightMonetPrimary,
     onPrimary = LightMonetOnPrimary,
     primaryContainer = LightMonetPrimaryContainer,
@@ -70,10 +113,10 @@ private val ExpressiveLightColorScheme = lightColorScheme(
     onSecondary = Color(0xFFFFFFFF),
     secondaryContainer = Color(0xFFBEE9FF),
     onSecondaryContainer = Color(0xFF001F2A),
-    tertiary = Color(0xFF984061),
+    tertiary = Color(0xFF7D4E62),
     onTertiary = Color(0xFFFFFFFF),
-    tertiaryContainer = Color(0xFFFFD9E2),
-    onTertiaryContainer = Color(0xFF3E001D),
+    tertiaryContainer = Color(0xFFE8D5DC),
+    onTertiaryContainer = Color(0xFF381B26),
     background = Color(0xFFEBF3F2),
     onBackground = Color(0xFF0F172A),
     surface = Color(0xFFE4F0EF),
@@ -117,13 +160,22 @@ fun QuickPanelTheme(
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val base = if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            val softenedT = softenTertiaryColor(base.tertiary, isDark)
+            val softenedTC = softenTertiaryContainerColor(base.tertiaryContainer, isDark)
             if (isDark) {
                 base.copy(
+                    tertiary = softenedT,
+                    tertiaryContainer = softenedTC,
                     background = DarkUiBackground,
                     surface = base.surface,
                     surfaceVariant = base.surfaceVariant
                 )
-            } else base
+            } else {
+                base.copy(
+                    tertiary = softenedT,
+                    tertiaryContainer = softenedTC
+                )
+            }
         }
         isDark -> ExpressiveDarkColorScheme
         else -> ExpressiveLightColorScheme

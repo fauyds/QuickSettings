@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TouchApp
@@ -43,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -70,77 +72,88 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
         kotlinx.coroutines.flow.MutableStateFlow(enableSystemHeadsUp)
     }).collectAsState()
 
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing)
-    ) {
-        // 1. Master Toggle Card
-        SettingsCard(
-            shape = CustomizeCardShapes.TopCard,
-            modifier = Modifier.testTag("heads_up_overlay_engine_card")
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+    val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.HEADS_UP, context).collectAsState()
+
+    val masterToggleCard = @Composable {
+        PinnableCardWrapper("heads_up_overlay_engine_card", CustomizeCategory.HEADS_UP) {
+            SettingsCard(
+                shape = CustomizeCardShapes.TopCard,
+                modifier = Modifier.testTag("heads_up_overlay_engine_card")
             ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(colorScheme.primaryContainer),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.NotificationsActive,
-                            contentDescription = null,
-                            tint = colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.NotificationsActive,
+                                contentDescription = null,
+                                tint = colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = "Custom Heads-Up Overlay",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                style = TextStyle(
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                    lineHeightStyle = LineHeightStyle(
+                                        alignment = LineHeightStyle.Alignment.Center,
+                                        trim = LineHeightStyle.Trim.Both
+                                    )
+                                ),
+                                color = colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Lightweight top overlay for high-priority notifications with direct QS shade swipe trigger.",
+                                fontSize = 11.sp,
+                                style = TextStyle(
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                    lineHeightStyle = LineHeightStyle(
+                                        alignment = LineHeightStyle.Alignment.Center,
+                                        trim = LineHeightStyle.Trim.Both
+                                    )
+                                ),
+                                color = colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
-                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                        Text(
-                            text = "Custom Heads-Up Overlay",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Lightweight top overlay for high-priority notifications with direct QS shade swipe trigger.",
-                            fontSize = 11.sp,
-                            lineHeight = 14.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Switch(
+                        checked = enableHeadsUpOverlay,
+                        onCheckedChange = { PanelPreferences.setEnableHeadsUpOverlay(context, it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = colorScheme.onPrimary,
+                            checkedTrackColor = colorScheme.primary,
+                            uncheckedThumbColor = colorScheme.outline,
+                            uncheckedTrackColor = screenBg
+                        ),
+                        modifier = Modifier.testTag("enable_heads_up_toggle")
+                    )
                 }
-
-                Switch(
-                    checked = enableHeadsUpOverlay,
-                    onCheckedChange = { PanelPreferences.setEnableHeadsUpOverlay(context, it) },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = colorScheme.onPrimary,
-                        checkedTrackColor = colorScheme.primary,
-                        uncheckedThumbColor = colorScheme.outline,
-                        uncheckedTrackColor = screenBg
-                    ),
-                    modifier = Modifier.testTag("enable_heads_up_toggle")
-                )
             }
         }
+    }
 
-        // 2. System Heads-Up Toggle Card (Visible when custom Heads-Up overlay is disabled)
-        AnimatedVisibility(visible = !enableHeadsUpOverlay) {
+    val systemHeadsUpCard = @Composable {
+        PinnableCardWrapper("system_heads_up_card", CustomizeCategory.HEADS_UP) {
             SettingsCard(
                 shape = CustomizeCardShapes.BottomCard,
                 modifier = Modifier.testTag("system_heads_up_card")
@@ -207,289 +220,260 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
                 }
             }
         }
+    }
 
-        AnimatedVisibility(visible = enableHeadsUpOverlay) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing)
+    val permissionStatusCard = @Composable {
+        PinnableCardWrapper("heads_up_permission_card", CustomizeCategory.HEADS_UP) {
+            SettingsCard(
+                shape = CustomizeCardShapes.CenterCard
             ) {
-                // 2. Permission Status Card
-                SettingsCard(
-                    shape = CustomizeCardShapes.CenterCard
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        if (!isNotifPermissionGranted) {
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.NotificationsOff,
-                                        contentDescription = null,
-                                        tint = nonGrantedRed,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Text(
-                                        text = "Notification Listener Access Required",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = nonGrantedRed
-                                    )
-                                }
-                                Text(
-                                    text = "To detect incoming messages, calls, and high-priority alarms, grant Notification Listener permission to QuickPanel.",
-                                    fontSize = 11.sp,
-                                    color = colorScheme.onSurfaceVariant
-                                )
-                                Button(
-                                    onClick = {
-                                        QuickPanelNotificationListenerService.openPermissionSettings(context)
-                                    },
-                                    shape = RoundedCornerShape(10.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = nonGrantedRed,
-                                        contentColor = Color.White
-                                    ),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .testTag("grant_notification_access_btn")
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Security,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "Grant Notification Access",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        } else {
+                    if (!isNotifPermissionGranted) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.NotificationsActive,
+                                    imageVector = Icons.Default.NotificationsOff,
                                     contentDescription = null,
-                                    tint = colorScheme.primary,
+                                    tint = nonGrantedRed,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Text(
-                                    text = "Notification Access is Granted & Active",
+                                    text = "Notification Listener Access Required",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = colorScheme.primary
+                                    color = nonGrantedRed,
+                                    style = TextStyle(
+                                        platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                        lineHeightStyle = LineHeightStyle(
+                                            alignment = LineHeightStyle.Alignment.Center,
+                                            trim = LineHeightStyle.Trim.Both
+                                        )
+                                    )
                                 )
                             }
-                        }
-                    }
-                }
-
-                // 3. Independent Preview & Test Card
-                SettingsCard(
-                    shape = CustomizeCardShapes.CenterCard
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                             Text(
-                                text = "Independent Preview & Test",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 16.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Inflates a lightweight Compose layout at the top of the screen via WindowManager with try-catch safety.",
+                                text = "To detect incoming messages, calls, and high-priority alarms, grant Notification Listener permission to QuickPanel.",
                                 fontSize = 11.sp,
-                                lineHeight = 14.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = colorScheme.onSurfaceVariant
+                                color = colorScheme.onSurfaceVariant,
+                                style = TextStyle(
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                    lineHeightStyle = LineHeightStyle(
+                                        alignment = LineHeightStyle.Alignment.Center,
+                                        trim = LineHeightStyle.Trim.Both
+                                    )
+                                )
                             )
-                        }
-
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Button(
-                                    onClick = {
-                                        HeadsUpOverlayManager.showTestHeadsUp(context)
-                                    },
-                                    shape = RoundedCornerShape(10.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = colorScheme.primary,
-                                        contentColor = colorScheme.onPrimary
-                                    ),
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .testTag("test_heads_up_btn")
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.NotificationsActive,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(15.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Test Alert", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-
-                                Button(
-                                    onClick = {
-                                        HeadsUpOverlayManager.showTestAlarmHeadsUp(context)
-                                    },
-                                    shape = RoundedCornerShape(10.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = colorScheme.secondary,
-                                        contentColor = colorScheme.onSecondary
-                                    ),
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .testTag("test_alarm_heads_up_btn")
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Alarm,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(15.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Test Alarm", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-
                             Button(
                                 onClick = {
-                                    HeadsUpOverlayManager.showTestCallHeadsUp(context)
+                                    QuickPanelNotificationListenerService.openPermissionSettings(context)
                                 },
                                 shape = RoundedCornerShape(10.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = colorScheme.primaryContainer,
-                                    contentColor = colorScheme.onPrimaryContainer
+                                    containerColor = nonGrantedRed,
+                                    contentColor = Color.White
                                 ),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .testTag("test_call_heads_up_btn")
+                                    .testTag("grant_notification_access_btn")
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Call,
+                                    imageVector = Icons.Default.Security,
                                     contentDescription = null,
-                                    modifier = Modifier.size(15.dp)
+                                    modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Test Incoming Call", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = "Grant Notification Access",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    style = TextStyle(
+                                        platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                        lineHeightStyle = LineHeightStyle(
+                                            alignment = LineHeightStyle.Alignment.Center,
+                                            trim = LineHeightStyle.Trim.Both
+                                        )
+                                    )
+                                )
                             }
+                        }
+                    } else {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.NotificationsActive,
+                                contentDescription = null,
+                                tint = colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = "Notification Access is Granted & Active",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = colorScheme.primary,
+                                style = TextStyle(
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                    lineHeightStyle = LineHeightStyle(
+                                        alignment = LineHeightStyle.Alignment.Center,
+                                        trim = LineHeightStyle.Trim.Both
+                                    )
+                                )
+                            )
                         }
                     }
                 }
+            }
+        }
+    }
 
-                // 4. Auto-Dismiss Timeout Slider Card
-                SettingsCard(
-                    shape = CustomizeCardShapes.CenterCard
+    val testPreviewCard = @Composable {
+        PinnableCardWrapper("heads_up_test_card", CustomizeCategory.HEADS_UP) {
+            SettingsCard(
+                shape = CustomizeCardShapes.CenterCard
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = "Independent Preview & Test",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            style = TextStyle(
+                                platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                lineHeightStyle = LineHeightStyle(
+                                    alignment = LineHeightStyle.Alignment.Center,
+                                    trim = LineHeightStyle.Trim.Both
+                                )
+                            ),
+                            color = colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Inflates a lightweight Compose layout at the top of the screen via WindowManager with try-catch safety.",
+                            fontSize = 11.sp,
+                            style = TextStyle(
+                                platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                lineHeightStyle = LineHeightStyle(
+                                    alignment = LineHeightStyle.Alignment.Center,
+                                    trim = LineHeightStyle.Trim.Both
+                                )
+                            ),
+                            color = colorScheme.onSurfaceVariant
+                        )
+                    }
+
                     Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            Button(
+                                onClick = {
+                                    HeadsUpOverlayManager.showTestHeadsUp(context)
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = colorScheme.primary,
+                                    contentColor = colorScheme.onPrimary
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("test_heads_up_btn")
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(CircleShape)
-                                        .background(colorScheme.primaryContainer),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = androidx.compose.material.icons.Icons.Default.Timer,
-                                        contentDescription = null,
-                                        tint = colorScheme.onPrimaryContainer,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                                Text(
-                                    text = "Auto-Dismiss Timeout",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = colorScheme.onSurface
+                                Icon(
+                                    imageVector = Icons.Default.NotificationsActive,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(15.dp)
                                 )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Test Alert", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
-                            Text(
-                                text = "$headsUpTimeoutSeconds seconds",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = colorScheme.primary
-                            )
+
+                            Button(
+                                onClick = {
+                                    HeadsUpOverlayManager.showTestAlarmHeadsUp(context)
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = colorScheme.secondary,
+                                    contentColor = colorScheme.onSecondary
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("test_alarm_heads_up_btn")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Alarm,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Test Alarm", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
 
-                        Slider(
-                            value = headsUpTimeoutSeconds.toFloat(),
-                            onValueChange = { PanelPreferences.setHeadsUpTimeoutSeconds(context, it.toInt()) },
-                            valueRange = 2f..10f,
-                            steps = 7,
+                        Button(
+                            onClick = {
+                                HeadsUpOverlayManager.showTestCallHeadsUp(context)
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colorScheme.primaryContainer,
+                                contentColor = colorScheme.onPrimaryContainer
+                            ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .testTag("heads_up_timeout_slider"),
-                            colors = SliderDefaults.colors(
-                                thumbColor = colorScheme.primary,
-                                activeTrackColor = colorScheme.primary,
-                                inactiveTrackColor = colorScheme.primary.copy(alpha = 0.2f)
-                            )
-                        )
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                                .testTag("test_call_heads_up_btn")
                         ) {
-                            Text("2s", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
-                            Text("Default (4s)", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
-                            Text("10s", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
+                            Icon(
+                                imageVector = Icons.Default.Call,
+                                contentDescription = null,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Test Incoming Call", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
+            }
+        }
+    }
 
-                // 5. Gesture Hints Card
-                SettingsCard(
-                    shape = CustomizeCardShapes.BottomCard
+    val timeoutSliderCard = @Composable {
+        PinnableCardWrapper("heads_up_timeout_card", CustomizeCategory.HEADS_UP) {
+            SettingsCard(
+                shape = CustomizeCardShapes.CenterCard
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.padding(bottom = 4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Box(
                                 modifier = Modifier
@@ -499,44 +483,219 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = androidx.compose.material.icons.Icons.Default.TouchApp,
+                                    imageVector = androidx.compose.material.icons.Icons.Default.Timer,
                                     contentDescription = null,
                                     tint = colorScheme.onPrimaryContainer,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
                             Text(
-                                text = "Gesture Actions:",
-                                fontSize = 12.sp,
+                                text = "Auto-Dismiss Timeout",
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = colorScheme.onSurface
+                                color = colorScheme.onSurface,
+                                style = TextStyle(
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                    lineHeightStyle = LineHeightStyle(
+                                        alignment = LineHeightStyle.Alignment.Center,
+                                        trim = LineHeightStyle.Trim.Both
+                                    )
+                                )
                             )
                         }
                         Text(
-                            text = "• Swipe Up / Left / Right: Dismiss heads-up banner",
-                            fontSize = 11.sp,
-                            lineHeight = 14.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "• Swipe Down: Directly trigger Custom Quick Settings Shade",
-                            fontSize = 11.sp,
-                            lineHeight = 14.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            text = "$headsUpTimeoutSeconds seconds",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
                             color = colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = "• Tap: Open notification destination app",
-                            fontSize = 11.sp,
-                            lineHeight = 14.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = colorScheme.onSurfaceVariant
+                            style = TextStyle(
+                                platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                lineHeightStyle = LineHeightStyle(
+                                    alignment = LineHeightStyle.Alignment.Center,
+                                    trim = LineHeightStyle.Trim.Both
+                                )
+                            )
                         )
                     }
+
+                    Slider(
+                        value = headsUpTimeoutSeconds.toFloat(),
+                        onValueChange = { PanelPreferences.setHeadsUpTimeoutSeconds(context, it.toInt()) },
+                        valueRange = 2f..10f,
+                        steps = 7,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("heads_up_timeout_slider"),
+                        colors = SliderDefaults.colors(
+                            thumbColor = colorScheme.primary,
+                            activeTrackColor = colorScheme.primary,
+                            inactiveTrackColor = colorScheme.primary.copy(alpha = 0.2f)
+                        )
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "2s",
+                            fontSize = 10.sp,
+                            color = colorScheme.onSurfaceVariant,
+                            style = TextStyle(
+                                platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                lineHeightStyle = LineHeightStyle(
+                                    alignment = LineHeightStyle.Alignment.Center,
+                                    trim = LineHeightStyle.Trim.Both
+                                )
+                            )
+                        )
+                        Text(
+                            text = "Default (4s)",
+                            fontSize = 10.sp,
+                            color = colorScheme.onSurfaceVariant,
+                            style = TextStyle(
+                                platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                lineHeightStyle = LineHeightStyle(
+                                    alignment = LineHeightStyle.Alignment.Center,
+                                    trim = LineHeightStyle.Trim.Both
+                                )
+                            )
+                        )
+                        Text(
+                            text = "10s",
+                            fontSize = 10.sp,
+                            color = colorScheme.onSurfaceVariant,
+                            style = TextStyle(
+                                platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                lineHeightStyle = LineHeightStyle(
+                                    alignment = LineHeightStyle.Alignment.Center,
+                                    trim = LineHeightStyle.Trim.Both
+                                )
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    val gestureHintsCard = @Composable {
+        PinnableCardWrapper("heads_up_gestures_card", CustomizeCategory.HEADS_UP) {
+            SettingsCard(
+                shape = CustomizeCardShapes.BottomCard
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.TouchApp,
+                                contentDescription = null,
+                                tint = colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Text(
+                            text = "Gesture Actions:",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = 15.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            color = colorScheme.onSurface
+                        )
+                    }
+                    Text(
+                        text = "• Swipe Up / Left / Right: Dismiss heads-up banner",
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp,
+                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                        color = colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "• Swipe Down: Directly trigger Custom Quick Settings Shade",
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp,
+                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                        color = colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "• Tap: Open notification destination app",
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp,
+                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                        color = colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing)
+    ) {
+        // 1. Pinned Cards at the very top of Heads-Up
+        val pinnedCards = mutableListOf<@Composable () -> Unit>()
+        if (pinnedIds.contains("heads_up_overlay_engine_card")) pinnedCards.add(masterToggleCard)
+        if (!enableHeadsUpOverlay && pinnedIds.contains("system_heads_up_card")) pinnedCards.add(systemHeadsUpCard)
+        if (enableHeadsUpOverlay) {
+            if (pinnedIds.contains("heads_up_permission_card")) pinnedCards.add(permissionStatusCard)
+            if (pinnedIds.contains("heads_up_test_card")) pinnedCards.add(testPreviewCard)
+            if (pinnedIds.contains("heads_up_timeout_card")) pinnedCards.add(timeoutSliderCard)
+            if (pinnedIds.contains("heads_up_gestures_card")) pinnedCards.add(gestureHintsCard)
+        }
+
+        if (pinnedCards.isNotEmpty()) {
+            ListSubheader(
+                text = "Pinned",
+                icon = androidx.compose.material.icons.Icons.Default.PushPin
+            )
+            pinnedCards.forEach { card -> card() }
+        }
+
+        // 2. Unpinned Master Toggle Card
+        if (!pinnedIds.contains("heads_up_overlay_engine_card")) {
+            masterToggleCard()
+        }
+
+        // 3. Unpinned System Heads-Up Toggle Card (Visible when custom Heads-Up overlay is disabled)
+        AnimatedVisibility(visible = !enableHeadsUpOverlay && !pinnedIds.contains("system_heads_up_card")) {
+            systemHeadsUpCard()
+        }
+
+        // 4. Unpinned Feature Cards (Visible when custom Heads-Up overlay is enabled)
+        AnimatedVisibility(visible = enableHeadsUpOverlay) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing)
+            ) {
+                if (!pinnedIds.contains("heads_up_permission_card")) {
+                    permissionStatusCard()
+                }
+                if (!pinnedIds.contains("heads_up_test_card")) {
+                    testPreviewCard()
+                }
+                if (!pinnedIds.contains("heads_up_timeout_card")) {
+                    timeoutSliderCard()
+                }
+                if (!pinnedIds.contains("heads_up_gestures_card")) {
+                    gestureHintsCard()
                 }
             }
         }

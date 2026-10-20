@@ -16,6 +16,7 @@ import com.example.data.PanelPreferences
 import com.example.data.TileShape
 import com.example.model.QsTileModel
 import com.example.model.TileState
+import androidx.compose.ui.graphics.toArgb
 import com.example.ui.notification.MonetThemeHelper
 
 object QsTileViewHelper {
@@ -50,7 +51,27 @@ object QsTileViewHelper {
         // 1. Resolve Monet Dynamic Colors
         val primaryAccent = MonetThemeHelper.getPrimaryAccent(context, isDark)
         val onPrimary = MonetThemeHelper.getOnPrimaryText(context, isDark)
-        val inactiveBg = MonetThemeHelper.getActionBackground(context, isDark)
+        val inactiveTilesTertiary = PanelPreferences.getInactiveTilesColorTertiary(isDark).value
+        val baseInactiveBg = if (inactiveTilesTertiary) {
+            MonetThemeHelper.getTertiaryAccent(context, isDark)
+        } else {
+            MonetThemeHelper.getActionBackground(context, isDark)
+        }
+        val hue = PanelPreferences.getInactiveTilesHue(isDark).value
+        val sat = PanelPreferences.getInactiveTilesSat(isDark).value
+        val valFactor = PanelPreferences.getInactiveTilesVal(isDark).value
+        val inactiveBg = if (hue != 0f || sat != 1f || valFactor != 1f) {
+            val composeColor = androidx.compose.ui.graphics.Color(baseInactiveBg)
+            val adjusted = com.example.ui.theme.applyHsvAdjustments(composeColor, hue, sat, valFactor)
+            android.graphics.Color.argb(
+                (adjusted.alpha * 255).toInt().coerceIn(0, 255),
+                (adjusted.red * 255).toInt().coerceIn(0, 255),
+                (adjusted.green * 255).toInt().coerceIn(0, 255),
+                (adjusted.blue * 255).toInt().coerceIn(0, 255)
+            )
+        } else {
+            baseInactiveBg
+        }
         val textPrimary = MonetThemeHelper.getTextPrimary(context, isDark)
         val textSecondary = MonetThemeHelper.getTextSecondary(context, isDark)
 

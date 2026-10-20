@@ -17,6 +17,8 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -87,23 +89,18 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     val qsTileLabelFontSize by PanelPreferences.qsTileLabelFontSize.collectAsState()
     val qsTileSubtitleFontSize by PanelPreferences.qsTileSubtitleFontSize.collectAsState()
     val hideDateInExpanded by PanelPreferences.hideDateInExpanded.collectAsState()
+    val disableLabelsInExpanded by PanelPreferences.disableLabelsInExpanded.collectAsState()
     val collapseExpandOptions by PanelPreferences.collapseExpandOptions.collectAsState()
 
     var fontSizesExpanded by rememberSaveable { mutableStateOf(false) }
 
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)
-    ) {
-        CollapsibleSubheaderSection(
-            title = "Grid & Tile Density",
-            icon = androidx.compose.material.icons.Icons.Default.GridView
-        ) {
+    val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.QS_TWEAKS, context).collectAsState()
 
-        // 1. QS Grid Layout Density Card
-        SettingsCard(
-            shape = CustomizeCardShapes.SingleCard
-        ) {
+    val gridDensityCard = @Composable {
+        PinnableCardWrapper("qs_grid_density_card", CustomizeCategory.QS_TWEAKS) {
+            SettingsCard(
+                shape = CustomizeCardShapes.SingleCard
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -184,16 +181,13 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
             }
         }
     }
+}
 
-        CollapsibleSubheaderSection(
-            title = "Drag Handle Options",
-            icon = androidx.compose.material.icons.Icons.Default.DragHandle
-        ) {
-
-        // 2. Drag Handle Length Card
-        SettingsCard(
-            shape = CustomizeCardShapes.SingleCard
-        ) {
+    val dragHandleLengthCard = @Composable {
+        PinnableCardWrapper("qs_drag_handle_length_card", CustomizeCategory.QS_TWEAKS) {
+            SettingsCard(
+                shape = CustomizeCardShapes.SingleCard
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -275,17 +269,14 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
             }
         }
     }
+}
 
-        CollapsibleSubheaderSection(
-            title = "Header & Controls",
-            icon = androidx.compose.material.icons.Icons.Default.Tune
-        ) {
-
-        // 3. Date Position in Header Card
-        SettingsCard(
-            shape = CustomizeCardShapes.TopCard,
-            modifier = Modifier.testTag("date_position_card")
-        ) {
+    val datePositionCard = @Composable {
+        PinnableCardWrapper("date_position_card", CustomizeCategory.QS_TWEAKS) {
+            SettingsCard(
+                shape = CustomizeCardShapes.TopCard,
+                modifier = Modifier.testTag("date_position_card")
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -366,11 +357,14 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                 }
             }
         }
+    }
+}
 
-        // 4. Edit Pencil Icon Location Card
-        SettingsCard(
-            shape = CustomizeCardShapes.BottomCard
-        ) {
+    val editPencilLocationCard = @Composable {
+        PinnableCardWrapper("edit_pencil_location_card", CustomizeCategory.QS_TWEAKS) {
+            SettingsCard(
+                shape = CustomizeCardShapes.BottomCard
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -452,17 +446,14 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
             }
         }
     }
+}
 
-        CollapsibleSubheaderSection(
-            title = "Typography & Font Sizes",
-            icon = androidx.compose.material.icons.Icons.Default.TextFields
-        ) {
-
-        // 5. Tile Label & Subtitle Font Size Card
-        SettingsCard(
-            shape = CustomizeCardShapes.TopCard,
-            modifier = Modifier.testTag("qs_tile_font_size_card")
-        ) {
+    val tileFontSizeCard = @Composable {
+        PinnableCardWrapper("qs_tile_font_size_card", CustomizeCategory.QS_TWEAKS) {
+            SettingsCard(
+                shape = CustomizeCardShapes.TopCard,
+                modifier = Modifier.testTag("qs_tile_font_size_card")
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -636,11 +627,14 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                 }
             }
         }
+    }
+}
 
-        // 6. Hide Date in Expanded QS Card
-        SettingsCard(
-            shape = CustomizeCardShapes.CenterCard
-        ) {
+    val hideDateInExpandedCard = @Composable {
+        PinnableCardWrapper("hide_date_in_expanded_card", CustomizeCategory.QS_TWEAKS) {
+            SettingsCard(
+                shape = CustomizeCardShapes.TopCard
+            ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -702,11 +696,83 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                 )
             }
         }
+    }
+}
 
-        // 7. Hide QQS Drag Handle Card
-        SettingsCard(
-            shape = CustomizeCardShapes.BottomCard
-        ) {
+    val disableLabelsInExpandedCard = @Composable {
+        PinnableCardWrapper("disable_labels_in_expanded_card", CustomizeCategory.QS_TWEAKS) {
+            SettingsCard(
+                shape = CustomizeCardShapes.CenterCard
+            ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.VisibilityOff,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(1.dp)
+                    ) {
+                        Text(
+                            text = "Disable Labels in Expanded QS",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = 17.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Hide text labels in expanded QS panel and scale tiles bigger automatically.",
+                            fontSize = 12.sp,
+                            lineHeight = 15.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Switch(
+                    checked = disableLabelsInExpanded,
+                    onCheckedChange = { PanelPreferences.setDisableLabelsInExpanded(context, it) },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                    ),
+                    modifier = Modifier.testTag("disable_labels_in_expanded_toggle")
+                )
+            }
+        }
+    }
+}
+
+    val hideQqsDragHandleCard = @Composable {
+        PinnableCardWrapper("hide_qqs_drag_handle_card", CustomizeCategory.QS_TWEAKS) {
+            SettingsCard(
+                shape = CustomizeCardShapes.BottomCard
+            ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -770,4 +836,88 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         }
     }
 }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)
+    ) {
+        // 1. Pinned Cards at the very top of Quick Settings Tweaks
+        val pinnedCards = mutableListOf<@Composable () -> Unit>()
+        if (pinnedIds.contains("qs_grid_density_card")) pinnedCards.add(gridDensityCard)
+        if (pinnedIds.contains("qs_drag_handle_length_card")) pinnedCards.add(dragHandleLengthCard)
+        if (pinnedIds.contains("date_position_card")) pinnedCards.add(datePositionCard)
+        if (pinnedIds.contains("edit_pencil_location_card")) pinnedCards.add(editPencilLocationCard)
+        if (pinnedIds.contains("qs_tile_font_size_card")) pinnedCards.add(tileFontSizeCard)
+        if (pinnedIds.contains("hide_date_in_expanded_card")) pinnedCards.add(hideDateInExpandedCard)
+        if (pinnedIds.contains("disable_labels_in_expanded_card")) pinnedCards.add(disableLabelsInExpandedCard)
+        if (pinnedIds.contains("hide_qqs_drag_handle_card")) pinnedCards.add(hideQqsDragHandleCard)
+
+        if (pinnedCards.isNotEmpty()) {
+            ListSubheader(
+                text = "Pinned",
+                icon = androidx.compose.material.icons.Icons.Default.PushPin
+            )
+            pinnedCards.forEach { card -> card() }
+        }
+
+        // 2. Unpinned Grid & Tile Density
+        if (!pinnedIds.contains("qs_grid_density_card")) {
+            CollapsibleSubheaderSection(
+                title = "Grid & Tile Density",
+                icon = androidx.compose.material.icons.Icons.Default.GridView
+            ) {
+                gridDensityCard()
+            }
+        }
+
+        // 3. Unpinned Drag Handle Options
+        if (!pinnedIds.contains("qs_drag_handle_length_card")) {
+            CollapsibleSubheaderSection(
+                title = "Drag Handle Options",
+                icon = androidx.compose.material.icons.Icons.Default.DragHandle
+            ) {
+                dragHandleLengthCard()
+            }
+        }
+
+        // 4. Unpinned Header & Controls
+        if (!pinnedIds.contains("date_position_card") || !pinnedIds.contains("edit_pencil_location_card")) {
+            CollapsibleSubheaderSection(
+                title = "Header & Controls",
+                icon = androidx.compose.material.icons.Icons.Default.Tune
+            ) {
+                if (!pinnedIds.contains("date_position_card")) {
+                    datePositionCard()
+                }
+                if (!pinnedIds.contains("edit_pencil_location_card")) {
+                    editPencilLocationCard()
+                }
+            }
+        }
+
+        // 5. Unpinned Typography & Font Sizes
+        if (!pinnedIds.contains("qs_tile_font_size_card") ||
+            !pinnedIds.contains("hide_date_in_expanded_card") ||
+            !pinnedIds.contains("disable_labels_in_expanded_card") ||
+            !pinnedIds.contains("hide_qqs_drag_handle_card")
+        ) {
+            CollapsibleSubheaderSection(
+                title = "Typography & Font Sizes",
+                icon = androidx.compose.material.icons.Icons.Default.TextFields
+            ) {
+                if (!pinnedIds.contains("qs_tile_font_size_card")) {
+                    tileFontSizeCard()
+                }
+                if (!pinnedIds.contains("hide_date_in_expanded_card")) {
+                    hideDateInExpandedCard()
+                }
+                if (!pinnedIds.contains("disable_labels_in_expanded_card")) {
+                    disableLabelsInExpandedCard()
+                }
+                if (!pinnedIds.contains("hide_qqs_drag_handle_card")) {
+                    hideQqsDragHandleCard()
+                }
+            }
+        }
+    }
 }

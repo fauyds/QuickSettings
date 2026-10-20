@@ -2,6 +2,7 @@ package com.example.ui.customizer
 
 import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -68,6 +69,15 @@ object CustomizeCardShapes {
     val CenterCard = RoundedCornerShape(4.dp)
     val BottomCard = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 16.dp)
     val SingleCard = RoundedCornerShape(16.dp)
+
+    fun getShapeForIndex(index: Int, total: Int): Shape {
+        return when {
+            total <= 1 -> SingleCard
+            index == 0 -> TopCard
+            index == total - 1 -> BottomCard
+            else -> CenterCard
+        }
+    }
 }
 
 

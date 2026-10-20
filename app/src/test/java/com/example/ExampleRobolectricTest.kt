@@ -390,6 +390,49 @@ class ExampleRobolectricTest {
         com.example.data.ThemeManager.deleteTheme(context, savedTheme.id)
         assertEquals(0, com.example.data.ThemeManager.savedThemes.value.size)
     }
+
+    @Test
+    fun testElementColorsLightAndDarkModeIsolationAndSync() {
+        val context = org.robolectric.RuntimeEnvironment.getApplication()
+        com.example.data.PanelPreferences.init(context)
+
+        // 1. Configure Light mode settings
+        com.example.data.PanelPreferences.setSurfaceBgColorTertiary(context, isDark = false, enabled = true)
+        com.example.data.PanelPreferences.setSurfaceBgHsb(context, isDark = false, hue = 45f, sat = 1.2f, valFactor = 0.8f)
+        com.example.data.PanelPreferences.setInactiveTilesColorTertiary(context, isDark = false, enabled = true)
+        com.example.data.PanelPreferences.setInactiveTilesHsb(context, isDark = false, hue = 30f, sat = 1.1f, valFactor = 0.9f)
+
+        // 2. Configure Dark mode settings differently
+        com.example.data.PanelPreferences.setSurfaceBgColorTertiary(context, isDark = true, enabled = false)
+        com.example.data.PanelPreferences.setSurfaceBgHsb(context, isDark = true, hue = -90f, sat = 0.5f, valFactor = 1.3f)
+        com.example.data.PanelPreferences.setInactiveTilesColorTertiary(context, isDark = true, enabled = false)
+        com.example.data.PanelPreferences.setInactiveTilesHsb(context, isDark = true, hue = -60f, sat = 0.7f, valFactor = 1.2f)
+
+        // Verify Light mode values
+        assertEquals(true, com.example.data.PanelPreferences.getSurfaceBgColorTertiary(isDark = false).value)
+        assertEquals(45f, com.example.data.PanelPreferences.getSurfaceBgHue(isDark = false).value, 0.001f)
+        assertEquals(1.2f, com.example.data.PanelPreferences.getSurfaceBgSat(isDark = false).value, 0.001f)
+        assertEquals(0.8f, com.example.data.PanelPreferences.getSurfaceBgVal(isDark = false).value, 0.001f)
+        assertEquals(true, com.example.data.PanelPreferences.getInactiveTilesColorTertiary(isDark = false).value)
+        assertEquals(30f, com.example.data.PanelPreferences.getInactiveTilesHue(isDark = false).value, 0.001f)
+
+        // Verify Dark mode values remain isolated
+        assertEquals(false, com.example.data.PanelPreferences.getSurfaceBgColorTertiary(isDark = true).value)
+        assertEquals(-90f, com.example.data.PanelPreferences.getSurfaceBgHue(isDark = true).value, 0.001f)
+        assertEquals(0.5f, com.example.data.PanelPreferences.getSurfaceBgSat(isDark = true).value, 0.001f)
+        assertEquals(1.3f, com.example.data.PanelPreferences.getSurfaceBgVal(isDark = true).value, 0.001f)
+        assertEquals(false, com.example.data.PanelPreferences.getInactiveTilesColorTertiary(isDark = true).value)
+        assertEquals(-60f, com.example.data.PanelPreferences.getInactiveTilesHue(isDark = true).value, 0.001f)
+
+        // 3. Test Sync from Dark to Light
+        com.example.data.PanelPreferences.syncElementColors(context, fromDark = true)
+        assertEquals(false, com.example.data.PanelPreferences.getSurfaceBgColorTertiary(isDark = false).value)
+        assertEquals(-90f, com.example.data.PanelPreferences.getSurfaceBgHue(isDark = false).value, 0.001f)
+        assertEquals(0.5f, com.example.data.PanelPreferences.getSurfaceBgSat(isDark = false).value, 0.001f)
+        assertEquals(1.3f, com.example.data.PanelPreferences.getSurfaceBgVal(isDark = false).value, 0.001f)
+        assertEquals(false, com.example.data.PanelPreferences.getInactiveTilesColorTertiary(isDark = false).value)
+        assertEquals(-60f, com.example.data.PanelPreferences.getInactiveTilesHue(isDark = false).value, 0.001f)
+    }
 }
 
 

@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.SettingsSuggest
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SyncAlt
@@ -71,126 +72,124 @@ fun BasicSettingsSection(modifier: Modifier = Modifier) {
     var showExportDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        ListSubheader(
-            text = "Appearance & Theme",
-            icon = Icons.Default.Palette
-        )
+    val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.BASIC, context).collectAsState()
 
-        // Card 1: Theme Mode
-        SettingsCard(
-            shape = CustomizeCardShapes.TopCard,
-            modifier = Modifier.testTag("theme_mode_card")
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+    val themeModeCard = @Composable {
+        PinnableCardWrapper("theme_mode_card", CustomizeCategory.BASIC) {
+            SettingsCard(
+                shape = CustomizeCardShapes.TopCard,
+                modifier = Modifier.testTag("theme_mode_card")
             ) {
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Text(
-                            text = "App Settings Theme Mode",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 18.sp,
-                            textAlign = TextAlign.Center,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Customize the theme for the app settings. The Quick Settings panel retains its authentic system dark appearance.",
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            textAlign = TextAlign.Center,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Palette,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    ThemeMode.entries.forEachIndexed { index, mode ->
-                        val isSelected = themeMode == mode
-                        val buttonShape = com.example.ui.theme.SegmentedButtonShapes.getShape(
-                            index = index,
-                            count = ThemeMode.entries.size,
-                            isSelected = isSelected,
-                            innerCorner = 8.dp
-                        )
-                        Surface(
-                            onClick = { PanelPreferences.setThemeMode(context, mode) },
-                            shape = buttonShape,
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            modifier = Modifier.weight(1f)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 12.dp),
-                                contentAlignment = Alignment.Center
+                            Text(
+                                text = "App Settings Theme Mode",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 18.sp,
+                                textAlign = TextAlign.Center,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Customize the theme for the app settings. The Quick Settings panel retains its authentic system dark appearance.",
+                                fontSize = 12.sp,
+                                lineHeight = 15.sp,
+                                textAlign = TextAlign.Center,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Palette,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        ThemeMode.entries.forEachIndexed { index, mode ->
+                            val isSelected = themeMode == mode
+                            val buttonShape = com.example.ui.theme.SegmentedButtonShapes.getShape(
+                                index = index,
+                                count = ThemeMode.entries.size,
+                                isSelected = isSelected,
+                                innerCorner = 8.dp
+                            )
+                            Surface(
+                                onClick = { PanelPreferences.setThemeMode(context, mode) },
+                                shape = buttonShape,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.weight(1f)
                             ) {
-                                Icon(
-                                    imageVector = when (mode) {
-                                        ThemeMode.SYSTEM -> Icons.Default.SettingsSuggest
-                                        ThemeMode.LIGHT -> Icons.Default.WbSunny
-                                        ThemeMode.DARK -> Icons.Default.DarkMode
-                                    },
-                                    contentDescription = mode.displayName,
-                                    tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 12.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = when (mode) {
+                                            ThemeMode.SYSTEM -> Icons.Default.SettingsSuggest
+                                            ThemeMode.LIGHT -> Icons.Default.WbSunny
+                                            ThemeMode.DARK -> Icons.Default.DarkMode
+                                        },
+                                        contentDescription = mode.displayName,
+                                        tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
         }
+    }
 
-        // Card 2: Collapse & Expand Options Toggle Card
-        CollapseExpandToggleCard(shape = CustomizeCardShapes.CenterCard)
+    val collapseToggleCard = @Composable {
+        PinnableCardWrapper("collapse_expand_options_card", CustomizeCategory.BASIC) {
+            CollapseExpandToggleCard(shape = CustomizeCardShapes.CenterCard)
+        }
+    }
 
-        // Card 3: Collapse & Expand List Subheaders Toggle Card
-        CollapseExpandSubheadersCard(shape = CustomizeCardShapes.BottomCard)
+    val collapseSubheadersCard = @Composable {
+        PinnableCardWrapper("collapse_expand_subheaders_card", CustomizeCategory.BASIC) {
+            CollapseExpandSubheadersCard(shape = CustomizeCardShapes.BottomCard)
+        }
+    }
 
-        CollapsibleSubheaderSection(
-            title = "Configuration Backup",
-            icon = Icons.Default.SyncAlt
-        ) {
-            // Import & Export Settings
+    val importExportCard = @Composable {
+        PinnableCardWrapper("import_export_card", CustomizeCategory.BASIC) {
             SettingsCard(
                 shape = CustomizeCardShapes.SingleCard,
                 modifier = Modifier.testTag("import_export_card")
@@ -202,85 +201,130 @@ fun BasicSettingsSection(modifier: Modifier = Modifier) {
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Text(
-                            text = "Import & Export Settings",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 18.sp,
-                            textAlign = TextAlign.Center,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Backup your Quick Settings configurations to a JSON file or restore from a previously exported setup.",
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            textAlign = TextAlign.Center,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = "Import & Export Settings",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 18.sp,
+                                textAlign = TextAlign.Center,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Backup your Quick Settings configurations to a JSON file or restore from a previously exported setup.",
+                                fontSize = 12.sp,
+                                lineHeight = 15.sp,
+                                textAlign = TextAlign.Center,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SyncAlt,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.SyncAlt,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                }
+                        FilledTonalButton(
+                            onClick = { showExportDialog = true },
+                            modifier = Modifier.weight(1f).testTag("export_settings_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FileUpload,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = "Export", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    FilledTonalButton(
-                        onClick = { showExportDialog = true },
-                        modifier = Modifier.weight(1f).testTag("export_settings_btn")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FileUpload,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Export", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                    }
-
-                    Button(
-                        onClick = { showImportDialog = true },
-                        modifier = Modifier.weight(1f).testTag("import_settings_btn")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FileDownload,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Import", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Button(
+                            onClick = { showImportDialog = true },
+                            modifier = Modifier.weight(1f).testTag("import_settings_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FileDownload,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = "Import", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        }
                     }
                 }
             }
         }
     }
-}
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // 1. Pinned Cards at the very top of Basic Settings
+        val pinnedCards = mutableListOf<@Composable () -> Unit>()
+        if (pinnedIds.contains("theme_mode_card")) pinnedCards.add(themeModeCard)
+        if (pinnedIds.contains("collapse_expand_options_card")) pinnedCards.add(collapseToggleCard)
+        if (pinnedIds.contains("collapse_expand_subheaders_card")) pinnedCards.add(collapseSubheadersCard)
+        if (pinnedIds.contains("import_export_card")) pinnedCards.add(importExportCard)
+
+        if (pinnedCards.isNotEmpty()) {
+            ListSubheader(
+                text = "Pinned",
+                icon = androidx.compose.material.icons.Icons.Default.PushPin
+            )
+            pinnedCards.forEach { card -> card() }
+        }
+
+        // 2. Unpinned Appearance & Theme Cards
+        val unpinnedAppearance = mutableListOf<@Composable () -> Unit>()
+        if (!pinnedIds.contains("theme_mode_card")) unpinnedAppearance.add(themeModeCard)
+        if (!pinnedIds.contains("collapse_expand_options_card")) unpinnedAppearance.add(collapseToggleCard)
+        if (!pinnedIds.contains("collapse_expand_subheaders_card")) unpinnedAppearance.add(collapseSubheadersCard)
+
+        if (unpinnedAppearance.isNotEmpty()) {
+            ListSubheader(
+                text = "Appearance & Theme",
+                icon = Icons.Default.Palette
+            )
+            unpinnedAppearance.forEach { card -> card() }
+        }
+
+        // 3. Unpinned Configuration Backup Card
+        if (!pinnedIds.contains("import_export_card")) {
+            CollapsibleSubheaderSection(
+                title = "Configuration Backup",
+                icon = Icons.Default.SyncAlt
+            ) {
+                importExportCard()
+            }
+        }
+    }
 
     if (showExportDialog) {
         ExportSettingsDialog(
