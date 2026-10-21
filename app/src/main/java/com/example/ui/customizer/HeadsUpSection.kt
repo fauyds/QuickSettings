@@ -74,10 +74,10 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
 
     val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.HEADS_UP, context).collectAsState()
 
-    val masterToggleCard = @Composable {
+    val masterToggleCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("heads_up_overlay_engine_card", CustomizeCategory.HEADS_UP) {
             SettingsCard(
-                shape = CustomizeCardShapes.TopCard,
+                shape = shape,
                 modifier = Modifier.testTag("heads_up_overlay_engine_card")
             ) {
                 Row(
@@ -152,10 +152,10 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
         }
     }
 
-    val systemHeadsUpCard = @Composable {
+    val systemHeadsUpCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("system_heads_up_card", CustomizeCategory.HEADS_UP) {
             SettingsCard(
-                shape = CustomizeCardShapes.BottomCard,
+                shape = shape,
                 modifier = Modifier.testTag("system_heads_up_card")
             ) {
                 Row(
@@ -222,10 +222,10 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
         }
     }
 
-    val permissionStatusCard = @Composable {
+    val permissionStatusCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("heads_up_permission_card", CustomizeCategory.HEADS_UP) {
             SettingsCard(
-                shape = CustomizeCardShapes.CenterCard
+                shape = shape
             ) {
                 Column(
                     modifier = Modifier
@@ -336,10 +336,10 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
         }
     }
 
-    val testPreviewCard = @Composable {
+    val testPreviewCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("heads_up_test_card", CustomizeCategory.HEADS_UP) {
             SettingsCard(
-                shape = CustomizeCardShapes.CenterCard
+                shape = shape
             ) {
                 Column(
                     modifier = Modifier
@@ -455,10 +455,10 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
         }
     }
 
-    val timeoutSliderCard = @Composable {
+    val timeoutSliderCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("heads_up_timeout_card", CustomizeCategory.HEADS_UP) {
             SettingsCard(
-                shape = CustomizeCardShapes.CenterCard
+                shape = shape
             ) {
                 Column(
                     modifier = Modifier
@@ -580,10 +580,10 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
         }
     }
 
-    val gestureHintsCard = @Composable {
+    val gestureHintsCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("heads_up_gestures_card", CustomizeCategory.HEADS_UP) {
             SettingsCard(
-                shape = CustomizeCardShapes.BottomCard
+                shape = shape
             ) {
                 Column(
                     modifier = Modifier
@@ -651,7 +651,7 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing)
     ) {
         // 1. Pinned Cards at the very top of Heads-Up
-        val pinnedCards = mutableListOf<@Composable () -> Unit>()
+        val pinnedCards = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
         if (pinnedIds.contains("heads_up_overlay_engine_card")) pinnedCards.add(masterToggleCard)
         if (!enableHeadsUpOverlay && pinnedIds.contains("system_heads_up_card")) pinnedCards.add(systemHeadsUpCard)
         if (enableHeadsUpOverlay) {
@@ -666,37 +666,30 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
                 text = "Pinned",
                 icon = androidx.compose.material.icons.Icons.Default.PushPin
             )
-            pinnedCards.forEach { card -> card() }
+            pinnedCards.forEachIndexed { index, card ->
+                card(CustomizeCardShapes.getShapeForIndex(index, pinnedCards.size))
+            }
         }
 
-        // 2. Unpinned Master Toggle Card
-        if (!pinnedIds.contains("heads_up_overlay_engine_card")) {
-            masterToggleCard()
-        }
+        // Unpinned Cards
+        if (!enableHeadsUpOverlay) {
+            val unpinnedDisabled = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
+            if (!pinnedIds.contains("heads_up_overlay_engine_card")) unpinnedDisabled.add(masterToggleCard)
+            if (!pinnedIds.contains("system_heads_up_card")) unpinnedDisabled.add(systemHeadsUpCard)
 
-        // 3. Unpinned System Heads-Up Toggle Card (Visible when custom Heads-Up overlay is disabled)
-        AnimatedVisibility(visible = !enableHeadsUpOverlay && !pinnedIds.contains("system_heads_up_card")) {
-            systemHeadsUpCard()
-        }
+            unpinnedDisabled.forEachIndexed { index, card ->
+                card(CustomizeCardShapes.getShapeForIndex(index, unpinnedDisabled.size))
+            }
+        } else {
+            val unpinnedActive = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
+            if (!pinnedIds.contains("heads_up_overlay_engine_card")) unpinnedActive.add(masterToggleCard)
+            if (!pinnedIds.contains("heads_up_permission_card")) unpinnedActive.add(permissionStatusCard)
+            if (!pinnedIds.contains("heads_up_test_card")) unpinnedActive.add(testPreviewCard)
+            if (!pinnedIds.contains("heads_up_timeout_card")) unpinnedActive.add(timeoutSliderCard)
+            if (!pinnedIds.contains("heads_up_gestures_card")) unpinnedActive.add(gestureHintsCard)
 
-        // 4. Unpinned Feature Cards (Visible when custom Heads-Up overlay is enabled)
-        AnimatedVisibility(visible = enableHeadsUpOverlay) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing)
-            ) {
-                if (!pinnedIds.contains("heads_up_permission_card")) {
-                    permissionStatusCard()
-                }
-                if (!pinnedIds.contains("heads_up_test_card")) {
-                    testPreviewCard()
-                }
-                if (!pinnedIds.contains("heads_up_timeout_card")) {
-                    timeoutSliderCard()
-                }
-                if (!pinnedIds.contains("heads_up_gestures_card")) {
-                    gestureHintsCard()
-                }
+            unpinnedActive.forEachIndexed { index, card ->
+                card(CustomizeCardShapes.getShapeForIndex(index, unpinnedActive.size))
             }
         }
     }

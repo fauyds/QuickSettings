@@ -96,10 +96,10 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
 
     val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.QS_TWEAKS, context).collectAsState()
 
-    val gridDensityCard = @Composable {
+    val gridDensityCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("qs_grid_density_card", CustomizeCategory.QS_TWEAKS) {
             SettingsCard(
-                shape = CustomizeCardShapes.SingleCard
+                shape = shape
             ) {
             Column(
                 modifier = Modifier
@@ -157,7 +157,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                     val allGrids = QsGridLayout.entries
                     allGrids.forEach { grid ->
                         val isSelected = gridLayout == grid
-                        val shape = SegmentedButtonShapes.getShape(
+                        val chipShape = SegmentedButtonShapes.getShape(
                             item = grid,
                             items = allGrids,
                             selectedItem = gridLayout
@@ -166,7 +166,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                             selected = isSelected,
                             onClick = { PanelPreferences.setGridLayout(context, grid) },
                             label = { Text(grid.label, fontSize = 11.sp) },
-                            shape = shape,
+                            shape = chipShape,
                             border = null,
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
@@ -183,10 +183,10 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     }
 }
 
-    val dragHandleLengthCard = @Composable {
+    val dragHandleLengthCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("qs_drag_handle_length_card", CustomizeCategory.QS_TWEAKS) {
             SettingsCard(
-                shape = CustomizeCardShapes.SingleCard
+                shape = shape
             ) {
             Column(
                 modifier = Modifier
@@ -271,10 +271,10 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     }
 }
 
-    val datePositionCard = @Composable {
+    val datePositionCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("date_position_card", CustomizeCategory.QS_TWEAKS) {
             SettingsCard(
-                shape = CustomizeCardShapes.TopCard,
+                shape = shape,
                 modifier = Modifier.testTag("date_position_card")
             ) {
             Column(
@@ -334,7 +334,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                     val allDatePositions = DatePosition.entries
                     allDatePositions.forEach { pos ->
                         val isSelected = datePosition == pos
-                        val shape = SegmentedButtonShapes.getShape(
+                        val chipShape = SegmentedButtonShapes.getShape(
                             item = pos,
                             items = allDatePositions,
                             selectedItem = datePosition
@@ -343,7 +343,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                             selected = isSelected,
                             onClick = { PanelPreferences.setDatePosition(context, pos) },
                             label = { Text(pos.label, fontSize = 10.sp) },
-                            shape = shape,
+                            shape = chipShape,
                             border = null,
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
@@ -360,10 +360,10 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     }
 }
 
-    val editPencilLocationCard = @Composable {
+    val editPencilLocationCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("edit_pencil_location_card", CustomizeCategory.QS_TWEAKS) {
             SettingsCard(
-                shape = CustomizeCardShapes.BottomCard
+                shape = shape
             ) {
             Column(
                 modifier = Modifier
@@ -422,7 +422,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                     val allEditPositions = EditButtonPosition.entries
                     allEditPositions.forEach { pos ->
                         val isSelected = editButtonPosition == pos
-                        val shape = SegmentedButtonShapes.getShape(
+                        val chipShape = SegmentedButtonShapes.getShape(
                             item = pos,
                             items = allEditPositions,
                             selectedItem = editButtonPosition
@@ -431,7 +431,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                             selected = isSelected,
                             onClick = { PanelPreferences.setEditButtonPosition(context, pos) },
                             label = { Text(pos.label, fontSize = 10.sp) },
-                            shape = shape,
+                            shape = chipShape,
                             border = null,
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
@@ -448,10 +448,10 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     }
 }
 
-    val tileFontSizeCard = @Composable {
+    val tileFontSizeCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("qs_tile_font_size_card", CustomizeCategory.QS_TWEAKS) {
             SettingsCard(
-                shape = CustomizeCardShapes.TopCard,
+                shape = shape,
                 modifier = Modifier.testTag("qs_tile_font_size_card")
             ) {
             Column(
@@ -630,10 +630,10 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     }
 }
 
-    val hideDateInExpandedCard = @Composable {
+    val hideDateInExpandedCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("hide_date_in_expanded_card", CustomizeCategory.QS_TWEAKS) {
             SettingsCard(
-                shape = CustomizeCardShapes.TopCard
+                shape = shape
             ) {
             Row(
                 modifier = Modifier
@@ -699,10 +699,10 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     }
 }
 
-    val disableLabelsInExpandedCard = @Composable {
+    val disableLabelsInExpandedCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("disable_labels_in_expanded_card", CustomizeCategory.QS_TWEAKS) {
             SettingsCard(
-                shape = CustomizeCardShapes.CenterCard
+                shape = shape
             ) {
             Row(
                 modifier = Modifier
@@ -768,10 +768,10 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     }
 }
 
-    val hideQqsDragHandleCard = @Composable {
+    val hideQqsDragHandleCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("hide_qqs_drag_handle_card", CustomizeCategory.QS_TWEAKS) {
             SettingsCard(
-                shape = CustomizeCardShapes.BottomCard
+                shape = shape
             ) {
             Row(
                 modifier = Modifier
@@ -842,7 +842,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)
     ) {
         // 1. Pinned Cards at the very top of Quick Settings Tweaks
-        val pinnedCards = mutableListOf<@Composable () -> Unit>()
+        val pinnedCards = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
         if (pinnedIds.contains("qs_grid_density_card")) pinnedCards.add(gridDensityCard)
         if (pinnedIds.contains("qs_drag_handle_length_card")) pinnedCards.add(dragHandleLengthCard)
         if (pinnedIds.contains("date_position_card")) pinnedCards.add(datePositionCard)
@@ -857,7 +857,9 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                 text = "Pinned",
                 icon = androidx.compose.material.icons.Icons.Default.PushPin
             )
-            pinnedCards.forEach { card -> card() }
+            pinnedCards.forEachIndexed { index, card ->
+                card(CustomizeCardShapes.getShapeForIndex(index, pinnedCards.size))
+            }
         }
 
         // 2. Unpinned Grid & Tile Density
@@ -866,7 +868,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                 title = "Grid & Tile Density",
                 icon = androidx.compose.material.icons.Icons.Default.GridView
             ) {
-                gridDensityCard()
+                gridDensityCard(CustomizeCardShapes.SingleCard)
             }
         }
 
@@ -876,46 +878,40 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                 title = "Drag Handle Options",
                 icon = androidx.compose.material.icons.Icons.Default.DragHandle
             ) {
-                dragHandleLengthCard()
+                dragHandleLengthCard(CustomizeCardShapes.SingleCard)
             }
         }
 
         // 4. Unpinned Header & Controls
-        if (!pinnedIds.contains("date_position_card") || !pinnedIds.contains("edit_pencil_location_card")) {
+        val unpinnedHeaderControls = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
+        if (!pinnedIds.contains("date_position_card")) unpinnedHeaderControls.add(datePositionCard)
+        if (!pinnedIds.contains("edit_pencil_location_card")) unpinnedHeaderControls.add(editPencilLocationCard)
+
+        if (unpinnedHeaderControls.isNotEmpty()) {
             CollapsibleSubheaderSection(
                 title = "Header & Controls",
                 icon = androidx.compose.material.icons.Icons.Default.Tune
             ) {
-                if (!pinnedIds.contains("date_position_card")) {
-                    datePositionCard()
-                }
-                if (!pinnedIds.contains("edit_pencil_location_card")) {
-                    editPencilLocationCard()
+                unpinnedHeaderControls.forEachIndexed { index, card ->
+                    card(CustomizeCardShapes.getShapeForIndex(index, unpinnedHeaderControls.size))
                 }
             }
         }
 
         // 5. Unpinned Typography & Font Sizes
-        if (!pinnedIds.contains("qs_tile_font_size_card") ||
-            !pinnedIds.contains("hide_date_in_expanded_card") ||
-            !pinnedIds.contains("disable_labels_in_expanded_card") ||
-            !pinnedIds.contains("hide_qqs_drag_handle_card")
-        ) {
+        val unpinnedTypography = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
+        if (!pinnedIds.contains("qs_tile_font_size_card")) unpinnedTypography.add(tileFontSizeCard)
+        if (!pinnedIds.contains("hide_date_in_expanded_card")) unpinnedTypography.add(hideDateInExpandedCard)
+        if (!pinnedIds.contains("disable_labels_in_expanded_card")) unpinnedTypography.add(disableLabelsInExpandedCard)
+        if (!pinnedIds.contains("hide_qqs_drag_handle_card")) unpinnedTypography.add(hideQqsDragHandleCard)
+
+        if (unpinnedTypography.isNotEmpty()) {
             CollapsibleSubheaderSection(
                 title = "Typography & Font Sizes",
                 icon = androidx.compose.material.icons.Icons.Default.TextFields
             ) {
-                if (!pinnedIds.contains("qs_tile_font_size_card")) {
-                    tileFontSizeCard()
-                }
-                if (!pinnedIds.contains("hide_date_in_expanded_card")) {
-                    hideDateInExpandedCard()
-                }
-                if (!pinnedIds.contains("disable_labels_in_expanded_card")) {
-                    disableLabelsInExpandedCard()
-                }
-                if (!pinnedIds.contains("hide_qqs_drag_handle_card")) {
-                    hideQqsDragHandleCard()
+                unpinnedTypography.forEachIndexed { index, card ->
+                    card(CustomizeCardShapes.getShapeForIndex(index, unpinnedTypography.size))
                 }
             }
         }

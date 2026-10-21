@@ -9,6 +9,14 @@ import kotlinx.coroutines.flow.map
 
 object PinnedCardsManager {
     fun getPinnedCardIds(category: CustomizeCategory, context: Context): StateFlow<List<String>> {
-        return MutableStateFlow(PanelPreferences.pinnedFeatures.value).asStateFlow()
+        return PanelPreferences.pinnedFeatures
+    }
+
+    fun isCardPinned(cardId: String): Boolean {
+        return PanelPreferences.isFeaturePinned(cardId)
+    }
+
+    fun togglePin(cardId: String, category: CustomizeCategory, context: Context): Boolean {
+        return PanelPreferences.toggleFeaturePinned(context, cardId)
     }
 }

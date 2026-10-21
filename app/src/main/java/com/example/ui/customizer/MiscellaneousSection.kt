@@ -8,9 +8,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.PublishedWithChanges
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timelapse
 import androidx.compose.material.icons.filled.TouchApp
@@ -75,6 +76,7 @@ import kotlinx.coroutines.withContext
 /**
  * Miscellaneous section containing Performance, Gestures, Trigger, and Debug options
  * organized under individual collapsible ListSubheaders with proper corner shapes.
+ * Supports pinning cards to the top of the section.
  */
 @Composable
 fun MiscellaneousSection(modifier: Modifier = Modifier) {
@@ -100,20 +102,13 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
 
     val forceShowMediaPreview by PanelPreferences.forceShowMediaPreview.collectAsState()
 
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing)
-    ) {
-        // ==========================================
-        // 1. PERFORMANCE SUBHEADER
-        // ==========================================
-        CollapsibleSubheaderSection(
-            title = "Performance",
-            icon = Icons.Default.Speed
-        ) {
-            // Disable Panel Animations Card (TopCard)
+    val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.MISCELLANEOUS, context).collectAsState()
+
+    // 1. Disable Panel Animations Card
+    val disablePanelAnimationsCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("disable_panel_animations_card", CustomizeCategory.MISCELLANEOUS, "Disable Panel Animations") {
             SettingsCard(
-                shape = CustomizeCardShapes.TopCard
+                shape = shape
             ) {
                 Row(
                     modifier = Modifier
@@ -176,10 +171,14 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                     )
                 }
             }
+        }
+    }
 
-            // Prime Core Mode Card (BottomCard)
+    // 2. Prime Core Mode Card
+    val primeCoreAffinityCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("prime_core_affinity_card", CustomizeCategory.MISCELLANEOUS, "Prime Core High Smoothness Mode") {
             SettingsCard(
-                shape = CustomizeCardShapes.BottomCard,
+                shape = shape,
                 modifier = Modifier.testTag("prime_core_affinity_card")
             ) {
                 Row(
@@ -273,17 +272,13 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                 }
             }
         }
+    }
 
-        // ==========================================
-        // 2. GESTURES SUBHEADER
-        // ==========================================
-        CollapsibleSubheaderSection(
-            title = "Gestures",
-            icon = Icons.Default.VolumeUp
-        ) {
-            // Hardware Key Actions Card (SingleCard)
+    // 3. Hardware Key Actions Card
+    val customVolumePanelCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("custom_volume_panel_card", CustomizeCategory.MISCELLANEOUS, "Hide QS/QQS on Volume Key Press") {
             SettingsCard(
-                shape = CustomizeCardShapes.SingleCard,
+                shape = shape,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -348,17 +343,13 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                 }
             }
         }
+    }
 
-        // ==========================================
-        // 3. TRIGGER SUBHEADER
-        // ==========================================
-        CollapsibleSubheaderSection(
-            title = "Trigger",
-            icon = Icons.Default.TouchApp
-        ) {
-            // 1. Invisible Status Bar Trigger Card (TopCard)
+    // 4. Invisible Status Bar Trigger Card
+    val invisibleStatusBarTriggerCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("invisible_status_bar_trigger_card", CustomizeCategory.MISCELLANEOUS, "Invisible Status Bar Trigger") {
             SettingsCard(
-                shape = CustomizeCardShapes.TopCard
+                shape = shape
             ) {
                 Row(
                     modifier = Modifier
@@ -421,10 +412,14 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                     )
                 }
             }
+        }
+    }
 
-            // 2. Use auto system panel closing Card (CenterCard)
+    // 5. Auto System Panel Closing Card
+    val autoSystemPanelClosingCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("auto_system_panel_closing_card", CustomizeCategory.MISCELLANEOUS, "Use auto system panel closing") {
             SettingsCard(
-                shape = CustomizeCardShapes.CenterCard,
+                shape = shape,
                 modifier = Modifier.testTag("auto_system_panel_closing_card")
             ) {
                 Row(
@@ -505,10 +500,14 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                     )
                 }
             }
+        }
+    }
 
-            // 3. Panel Replacement Delay Card (CenterCard)
+    // 6. Panel Replacement Delay Card
+    val panelReplacementDelayCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("panel_replacement_delay_card", CustomizeCategory.MISCELLANEOUS, "Panel Replacement Delay") {
             SettingsCard(
-                shape = CustomizeCardShapes.CenterCard,
+                shape = shape,
                 modifier = Modifier.testTag("panel_replacement_delay_card")
             ) {
                 Column(
@@ -645,7 +644,7 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                                 )
                                 delayPresets.forEachIndexed { index, (delayVal, label) ->
                                     val isSelected = panelReplacementDelayMs == delayVal
-                                    val shape = if (isSelected) {
+                                    val presetBtnShape = if (isSelected) {
                                         CircleShape
                                     } else {
                                         when (index) {
@@ -657,7 +656,7 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
 
                                     Button(
                                         onClick = { PanelPreferences.setPanelReplacementDelayMs(context, delayVal) },
-                                        shape = shape,
+                                        shape = presetBtnShape,
                                         border = null,
                                         elevation = null,
                                         colors = ButtonDefaults.buttonColors(
@@ -679,10 +678,14 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                     }
                 }
             }
+        }
+    }
 
-            // 4. Stock Shade Auto-Override Card (BottomCard)
+    // 7. Stock Shade Auto-Override Card
+    val stockShadeOverrideCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("stock_shade_override_card", CustomizeCategory.MISCELLANEOUS, "Stock Shade Auto-Override") {
             SettingsCard(
-                shape = CustomizeCardShapes.BottomCard
+                shape = shape
             ) {
                 Column(
                     modifier = Modifier
@@ -1049,17 +1052,13 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                 }
             }
         }
+    }
 
-        // ==========================================
-        // 4. DEBUG SUBHEADER
-        // ==========================================
-        CollapsibleSubheaderSection(
-            title = "Debug",
-            icon = Icons.Default.BugReport
-        ) {
-            // Force Show Media Preview Card (SingleCard)
+    // 8. Force Show Media Preview Card
+    val forceShowMediaPreviewCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("force_show_media_preview_card", CustomizeCategory.MISCELLANEOUS, "Force Show Preview Placeholder") {
             SettingsCard(
-                shape = CustomizeCardShapes.SingleCard,
+                shape = shape,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -1122,6 +1121,86 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                         modifier = Modifier.testTag("force_show_media_preview_toggle")
                     )
                 }
+            }
+        }
+    }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing)
+    ) {
+        // 1. Pinned Cards at the very top of Miscellaneous
+        val pinnedCards = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
+        if (pinnedIds.contains("disable_panel_animations_card")) pinnedCards.add(disablePanelAnimationsCard)
+        if (pinnedIds.contains("prime_core_affinity_card")) pinnedCards.add(primeCoreAffinityCard)
+        if (pinnedIds.contains("custom_volume_panel_card")) pinnedCards.add(customVolumePanelCard)
+        if (pinnedIds.contains("invisible_status_bar_trigger_card")) pinnedCards.add(invisibleStatusBarTriggerCard)
+        if (pinnedIds.contains("auto_system_panel_closing_card")) pinnedCards.add(autoSystemPanelClosingCard)
+        if (pinnedIds.contains("panel_replacement_delay_card")) pinnedCards.add(panelReplacementDelayCard)
+        if (pinnedIds.contains("stock_shade_override_card")) pinnedCards.add(stockShadeOverrideCard)
+        if (pinnedIds.contains("force_show_media_preview_card")) pinnedCards.add(forceShowMediaPreviewCard)
+
+        if (pinnedCards.isNotEmpty()) {
+            ListSubheader(
+                text = "Pinned",
+                icon = Icons.Default.PushPin
+            )
+            pinnedCards.forEachIndexed { index, card ->
+                card(CustomizeCardShapes.getShapeForIndex(index, pinnedCards.size))
+            }
+        }
+
+        // 2. Unpinned Performance
+        val unpinnedPerf = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
+        if (!pinnedIds.contains("disable_panel_animations_card")) unpinnedPerf.add(disablePanelAnimationsCard)
+        if (!pinnedIds.contains("prime_core_affinity_card")) unpinnedPerf.add(primeCoreAffinityCard)
+
+        if (unpinnedPerf.isNotEmpty()) {
+            CollapsibleSubheaderSection(
+                title = "Performance",
+                icon = Icons.Default.Speed
+            ) {
+                unpinnedPerf.forEachIndexed { index, card ->
+                    card(CustomizeCardShapes.getShapeForIndex(index, unpinnedPerf.size))
+                }
+            }
+        }
+
+        // 3. Unpinned Gestures
+        if (!pinnedIds.contains("custom_volume_panel_card")) {
+            CollapsibleSubheaderSection(
+                title = "Gestures",
+                icon = Icons.Default.VolumeUp
+            ) {
+                customVolumePanelCard(CustomizeCardShapes.SingleCard)
+            }
+        }
+
+        // 4. Unpinned Trigger
+        val unpinnedTrigger = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
+        if (!pinnedIds.contains("invisible_status_bar_trigger_card")) unpinnedTrigger.add(invisibleStatusBarTriggerCard)
+        if (!pinnedIds.contains("auto_system_panel_closing_card")) unpinnedTrigger.add(autoSystemPanelClosingCard)
+        if (!pinnedIds.contains("panel_replacement_delay_card")) unpinnedTrigger.add(panelReplacementDelayCard)
+        if (!pinnedIds.contains("stock_shade_override_card")) unpinnedTrigger.add(stockShadeOverrideCard)
+
+        if (unpinnedTrigger.isNotEmpty()) {
+            CollapsibleSubheaderSection(
+                title = "Trigger",
+                icon = Icons.Default.TouchApp
+            ) {
+                unpinnedTrigger.forEachIndexed { index, card ->
+                    card(CustomizeCardShapes.getShapeForIndex(index, unpinnedTrigger.size))
+                }
+            }
+        }
+
+        // 5. Unpinned Debug
+        if (!pinnedIds.contains("force_show_media_preview_card")) {
+            CollapsibleSubheaderSection(
+                title = "Debug",
+                icon = Icons.Default.BugReport
+            ) {
+                forceShowMediaPreviewCard(CustomizeCardShapes.SingleCard)
             }
         }
     }

@@ -116,10 +116,10 @@ fun ThemesSection(modifier: Modifier = Modifier) {
 
     val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.THEMES, context).collectAsState()
 
-    val saveThemeCard = @Composable {
+    val saveThemeCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("save_theme_card", CustomizeCategory.THEMES) {
             SettingsCard(
-                shape = CustomizeCardShapes.TopCard,
+                shape = shape,
                 modifier = Modifier.testTag("save_theme_card")
             ) {
                 Column(
@@ -226,10 +226,10 @@ fun ThemesSection(modifier: Modifier = Modifier) {
         }
     }
 
-    val themeTransferCard = @Composable {
+    val themeTransferCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("theme_transfer_card", CustomizeCategory.THEMES) {
             SettingsCard(
-                shape = CustomizeCardShapes.BottomCard,
+                shape = shape,
                 modifier = Modifier.testTag("theme_transfer_card")
             ) {
                 Column(
@@ -328,15 +328,15 @@ fun ThemesSection(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing)
     ) {
         // 1. Pinned Cards at the very top of Themes
-        val pinnedCards = mutableListOf<@Composable () -> Unit>()
+        val pinnedCards = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
         if (pinnedIds.contains("save_theme_card")) pinnedCards.add(saveThemeCard)
         if (pinnedIds.contains("theme_transfer_card")) pinnedCards.add(themeTransferCard)
         savedThemes.forEach { theme ->
             if (pinnedIds.contains("saved_theme_${theme.id}")) {
-                pinnedCards.add {
+                pinnedCards.add { cardShape ->
                     SavedThemeCard(
                         theme = theme,
-                        shape = CustomizeCardShapes.SingleCard,
+                        shape = cardShape,
                         activeThemeId = activeThemeId,
                         collapseAllTrigger = collapseAllTrigger,
                         onApply = {
@@ -375,20 +375,23 @@ fun ThemesSection(modifier: Modifier = Modifier) {
                 text = "Pinned",
                 icon = androidx.compose.material.icons.Icons.Default.PushPin
             )
-            pinnedCards.forEach { card -> card() }
+            pinnedCards.forEachIndexed { index, card ->
+                card(CustomizeCardShapes.getShapeForIndex(index, pinnedCards.size))
+            }
         }
 
         // Unpinned Save Configuration subheader
-        if (!pinnedIds.contains("save_theme_card") || !pinnedIds.contains("theme_transfer_card")) {
+        val unpinnedSaveConfig = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
+        if (!pinnedIds.contains("save_theme_card")) unpinnedSaveConfig.add(saveThemeCard)
+        if (!pinnedIds.contains("theme_transfer_card")) unpinnedSaveConfig.add(themeTransferCard)
+
+        if (unpinnedSaveConfig.isNotEmpty()) {
             CollapsibleSubheaderSection(
                 title = "Save Configuration",
                 icon = Icons.Default.BookmarkAdd
             ) {
-                if (!pinnedIds.contains("save_theme_card")) {
-                    saveThemeCard()
-                }
-                if (!pinnedIds.contains("theme_transfer_card")) {
-                    themeTransferCard()
+                unpinnedSaveConfig.forEachIndexed { index, card ->
+                    card(CustomizeCardShapes.getShapeForIndex(index, unpinnedSaveConfig.size))
                 }
             }
         }

@@ -56,10 +56,10 @@ fun AboutSection(modifier: Modifier = Modifier) {
 
     val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.ABOUT, context).collectAsState()
 
-    val appHeaderCard = @Composable {
+    val appHeaderCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("about_app_header_card", CustomizeCategory.ABOUT) {
             SettingsCard(
-                shape = CustomizeCardShapes.SingleCard,
+                shape = shape,
                 modifier = Modifier.testTag("about_app_header_card")
             ) {
                 Column(
@@ -122,10 +122,10 @@ fun AboutSection(modifier: Modifier = Modifier) {
         }
     }
 
-    val developerCard = @Composable {
+    val developerCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("about_developer_card", CustomizeCategory.ABOUT) {
             SettingsCard(
-                shape = CustomizeCardShapes.SingleCard,
+                shape = shape,
                 modifier = Modifier.testTag("about_developer_card")
             ) {
                 Row(
@@ -181,10 +181,10 @@ fun AboutSection(modifier: Modifier = Modifier) {
         }
     }
 
-    val telegramCard = @Composable {
+    val telegramCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("about_telegram_card", CustomizeCategory.ABOUT) {
             SettingsCard(
-                shape = CustomizeCardShapes.SingleCard,
+                shape = shape,
                 modifier = Modifier.testTag("about_telegram_card")
             ) {
                 Column(
@@ -288,10 +288,10 @@ fun AboutSection(modifier: Modifier = Modifier) {
         }
     }
 
-    val featuresCard = @Composable {
+    val featuresCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("about_features_card", CustomizeCategory.ABOUT) {
             SettingsCard(
-                shape = CustomizeCardShapes.SingleCard,
+                shape = shape,
                 modifier = Modifier.testTag("about_features_card")
             ) {
                 Column(
@@ -347,7 +347,7 @@ fun AboutSection(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing)
     ) {
         // 1. Pinned Cards Section at the very top of About
-        val pinnedCards = mutableListOf<@Composable () -> Unit>()
+        val pinnedCards = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
         if (pinnedIds.contains("about_app_header_card")) pinnedCards.add(appHeaderCard)
         if (pinnedIds.contains("about_developer_card")) pinnedCards.add(developerCard)
         if (pinnedIds.contains("about_telegram_card")) pinnedCards.add(telegramCard)
@@ -358,7 +358,9 @@ fun AboutSection(modifier: Modifier = Modifier) {
                 text = "Pinned",
                 icon = androidx.compose.material.icons.Icons.Default.PushPin
             )
-            pinnedCards.forEach { card -> card() }
+            pinnedCards.forEachIndexed { index, card ->
+                card(CustomizeCardShapes.getShapeForIndex(index, pinnedCards.size))
+            }
         }
 
         // 2. Unpinned App Information
@@ -367,7 +369,7 @@ fun AboutSection(modifier: Modifier = Modifier) {
                 title = "App Information",
                 icon = Icons.Default.Info
             ) {
-                appHeaderCard()
+                appHeaderCard(CustomizeCardShapes.SingleCard)
             }
         }
 
@@ -377,7 +379,7 @@ fun AboutSection(modifier: Modifier = Modifier) {
                 title = "Developer & Creator",
                 icon = Icons.Default.Person
             ) {
-                developerCard()
+                developerCard(CustomizeCardShapes.SingleCard)
             }
         }
 
@@ -387,7 +389,7 @@ fun AboutSection(modifier: Modifier = Modifier) {
                 title = "Community & Support",
                 icon = Icons.Default.Send
             ) {
-                telegramCard()
+                telegramCard(CustomizeCardShapes.SingleCard)
             }
         }
 
@@ -397,7 +399,7 @@ fun AboutSection(modifier: Modifier = Modifier) {
                 title = "Features Overview",
                 icon = Icons.Default.Star
             ) {
-                featuresCard()
+                featuresCard(CustomizeCardShapes.SingleCard)
             }
         }
     }

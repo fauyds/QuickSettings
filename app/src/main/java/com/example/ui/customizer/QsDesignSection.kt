@@ -84,6 +84,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -174,20 +175,16 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
     var showImportDialog by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)
-    ) {
-        // --- 1. TILE SHAPES & LAYOUT ---
-        CollapsibleSubheaderSection(
-            title = "Tile Shapes & Layout",
-            icon = Icons.Default.Apps
-        ) {
+    val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.QS_DESIGN, context).collectAsState()
 
-        // 1. QQS Icon Size Card
-        SettingsCard(
-            shape = CustomizeCardShapes.TopCard
-        ) {
+    // --- 1. TILE SHAPES & LAYOUT CARDS ---
+
+    // 1. QQS Icon Size Card
+    val qqsIconSizeCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("qqs_icon_size_card", CustomizeCategory.QS_DESIGN, "QQS Icon Size") {
+            SettingsCard(
+                shape = shape
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -268,13 +265,17 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     Text("Default (48 dp)", fontSize = 10.sp, color = Color.Gray)
                     Text("64 dp", fontSize = 10.sp, color = Color.Gray)
                 }
+                }
             }
         }
+    }
 
-        // 2. QQS Icon Quantity Card
-        SettingsCard(
-            shape = CustomizeCardShapes.CenterCard
-        ) {
+    // 2. QQS Icon Quantity Card
+    val qqsIconQuantityCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("qqs_icon_quantity_card", CustomizeCategory.QS_DESIGN, "QQS Icon Quantity") {
+            SettingsCard(
+                shape = shape
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -358,12 +359,16 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 }
             }
         }
+    }
+    }
 
-        // 3. Tile Shape Customization (XML Paths) -> Moved to Tile Shapes & Layout!
-        SettingsCard(
-            shape = CustomizeCardShapes.CenterCard,
-            modifier = Modifier.testTag("tile_shape_selection_card")
-        ) {
+    // 3. Tile Shape Customization (XML Paths)
+    val tileShapeSelectionCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("tile_shape_selection_card", CustomizeCategory.QS_DESIGN, "Tile Shape Customization") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("tile_shape_selection_card")
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -684,17 +689,21 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             }
                         }
                     }
-                }
                     }
                 }
             }
         }
+    }
+    }
+    }
 
-        // 4. 1.2dp Tile Outline Card
-        SettingsCard(
-            shape = CustomizeCardShapes.CenterCard,
-            modifier = Modifier.testTag("tile_outline_card")
-        ) {
+    // 4. 1.2dp Tile Outline Card
+    val tileOutlineCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("tile_outline_card", CustomizeCategory.QS_DESIGN, "QS Tile Outline") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("tile_outline_card")
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -842,12 +851,16 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 }
             }
         }
+    }
+    }
 
-        // 5. QS Tile Diagonal Gradient Card
-        SettingsCard(
-            shape = CustomizeCardShapes.BottomCard,
-            modifier = Modifier.testTag("qs_tile_gradient_card")
-        ) {
+    // 5. QS Tile Diagonal Gradient Card
+    val qsTileGradientCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("qs_tile_gradient_card", CustomizeCategory.QS_DESIGN, "Tile Gradient") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("qs_tile_gradient_card")
+            ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -906,20 +919,17 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 )
             }
         }
+    }
+    }
 
+    // --- 2. SIM CARD CARRIER CARDS ---
 
-        }
-
-        // --- 2. SIM CARD CARRIER ---
-        CollapsibleSubheaderSection(
-            title = "SIM Card Carrier",
-            icon = Icons.Default.SimCard
-        ) {
-
-        // Show SIM Card Carrier Card
-        SettingsCard(
-            shape = if (showCarrier) CustomizeCardShapes.TopCard else CustomizeCardShapes.SingleCard
-        ) {
+    // Show SIM Card Carrier Card
+    val showCarrierCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("show_carrier_card", CustomizeCategory.QS_DESIGN, "Show SIM Card Carrier") {
+            SettingsCard(
+                shape = shape
+            ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -978,18 +988,16 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 )
             }
         }
+    }
+    }
 
-        // Divider Between Carrier & QQS Tiles Card
-        AnimatedVisibility(
-            visible = showCarrier,
-            enter = expandVertically() + fadeIn(),
-            exit = shrinkVertically() + fadeOut()
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)) {
-                SettingsCard(
-                    shape = CustomizeCardShapes.CenterCard,
-                    modifier = Modifier.testTag("carrier_divider_card")
-                ) {
+    // Divider Between Carrier & QQS Tiles Card
+    val carrierDividerCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("carrier_divider_card", CustomizeCategory.QS_DESIGN, "Carrier Divider") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("carrier_divider_card")
+            ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1048,11 +1056,16 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         )
                     }
                 }
+        }
+    }
 
-                SettingsCard(
-                    shape = CustomizeCardShapes.BottomCard,
-                    modifier = Modifier.testTag("hide_carrier_in_expanded_card")
-                ) {
+    // Hide Carrier in Expanded QS Card
+    val hideCarrierInExpandedCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("hide_carrier_in_expanded_card", CustomizeCategory.QS_DESIGN, "Hide Carrier in Expanded QS") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("hide_carrier_in_expanded_card")
+            ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1111,23 +1124,18 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         )
                     }
                 }
-            }
         }
+    }
 
+    // --- 3. HEADER & BACKGROUNDS CARDS ---
 
-        }
-
-        // --- 3. HEADER & BACKGROUNDS ---
-        CollapsibleSubheaderSection(
-            title = "Header & Backgrounds",
-            icon = Icons.Default.Image
-        ) {
-
-        // Custom Header Image Banner Card
-        SettingsCard(
-            shape = CustomizeCardShapes.TopCard,
-            modifier = Modifier.testTag("custom_header_image_card")
-        ) {
+    // Custom Header Image Banner Card
+    val customHeaderImageCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("custom_header_image_card", CustomizeCategory.QS_DESIGN, "Custom Header Image") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("custom_header_image_card")
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1326,17 +1334,21 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                     )
                                 }
                             }
-                        }
                     }
                 }
             }
         }
+    }
+    }
+    }
 
-        // Header Monet Gradient Card
-        SettingsCard(
-            shape = CustomizeCardShapes.CenterCard,
-            modifier = Modifier.testTag("header_monet_gradient_card")
-        ) {
+    // Header Monet Gradient Card
+    val customHeaderMonetGradientCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("custom_header_monet_gradient_card", CustomizeCategory.QS_DESIGN, "Header Monet Gradient") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("header_monet_gradient_card")
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1517,16 +1529,20 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 }
             }
         }
+    }
+    }
 
-        // Per-Element Monet Accent Colors Preference Card
-        SettingsCard(
-            shape = CustomizeCardShapes.BottomCard,
-            onClick = {
-                val intent = Intent(context, ElementColorsActivity::class.java)
-                context.startActivity(intent)
-            },
-            modifier = Modifier.testTag("element_colors_preference_card")
-        ) {
+    // Per-Element Monet Accent Colors Preference Card
+    val elementColorsPreferenceCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("element_colors_preference_card", CustomizeCategory.QS_DESIGN, "Per-Element Monet Accent Colors") {
+            SettingsCard(
+                shape = shape,
+                onClick = {
+                    val intent = Intent(context, ElementColorsActivity::class.java)
+                    context.startActivity(intent)
+                },
+                modifier = Modifier.testTag("element_colors_preference_card")
+            ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1592,20 +1608,17 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 )
             }
         }
+    }
+    }
 
+    // --- 4. BRIGHTNESS & SLIDERS CARDS ---
 
-        }
-
-        // --- 3. BRIGHTNESS & SLIDERS ---
-        CollapsibleSubheaderSection(
-            title = "Brightness & Sliders",
-            icon = Icons.Default.BrightnessMedium
-        ) {
-
-        // Move Brightness to Bottom Card
-        SettingsCard(
-            shape = CustomizeCardShapes.TopCard
-        ) {
+    // Move Brightness to Bottom Card
+    val moveBrightnessBottomCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("move_brightness_bottom_card", CustomizeCategory.QS_DESIGN, "Move Brightness to Bottom") {
+            SettingsCard(
+                shape = shape
+            ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1678,11 +1691,15 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 )
             }
         }
+    }
+    }
 
-        // Show Brightness Slider in QQS Card
-        SettingsCard(
-            shape = CustomizeCardShapes.CenterCard
-        ) {
+    // Show Brightness Slider in QQS Card
+    val brightnessInQqsCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("brightness_in_qqs_card", CustomizeCategory.QS_DESIGN, "Brightness Slider in QQS") {
+            SettingsCard(
+                shape = shape
+            ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1755,8 +1772,11 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 )
             }
         }
+    }
+    }
 
-        // Progress Bar & Slider Style Card
+    // Progress Bar & Slider Style Card
+    val progressBarSliderStyleCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         var previewSliderValue by remember { mutableFloatStateOf(0.65f) }
         var selectedSliderTarget by remember { mutableStateOf(QsSliderTarget.BRIGHTNESS) }
 
@@ -1788,9 +1808,10 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             QsSliderTarget.MEDIA -> if (sliderSyncAll) globalProgressBarStyle else mediaSliderStyle
         }
 
-        SettingsCard(
-            shape = CustomizeCardShapes.BottomCard
-        ) {
+        PinnableCardWrapper("progress_bar_slider_style_card", CustomizeCategory.QS_DESIGN, "Progress Bar & Slider Style") {
+            SettingsCard(
+                shape = shape
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -2745,25 +2766,22 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             )
                         }
                     }
-                }
                     }
                 }
             }
         }
+    }
+    }
+    }
 
+    // --- 5. PANEL CORNER STYLING CARDS ---
 
-        }
-
-        // --- 4. PANEL CORNER STYLING ---
-        CollapsibleSubheaderSection(
-            title = "Panel Corner Styling",
-            icon = Icons.Default.RoundedCorner
-        ) {
-
-        // QS, QQS & Notifications Panel Corners Card
-        SettingsCard(
-            shape = CustomizeCardShapes.SingleCard
-        ) {
+    // QS, QQS & Notifications Panel Corners Card
+    val panelCornerStylingCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("panel_corner_styling_card", CustomizeCategory.QS_DESIGN, "Panel Corners") {
+            SettingsCard(
+                shape = shape
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -3038,7 +3056,129 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             }
         }
     }
-}
+    }
+
+    val pinnedCardsMap = mapOf<String, @Composable (androidx.compose.ui.graphics.Shape) -> Unit>(
+        "qqs_icon_size_card" to qqsIconSizeCard,
+        "qqs_icon_quantity_card" to qqsIconQuantityCard,
+        "tile_shape_selection_card" to tileShapeSelectionCard,
+        "tile_outline_card" to tileOutlineCard,
+        "qs_tile_gradient_card" to qsTileGradientCard,
+        "show_carrier_card" to showCarrierCard,
+        "carrier_divider_card" to carrierDividerCard,
+        "hide_carrier_in_expanded_card" to hideCarrierInExpandedCard,
+        "custom_header_image_card" to customHeaderImageCard,
+        "custom_header_monet_gradient_card" to customHeaderMonetGradientCard,
+        "element_colors_preference_card" to elementColorsPreferenceCard,
+        "move_brightness_bottom_card" to moveBrightnessBottomCard,
+        "brightness_in_qqs_card" to brightnessInQqsCard,
+        "progress_bar_slider_style_card" to progressBarSliderStyleCard,
+        "panel_corner_styling_card" to panelCornerStylingCard
+    )
+    val pinnedCards = pinnedIds.mapNotNull { pinnedCardsMap[it] }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)
+    ) {
+        // 1. Pinned Cards at the very top of Quick Settings Design
+        if (pinnedCards.isNotEmpty()) {
+            ListSubheader(
+                text = "Pinned",
+                icon = Icons.Default.PushPin
+            )
+            pinnedCards.forEachIndexed { index, card ->
+                card(CustomizeCardShapes.getShapeForIndex(index, pinnedCards.size))
+            }
+        }
+
+        // 2. Tile Shapes & Layout
+        val unpinnedTileShapes = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
+        if (!pinnedIds.contains("qqs_icon_size_card")) unpinnedTileShapes.add(qqsIconSizeCard)
+        if (!pinnedIds.contains("qqs_icon_quantity_card")) unpinnedTileShapes.add(qqsIconQuantityCard)
+        if (!pinnedIds.contains("tile_shape_selection_card")) unpinnedTileShapes.add(tileShapeSelectionCard)
+        if (!pinnedIds.contains("tile_outline_card")) unpinnedTileShapes.add(tileOutlineCard)
+        if (!pinnedIds.contains("qs_tile_gradient_card")) unpinnedTileShapes.add(qsTileGradientCard)
+
+        if (unpinnedTileShapes.isNotEmpty()) {
+            CollapsibleSubheaderSection(
+                title = "Tile Shapes & Layout",
+                icon = Icons.Default.Apps
+            ) {
+                unpinnedTileShapes.forEachIndexed { index, card ->
+                    card(CustomizeCardShapes.getShapeForIndex(index, unpinnedTileShapes.size))
+                }
+            }
+        }
+
+        // 3. SIM Card Carrier
+        val unpinnedCarrier = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
+        if (!pinnedIds.contains("show_carrier_card")) unpinnedCarrier.add(showCarrierCard)
+        if (showCarrier) {
+            if (!pinnedIds.contains("carrier_divider_card")) unpinnedCarrier.add(carrierDividerCard)
+            if (!pinnedIds.contains("hide_carrier_in_expanded_card")) unpinnedCarrier.add(hideCarrierInExpandedCard)
+        }
+
+        if (unpinnedCarrier.isNotEmpty()) {
+            CollapsibleSubheaderSection(
+                title = "SIM Card Carrier",
+                icon = Icons.Default.SimCard
+            ) {
+                unpinnedCarrier.forEachIndexed { index, card ->
+                    card(CustomizeCardShapes.getShapeForIndex(index, unpinnedCarrier.size))
+                }
+            }
+        }
+
+        // 4. Header & Backgrounds
+        val unpinnedHeader = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
+        if (!pinnedIds.contains("custom_header_image_card")) unpinnedHeader.add(customHeaderImageCard)
+        if (!pinnedIds.contains("custom_header_monet_gradient_card")) unpinnedHeader.add(customHeaderMonetGradientCard)
+        if (!pinnedIds.contains("element_colors_preference_card")) unpinnedHeader.add(elementColorsPreferenceCard)
+
+        if (unpinnedHeader.isNotEmpty()) {
+            CollapsibleSubheaderSection(
+                title = "Header & Backgrounds",
+                icon = Icons.Default.Image
+            ) {
+                unpinnedHeader.forEachIndexed { index, card ->
+                    card(CustomizeCardShapes.getShapeForIndex(index, unpinnedHeader.size))
+                }
+            }
+        }
+
+        // 5. Brightness & Sliders
+        val unpinnedBrightness = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
+        if (!pinnedIds.contains("move_brightness_bottom_card")) unpinnedBrightness.add(moveBrightnessBottomCard)
+        if (!pinnedIds.contains("brightness_in_qqs_card")) unpinnedBrightness.add(brightnessInQqsCard)
+        if (!pinnedIds.contains("progress_bar_slider_style_card")) unpinnedBrightness.add(progressBarSliderStyleCard)
+
+        if (unpinnedBrightness.isNotEmpty()) {
+            CollapsibleSubheaderSection(
+                title = "Brightness & Sliders",
+                icon = Icons.Default.BrightnessMedium
+            ) {
+                unpinnedBrightness.forEachIndexed { index, card ->
+                    card(CustomizeCardShapes.getShapeForIndex(index, unpinnedBrightness.size))
+                }
+            }
+        }
+
+        // 6. Panel Corner Styling
+        val unpinnedCorners = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
+        if (!pinnedIds.contains("panel_corner_styling_card")) unpinnedCorners.add(panelCornerStylingCard)
+
+        if (unpinnedCorners.isNotEmpty()) {
+            CollapsibleSubheaderSection(
+                title = "Panel Corner Styling",
+                icon = Icons.Default.RoundedCorner
+            ) {
+                unpinnedCorners.forEachIndexed { index, card ->
+                    card(CustomizeCardShapes.getShapeForIndex(index, unpinnedCorners.size))
+                }
+            }
+        }
+    }
 
     if (showImportDialog) {
         ImportXmlShapeDialog(

@@ -74,10 +74,10 @@ fun BasicSettingsSection(modifier: Modifier = Modifier) {
 
     val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.BASIC, context).collectAsState()
 
-    val themeModeCard = @Composable {
+    val themeModeCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("theme_mode_card", CustomizeCategory.BASIC) {
             SettingsCard(
-                shape = CustomizeCardShapes.TopCard,
+                shape = shape,
                 modifier = Modifier.testTag("theme_mode_card")
             ) {
                 Column(
@@ -176,22 +176,22 @@ fun BasicSettingsSection(modifier: Modifier = Modifier) {
         }
     }
 
-    val collapseToggleCard = @Composable {
+    val collapseToggleCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("collapse_expand_options_card", CustomizeCategory.BASIC) {
-            CollapseExpandToggleCard(shape = CustomizeCardShapes.CenterCard)
+            CollapseExpandToggleCard(shape = shape)
         }
     }
 
-    val collapseSubheadersCard = @Composable {
+    val collapseSubheadersCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("collapse_expand_subheaders_card", CustomizeCategory.BASIC) {
-            CollapseExpandSubheadersCard(shape = CustomizeCardShapes.BottomCard)
+            CollapseExpandSubheadersCard(shape = shape)
         }
     }
 
-    val importExportCard = @Composable {
+    val importExportCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("import_export_card", CustomizeCategory.BASIC) {
             SettingsCard(
-                shape = CustomizeCardShapes.SingleCard,
+                shape = shape,
                 modifier = Modifier.testTag("import_export_card")
             ) {
                 Column(
@@ -287,8 +287,7 @@ fun BasicSettingsSection(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // 1. Pinned Cards at the very top of Basic Settings
-        val pinnedCards = mutableListOf<@Composable () -> Unit>()
-        android.util.Log.d("BasicSettingsSection", "Pinned IDs: $pinnedIds")
+        val pinnedCards = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
         if (pinnedIds.contains("theme_mode_card")) pinnedCards.add(themeModeCard)
         if (pinnedIds.contains("collapse_expand_options_card")) pinnedCards.add(collapseToggleCard)
         if (pinnedIds.contains("collapse_expand_subheaders_card")) pinnedCards.add(collapseSubheadersCard)
@@ -299,11 +298,13 @@ fun BasicSettingsSection(modifier: Modifier = Modifier) {
                 text = "Pinned",
                 icon = androidx.compose.material.icons.Icons.Default.PushPin
             )
-            pinnedCards.forEach { card -> card() }
+            pinnedCards.forEachIndexed { index, card ->
+                card(CustomizeCardShapes.getShapeForIndex(index, pinnedCards.size))
+            }
         }
 
         // 2. Unpinned Appearance & Theme Cards
-        val unpinnedAppearance = mutableListOf<@Composable () -> Unit>()
+        val unpinnedAppearance = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
         if (!pinnedIds.contains("theme_mode_card")) unpinnedAppearance.add(themeModeCard)
         if (!pinnedIds.contains("collapse_expand_options_card")) unpinnedAppearance.add(collapseToggleCard)
         if (!pinnedIds.contains("collapse_expand_subheaders_card")) unpinnedAppearance.add(collapseSubheadersCard)
@@ -313,7 +314,9 @@ fun BasicSettingsSection(modifier: Modifier = Modifier) {
                 text = "Appearance & Theme",
                 icon = Icons.Default.Palette
             )
-            unpinnedAppearance.forEach { card -> card() }
+            unpinnedAppearance.forEachIndexed { index, card ->
+                card(CustomizeCardShapes.getShapeForIndex(index, unpinnedAppearance.size))
+            }
         }
 
         // 3. Unpinned Configuration Backup Card
@@ -322,7 +325,7 @@ fun BasicSettingsSection(modifier: Modifier = Modifier) {
                 title = "Configuration Backup",
                 icon = Icons.Default.SyncAlt
             ) {
-                importExportCard()
+                importExportCard(CustomizeCardShapes.SingleCard)
             }
         }
     }
