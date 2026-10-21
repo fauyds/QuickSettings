@@ -994,7 +994,7 @@ fun QsHeaderBar(
     val customHeaderImageUri by PanelPreferences.customHeaderImageUri.collectAsState()
 
     val isHeaderImageEnabled = showCustomHeaderImage && customHeaderImageUri.isNotBlank()
-    val useBlackHeaderText = showMonetSurfaceBackground && !isDark && !isHeaderImageEnabled
+    val useBlackHeaderText = showMonetSurfaceBackground && !isDark
 
     val headerTextColor = if (useBlackHeaderText) Color.Black else Color.White
     val headerSecondaryTextColor = if (useBlackHeaderText) Color.Black.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.9f)

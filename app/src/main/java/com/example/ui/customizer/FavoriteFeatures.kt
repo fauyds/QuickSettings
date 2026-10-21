@@ -377,7 +377,7 @@ enum class FavoriteFeature(
     // Miscellaneous
     MISC_ANIMATION_SPEED(
         id = "misc_animation_speed",
-        title = "Animation Speed Scale",
+        title = "Disable Panel Animations",
         category = CustomizeCategory.MISCELLANEOUS,
         description = "Adjust opening, expanding, and closing animation speeds",
         icon = Icons.Default.Speed
@@ -391,14 +391,14 @@ enum class FavoriteFeature(
     ),
     MISC_STATUS_BAR_GESTURES(
         id = "misc_status_bar_gestures",
-        title = "Status Bar Pull Gestures",
+        title = "Invisible Status Bar Trigger",
         category = CustomizeCategory.MISCELLANEOUS,
         description = "Swipe down anywhere on the status bar to expand panel",
         icon = Icons.Default.TouchApp
     ),
     MISC_HARDWARE_BUTTONS(
         id = "misc_hardware_buttons",
-        title = "Hardware Key Gestures",
+        title = "Hide QS/QQS on Volume Key Press",
         category = CustomizeCategory.MISCELLANEOUS,
         description = "Use volume keys or shortcuts to trigger the Quick Settings panel",
         icon = Icons.Default.VolumeUp
@@ -465,7 +465,7 @@ enum class FavoriteFeature(
     // Additional Miscellaneous
     MISC_PRIME_CORE(
         id = "misc_prime_core",
-        title = "CPU Prime Core Affinity",
+        title = "Prime Core High Smoothness Mode",
         category = CustomizeCategory.MISCELLANEOUS,
         description = "Pin UI animation threads to prime performance core",
         icon = Icons.Default.Speed
@@ -486,7 +486,7 @@ enum class FavoriteFeature(
     ),
     MISC_PANEL_AUTO_CLOSE(
         id = "misc_panel_auto_close",
-        title = "Auto System Panel Closing",
+        title = "Use auto system panel closing",
         category = CustomizeCategory.MISCELLANEOUS,
         description = "Automatically dismiss stock system shade when custom panel opens",
         icon = Icons.Default.Close
@@ -500,7 +500,7 @@ enum class FavoriteFeature(
     ),
     MISC_SYSTEM_OVERRIDE(
         id = "misc_system_override",
-        title = "System QS Override Engine",
+        title = "Stock Shade Auto-Override",
         category = CustomizeCategory.MISCELLANEOUS,
         description = "Full system status bar pulldown interception service",
         icon = Icons.Default.AutoAwesome
@@ -993,7 +993,7 @@ fun ManageFavoriteFeaturesDialog(
             if (pinnedIds.isNotEmpty()) {
                 TextButton(
                     onClick = {
-                        PanelPreferences.setPinnedFeatures(context, emptySet())
+                        PanelPreferences.setPinnedFeatures(context, emptyList())
                     },
                     modifier = Modifier.testTag("clear_all_favorites_btn")
                 ) {
@@ -1144,7 +1144,18 @@ fun GenericPinnedFeatureCard(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
+                        ) {
+                            Text(
+                                text = "PINNED",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                            )
+                        }
                     }
                     Text(
                         text = feature.description,
@@ -1691,20 +1702,7 @@ fun FavoriteFeatureActionContent(
         }
 
         // --- GESTURES & OTHER ---
-        FavoriteFeature.GESTURE_VOLUME_KEY -> {
-            val enableVolumePanel by PanelPreferences.enableCustomVolumePanel.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Hide QS/QQS on Volume Key Press", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Switch(
-                    checked = enableVolumePanel,
-                    onCheckedChange = { PanelPreferences.setEnableCustomVolumePanel(context, it) }
-                )
-            }
-        }
+        FavoriteFeature.GESTURE_VOLUME_KEY,
         FavoriteFeature.MISC_HARDWARE_BUTTONS,
         FavoriteFeature.MISC_LOCKSCREEN_BYPASS,
         FavoriteFeature.MISC_DUAL_TONE_STATUS,

@@ -57,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.PanelPreferences
+import com.example.ui.customizer.CustomizeCategory
 
 /**
  * Dedicated Card Composable for Settings Sections in ui/customizer.
@@ -306,4 +307,12 @@ fun CollapsibleSubheaderSection(
             )
         }
     }
+}
+@Composable
+fun PinnableCardWrapper(
+    cardId: String,
+    category: CustomizeCategory,
+    content: @Composable () -> Unit
+) {
+    content()
 }

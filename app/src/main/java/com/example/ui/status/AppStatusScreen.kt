@@ -218,6 +218,7 @@ fun AppStatusScreen(
                     FilledTonalButton(
                         onClick = onLaunchInitialSetup,
                         shape = RoundedCornerShape(8.dp),
+                        colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(containerColor = screenBg),
                         modifier = Modifier.testTag("btn_launch_initial_setup")
                     ) {
                         Text("Start", fontWeight = FontWeight.Bold, fontSize = 12.sp)
@@ -374,7 +375,7 @@ fun AppStatusScreen(
                     Surface(
                         onClick = onOpenAccessibilitySettings,
                         shape = RoundedCornerShape(8.dp),
-                        color = nonGrantedRed
+                        color = screenBg
                     ) {
                         Text(
                             text = "Configure",
@@ -459,7 +460,7 @@ fun AppStatusScreen(
                     Surface(
                         onClick = onRequestPermission,
                         shape = RoundedCornerShape(8.dp),
-                        color = nonGrantedRed
+                        color = screenBg
                     ) {
                         Text(
                             text = "Grant",
@@ -654,6 +655,7 @@ fun TopTriggerStripBar(
     val colorScheme = MaterialTheme.colorScheme
     val isDark = com.example.ui.theme.LocalIsDarkTheme.current
     val cardBg = com.example.ui.theme.getSettingsCardBackgroundColor(isDark)
+    val screenBg = com.example.ui.theme.getSettingsScreenBackgroundColor(isDark)
 
     Card(
         shape = ExpressiveCardShapes.SingleCard,
@@ -734,7 +736,7 @@ fun TopTriggerStripBar(
                     Surface(
                         onClick = onRequestPermission,
                         shape = RoundedCornerShape(8.dp),
-                        color = colorScheme.errorContainer.copy(alpha = 0.25f),
+                        color = screenBg,
                         modifier = Modifier.testTag("grant_overlay_perm_btn")
                     ) {
                         Text(
@@ -756,7 +758,7 @@ fun TopTriggerStripBar(
                 Surface(
                     onClick = onTestFloatingOverlay,
                     shape = RoundedCornerShape(8.dp),
-                    color = colorScheme.primaryContainer,
+                    color = screenBg,
                     modifier = Modifier.testTag("open_floating_qs_btn")
                 ) {
                     Row(

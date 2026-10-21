@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -28,7 +29,6 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.PublishedWithChanges
-import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timelapse
 import androidx.compose.material.icons.filled.TouchApp
@@ -100,10 +100,18 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
 
     val forceShowMediaPreview by PanelPreferences.forceShowMediaPreview.collectAsState()
 
-    val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.MISCELLANEOUS, context).collectAsState()
-
-    val disablePanelAnimationsCard = @Composable {
-        PinnableCardWrapper("disable_panel_animations_card", CustomizeCategory.MISCELLANEOUS) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing)
+    ) {
+        // ==========================================
+        // 1. PERFORMANCE SUBHEADER
+        // ==========================================
+        CollapsibleSubheaderSection(
+            title = "Performance",
+            icon = Icons.Default.Speed
+        ) {
+            // Disable Panel Animations Card (TopCard)
             SettingsCard(
                 shape = CustomizeCardShapes.TopCard
             ) {
@@ -168,11 +176,8 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                     )
                 }
             }
-        }
-    }
 
-    val primeCoreAffinityCard = @Composable {
-        PinnableCardWrapper("prime_core_affinity_card", CustomizeCategory.MISCELLANEOUS) {
+            // Prime Core Mode Card (BottomCard)
             SettingsCard(
                 shape = CustomizeCardShapes.BottomCard,
                 modifier = Modifier.testTag("prime_core_affinity_card")
@@ -268,10 +273,15 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                 }
             }
         }
-    }
 
-    val hardwareKeyActionsCard = @Composable {
-        PinnableCardWrapper("hardware_key_actions_card", CustomizeCategory.MISCELLANEOUS) {
+        // ==========================================
+        // 2. GESTURES SUBHEADER
+        // ==========================================
+        CollapsibleSubheaderSection(
+            title = "Gestures",
+            icon = Icons.Default.VolumeUp
+        ) {
+            // Hardware Key Actions Card (SingleCard)
             SettingsCard(
                 shape = CustomizeCardShapes.SingleCard,
                 modifier = Modifier.fillMaxWidth()
@@ -338,10 +348,15 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                 }
             }
         }
-    }
 
-    val invisibleStatusBarTriggerCard = @Composable {
-        PinnableCardWrapper("invisible_status_bar_trigger_card", CustomizeCategory.MISCELLANEOUS) {
+        // ==========================================
+        // 3. TRIGGER SUBHEADER
+        // ==========================================
+        CollapsibleSubheaderSection(
+            title = "Trigger",
+            icon = Icons.Default.TouchApp
+        ) {
+            // 1. Invisible Status Bar Trigger Card (TopCard)
             SettingsCard(
                 shape = CustomizeCardShapes.TopCard
             ) {
@@ -406,11 +421,8 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                     )
                 }
             }
-        }
-    }
 
-    val autoCloseSystemPanelCard = @Composable {
-        PinnableCardWrapper("auto_close_system_panel_card", CustomizeCategory.MISCELLANEOUS) {
+            // 2. Use auto system panel closing Card (CenterCard)
             SettingsCard(
                 shape = CustomizeCardShapes.CenterCard,
                 modifier = Modifier.testTag("auto_system_panel_closing_card")
@@ -493,11 +505,8 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                     )
                 }
             }
-        }
-    }
 
-    val panelReplacementDelayCard = @Composable {
-        PinnableCardWrapper("panel_replacement_delay_card", CustomizeCategory.MISCELLANEOUS) {
+            // 3. Panel Replacement Delay Card (CenterCard)
             SettingsCard(
                 shape = CustomizeCardShapes.CenterCard,
                 modifier = Modifier.testTag("panel_replacement_delay_card")
@@ -652,7 +661,7 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                                         border = null,
                                         elevation = null,
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.background,
+                                            containerColor = if (isSelected) MaterialTheme.colorScheme.primary else com.example.ui.theme.getSettingsScreenBackgroundColor(isSystemInDarkTheme()),
                                             contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                                         ),
                                         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
@@ -670,11 +679,8 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                     }
                 }
             }
-        }
-    }
 
-    val systemQsInterceptorCard = @Composable {
-        PinnableCardWrapper("system_qs_interceptor_card", CustomizeCategory.MISCELLANEOUS) {
+            // 4. Stock Shade Auto-Override Card (BottomCard)
             SettingsCard(
                 shape = CustomizeCardShapes.BottomCard
             ) {
@@ -1043,10 +1049,15 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                 }
             }
         }
-    }
 
-    val forceMediaPreviewCard = @Composable {
-        PinnableCardWrapper("force_media_preview_card", CustomizeCategory.MISCELLANEOUS) {
+        // ==========================================
+        // 4. DEBUG SUBHEADER
+        // ==========================================
+        CollapsibleSubheaderSection(
+            title = "Debug",
+            icon = Icons.Default.BugReport
+        ) {
+            // Force Show Media Preview Card (SingleCard)
             SettingsCard(
                 shape = CustomizeCardShapes.SingleCard,
                 modifier = Modifier.fillMaxWidth()
@@ -1111,90 +1122,6 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                         modifier = Modifier.testTag("force_show_media_preview_toggle")
                     )
                 }
-            }
-        }
-    }
-
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing)
-    ) {
-        // 1. Pinned Cards at the very top of Miscellaneous
-        val pinnedCards = mutableListOf<@Composable () -> Unit>()
-        if (pinnedIds.contains("disable_panel_animations_card")) pinnedCards.add(disablePanelAnimationsCard)
-        if (pinnedIds.contains("prime_core_affinity_card")) pinnedCards.add(primeCoreAffinityCard)
-        if (pinnedIds.contains("hardware_key_actions_card")) pinnedCards.add(hardwareKeyActionsCard)
-        if (pinnedIds.contains("invisible_status_bar_trigger_card")) pinnedCards.add(invisibleStatusBarTriggerCard)
-        if (pinnedIds.contains("auto_close_system_panel_card")) pinnedCards.add(autoCloseSystemPanelCard)
-        if (pinnedIds.contains("panel_replacement_delay_card")) pinnedCards.add(panelReplacementDelayCard)
-        if (pinnedIds.contains("system_qs_interceptor_card")) pinnedCards.add(systemQsInterceptorCard)
-        if (pinnedIds.contains("force_media_preview_card")) pinnedCards.add(forceMediaPreviewCard)
-
-        if (pinnedCards.isNotEmpty()) {
-            ListSubheader(
-                text = "Pinned",
-                icon = androidx.compose.material.icons.Icons.Default.PushPin
-            )
-            pinnedCards.forEach { card -> card() }
-        }
-
-        // 2. Unpinned Performance Subheader
-        if (!pinnedIds.contains("disable_panel_animations_card") || !pinnedIds.contains("prime_core_affinity_card")) {
-            CollapsibleSubheaderSection(
-                title = "Performance",
-                icon = Icons.Default.Speed
-            ) {
-                if (!pinnedIds.contains("disable_panel_animations_card")) {
-                    disablePanelAnimationsCard()
-                }
-                if (!pinnedIds.contains("prime_core_affinity_card")) {
-                    primeCoreAffinityCard()
-                }
-            }
-        }
-
-        // 3. Unpinned Gestures Subheader
-        if (!pinnedIds.contains("hardware_key_actions_card")) {
-            CollapsibleSubheaderSection(
-                title = "Gestures",
-                icon = Icons.Default.VolumeUp
-            ) {
-                hardwareKeyActionsCard()
-            }
-        }
-
-        // 4. Unpinned Trigger Subheader
-        if (!pinnedIds.contains("invisible_status_bar_trigger_card") ||
-            !pinnedIds.contains("auto_close_system_panel_card") ||
-            !pinnedIds.contains("panel_replacement_delay_card") ||
-            !pinnedIds.contains("system_qs_interceptor_card")
-        ) {
-            CollapsibleSubheaderSection(
-                title = "Trigger",
-                icon = Icons.Default.TouchApp
-            ) {
-                if (!pinnedIds.contains("invisible_status_bar_trigger_card")) {
-                    invisibleStatusBarTriggerCard()
-                }
-                if (!pinnedIds.contains("auto_close_system_panel_card")) {
-                    autoCloseSystemPanelCard()
-                }
-                if (!pinnedIds.contains("panel_replacement_delay_card")) {
-                    panelReplacementDelayCard()
-                }
-                if (!pinnedIds.contains("system_qs_interceptor_card")) {
-                    systemQsInterceptorCard()
-                }
-            }
-        }
-
-        // 5. Unpinned Debug Subheader
-        if (!pinnedIds.contains("force_media_preview_card")) {
-            CollapsibleSubheaderSection(
-                title = "Debug",
-                icon = Icons.Default.BugReport
-            ) {
-                forceMediaPreviewCard()
             }
         }
     }

@@ -288,6 +288,7 @@ fun BasicSettingsSection(modifier: Modifier = Modifier) {
     ) {
         // 1. Pinned Cards at the very top of Basic Settings
         val pinnedCards = mutableListOf<@Composable () -> Unit>()
+        android.util.Log.d("BasicSettingsSection", "Pinned IDs: $pinnedIds")
         if (pinnedIds.contains("theme_mode_card")) pinnedCards.add(themeModeCard)
         if (pinnedIds.contains("collapse_expand_options_card")) pinnedCards.add(collapseToggleCard)
         if (pinnedIds.contains("collapse_expand_subheaders_card")) pinnedCards.add(collapseSubheadersCard)

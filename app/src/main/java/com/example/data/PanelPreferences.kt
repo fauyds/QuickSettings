@@ -746,8 +746,8 @@ object PanelPreferences {
     private val _disableLabelsInExpanded = MutableStateFlow(false)
     val disableLabelsInExpanded: StateFlow<Boolean> = _disableLabelsInExpanded.asStateFlow()
 
-    private val _pinnedFeatures = MutableStateFlow<Set<String>>(emptySet())
-    val pinnedFeatures: StateFlow<Set<String>> = _pinnedFeatures.asStateFlow()
+    private val _pinnedFeatures = MutableStateFlow<List<String>>(emptyList())
+    val pinnedFeatures: StateFlow<List<String>> = _pinnedFeatures.asStateFlow()
 
     private val _datePosition = MutableStateFlow(DatePosition.BELOW_TIME)
     val datePosition: StateFlow<DatePosition> = _datePosition.asStateFlow()
@@ -1126,7 +1126,7 @@ object PanelPreferences {
         _qsTileSubtitleFontSize.value = prefs.getFloat(KEY_QS_TILE_SUBTITLE_FONT_SIZE, 9.0f)
         _hideDateInExpanded.value = prefs.getBoolean(KEY_HIDE_DATE_IN_EXPANDED, false)
         _disableLabelsInExpanded.value = prefs.getBoolean(KEY_DISABLE_LABELS_IN_EXPANDED, false)
-        _pinnedFeatures.value = prefs.getStringSet(KEY_PINNED_FEATURES, emptySet()) ?: emptySet()
+        _pinnedFeatures.value = (prefs.getStringSet(KEY_PINNED_FEATURES, emptySet()) ?: emptySet()).toList()
         _wavyThickness.value = prefs.getFloat(KEY_WAVY_THICKNESS, 4.0f)
         _wavyWobbliness.value = prefs.getFloat(KEY_WAVY_WOBBLINESS, 3.5f)
         _wavyWavelength.value = prefs.getFloat(KEY_WAVY_WAVELENGTH, 26.0f)
@@ -2088,24 +2088,26 @@ object PanelPreferences {
     fun isFeaturePinned(featureId: String): Boolean = _pinnedFeatures.value.contains(featureId)
 
     fun toggleFeaturePinned(context: Context, featureId: String): Boolean {
-        val current = _pinnedFeatures.value.toMutableSet()
+        val current = _pinnedFeatures.value.toMutableList()
         val isNowPinned = if (current.contains(featureId)) {
             current.remove(featureId)
             false
         } else {
-            current.add(featureId)
+            current.add(0, featureId)
             true
         }
-        _pinnedFeatures.value = current
+        android.util.Log.d("PanelPreferences", "Feature $featureId pinned: $isNowPinned")
+        _pinnedFeatures.value = current.toList()
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putStringSet(KEY_PINNED_FEATURES, current).apply()
+        prefs.edit().putStringSet(KEY_PINNED_FEATURES, current.toSet()).apply()
+        android.util.Log.d("PanelPreferences", "New pinned list: $current")
         return isNowPinned
     }
 
-    fun setPinnedFeatures(context: Context, featureIds: Set<String>) {
+    fun setPinnedFeatures(context: Context, featureIds: List<String>) {
         _pinnedFeatures.value = featureIds
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putStringSet(KEY_PINNED_FEATURES, featureIds).apply()
+        prefs.edit().putStringSet(KEY_PINNED_FEATURES, featureIds.toSet()).apply()
     }
 
     fun setWavyThickness(context: Context, value: Float) {

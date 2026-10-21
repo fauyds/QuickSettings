@@ -138,7 +138,7 @@ fun NativeControlsScreen(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surface)
+                            .background(com.example.ui.theme.getSettingsCardBackgroundColor(com.example.ui.theme.LocalIsDarkTheme.current))
                             .testTag("refresh_hardware_button")
                     ) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = MonetPrimary, modifier = Modifier.size(18.dp))

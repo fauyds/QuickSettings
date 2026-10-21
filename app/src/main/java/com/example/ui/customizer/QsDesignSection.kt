@@ -100,7 +100,6 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Draw
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.Wifi
@@ -175,44 +174,20 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
     var showImportDialog by remember { mutableStateOf(false) }
 
-    val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.QS_DESIGN, context).collectAsState()
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)
+    ) {
+        // --- 1. TILE SHAPES & LAYOUT ---
+        CollapsibleSubheaderSection(
+            title = "Tile Shapes & Layout",
+            icon = Icons.Default.Apps
+        ) {
 
-    var previewSliderValue by remember { mutableFloatStateOf(0.65f) }
-    var selectedSliderTarget by remember { mutableStateOf(QsSliderTarget.BRIGHTNESS) }
-
-    val sliderSyncAll by PanelPreferences.sliderSyncAll.collectAsState()
-    val globalProgressBarStyle by PanelPreferences.progressBarStyle.collectAsState()
-    val brightnessSliderStyle by PanelPreferences.brightnessSliderStyle.collectAsState()
-    val volumeSliderStyle by PanelPreferences.volumeSliderStyle.collectAsState()
-    val mediaSliderStyle by PanelPreferences.mediaSliderStyle.collectAsState()
-
-    val wavyThickness by PanelPreferences.wavyThickness.collectAsState()
-    val wavyWobbliness by PanelPreferences.wavyWobbliness.collectAsState()
-    val wavyWavelength by PanelPreferences.wavyWavelength.collectAsState()
-    val wavyThumbRadius by PanelPreferences.wavyThumbRadius.collectAsState()
-    val wavySpeed by PanelPreferences.wavySpeed.collectAsState()
-    val wavyInactiveThickness by PanelPreferences.wavyInactiveTrackThickness.collectAsState()
-    val wavyCornerRadius by PanelPreferences.wavyCornerRadius.collectAsState()
-
-    val a12InactiveThickness by PanelPreferences.a12InactiveTrackThickness.collectAsState()
-    val a12CornerRadius by PanelPreferences.a12CornerRadius.collectAsState()
-
-    val straightThickness by PanelPreferences.straightThickness.collectAsState()
-    val straightInactiveThickness by PanelPreferences.straightInactiveTrackThickness.collectAsState()
-    val straightCornerRadius by PanelPreferences.straightCornerRadius.collectAsState()
-    val straightThumbRadius by PanelPreferences.straightThumbRadius.collectAsState()
-
-    val currentProgressBarStyle = when (selectedSliderTarget) {
-        QsSliderTarget.BRIGHTNESS -> if (sliderSyncAll) globalProgressBarStyle else brightnessSliderStyle
-        QsSliderTarget.VOLUME -> if (sliderSyncAll) globalProgressBarStyle else volumeSliderStyle
-        QsSliderTarget.MEDIA -> if (sliderSyncAll) globalProgressBarStyle else mediaSliderStyle
-    }
-
-    val qqsIconSizeCard = @Composable {
-        PinnableCardWrapper("qqs_icon_size_card", CustomizeCategory.QS_DESIGN) {
-            SettingsCard(
-                shape = CustomizeCardShapes.TopCard
-            ) {
+        // 1. QQS Icon Size Card
+        SettingsCard(
+            shape = CustomizeCardShapes.TopCard
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -295,15 +270,11 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 }
             }
         }
-    }
-}
 
-    val qqsIconQuantityCard = @Composable {
-        PinnableCardWrapper("qqs_icon_quantity_card", CustomizeCategory.QS_DESIGN) {
-            // 2. QQS Icon Quantity Card
-            SettingsCard(
-                shape = CustomizeCardShapes.CenterCard
-            ) {
+        // 2. QQS Icon Quantity Card
+        SettingsCard(
+            shape = CustomizeCardShapes.CenterCard
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -383,19 +354,16 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 ) {
                     Text("2 icons", fontSize = 10.sp, color = Color.Gray)
                     Text("Default (6 icons)", fontSize = 10.sp, color = Color.Gray)
+                    Text("6 icons", fontSize = 10.sp, color = Color.Gray)
                 }
             }
         }
-    }
-}
 
-    val tileShapeSelectionCard = @Composable {
-        PinnableCardWrapper("tile_shape_selection_card", CustomizeCategory.QS_DESIGN) {
-            // 3. Tile Shape Customization (XML Paths) -> Moved to Tile Shapes & Layout!
-            SettingsCard(
-                shape = CustomizeCardShapes.CenterCard,
-                modifier = Modifier.testTag("tile_shape_selection_card")
-            ) {
+        // 3. Tile Shape Customization (XML Paths) -> Moved to Tile Shapes & Layout!
+        SettingsCard(
+            shape = CustomizeCardShapes.CenterCard,
+            modifier = Modifier.testTag("tile_shape_selection_card")
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -456,7 +424,10 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         OutlinedButton(
                             onClick = { showImportDialog = true },
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                            modifier = Modifier.testTag("import_xml_shape_button")
+                            modifier = Modifier.testTag("import_xml_shape_button"),
+                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                containerColor = com.example.ui.theme.getSettingsScreenBackgroundColor(isSystemInDarkTheme())
+                            )
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Add,
@@ -712,22 +683,18 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 }
                             }
                         }
+                    }
+                }
+                    }
                 }
             }
         }
-    }
-}
-}
-}
-}
 
-    val tileOutlineCard = @Composable {
-        PinnableCardWrapper("tile_outline_card", CustomizeCategory.QS_DESIGN) {
-            // 4. 1.2dp Tile Outline Card
-            SettingsCard(
-                shape = CustomizeCardShapes.CenterCard,
-                modifier = Modifier.testTag("tile_outline_card")
-            ) {
+        // 4. 1.2dp Tile Outline Card
+        SettingsCard(
+            shape = CustomizeCardShapes.CenterCard,
+            modifier = Modifier.testTag("tile_outline_card")
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -875,16 +842,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 }
             }
         }
-    }
-}
 
-    val qsTileGradientCard = @Composable {
-        PinnableCardWrapper("qs_tile_gradient_card", CustomizeCategory.QS_DESIGN) {
-            // 5. QS Tile Diagonal Gradient Card
-            SettingsCard(
-                shape = CustomizeCardShapes.BottomCard,
-                modifier = Modifier.testTag("qs_tile_gradient_card")
-            ) {
+        // 5. QS Tile Diagonal Gradient Card
+        SettingsCard(
+            shape = CustomizeCardShapes.BottomCard,
+            modifier = Modifier.testTag("qs_tile_gradient_card")
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -943,15 +906,20 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 )
             }
         }
-    }
-}
 
-    val showCarrierCard = @Composable {
-        PinnableCardWrapper("show_carrier_card", CustomizeCategory.QS_DESIGN) {
-            // Show SIM Card Carrier Card
-            SettingsCard(
-                shape = if (showCarrier) CustomizeCardShapes.TopCard else CustomizeCardShapes.SingleCard
-            ) {
+
+        }
+
+        // --- 2. SIM CARD CARRIER ---
+        CollapsibleSubheaderSection(
+            title = "SIM Card Carrier",
+            icon = Icons.Default.SimCard
+        ) {
+
+        // Show SIM Card Carrier Card
+        SettingsCard(
+            shape = if (showCarrier) CustomizeCardShapes.TopCard else CustomizeCardShapes.SingleCard
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1010,16 +978,18 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 )
             }
         }
-    }
-}
 
-    val carrierDividerCard = @Composable {
-        PinnableCardWrapper("carrier_divider_card", CustomizeCategory.QS_DESIGN) {
-            // Divider Between Carrier & QQS Tiles Card
-            SettingsCard(
-                shape = CustomizeCardShapes.CenterCard,
-                modifier = Modifier.testTag("carrier_divider_card")
-            ) {
+        // Divider Between Carrier & QQS Tiles Card
+        AnimatedVisibility(
+            visible = showCarrier,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)) {
+                SettingsCard(
+                    shape = CustomizeCardShapes.CenterCard,
+                    modifier = Modifier.testTag("carrier_divider_card")
+                ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1076,17 +1046,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             ),
                             modifier = Modifier.testTag("show_carrier_divider_toggle")
                         )
-            }
-        }
-    }
-}
+                    }
+                }
 
-    val hideCarrierInExpandedCard = @Composable {
-        PinnableCardWrapper("hide_carrier_in_expanded_card", CustomizeCategory.QS_DESIGN) {
-            SettingsCard(
-                shape = CustomizeCardShapes.BottomCard,
-                modifier = Modifier.testTag("hide_carrier_in_expanded_card")
-            ) {
+                SettingsCard(
+                    shape = CustomizeCardShapes.BottomCard,
+                    modifier = Modifier.testTag("hide_carrier_in_expanded_card")
+                ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1143,18 +1109,25 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             ),
                             modifier = Modifier.testTag("hide_carrier_in_expanded_toggle")
                         )
+                    }
+                }
             }
         }
-    }
-}
 
-    val customHeaderImageCard = @Composable {
-        PinnableCardWrapper("custom_header_image_card", CustomizeCategory.QS_DESIGN) {
-            // Custom Header Image Banner Card
-            SettingsCard(
-                shape = CustomizeCardShapes.TopCard,
-                modifier = Modifier.testTag("custom_header_image_card")
-            ) {
+
+        }
+
+        // --- 3. HEADER & BACKGROUNDS ---
+        CollapsibleSubheaderSection(
+            title = "Header & Backgrounds",
+            icon = Icons.Default.Image
+        ) {
+
+        // Custom Header Image Banner Card
+        SettingsCard(
+            shape = CustomizeCardShapes.TopCard,
+            modifier = Modifier.testTag("custom_header_image_card")
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1358,16 +1331,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 }
             }
         }
-    }
-}
 
-    val headerMonetGradientCard = @Composable {
-        PinnableCardWrapper("header_monet_gradient_card", CustomizeCategory.QS_DESIGN) {
-            // Header Monet Gradient Card
-            SettingsCard(
-                shape = CustomizeCardShapes.CenterCard,
-                modifier = Modifier.testTag("header_monet_gradient_card")
-            ) {
+        // Header Monet Gradient Card
+        SettingsCard(
+            shape = CustomizeCardShapes.CenterCard,
+            modifier = Modifier.testTag("header_monet_gradient_card")
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1545,23 +1514,19 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         ),
                         modifier = Modifier.testTag("monet_surface_background_toggle")
                     )
+                }
             }
         }
-    }
-}
-}
 
-    val elementColorsPreferenceCard = @Composable {
-        PinnableCardWrapper("element_colors_preference_card", CustomizeCategory.QS_DESIGN) {
-            // Per-Element Monet Accent Colors Preference Card
-            SettingsCard(
-                shape = CustomizeCardShapes.BottomCard,
-                onClick = {
-                    val intent = Intent(context, ElementColorsActivity::class.java)
-                    context.startActivity(intent)
-                },
-                modifier = Modifier.testTag("element_colors_preference_card")
-            ) {
+        // Per-Element Monet Accent Colors Preference Card
+        SettingsCard(
+            shape = CustomizeCardShapes.BottomCard,
+            onClick = {
+                val intent = Intent(context, ElementColorsActivity::class.java)
+                context.startActivity(intent)
+            },
+            modifier = Modifier.testTag("element_colors_preference_card")
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1627,15 +1592,20 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 )
             }
         }
-    }
-}
 
-    val brightnessAtBottomCard = @Composable {
-        PinnableCardWrapper("brightness_at_bottom_card", CustomizeCategory.QS_DESIGN) {
-            // Move Brightness to Bottom Card
-            SettingsCard(
-                shape = CustomizeCardShapes.TopCard
-            ) {
+
+        }
+
+        // --- 3. BRIGHTNESS & SLIDERS ---
+        CollapsibleSubheaderSection(
+            title = "Brightness & Sliders",
+            icon = Icons.Default.BrightnessMedium
+        ) {
+
+        // Move Brightness to Bottom Card
+        SettingsCard(
+            shape = CustomizeCardShapes.TopCard
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1708,15 +1678,11 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 )
             }
         }
-    }
-}
 
-    val brightnessInQqsCard = @Composable {
-        PinnableCardWrapper("brightness_in_qqs_card", CustomizeCategory.QS_DESIGN) {
-            // Show Brightness Slider in QQS Card
-            SettingsCard(
-                shape = CustomizeCardShapes.CenterCard
-            ) {
+        // Show Brightness Slider in QQS Card
+        SettingsCard(
+            shape = CustomizeCardShapes.CenterCard
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1789,15 +1755,42 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 )
             }
         }
-    }
-}
 
-    val sliderStyleCard = @Composable {
-        PinnableCardWrapper("slider_style_card", CustomizeCategory.QS_DESIGN) {
-            // Progress Bar & Slider Style Card
-            SettingsCard(
-                shape = CustomizeCardShapes.BottomCard
-            ) {
+        // Progress Bar & Slider Style Card
+        var previewSliderValue by remember { mutableFloatStateOf(0.65f) }
+        var selectedSliderTarget by remember { mutableStateOf(QsSliderTarget.BRIGHTNESS) }
+
+        val sliderSyncAll by PanelPreferences.sliderSyncAll.collectAsState()
+        val globalProgressBarStyle by PanelPreferences.progressBarStyle.collectAsState()
+        val brightnessSliderStyle by PanelPreferences.brightnessSliderStyle.collectAsState()
+        val volumeSliderStyle by PanelPreferences.volumeSliderStyle.collectAsState()
+        val mediaSliderStyle by PanelPreferences.mediaSliderStyle.collectAsState()
+
+        val wavyThickness by PanelPreferences.wavyThickness.collectAsState()
+        val wavyWobbliness by PanelPreferences.wavyWobbliness.collectAsState()
+        val wavyWavelength by PanelPreferences.wavyWavelength.collectAsState()
+        val wavyThumbRadius by PanelPreferences.wavyThumbRadius.collectAsState()
+        val wavySpeed by PanelPreferences.wavySpeed.collectAsState()
+        val wavyInactiveThickness by PanelPreferences.wavyInactiveTrackThickness.collectAsState()
+        val wavyCornerRadius by PanelPreferences.wavyCornerRadius.collectAsState()
+
+        val a12InactiveThickness by PanelPreferences.a12InactiveTrackThickness.collectAsState()
+        val a12CornerRadius by PanelPreferences.a12CornerRadius.collectAsState()
+
+        val straightThickness by PanelPreferences.straightThickness.collectAsState()
+        val straightInactiveThickness by PanelPreferences.straightInactiveTrackThickness.collectAsState()
+        val straightCornerRadius by PanelPreferences.straightCornerRadius.collectAsState()
+        val straightThumbRadius by PanelPreferences.straightThumbRadius.collectAsState()
+
+        val currentProgressBarStyle = when (selectedSliderTarget) {
+            QsSliderTarget.BRIGHTNESS -> if (sliderSyncAll) globalProgressBarStyle else brightnessSliderStyle
+            QsSliderTarget.VOLUME -> if (sliderSyncAll) globalProgressBarStyle else volumeSliderStyle
+            QsSliderTarget.MEDIA -> if (sliderSyncAll) globalProgressBarStyle else mediaSliderStyle
+        }
+
+        SettingsCard(
+            shape = CustomizeCardShapes.BottomCard
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -2289,7 +2282,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 }
                             }
                         }
-                    }
 
                         if (currentProgressBarStyle == ProgressBarStyle.WAVY) {
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -2573,8 +2565,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 }
                             }
                         }
-                    }
-                }
 
                         if (currentProgressBarStyle == ProgressBarStyle.STRAIGHT) {
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -2756,16 +2746,24 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         }
                     }
                 }
+                    }
+                }
             }
         }
-    }
 
-    val panelCornersCard = @Composable {
-        PinnableCardWrapper("panel_corners_card", CustomizeCategory.QS_DESIGN) {
-            // QS, QQS & Notifications Panel Corners Card
-            SettingsCard(
-                shape = CustomizeCardShapes.SingleCard
-            ) {
+
+        }
+
+        // --- 4. PANEL CORNER STYLING ---
+        CollapsibleSubheaderSection(
+            title = "Panel Corner Styling",
+            icon = Icons.Default.RoundedCorner
+        ) {
+
+        // QS, QQS & Notifications Panel Corners Card
+        SettingsCard(
+            shape = CustomizeCardShapes.SingleCard
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -3030,131 +3028,26 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             ) {
                                 Text("0 dp (Square)", fontSize = 10.sp, color = Color.Gray)
                                 Text("5 dp (Default)", fontSize = 10.sp, color = Color.Gray)
+                                Text("36 dp (Max)", fontSize = 10.sp, color = Color.Gray)
+                            }
                         }
+                    }
+                }
                     }
                 }
             }
         }
     }
 }
-}
-}
-}
 
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)
-    ) {
-        // 1. Pinned Cards at the very top of Quick Settings Design
-        val pinnedCards = mutableListOf<@Composable () -> Unit>()
-        if (pinnedIds.contains("qqs_icon_size_card")) pinnedCards.add(qqsIconSizeCard)
-        if (pinnedIds.contains("qqs_icon_quantity_card")) pinnedCards.add(qqsIconQuantityCard)
-        if (pinnedIds.contains("tile_shape_selection_card")) pinnedCards.add(tileShapeSelectionCard)
-        if (pinnedIds.contains("tile_outline_card")) pinnedCards.add(tileOutlineCard)
-        if (pinnedIds.contains("qs_tile_gradient_card")) pinnedCards.add(qsTileGradientCard)
-        if (pinnedIds.contains("show_carrier_card")) pinnedCards.add(showCarrierCard)
-        if (showCarrier && pinnedIds.contains("carrier_divider_card")) pinnedCards.add(carrierDividerCard)
-        if (showCarrier && pinnedIds.contains("hide_carrier_in_expanded_card")) pinnedCards.add(hideCarrierInExpandedCard)
-        if (pinnedIds.contains("custom_header_image_card")) pinnedCards.add(customHeaderImageCard)
-        if (pinnedIds.contains("header_monet_gradient_card")) pinnedCards.add(headerMonetGradientCard)
-        if (pinnedIds.contains("element_colors_preference_card")) pinnedCards.add(elementColorsPreferenceCard)
-        if (pinnedIds.contains("brightness_at_bottom_card")) pinnedCards.add(brightnessAtBottomCard)
-        if (pinnedIds.contains("brightness_in_qqs_card")) pinnedCards.add(brightnessInQqsCard)
-        if (pinnedIds.contains("slider_style_card")) pinnedCards.add(sliderStyleCard)
-        if (pinnedIds.contains("panel_corners_card")) pinnedCards.add(panelCornersCard)
-
-        if (pinnedCards.isNotEmpty()) {
-            ListSubheader(
-                text = "Pinned",
-                icon = androidx.compose.material.icons.Icons.Default.PushPin
-            )
-            pinnedCards.forEach { card -> card() }
-        }
-
-        // --- 1. TILE SHAPES & LAYOUT ---
-        if (!pinnedIds.contains("qqs_icon_size_card") ||
-            !pinnedIds.contains("qqs_icon_quantity_card") ||
-            !pinnedIds.contains("tile_shape_selection_card") ||
-            !pinnedIds.contains("tile_outline_card") ||
-            !pinnedIds.contains("qs_tile_gradient_card")
-        ) {
-            CollapsibleSubheaderSection(
-                title = "Tile Shapes & Layout",
-                icon = Icons.Default.Apps
-            ) {
-                if (!pinnedIds.contains("qqs_icon_size_card")) qqsIconSizeCard()
-                if (!pinnedIds.contains("qqs_icon_quantity_card")) qqsIconQuantityCard()
-                if (!pinnedIds.contains("tile_shape_selection_card")) tileShapeSelectionCard()
-                if (!pinnedIds.contains("tile_outline_card")) tileOutlineCard()
-                if (!pinnedIds.contains("qs_tile_gradient_card")) qsTileGradientCard()
+    if (showImportDialog) {
+        ImportXmlShapeDialog(
+            onDismiss = { showImportDialog = false },
+            onShapeImported = { importedItem ->
+                PanelPreferences.setEnabledTileShapeId(context, importedItem.id)
+                showImportDialog = false
             }
-        }
-
-        // --- 2. SIM CARD CARRIER ---
-        if (!pinnedIds.contains("show_carrier_card") ||
-            (showCarrier && (!pinnedIds.contains("carrier_divider_card") || !pinnedIds.contains("hide_carrier_in_expanded_card")))
-        ) {
-            CollapsibleSubheaderSection(
-                title = "SIM Card Carrier",
-                icon = Icons.Default.SimCard
-            ) {
-                if (!pinnedIds.contains("show_carrier_card")) showCarrierCard()
-                if (showCarrier) {
-                    if (!pinnedIds.contains("carrier_divider_card")) carrierDividerCard()
-                    if (!pinnedIds.contains("hide_carrier_in_expanded_card")) hideCarrierInExpandedCard()
-                }
-            }
-        }
-
-        // --- 3. HEADER & BACKGROUNDS ---
-        if (!pinnedIds.contains("custom_header_image_card") ||
-            !pinnedIds.contains("header_monet_gradient_card") ||
-            !pinnedIds.contains("element_colors_preference_card")
-        ) {
-            CollapsibleSubheaderSection(
-                title = "Header & Backgrounds",
-                icon = Icons.Default.Image
-            ) {
-                if (!pinnedIds.contains("custom_header_image_card")) customHeaderImageCard()
-                if (!pinnedIds.contains("header_monet_gradient_card")) headerMonetGradientCard()
-                if (!pinnedIds.contains("element_colors_preference_card")) elementColorsPreferenceCard()
-            }
-        }
-
-        // --- 4. BRIGHTNESS & SLIDERS ---
-        if (!pinnedIds.contains("brightness_at_bottom_card") ||
-            !pinnedIds.contains("brightness_in_qqs_card") ||
-            !pinnedIds.contains("slider_style_card")
-        ) {
-            CollapsibleSubheaderSection(
-                title = "Brightness & Sliders",
-                icon = Icons.Default.BrightnessMedium
-            ) {
-                if (!pinnedIds.contains("brightness_at_bottom_card")) brightnessAtBottomCard()
-                if (!pinnedIds.contains("brightness_in_qqs_card")) brightnessInQqsCard()
-                if (!pinnedIds.contains("slider_style_card")) sliderStyleCard()
-            }
-        }
-
-        // --- 5. PANEL CORNER STYLING ---
-        if (!pinnedIds.contains("panel_corners_card")) {
-            CollapsibleSubheaderSection(
-                title = "Panel Corner Styling",
-                icon = Icons.Default.RoundedCorner
-            ) {
-                panelCornersCard()
-            }
-        }
-
-        if (showImportDialog) {
-            ImportXmlShapeDialog(
-                onDismiss = { showImportDialog = false },
-                onShapeImported = { importedItem ->
-                    PanelPreferences.setEnabledTileShapeId(context, importedItem.id)
-                    showImportDialog = false
-                }
-            )
-        }
+        )
     }
 }
 
