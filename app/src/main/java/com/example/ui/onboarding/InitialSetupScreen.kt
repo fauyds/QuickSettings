@@ -208,7 +208,7 @@ fun InitialSetupScreen(
             }
 
             TextButton(
-                onClick = onComplete,
+                onClick = onDismiss,
                 modifier = Modifier.testTag("setup_top_skip_button")
             ) {
                 Text(
@@ -261,7 +261,7 @@ fun InitialSetupScreen(
                     if (currentStep > 0) {
                         currentStep--
                     } else {
-                        onComplete()
+                        onDismiss()
                     }
                 },
                 enabled = true,

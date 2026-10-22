@@ -100,7 +100,7 @@ fun AboutSection(modifier: Modifier = Modifier) {
                             color = MaterialTheme.colorScheme.secondaryContainer
                         ) {
                             Text(
-                                text = "Version 1.0",
+                                text = "Version 1.1",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,

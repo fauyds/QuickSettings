@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Info
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -40,18 +42,23 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.PanelPreferences
 import com.example.model.PrivilegeMode
 import com.example.ui.theme.ExpressiveCardShapes
 
@@ -96,13 +103,17 @@ fun AppStatusScreen(
     onRequestPermission: () -> Unit,
     onOpenAccessibilitySettings: () -> Unit,
     onSimulateSwipeDown: () -> Unit,
-    onLaunchInitialSetup: (() -> Unit)? = null
+    onLaunchInitialSetup: (() -> Unit)? = null,
+    isInitialSetupDone: Boolean? = null
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val isDark = com.example.ui.theme.LocalIsDarkTheme.current
     val screenBg = com.example.ui.theme.getSettingsScreenBackgroundColor(isDark)
     val cardBg = com.example.ui.theme.getSettingsCardBackgroundColor(isDark)
     val nonGrantedRed = com.example.ui.theme.getNonGrantedRedColor(isDark)
+
+    val storedInitialSetupDone by PanelPreferences.initialSetupCompleted.collectAsStateWithLifecycle(initialValue = PanelPreferences.initialSetupCompleted.value)
+    val effectiveSetupDone = isInitialSetupDone ?: storedInitialSetupDone
 
     Column(
         modifier = Modifier
@@ -115,7 +126,7 @@ fun AppStatusScreen(
     ) {
         // 1. Header Card
         Card(
-            shape = AppStatusCardShapes.SingleCard,
+            shape = AppStatusCardShapes.TopCard,
             colors = CardDefaults.cardColors(containerColor = cardBg),
             modifier = Modifier
                 .fillMaxWidth()
@@ -167,9 +178,9 @@ fun AppStatusScreen(
             }
         }
 
-        if (onLaunchInitialSetup != null) {
+        if (onLaunchInitialSetup != null && !effectiveSetupDone) {
             Card(
-                shape = AppStatusCardShapes.SingleCard,
+                shape = AppStatusCardShapes.CenterCard,
                 colors = CardDefaults.cardColors(containerColor = cardBg),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -206,11 +217,27 @@ fun AppStatusScreen(
                                 text = "Initial Setup Wizard",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
+                                lineHeight = 18.sp,
+                                style = TextStyle(
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                    lineHeightStyle = LineHeightStyle(
+                                        alignment = LineHeightStyle.Alignment.Center,
+                                        trim = LineHeightStyle.Trim.Both
+                                    )
+                                ),
                                 color = colorScheme.onSurface
                             )
                             Text(
                                 text = "Setup privileges, configure tiles & triggers",
                                 fontSize = 11.sp,
+                                lineHeight = 14.sp,
+                                style = TextStyle(
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                    lineHeightStyle = LineHeightStyle(
+                                        alignment = LineHeightStyle.Alignment.Center,
+                                        trim = LineHeightStyle.Trim.Both
+                                    )
+                                ),
                                 color = colorScheme.onSurfaceVariant
                             )
                         }
@@ -240,7 +267,9 @@ fun AppStatusScreen(
             onSimulateSwipeDown = onSimulateSwipeDown
         )
 
-        // 3. System Diagnostics & Services Stack (Outer corners 16dp, inside corners 5dp)
+        // 3. System Diagnostics & Services Stack (Consolidated Single Card)
+        val allPermissionsAllowed = hasOverlayPermission && isAccessibilityRunning && isOverlayRunning
+
         Text(
             text = "SERVICE HEALTH DIAGNOSTICS",
             fontSize = 11.sp,
@@ -249,317 +278,92 @@ fun AppStatusScreen(
             modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 2.dp)
         )
 
-        // Top Card: Floating Overlay Window Service
         Card(
-            shape = AppStatusCardShapes.TopCard,
+            shape = AppStatusCardShapes.SingleCard,
             colors = CardDefaults.cardColors(containerColor = cardBg),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("app_status_service_health_card")
         ) {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(vertical = 2.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (isOverlayRunning) colorScheme.primary
-                                else nonGrantedRed
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Dashboard,
-                            contentDescription = null,
-                            tint = if (isOverlayRunning) colorScheme.onPrimary else Color.White,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                        Text(
-                            text = "Overlay Window Service",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            lineHeight = 16.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = colorScheme.onSurface
-                        )
-                        Text(
-                            text = if (isOverlayRunning) "Running & Ready for Gestures" else "Service Stopped / Inactive",
-                            fontSize = 11.sp,
-                            lineHeight = 14.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = if (isOverlayRunning) colorScheme.primary else nonGrantedRed
-                        )
-                    }
-                }
+                if (allPermissionsAllowed) {
+                    DiagnosticItemRow(
+                        icon = Icons.Default.CheckCircle,
+                        title = "All privileges are allowed",
+                        subtitle = "Overlay, accessibility & system permissions granted",
+                        isGood = true
+                    )
 
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (isOverlayRunning) colorScheme.primaryContainer else nonGrantedRed
-                ) {
-                    Text(
-                        text = if (isOverlayRunning) "ACTIVE" else "OFF",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isOverlayRunning) colorScheme.onPrimaryContainer else Color.White,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    HorizontalDivider(
+                        color = colorScheme.outlineVariant.copy(alpha = 0.25f),
+                        modifier = Modifier.padding(horizontal = 14.dp)
+                    )
+                } else {
+                    // Item 1: Overlay Window Service
+                    DiagnosticItemRow(
+                        icon = Icons.Default.Dashboard,
+                        title = "Overlay Window Service",
+                        subtitle = if (isOverlayRunning) "Running & Ready for Gestures" else "Service Stopped / Inactive",
+                        isGood = isOverlayRunning,
+                        badgeText = if (isOverlayRunning) "ACTIVE" else "OFF",
+                        badgeContainerColor = if (isOverlayRunning) colorScheme.primaryContainer else nonGrantedRed,
+                        badgeContentColor = if (isOverlayRunning) colorScheme.onPrimaryContainer else Color.White
+                    )
+
+                    HorizontalDivider(
+                        color = colorScheme.outlineVariant.copy(alpha = 0.25f),
+                        modifier = Modifier.padding(horizontal = 14.dp)
+                    )
+
+                    // Item 2: Accessibility Service
+                    DiagnosticItemRow(
+                        icon = Icons.Default.TouchApp,
+                        title = "Accessibility Service",
+                        subtitle = if (isAccessibilityRunning) "Top Edge Interceptor Active" else "Not running (tap to configure)",
+                        isGood = isAccessibilityRunning,
+                        badgeText = if (isAccessibilityRunning) "READY" else "Configure",
+                        badgeContainerColor = if (isAccessibilityRunning) colorScheme.tertiaryContainer else screenBg,
+                        badgeContentColor = if (isAccessibilityRunning) colorScheme.onTertiaryContainer else Color.White,
+                        onClick = if (!isAccessibilityRunning) onOpenAccessibilitySettings else null
+                    )
+
+                    HorizontalDivider(
+                        color = colorScheme.outlineVariant.copy(alpha = 0.25f),
+                        modifier = Modifier.padding(horizontal = 14.dp)
+                    )
+
+                    // Item 3: System Overlay Permission
+                    DiagnosticItemRow(
+                        icon = if (hasOverlayPermission) Icons.Default.Check else Icons.Default.Warning,
+                        title = "System Overlay Permission",
+                        subtitle = if (hasOverlayPermission) "Granted (SYSTEM_ALERT_WINDOW)" else "Permission Required",
+                        isGood = hasOverlayPermission,
+                        badgeText = if (hasOverlayPermission) "GRANTED" else "Grant",
+                        badgeContainerColor = if (hasOverlayPermission) colorScheme.primaryContainer else screenBg,
+                        badgeContentColor = if (hasOverlayPermission) colorScheme.onPrimaryContainer else Color.White,
+                        onClick = if (!hasOverlayPermission) onRequestPermission else null
+                    )
+
+                    HorizontalDivider(
+                        color = colorScheme.outlineVariant.copy(alpha = 0.25f),
+                        modifier = Modifier.padding(horizontal = 14.dp)
                     )
                 }
-            }
-        }
 
-        // Center Card: Accessibility Interceptor
-        Card(
-            shape = AppStatusCardShapes.CenterCard,
-            colors = CardDefaults.cardColors(containerColor = cardBg),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (isAccessibilityRunning) colorScheme.primary
-                                else nonGrantedRed
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.TouchApp,
-                            contentDescription = null,
-                            tint = if (isAccessibilityRunning) colorScheme.onPrimary else Color.White,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                        Text(
-                            text = "Accessibility Service",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            lineHeight = 16.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = colorScheme.onSurface
-                        )
-                        Text(
-                            text = if (isAccessibilityRunning) "Top Edge Interceptor Active" else "Not running (tap to configure)",
-                            fontSize = 11.sp,
-                            lineHeight = 14.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = if (isAccessibilityRunning) colorScheme.primary else nonGrantedRed
-                        )
-                    }
-                }
-
-                if (!isAccessibilityRunning) {
-                    Surface(
-                        onClick = onOpenAccessibilitySettings,
-                        shape = RoundedCornerShape(8.dp),
-                        color = screenBg
-                    ) {
-                        Text(
-                            text = "Configure",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                } else {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = colorScheme.tertiaryContainer
-                    ) {
-                        Text(
-                            text = "READY",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = colorScheme.onTertiaryContainer,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-            }
-        }
-
-        // Center Card: System Overlay Permission
-        Card(
-            shape = AppStatusCardShapes.CenterCard,
-            colors = CardDefaults.cardColors(containerColor = cardBg),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (hasOverlayPermission) colorScheme.primary
-                                else nonGrantedRed
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = if (hasOverlayPermission) Icons.Default.Check else Icons.Default.Warning,
-                            contentDescription = null,
-                            tint = if (hasOverlayPermission) colorScheme.onPrimary else Color.White,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                        Text(
-                            text = "System Overlay Permission",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            lineHeight = 16.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = colorScheme.onSurface
-                        )
-                        Text(
-                            text = if (hasOverlayPermission) "Granted (SYSTEM_ALERT_WINDOW)" else "Permission Required",
-                            fontSize = 11.sp,
-                            lineHeight = 14.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = if (hasOverlayPermission) colorScheme.primary else nonGrantedRed
-                        )
-                    }
-                }
-
-                if (!hasOverlayPermission) {
-                    Surface(
-                        onClick = onRequestPermission,
-                        shape = RoundedCornerShape(8.dp),
-                        color = screenBg
-                    ) {
-                        Text(
-                            text = "Grant",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                } else {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = colorScheme.primaryContainer
-                    ) {
-                        Text(
-                            text = "GRANTED",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-            }
-        }
-
-        // Bottom Card: Privilege Execution Mode
-        Card(
-            shape = AppStatusCardShapes.BottomCard,
-            colors = CardDefaults.cardColors(containerColor = cardBg),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(colorScheme.primary),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Security,
-                            contentDescription = null,
-                            tint = colorScheme.onPrimary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    Column(
-                        modifier = Modifier.weight(1f, fill = false),
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(
-                            text = "Privilege Execution Engine",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            lineHeight = 16.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Active Mode: ${currentMode.title} • Root: ${if (isRootAvailable) "Yes" else "No"} • Shizuku: ${if (isShizukuAvailable) "Yes" else "No"}",
-                            fontSize = 11.sp,
-                            lineHeight = 14.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = colorScheme.secondaryContainer
-                ) {
-                    Text(
-                        text = currentMode.name,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        color = colorScheme.onSecondaryContainer,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
+                // Item 4: Privilege Engine
+                DiagnosticItemRow(
+                    icon = Icons.Default.Security,
+                    title = "Privilege Engine",
+                    subtitle = "${currentMode.title} • Root: ${if (isRootAvailable) "Yes" else "No"} • Shizuku: ${if (isShizukuAvailable) "Yes" else "No"}",
+                    isGood = true,
+                    badgeText = currentMode.name,
+                    badgeContainerColor = colorScheme.secondaryContainer,
+                    badgeContentColor = colorScheme.onSecondaryContainer
+                )
             }
         }
 
@@ -650,7 +454,8 @@ fun TopTriggerStripBar(
     onTestFloatingOverlay: () -> Unit,
     onRequestPermission: () -> Unit,
     onOpenAccessibilitySettings: () -> Unit,
-    onSimulateSwipeDown: () -> Unit = {}
+    onSimulateSwipeDown: () -> Unit = {},
+    shape: androidx.compose.ui.graphics.Shape = AppStatusCardShapes.BottomCard
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val isDark = com.example.ui.theme.LocalIsDarkTheme.current
@@ -658,7 +463,7 @@ fun TopTriggerStripBar(
     val screenBg = com.example.ui.theme.getSettingsScreenBackgroundColor(isDark)
 
     Card(
-        shape = ExpressiveCardShapes.SingleCard,
+        shape = shape,
         colors = CardDefaults.cardColors(containerColor = cardBg),
         modifier = Modifier
             .fillMaxWidth()
@@ -678,16 +483,29 @@ fun TopTriggerStripBar(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f, fill = false)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(12.dp)
+                            .size(36.dp)
                             .clip(CircleShape)
                             .background(
-                                if (isOverlayEnabled && isOverlayRunning) colorScheme.primary else colorScheme.outline.copy(alpha = 0.5f)
-                            )
-                    )
+                                if (isOverlayEnabled && isOverlayRunning) colorScheme.primary
+                                else if (isOverlayEnabled) colorScheme.primaryContainer
+                                else colorScheme.surfaceVariant
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PowerSettingsNew,
+                            contentDescription = null,
+                            tint = if (isOverlayEnabled && isOverlayRunning) colorScheme.onPrimary
+                            else if (isOverlayEnabled) colorScheme.onPrimaryContainer
+                            else colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
 
                     Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                         Text(
@@ -695,14 +513,26 @@ fun TopTriggerStripBar(
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             lineHeight = 16.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            style = TextStyle(
+                                platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                lineHeightStyle = LineHeightStyle(
+                                    alignment = LineHeightStyle.Alignment.Center,
+                                    trim = LineHeightStyle.Trim.Both
+                                )
+                            ),
                             color = colorScheme.onSurface
                         )
                         Text(
                             text = if (isAccessibilityRunning) "Accessibility Interceptor Ready" else if (hasOverlayPermission) "Overlay Service Ready" else "Requires Overlay / Accessibility Perm",
                             fontSize = 10.sp,
                             lineHeight = 13.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            style = TextStyle(
+                                platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                lineHeightStyle = LineHeightStyle(
+                                    alignment = LineHeightStyle.Alignment.Center,
+                                    trim = LineHeightStyle.Trim.Both
+                                )
+                            ),
                             color = if (isOverlayEnabled) colorScheme.primary else colorScheme.onSurfaceVariant
                         )
                     }
@@ -784,3 +614,113 @@ fun TopTriggerStripBar(
         }
     }
 }
+
+@Composable
+private fun DiagnosticItemRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    isGood: Boolean,
+    badgeText: String? = null,
+    badgeContainerColor: Color = Color.Transparent,
+    badgeContentColor: Color = Color.Unspecified,
+    onClick: (() -> Unit)? = null
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val isDark = com.example.ui.theme.LocalIsDarkTheme.current
+    val nonGrantedRed = com.example.ui.theme.getNonGrantedRedColor(isDark)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.weight(1f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(if (isGood) colorScheme.primary else nonGrantedRed),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (isGood) colorScheme.onPrimary else Color.White,
+                    modifier = Modifier.size(17.dp)
+                )
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text(
+                    text = title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    lineHeight = 16.sp,
+                    style = TextStyle(
+                        platformStyle = PlatformTextStyle(includeFontPadding = false),
+                        lineHeightStyle = LineHeightStyle(
+                            alignment = LineHeightStyle.Alignment.Center,
+                            trim = LineHeightStyle.Trim.Both
+                        )
+                    ),
+                    color = colorScheme.onSurface
+                )
+                Text(
+                    text = subtitle,
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = TextStyle(
+                        platformStyle = PlatformTextStyle(includeFontPadding = false),
+                        lineHeightStyle = LineHeightStyle(
+                            alignment = LineHeightStyle.Alignment.Center,
+                            trim = LineHeightStyle.Trim.Both
+                        )
+                    ),
+                    color = if (isGood) colorScheme.primary else nonGrantedRed
+                )
+            }
+        }
+
+        if (!badgeText.isNullOrEmpty()) {
+            Spacer(modifier = Modifier.width(8.dp))
+
+            if (onClick != null) {
+                Surface(
+                    onClick = onClick,
+                    shape = RoundedCornerShape(8.dp),
+                    color = badgeContainerColor
+                ) {
+                    Text(
+                        text = badgeText,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = badgeContentColor,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            } else {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = badgeContainerColor
+                ) {
+                    Text(
+                        text = badgeText,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = badgeContentColor,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+

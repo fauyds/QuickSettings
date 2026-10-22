@@ -312,6 +312,7 @@ fun MainScreen(viewModel: MainViewModel) {
 
                 9 -> {
                     // TAB 9: App Status Screen (with recently edited TopTriggerStripBar element)
+                    val isInitialSetupCompleted by com.example.data.PanelPreferences.initialSetupCompleted.collectAsStateWithLifecycle()
                     com.example.ui.status.AppStatusScreen(
                         isOverlayEnabled = isOverlayEnabled,
                         isOverlayRunning = isOverlayRunning,
@@ -333,7 +334,8 @@ fun MainScreen(viewModel: MainViewModel) {
                                 viewModel.setExpansionStage(QsExpansionStage.FULL_QS)
                             }
                         },
-                        onLaunchInitialSetup = { viewModel.openInitialSetup() }
+                        onLaunchInitialSetup = { viewModel.openInitialSetup() },
+                        isInitialSetupDone = isInitialSetupCompleted
                     )
                 }
 
@@ -370,7 +372,7 @@ private fun SettingsBottomNavigationBar(
     val showTileStudioInNavBar = false
     val showHardwareInNavBar = false
     val allNavItems = listOf(
-        Triple("Overlay", Icons.Default.Dashboard, 0),
+        Triple("Preview", Icons.Default.Dashboard, 0),
         Triple("App Status", Icons.Default.Speed, 9),
         Triple("Tile Studio", Icons.Default.Tune, 1),
         Triple("Tile Commands", Icons.Default.Terminal, 6),
@@ -492,14 +494,7 @@ private fun SettingsBottomNavigationBar(
                         ) {
                             BadgedBox(
                                 badge = {
-                                    if (index == 9 && isOverlayRunning) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(7.dp)
-                                                .clip(CircleShape)
-                                                .background(Color(0xFF22C55E))
-                                        )
-                                    } else if (index == 4 && (isRootAvail || isShizukuAvail)) {
+                                    if (index == 4 && (isRootAvail || isShizukuAvail)) {
                                         Box(
                                             modifier = Modifier
                                                 .size(7.dp)

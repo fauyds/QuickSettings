@@ -37,6 +37,7 @@ class NotificationListView @JvmOverloads constructor(
     private val ivSettingsBtn: ImageView
     private val tvHeaderTitle: TextView
     private val ivHeaderIcon: ImageView
+    private val llHeader: View
 
     private var adapter: NotificationAdapter? = null
 
@@ -109,6 +110,7 @@ class NotificationListView @JvmOverloads constructor(
         ivSettingsBtn = root.findViewById(R.id.iv_notif_settings_btn)
         tvHeaderTitle = root.findViewById(R.id.tv_notif_header_title)
         ivHeaderIcon = root.findViewById(R.id.iv_notif_header_icon)
+        llHeader = root.findViewById(R.id.ll_notif_header)
 
         // Enable completely free, unconstrained scrolling with native physics
         rvNotifications.layoutManager = LinearLayoutManager(context, RecyclerView.VERTICAL, false)
@@ -502,7 +504,7 @@ class NotificationListView @JvmOverloads constructor(
         ivSettingsBtn.setColorFilter(headerLabelColor)
 
         // 3. Style Permission Banner Card
-        val cardRadius = PanelPreferences.qsBackgroundCorner.value * density
+        val cardRadius = PanelPreferences.panelOuterCorner.value * density
         val cardBg = panelCardBackgroundColor ?: MonetThemeHelper.getCardBackground(context, isDark)
         flPermissionCard.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, cardRadius, customBgColor = cardBg)
         ivPermissionIcon.setColorFilter(MonetThemeHelper.getTertiaryAccent(context, isDark))
@@ -511,21 +513,31 @@ class NotificationListView @JvmOverloads constructor(
         btnEnablePermission.background = MonetThemeHelper.createMonetPrimaryPillDrawable(context, isDark, 16f * density)
         btnEnablePermission.setTextColor(onPrimary)
 
-        // 4. Style Empty State Card
+        // 4. Style Empty State Card ("No new notifications")
         flEmptyCard.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, cardRadius, customBgColor = cardBg)
         ivEmptyIcon.setColorFilter(textSecondary)
         tvEmptyText.setTextColor(textSecondary)
 
         // 5. Update Visibility and Data (Footer inside RecyclerView)
+        val hideEmptyNotifLabels = PanelPreferences.hideQqsEmptyNotifLabels.value
+
         if (!isPermissionGranted) {
+            llHeader.visibility = View.VISIBLE
             flPermissionCard.visibility = View.VISIBLE
             flEmptyCard.visibility = View.GONE
             rvNotifications.visibility = View.GONE
         } else if (notifications.isEmpty()) {
             flPermissionCard.visibility = View.GONE
-            flEmptyCard.visibility = View.VISIBLE
+            if (hideEmptyNotifLabels) {
+                llHeader.visibility = View.GONE
+                flEmptyCard.visibility = View.GONE
+            } else {
+                llHeader.visibility = View.VISIBLE
+                flEmptyCard.visibility = View.VISIBLE
+            }
             rvNotifications.visibility = View.GONE
         } else {
+            llHeader.visibility = View.VISIBLE
             flPermissionCard.visibility = View.GONE
             flEmptyCard.visibility = View.GONE
             rvNotifications.visibility = View.VISIBLE

@@ -31,7 +31,11 @@ data class NotificationItem(
     val actions: List<NotificationActionModel> = emptyList(),
     val progress: Int = -1,
     val progressMax: Int = 0,
-    val isIndeterminateProgress: Boolean = false
+    val isIndeterminateProgress: Boolean = false,
+    val isMessaging: Boolean = false,
+    val senderName: String? = null,
+    val conversationTitle: String? = null,
+    val latestMessageTimestamp: Long? = null
 ) {
     val hasProgress: Boolean
         get() = progressMax > 0 || (isIndeterminateProgress && progress >= 0) || isIndeterminateProgress

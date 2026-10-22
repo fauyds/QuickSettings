@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.TextFields
@@ -92,6 +93,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     val datePosition by PanelPreferences.datePosition.collectAsState()
     val editButtonPosition by PanelPreferences.editButtonPosition.collectAsState()
     val hideQqsDragHandle by PanelPreferences.hideQqsDragHandle.collectAsState()
+    val hideQqsEmptyNotifLabels by PanelPreferences.hideQqsEmptyNotifLabels.collectAsState()
     val qsTileLabelFontSize by PanelPreferences.qsTileLabelFontSize.collectAsState()
     val qsTileSubtitleFontSize by PanelPreferences.qsTileSubtitleFontSize.collectAsState()
     val hideDateInExpanded by PanelPreferences.hideDateInExpanded.collectAsState()
@@ -821,6 +823,75 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     }
 }
 
+    val hideQqsEmptyNotifLabelsCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("hide_qqs_empty_notif_labels_card", CustomizeCategory.QS_TWEAKS) {
+            SettingsCard(
+                shape = shape
+            ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.NotificationsOff,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(1.dp)
+                    ) {
+                        Text(
+                            text = "Disable Empty Notification Labels",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = 17.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Hide the 'Notifications' header and 'No new notifications' label in QQS when there are no active notifications.",
+                            fontSize = 12.sp,
+                            lineHeight = 15.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Switch(
+                    checked = hideQqsEmptyNotifLabels,
+                    onCheckedChange = { PanelPreferences.setHideQqsEmptyNotifLabels(context, it) },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                    ),
+                    modifier = Modifier.testTag("hide_qqs_empty_notif_labels_toggle")
+                )
+            }
+        }
+    }
+}
+
     val hideBrightnessPercentageCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("hide_brightness_percentage_card", CustomizeCategory.QS_TWEAKS) {
             SettingsCard(
@@ -1042,6 +1113,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         if (pinnedIds.contains("hide_date_in_expanded_card")) pinnedCards.add(hideDateInExpandedCard)
         if (pinnedIds.contains("disable_labels_in_expanded_card")) pinnedCards.add(disableLabelsInExpandedCard)
         if (pinnedIds.contains("hide_qqs_drag_handle_card")) pinnedCards.add(hideQqsDragHandleCard)
+        if (pinnedIds.contains("hide_qqs_empty_notif_labels_card")) pinnedCards.add(hideQqsEmptyNotifLabelsCard)
         if (pinnedIds.contains("hide_brightness_percentage_card")) pinnedCards.add(hideBrightnessPercentageCard)
         if (pinnedIds.contains("hide_brightness_icon_card")) pinnedCards.add(hideBrightnessIconCard)
         if (pinnedIds.contains("show_brightness_plus_minus_card")) pinnedCards.add(showBrightnessPlusMinusCard)
@@ -1115,6 +1187,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         if (!pinnedIds.contains("hide_date_in_expanded_card")) unpinnedTypography.add(hideDateInExpandedCard)
         if (!pinnedIds.contains("disable_labels_in_expanded_card")) unpinnedTypography.add(disableLabelsInExpandedCard)
         if (!pinnedIds.contains("hide_qqs_drag_handle_card")) unpinnedTypography.add(hideQqsDragHandleCard)
+        if (!pinnedIds.contains("hide_qqs_empty_notif_labels_card")) unpinnedTypography.add(hideQqsEmptyNotifLabelsCard)
 
         if (unpinnedTypography.isNotEmpty()) {
             CollapsibleSubheaderSection(

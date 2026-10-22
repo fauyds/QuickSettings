@@ -151,6 +151,7 @@ object PanelPreferences {
     private const val KEY_ACTIVE_SQUARE_SHAPE = "active_square_shape"
     private const val KEY_TILE_OUTLINE_ENABLED = "tile_outline_enabled"
     private const val KEY_HIDE_QQS_DRAG_HANDLE = "hide_qqs_drag_handle"
+    private const val KEY_HIDE_QQS_EMPTY_NOTIF_LABELS = "hide_qqs_empty_notif_labels"
     private const val KEY_SHOW_CARRIER = "show_carrier"
     private const val KEY_SHOW_CARRIER_DIVIDER = "show_carrier_divider"
     private const val KEY_HIDE_CARRIER_IN_EXPANDED = "hide_carrier_in_expanded"
@@ -781,6 +782,9 @@ object PanelPreferences {
     private val _hideQqsDragHandle = MutableStateFlow(false)
     val hideQqsDragHandle: StateFlow<Boolean> = _hideQqsDragHandle.asStateFlow()
 
+    private val _hideQqsEmptyNotifLabels = MutableStateFlow(false)
+    val hideQqsEmptyNotifLabels: StateFlow<Boolean> = _hideQqsEmptyNotifLabels.asStateFlow()
+
     private val _dragHandleVerticalOffset = MutableStateFlow(4f)
     val dragHandleVerticalOffset: StateFlow<Float> = _dragHandleVerticalOffset.asStateFlow()
 
@@ -920,6 +924,7 @@ object PanelPreferences {
         }
         _tileOutlineEnabled.value = prefs.getBoolean(KEY_TILE_OUTLINE_ENABLED, false)
         _hideQqsDragHandle.value = prefs.getBoolean(KEY_HIDE_QQS_DRAG_HANDLE, false)
+        _hideQqsEmptyNotifLabels.value = prefs.getBoolean(KEY_HIDE_QQS_EMPTY_NOTIF_LABELS, false)
         _dragHandleVerticalOffset.value = prefs.getFloat(KEY_DRAG_HANDLE_VERTICAL_OFFSET, 4f)
         _dragHandleLength.value = prefs.getFloat(KEY_DRAG_HANDLE_LENGTH, 36f)
         _showCarrier.value = prefs.getBoolean(KEY_SHOW_CARRIER, true)
@@ -1384,6 +1389,12 @@ object PanelPreferences {
         _hideQqsDragHandle.value = hide
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_HIDE_QQS_DRAG_HANDLE, hide).apply()
+    }
+
+    fun setHideQqsEmptyNotifLabels(context: Context, hide: Boolean) {
+        _hideQqsEmptyNotifLabels.value = hide
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_HIDE_QQS_EMPTY_NOTIF_LABELS, hide).apply()
     }
 
     fun setShowCarrier(context: Context, show: Boolean) {
@@ -2338,8 +2349,10 @@ object PanelPreferences {
 
     fun setPanelOuterCorner(context: Context, value: Float) {
         _panelOuterCorner.value = value
+        _qsBackgroundCorner.value = value
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putFloat(KEY_PANEL_OUTER_CORNER, value).apply()
+        prefs.edit().putFloat(KEY_QS_BACKGROUND_CORNER, value).apply()
         if (_panelGlobalCornerEnabled.value) {
             _panelInnerCorner.value = value
             prefs.edit().putFloat(KEY_PANEL_INNER_CORNER, value).apply()

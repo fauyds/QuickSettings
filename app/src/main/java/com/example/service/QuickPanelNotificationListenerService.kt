@@ -24,6 +24,9 @@ import com.example.data.PanelPreferences
 import com.example.model.NotificationActionModel
 import com.example.model.NotificationItem
 import com.example.ui.overlay.QsExpansionStage
+import androidx.core.app.NotificationCompat
+import androidx.core.app.Person as CorePerson
+import androidx.core.graphics.drawable.IconCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -219,6 +222,8 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                     old.text != new.text ||
                     old.subText != new.subText ||
                     old.appName != new.appName ||
+                    old.postTime != new.postTime ||
+                    old.isMessaging != new.isMessaging ||
                     old.isOngoing != new.isOngoing ||
                     old.isClearable != new.isClearable ||
                     old.progress != new.progress ||
@@ -578,7 +583,9 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
         }
 
         // Extract latest individual message cleanly if MessagingStyle is present
-        val (resolvedTitle, resolvedText) = extractLatestMessageContent(extras, title, text)
+        val messagingDetails = extractMessagingDetails(n, extras, sbn, title, text)
+        val resolvedTitle = messagingDetails.title
+        val resolvedText = messagingDetails.text
 
         val finalTitle = when {
             !callCallerName.isNullOrBlank() -> callCallerName
@@ -616,7 +623,7 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
             }
         }
 
-        val avatarBitmap = extractLargeIconOrAvatar(n, extras)
+        val avatarBitmap = messagingDetails.avatarBitmap ?: extractLargeIconOrAvatar(n, extras)
 
         val actionsList = mutableListOf<NotificationActionModel>()
         n.actions?.take(4)?.forEach { action ->
@@ -756,10 +763,23 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                         continue
                     }
 
-                    val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
+                    // 2. Keep notification history: DO NOT drop older child chat notifications!
+                    // If this is a group summary wrapper and child notifications for this package exist,
+                    // suppress the redundant generic group summary wrapper so individual chats remain in the shade.
+                    val isGroupSummary = (n.flags and Notification.FLAG_GROUP_SUMMARY != 0)
+                    val hasChildChatNotifications = sbns.any { other ->
+                        other.key != sbn.key &&
+                        other.packageName == sbn.packageName &&
+                        (other.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0)
+                    }
+                    if (isGroupSummary && hasChildChatNotifications) {
+                        continue
+                    }
+
+                    val rawTitle = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
                         ?: extras.getCharSequence(Notification.EXTRA_TITLE_BIG)?.toString()
                         ?: ""
-                    val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
+                    val rawText = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
                         ?: extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
                         ?: ""
                     val subText = extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()
@@ -776,12 +796,15 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                     val infoText = extras.getCharSequence(Notification.EXTRA_INFO_TEXT)?.toString()
                     val summaryText = extras.getCharSequence(Notification.EXTRA_SUMMARY_TEXT)?.toString()
 
-                    val conversationTitle = extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE)?.toString()
+                    // Extract single latest message for MessagingStyle notifications (Telegram, WhatsApp, etc.)
+                    val messagingDetails = extractMessagingDetails(n, extras, sbn, rawTitle, rawText)
 
-                    // Skip genuinely empty notifications (never drop ongoing or progress notifications)
-                    if (title.isBlank() && text.isBlank() && !hasProgress && !isOngoing) continue
+                    // Skip genuinely empty notifications (never drop ongoing, progress, or messaging notifications)
+                    if (messagingDetails.title.isBlank() && messagingDetails.text.isBlank() && !hasProgress && !isOngoing && !messagingDetails.isMessaging) {
+                        continue
+                    }
 
-                    // 2. Resolve Human-Readable Application Name (prevent raw package names)
+                    // 3. Resolve Human-Readable Application Name (prevent raw package names)
                     val appName = try {
                         val appInfo = pm.getApplicationInfo(sbn.packageName, 0)
                         val label = pm.getApplicationLabel(appInfo).toString()
@@ -801,7 +824,7 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                         }
                     }
 
-                    // 3. Load App Icon with fallback to smallIcon
+                    // 4. Load App Icon with fallback to smallIcon
                     val appIcon = try {
                         pm.getApplicationIcon(sbn.packageName)
                     } catch (e: Exception) {
@@ -812,13 +835,14 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                         }
                     }
 
-                    val avatarBitmap = extractLargeIconOrAvatar(n, extras)
+                    val avatarBitmap = messagingDetails.avatarBitmap
+                        ?: extractLargeIconOrAvatar(n, extras)
                     val bigPictureBitmap = extractBigPicture(extras)
 
                     val resolvedTitle = when {
-                        !conversationTitle.isNullOrBlank() && title.isNotBlank() && !title.contains(conversationTitle) -> "$conversationTitle: $title"
-                        !conversationTitle.isNullOrBlank() && title.isBlank() -> conversationTitle
-                        title.isNotBlank() -> title
+                        messagingDetails.isMessaging && messagingDetails.title.isNotBlank() -> messagingDetails.title
+                        rawTitle.isNotBlank() -> rawTitle
+                        !messagingDetails.conversationTitle.isNullOrBlank() -> messagingDetails.conversationTitle
                         !subText.isNullOrBlank() -> subText
                         !infoText.isNullOrBlank() -> infoText
                         hasProgress -> "Downloading"
@@ -827,7 +851,8 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                     }
 
                     val resolvedText = when {
-                        text.isNotBlank() -> text
+                        messagingDetails.isMessaging && messagingDetails.text.isNotBlank() -> messagingDetails.text
+                        rawText.isNotBlank() -> rawText
                         !infoText.isNullOrBlank() && resolvedTitle != infoText -> infoText
                         !subText.isNullOrBlank() && resolvedTitle != subText -> subText
                         !summaryText.isNullOrBlank() -> summaryText
@@ -835,6 +860,13 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                         hasProgress && isIndeterminateProgress -> "In progress"
                         isOngoing -> "Running in background"
                         else -> ""
+                    }
+
+                    // Effective timestamp: latest message time if messaging, otherwise max of postTime and when
+                    val effectiveTime = when {
+                        messagingDetails.timestamp != null && messagingDetails.timestamp > 0L -> messagingDetails.timestamp
+                        n.`when` > 0L -> maxOf(sbn.postTime, n.`when`)
+                        else -> sbn.postTime
                     }
 
                     val actionsList = mutableListOf<NotificationActionModel>()
@@ -859,7 +891,7 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                             title = resolvedTitle,
                             text = resolvedText,
                             subText = subText,
-                            postTime = sbn.postTime,
+                            postTime = effectiveTime,
                             appIcon = appIcon,
                             avatarBitmap = avatarBitmap,
                             bigPictureBitmap = bigPictureBitmap,
@@ -870,13 +902,23 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                             actions = actionsList,
                             progress = progress,
                             progressMax = progressMax,
-                            isIndeterminateProgress = isIndeterminateProgress
+                            isIndeterminateProgress = isIndeterminateProgress,
+                            isMessaging = messagingDetails.isMessaging,
+                            senderName = messagingDetails.senderName,
+                            conversationTitle = messagingDetails.conversationTitle,
+                            latestMessageTimestamp = messagingDetails.timestamp
                         )
                     )
                 }
 
-                // Sort newest first
-                val sortedList = list.sortedByDescending { it.postTime }
+                // Chat ordering: Move notifications from the most recently updated chat/sender to the top
+                // of the messaging section based on the latest message timestamp.
+                // Keep notification history: All older existing chat notifications remain preserved in the shade.
+                val sortedList = list.sortedWith(
+                    compareByDescending<NotificationItem> { it.isMessaging }
+                        .thenByDescending { it.postTime }
+                )
+
                 if (!areNotificationListsEqual(_notifications.value, sortedList)) {
                     _notifications.value = sortedList
                 }
@@ -997,45 +1039,157 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
         return null
     }
 
+    data class MessagingDetails(
+        val isMessaging: Boolean,
+        val title: String,
+        val text: String,
+        val senderName: String?,
+        val conversationTitle: String?,
+        val timestamp: Long?,
+        val avatarBitmap: Bitmap?
+    )
+
     /**
-     * Extracts the single latest incoming message from a MessagingStyle notification.
-     * Prevents displaying outdated conversation logs, multi-message summaries, or repeated old messages.
+     * Extracts the single latest incoming message from a MessagingStyle notification (Telegram, WhatsApp, etc.).
+     * Returns the newest individual message content, sender name, timestamp, and avatar.
      */
-    private fun extractLatestMessageContent(
+    private fun extractMessagingDetails(
+        n: Notification,
         extras: Bundle,
+        sbn: StatusBarNotification,
         fallbackTitle: String,
         fallbackText: String
-    ): Pair<String, String> {
-        try {
-            val messages = extras.getParcelableArray(Notification.EXTRA_MESSAGES)
-            if (messages != null && messages.isNotEmpty()) {
-                for (i in messages.indices.reversed()) {
-                    val msgBundle = messages[i] as? Bundle ?: continue
-                    val msgText = msgBundle.getCharSequence("text")?.toString()
-                    if (!msgText.isNullOrBlank()) {
-                        val sender = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                            try {
-                                msgBundle.getParcelable("sender_person", android.app.Person::class.java)?.name?.toString()
-                            } catch (_: Throwable) {
-                                null
-                            }
-                        } else null ?: msgBundle.getCharSequence("sender")?.toString()
+    ): MessagingDetails {
+        val messagingStyle = try {
+            NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(n)
+        } catch (_: Throwable) {
+            null
+        }
 
-                        val convTitle = extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE)?.toString()
-                        val resolvedTitle = when {
-                            !convTitle.isNullOrBlank() && !sender.isNullOrBlank() && convTitle != sender -> "$convTitle ($sender)"
-                            !convTitle.isNullOrBlank() -> convTitle
-                            !sender.isNullOrBlank() -> sender
-                            else -> fallbackTitle
-                        }
-                        return Pair(resolvedTitle, msgText)
+        var latestMessageText: String? = null
+        var latestMessageTime: Long? = null
+        var senderName: String? = null
+        val convTitle: String? = messagingStyle?.conversationTitle?.toString()
+            ?: extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE)?.toString()
+        var avatarBmp: Bitmap? = null
+        var isMessaging = messagingStyle != null
+
+        // 1. Primary: Extract latest message from NotificationCompat.MessagingStyle
+        if (messagingStyle != null && messagingStyle.messages.isNotEmpty()) {
+            val lastMsg = messagingStyle.messages.lastOrNull()
+            if (lastMsg != null) {
+                val textCandidate = lastMsg.text?.toString()
+                if (!textCandidate.isNullOrBlank()) {
+                    latestMessageText = textCandidate
+                } else if (!lastMsg.dataMimeType.isNullOrBlank()) {
+                    latestMessageText = when {
+                        lastMsg.dataMimeType?.startsWith("image/") == true -> "Photo"
+                        lastMsg.dataMimeType?.startsWith("audio/") == true -> "Voice message"
+                        lastMsg.dataMimeType?.startsWith("video/") == true -> "Video"
+                        else -> "Media attachment"
                     }
                 }
+                if (lastMsg.timestamp > 0L) {
+                    latestMessageTime = lastMsg.timestamp
+                }
+                val person = lastMsg.person
+                senderName = person?.name?.toString() ?: lastMsg.sender?.toString()
+                if (person?.icon != null) {
+                    avatarBmp = parseBitmapOrIcon(person.icon)
+                }
             }
-        } catch (_: Throwable) {
-            // Fallback on standard extras
         }
-        return Pair(fallbackTitle, fallbackText)
+
+        // 2. Secondary: Fallback to Notification.EXTRA_MESSAGES bundle array
+        if (latestMessageText == null) {
+            try {
+                val rawMessages = when (val raw = extras.get(Notification.EXTRA_MESSAGES)) {
+                    is Array<*> -> raw.toList()
+                    is List<*> -> raw
+                    else -> null
+                }
+                if (!rawMessages.isNullOrEmpty()) {
+                    isMessaging = true
+                    val lastMsgBundle = rawMessages.filterIsInstance<Bundle>().lastOrNull()
+                    if (lastMsgBundle != null) {
+                        val textCandidate = lastMsgBundle.getCharSequence("text")?.toString()
+                        val type = lastMsgBundle.getString("type")
+                        if (!textCandidate.isNullOrBlank()) {
+                            latestMessageText = textCandidate
+                        } else if (!type.isNullOrBlank()) {
+                            latestMessageText = when {
+                                type.startsWith("image/") -> "Photo"
+                                type.startsWith("audio/") -> "Voice message"
+                                type.startsWith("video/") -> "Video"
+                                else -> "Media attachment"
+                            }
+                        }
+                        val time = lastMsgBundle.getLong("time", 0L)
+                        if (time > 0L) {
+                            latestMessageTime = time
+                        }
+                        val senderPerson = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                            try {
+                                lastMsgBundle.getParcelable("sender_person", android.app.Person::class.java)
+                            } catch (_: Throwable) { null }
+                        } else null
+
+                        senderName = senderPerson?.name?.toString()
+                            ?: lastMsgBundle.getCharSequence("sender")?.toString()
+
+                        if (avatarBmp == null) {
+                            avatarBmp = parseBitmapOrIcon(senderPerson)
+                                ?: parseBitmapOrIcon(lastMsgBundle.get("sender_person"))
+                        }
+                    }
+                }
+            } catch (_: Throwable) {}
+        }
+
+        // 3. Fallback check for template, category, or messaging packages
+        val template = extras.getString(Notification.EXTRA_TEMPLATE) ?: ""
+        val isCategoryMessage = n.category == Notification.CATEGORY_MESSAGE
+        val isTemplateMessaging = template.contains("MessagingStyle", ignoreCase = true)
+        val isMessagingPackage = sbn.packageName.contains("telegram", ignoreCase = true) ||
+                sbn.packageName.contains("whatsapp", ignoreCase = true) ||
+                sbn.packageName.contains("signal", ignoreCase = true) ||
+                sbn.packageName.contains("messaging", ignoreCase = true) ||
+                sbn.packageName.contains("viber", ignoreCase = true) ||
+                sbn.packageName.contains("discord", ignoreCase = true)
+
+        if (isCategoryMessage || isTemplateMessaging || (isMessagingPackage && !convTitle.isNullOrBlank())) {
+            isMessaging = true
+        }
+
+        // 4. Resolve Title (clean away generic summary counts like "(2 messages)")
+        val cleanFallbackTitle = fallbackTitle.replace(
+            Regex("\\s*\\(\\d+\\s*(?:messages?|msgs?|новы[хe]\\s*сообщен[ияй]+|сообщен[ияй]+)?\\)", RegexOption.IGNORE_CASE),
+            ""
+        ).trim()
+
+        val resolvedTitle = when {
+            !convTitle.isNullOrBlank() && !senderName.isNullOrBlank() && convTitle != senderName -> "$convTitle ($senderName)"
+            !convTitle.isNullOrBlank() -> convTitle
+            !senderName.isNullOrBlank() -> senderName
+            cleanFallbackTitle.isNotBlank() -> cleanFallbackTitle
+            else -> fallbackTitle
+        }
+
+        val resolvedText = when {
+            !latestMessageText.isNullOrBlank() -> latestMessageText
+            fallbackText.isNotBlank() -> fallbackText
+            else -> ""
+        }
+
+        return MessagingDetails(
+            isMessaging = isMessaging,
+            title = resolvedTitle,
+            text = resolvedText,
+            senderName = senderName,
+            conversationTitle = convTitle,
+            timestamp = latestMessageTime,
+            avatarBitmap = avatarBmp
+        )
     }
 
     private fun parseBitmapOrIcon(obj: Any?): Bitmap? {
@@ -1063,6 +1217,14 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                 Log.d(TAG, "Failed loading Icon drawable: ${e.message}")
             }
         }
+        if (obj is IconCompat) {
+            try {
+                val drawable = obj.loadDrawable(this)
+                if (drawable != null) {
+                    return drawableToBitmap(drawable)
+                }
+            } catch (_: Throwable) {}
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && obj is android.app.Person) {
             try {
                 val icon = obj.icon
@@ -1070,6 +1232,14 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                     return parseBitmapOrIcon(icon)
                 }
             } catch (e: Throwable) {}
+        }
+        if (obj is CorePerson) {
+            try {
+                val icon = obj.icon
+                if (icon != null) {
+                    return parseBitmapOrIcon(icon)
+                }
+            } catch (_: Throwable) {}
         }
         if (obj is Bundle) {
             try {
