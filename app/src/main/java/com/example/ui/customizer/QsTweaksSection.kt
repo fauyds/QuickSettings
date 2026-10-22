@@ -65,9 +65,13 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.BatteryFull
+import androidx.compose.material.icons.filled.Settings
+import com.example.data.BatteryPercentageLocation
 import com.example.data.DatePosition
 import com.example.data.EditButtonPosition
 import com.example.data.PanelPreferences
+import com.example.data.SettingsIconLocation
 import com.example.model.QsGridLayout
 import com.example.ui.theme.ExpressiveCardShapes
 import com.example.ui.theme.SegmentedButtonShapes
@@ -92,6 +96,8 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     val dragHandleLength by PanelPreferences.dragHandleLength.collectAsState()
     val datePosition by PanelPreferences.datePosition.collectAsState()
     val editButtonPosition by PanelPreferences.editButtonPosition.collectAsState()
+    val batteryPercentageLocation by PanelPreferences.batteryPercentageLocation.collectAsState()
+    val settingsIconLocation by PanelPreferences.settingsIconLocation.collectAsState()
     val hideQqsDragHandle by PanelPreferences.hideQqsDragHandle.collectAsState()
     val hideQqsEmptyNotifLabels by PanelPreferences.hideQqsEmptyNotifLabels.collectAsState()
     val qsTileLabelFontSize by PanelPreferences.qsTileLabelFontSize.collectAsState()
@@ -102,6 +108,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     val hideBrightnessPercentage by PanelPreferences.hideBrightnessPercentage.collectAsState()
     val hideBrightnessIcon by PanelPreferences.hideBrightnessIcon.collectAsState()
     val showBrightnessPlusMinus by PanelPreferences.showBrightnessPlusMinus.collectAsState()
+    val disableClearAllBackground by PanelPreferences.disableClearAllBackground.collectAsState()
 
     var fontSizesExpanded by rememberSaveable { mutableStateOf(false) }
 
@@ -444,6 +451,184 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                                 labelColor = MaterialTheme.colorScheme.onSurface
                             ),
                             modifier = Modifier.testTag("edit_pos_${pos.id}")
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+    val batteryPercentageLocationCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("battery_percentage_location_card", CustomizeCategory.QS_TWEAKS) {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("battery_percentage_location_card")
+            ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.BatteryFull,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(1.dp)
+                    ) {
+                        Text(
+                            text = "Battery Percentage Location",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = 17.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Choose where to place the battery percentage indicator.",
+                            fontSize = 12.sp,
+                            lineHeight = 15.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val allBatteryLocs = BatteryPercentageLocation.entries
+                    allBatteryLocs.forEach { loc ->
+                        val isSelected = batteryPercentageLocation == loc
+                        val chipShape = SegmentedButtonShapes.getShape(
+                            item = loc,
+                            items = allBatteryLocs,
+                            selectedItem = batteryPercentageLocation
+                        )
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { PanelPreferences.setBatteryPercentageLocation(context, loc) },
+                            label = { Text(loc.label, fontSize = 10.sp) },
+                            shape = chipShape,
+                            border = null,
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                containerColor = MaterialTheme.colorScheme.background,
+                                labelColor = MaterialTheme.colorScheme.onSurface
+                            ),
+                            modifier = Modifier.testTag("battery_pos_${loc.id}")
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+    val settingsIconLocationCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("settings_icon_location_card", CustomizeCategory.QS_TWEAKS) {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("settings_icon_location_card")
+            ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.Settings,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(1.dp)
+                    ) {
+                        Text(
+                            text = "Settings Icon Location",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = 17.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Choose where the system settings icon is placed.",
+                            fontSize = 12.sp,
+                            lineHeight = 15.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val allSettingsLocs = SettingsIconLocation.entries
+                    allSettingsLocs.forEach { loc ->
+                        val isSelected = settingsIconLocation == loc
+                        val chipShape = SegmentedButtonShapes.getShape(
+                            item = loc,
+                            items = allSettingsLocs,
+                            selectedItem = settingsIconLocation
+                        )
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { PanelPreferences.setSettingsIconLocation(context, loc) },
+                            label = { Text(loc.label, fontSize = 10.sp) },
+                            shape = chipShape,
+                            border = null,
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                containerColor = MaterialTheme.colorScheme.background,
+                                labelColor = MaterialTheme.colorScheme.onSurface
+                            ),
+                            modifier = Modifier.testTag("settings_pos_${loc.id}")
                         )
                     }
                 }
@@ -1099,6 +1284,75 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     }
 }
 
+    val disableClearAllBgCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("disable_clear_all_bg_card", CustomizeCategory.QS_TWEAKS) {
+            SettingsCard(
+                shape = shape
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            androidx.compose.material3.Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.NotificationsOff,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                        ) {
+                            Text(
+                                text = "Disable Clear All Background",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 17.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Remove the background container tint from the notification clear all button.",
+                                fontSize = 12.sp,
+                                lineHeight = 15.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Switch(
+                        checked = disableClearAllBackground,
+                        onCheckedChange = { PanelPreferences.setDisableClearAllBackground(context, it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                        ),
+                        modifier = Modifier.testTag("disable_clear_all_bg_toggle")
+                    )
+                }
+            }
+        }
+    }
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)
@@ -1108,6 +1362,8 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         if (pinnedIds.contains("qs_grid_density_card")) pinnedCards.add(gridDensityCard)
         if (pinnedIds.contains("qs_drag_handle_length_card")) pinnedCards.add(dragHandleLengthCard)
         if (pinnedIds.contains("date_position_card")) pinnedCards.add(datePositionCard)
+        if (pinnedIds.contains("battery_percentage_location_card")) pinnedCards.add(batteryPercentageLocationCard)
+        if (pinnedIds.contains("settings_icon_location_card")) pinnedCards.add(settingsIconLocationCard)
         if (pinnedIds.contains("edit_pencil_location_card")) pinnedCards.add(editPencilLocationCard)
         if (pinnedIds.contains("qs_tile_font_size_card")) pinnedCards.add(tileFontSizeCard)
         if (pinnedIds.contains("hide_date_in_expanded_card")) pinnedCards.add(hideDateInExpandedCard)
@@ -1117,6 +1373,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         if (pinnedIds.contains("hide_brightness_percentage_card")) pinnedCards.add(hideBrightnessPercentageCard)
         if (pinnedIds.contains("hide_brightness_icon_card")) pinnedCards.add(hideBrightnessIconCard)
         if (pinnedIds.contains("show_brightness_plus_minus_card")) pinnedCards.add(showBrightnessPlusMinusCard)
+        if (pinnedIds.contains("disable_clear_all_bg_card")) pinnedCards.add(disableClearAllBgCard)
 
         if (pinnedCards.isNotEmpty()) {
             ListSubheader(
@@ -1151,7 +1408,10 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         // 4. Unpinned Header & Controls
         val unpinnedHeaderControls = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
         if (!pinnedIds.contains("date_position_card")) unpinnedHeaderControls.add(datePositionCard)
+        if (!pinnedIds.contains("battery_percentage_location_card")) unpinnedHeaderControls.add(batteryPercentageLocationCard)
+        if (!pinnedIds.contains("settings_icon_location_card")) unpinnedHeaderControls.add(settingsIconLocationCard)
         if (!pinnedIds.contains("edit_pencil_location_card")) unpinnedHeaderControls.add(editPencilLocationCard)
+        if (!pinnedIds.contains("disable_clear_all_bg_card")) unpinnedHeaderControls.add(disableClearAllBgCard)
 
         if (unpinnedHeaderControls.isNotEmpty()) {
             CollapsibleSubheaderSection(

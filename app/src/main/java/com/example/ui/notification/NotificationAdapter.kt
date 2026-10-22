@@ -119,6 +119,7 @@ class NotificationAdapter(
     }
 
     inner class FooterViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val llFooterRoot: LinearLayout = itemView.findViewById(R.id.ll_notif_footer_root)
         private val btnClearAll: LinearLayout = itemView.findViewById(R.id.btn_notif_clear_all)
         private val tvClearAllText: TextView = itemView.findViewById(R.id.tv_notif_clear_all_text)
         private val ivClearAllIcon: ImageView = itemView.findViewById(R.id.iv_notif_clear_all_icon)
@@ -126,15 +127,90 @@ class NotificationAdapter(
         fun bind() {
             val context = itemView.context
             val density = context.resources.displayMetrics.density
-            val onPrimary = if (disableMonetNotifText) {
-                if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
-            } else {
-                MonetThemeHelper.getOnPrimaryText(context, isDark)
-            }
+            val isDarkTheme = isDark
 
-            btnClearAll.background = MonetThemeHelper.createMonetPrimaryPillDrawable(context, isDark, 14f * density)
-            tvClearAllText.setTextColor(onPrimary)
-            ivClearAllIcon.setColorFilter(onPrimary)
+            val disableBg = com.example.data.PanelPreferences.disableClearAllBackground.value
+            val useFab = com.example.data.PanelPreferences.useClearAllFab.value
+            val fabPos = com.example.data.PanelPreferences.clearAllFabPosition.value
+            val fabShapeId = com.example.data.PanelPreferences.clearAllFabShapeId.value
+            val fabIcon = com.example.data.PanelPreferences.clearAllFabIcon.value
+
+            if (!useFab) {
+                // When FAB button is disabled: "Clear All" button remains on right side anyway
+                llFooterRoot.gravity = android.view.Gravity.END or android.view.Gravity.CENTER_VERTICAL
+
+                tvClearAllText.visibility = View.VISIBLE
+                val params = btnClearAll.layoutParams as ViewGroup.MarginLayoutParams
+                params.width = ViewGroup.LayoutParams.WRAP_CONTENT
+                params.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                btnClearAll.layoutParams = params
+                btnClearAll.setPadding((14 * density).toInt(), (6 * density).toInt(), (14 * density).toInt(), (6 * density).toInt())
+                btnClearAll.gravity = android.view.Gravity.CENTER_VERTICAL
+
+                val iconParams = ivClearAllIcon.layoutParams as ViewGroup.MarginLayoutParams
+                iconParams.width = (16 * density).toInt()
+                iconParams.height = (16 * density).toInt()
+                iconParams.marginStart = 0
+                ivClearAllIcon.layoutParams = iconParams
+                ivClearAllIcon.setImageResource(R.drawable.ic_notif_clear_all)
+
+                val clearAllTextColor = if (disableBg) {
+                    MonetThemeHelper.getPrimaryAccent(context, isDarkTheme)
+                } else {
+                    if (isDarkTheme) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+                }
+                tvClearAllText.setTextColor(clearAllTextColor)
+                ivClearAllIcon.setColorFilter(clearAllTextColor)
+
+                if (disableBg) {
+                    btnClearAll.background = null
+                } else {
+                    btnClearAll.background = MonetThemeHelper.createMonetPrimaryPillDrawable(context, isDarkTheme, 14f * density)
+                }
+            } else {
+                // When FAB button is enabled: positioned according to fabPos and bigger (64dp)
+                llFooterRoot.gravity = when (fabPos) {
+                    com.example.data.ClearAllFabPosition.LEFT -> android.view.Gravity.START or android.view.Gravity.CENTER_VERTICAL
+                    com.example.data.ClearAllFabPosition.RIGHT -> android.view.Gravity.END or android.view.Gravity.CENTER_VERTICAL
+                    com.example.data.ClearAllFabPosition.CENTER -> android.view.Gravity.CENTER
+                }
+
+                tvClearAllText.visibility = View.GONE
+                val params = btnClearAll.layoutParams as ViewGroup.MarginLayoutParams
+                params.width = (64 * density).toInt()
+                params.height = (64 * density).toInt()
+                btnClearAll.layoutParams = params
+                btnClearAll.setPadding(0, 0, 0, 0)
+                btnClearAll.gravity = android.view.Gravity.CENTER
+
+                val iconParams = ivClearAllIcon.layoutParams as ViewGroup.MarginLayoutParams
+                iconParams.width = (30 * density).toInt()
+                iconParams.height = (30 * density).toInt()
+                iconParams.marginStart = 0
+                ivClearAllIcon.layoutParams = iconParams
+                ivClearAllIcon.setImageResource(fabIcon.drawableRes)
+
+                val tintColor = if (disableBg) {
+                    MonetThemeHelper.getPrimaryAccent(context, isDarkTheme)
+                } else {
+                    if (isDarkTheme) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+                }
+                ivClearAllIcon.setColorFilter(tintColor)
+
+                if (disableBg) {
+                    btnClearAll.background = null
+                } else {
+                    val primaryColor = MonetThemeHelper.getPrimaryAccent(context, isDarkTheme)
+                    val shapeDrawable = com.example.ui.shape.QsShapeManager.createDrawable(fabShapeId, primaryColor)
+                    val maskDrawable = com.example.ui.shape.QsShapeManager.createDrawable(fabShapeId, android.graphics.Color.WHITE)
+                    val rippleColor = if (isDarkTheme) android.graphics.Color.parseColor("#44FFFFFF") else android.graphics.Color.parseColor("#33000000")
+                    btnClearAll.background = android.graphics.drawable.RippleDrawable(
+                        android.content.res.ColorStateList.valueOf(rippleColor),
+                        shapeDrawable,
+                        maskDrawable
+                    )
+                }
+            }
 
             btnClearAll.setOnClickListener {
                 onClearAll?.invoke()
@@ -182,19 +258,18 @@ class NotificationAdapter(
             val tertiaryColor = MonetThemeHelper.getTertiaryAccent(context, isDark)
 
             val disableNotifMonet = disableMonetNotifText
-            val showMonetSurface = com.example.data.PanelPreferences.showMonetSurfaceBackground.value
             val textPrimaryColor = if (disableNotifMonet) {
-                if (!showMonetSurface) android.graphics.Color.WHITE else (if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK)
+                if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
             } else {
                 MonetThemeHelper.getTextPrimary(context, isDark)
             }
             val textSecondaryColor = if (disableNotifMonet) {
-                if (!showMonetSurface) android.graphics.Color.WHITE else (if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK)
+                if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
             } else {
                 MonetThemeHelper.getTextSecondary(context, isDark)
             }
             val headerColor = if (disableNotifMonet) {
-                if (!showMonetSurface) android.graphics.Color.WHITE else (if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK)
+                if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
             } else {
                 when {
                     isCall -> primaryColor
@@ -204,12 +279,12 @@ class NotificationAdapter(
                 }
             }
             val subtextColor = if (disableNotifMonet) {
-                if (!showMonetSurface) android.graphics.Color.WHITE else (if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK)
+                if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
             } else {
                 tertiaryColor
             }
             val actionTextColor = if (disableNotifMonet) {
-                if (!showMonetSurface) android.graphics.Color.WHITE else (if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK)
+                if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
             } else {
                 primaryColor
             }

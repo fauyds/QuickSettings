@@ -63,6 +63,10 @@ import com.example.data.PanelPreferences
 import com.example.data.ProgressBarStyle
 import com.example.data.QsSliderTarget
 import com.example.data.TileShape
+import com.example.data.ClearAllFabPosition
+import com.example.data.ClearAllFabShape
+import com.example.data.ClearAllFabIcon
+import androidx.compose.material.icons.filled.NotificationsOff
 import com.example.ui.components.QsProgressSlider
 import com.example.ui.theme.ExpressiveCardShapes
 import com.example.ui.theme.SegmentedButtonShapes
@@ -158,6 +162,11 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
     val panelInnerCorner by PanelPreferences.panelInnerCorner.collectAsState()
     val collapseExpandOptions by PanelPreferences.collapseExpandOptions.collectAsState()
+    val useClearAllFab by PanelPreferences.useClearAllFab.collectAsState()
+    val clearAllFabPosition by PanelPreferences.clearAllFabPosition.collectAsState()
+    val clearAllFabShapeId by PanelPreferences.clearAllFabShapeId.collectAsState()
+    val clearAllFabShape by PanelPreferences.clearAllFabShape.collectAsState()
+    val clearAllFabIcon by PanelPreferences.clearAllFabIcon.collectAsState()
 
     var tileShapesExpanded by rememberSaveable { mutableStateOf(false) }
     var progressBarSliderExpanded by rememberSaveable { mutableStateOf(false) }
@@ -174,6 +183,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     }
 
     var showImportDialog by remember { mutableStateOf(false) }
+    var showFabImportDialog by remember { mutableStateOf(false) }
 
     val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.QS_DESIGN, context).collectAsState()
 
@@ -1950,7 +1960,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         }
                     }
 
-                    val allTargets = QsSliderTarget.entries
+                    val allTargets = QsSliderTarget.entries.filter { it != QsSliderTarget.VOLUME }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -2940,12 +2950,284 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     }
     }
 
+    val clearAllFabCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("clear_all_fab_card", CustomizeCategory.QS_DESIGN, "Clear All FAB Button") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("clear_all_fab_card")
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.NotificationsOff,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(1.dp)
+                            ) {
+                                Text(
+                                    text = "Clear All FAB Button",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    lineHeight = 17.sp,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Replace the text pill clear all button with a customizable FAB button.",
+                                    fontSize = 12.sp,
+                                    lineHeight = 15.sp,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Switch(
+                            checked = useClearAllFab,
+                            onCheckedChange = { PanelPreferences.setUseClearAllFab(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("use_clear_all_fab_toggle")
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = useClearAllFab,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                            // 1. FAB Alignment Position
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    text = "FAB Position",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    val allPositions = ClearAllFabPosition.entries
+                                    allPositions.forEach { pos ->
+                                        val isSelected = clearAllFabPosition == pos
+                                        val chipShape = SegmentedButtonShapes.getShape(
+                                            item = pos,
+                                            items = allPositions,
+                                            selectedItem = clearAllFabPosition
+                                        )
+                                        FilterChip(
+                                            selected = isSelected,
+                                            onClick = { PanelPreferences.setClearAllFabPosition(context, pos) },
+                                            label = { Text(pos.label, fontSize = 11.sp) },
+                                            shape = chipShape,
+                                            border = null,
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                                containerColor = MaterialTheme.colorScheme.background,
+                                                labelColor = MaterialTheme.colorScheme.onSurface
+                                            ),
+                                            modifier = Modifier.testTag("clear_all_fab_pos_${pos.id}")
+                                        )
+                                    }
+                                }
+                            }
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                            // 2. Custom FAB Shape Selection (XML Paths from QsShapeManager)
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(
+                                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(
+                                            text = "FAB Shape (XML Paths)",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "Tile-style vector XML shapes applied to the FAB",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    OutlinedButton(
+                                        onClick = { showFabImportDialog = true },
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                        modifier = Modifier.testTag("import_fab_xml_shape_button"),
+                                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                            containerColor = com.example.ui.theme.getSettingsScreenBackgroundColor(isSystemInDarkTheme())
+                                        )
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = "Add Shape",
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Text(
+                                            text = "Add Shape",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(start = 4.dp)
+                                        )
+                                    }
+                                }
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    allShapes.forEach { shape ->
+                                        val isSelected = (clearAllFabShapeId == shape.id)
+                                        val chipShape = SegmentedButtonShapes.getShape(
+                                            item = shape,
+                                            items = allShapes,
+                                            selectedItem = allShapes.firstOrNull { it.id == clearAllFabShapeId }
+                                        )
+                                        val composeShape = remember(shape.id) {
+                                            QsShapeManager.getComposeShape(shape.id)
+                                        }
+                                        FilterChip(
+                                            selected = isSelected,
+                                            onClick = { PanelPreferences.setClearAllFabShapeId(context, shape.id) },
+                                            label = {
+                                                Text(
+                                                    text = shape.label,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                                )
+                                            },
+                                            leadingIcon = {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(14.dp)
+                                                        .clip(composeShape)
+                                                        .background(
+                                                            if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                                            else MaterialTheme.colorScheme.primary
+                                                        )
+                                                )
+                                            },
+                                            shape = chipShape,
+                                            border = null,
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                                selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+                                                containerColor = MaterialTheme.colorScheme.background,
+                                                labelColor = MaterialTheme.colorScheme.onSurface
+                                            ),
+                                            modifier = Modifier.testTag("clear_all_fab_shape_${shape.id}")
+                                        )
+                                    }
+                                }
+                            }
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                            // 3. Icon Choice inside Clear All FAB
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    text = "FAB Icon",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    val allIcons = ClearAllFabIcon.entries
+                                    allIcons.forEach { iconItem ->
+                                        val isSelected = clearAllFabIcon == iconItem
+                                        val chipShape = SegmentedButtonShapes.getShape(
+                                            item = iconItem,
+                                            items = allIcons,
+                                            selectedItem = clearAllFabIcon
+                                        )
+                                        FilterChip(
+                                            selected = isSelected,
+                                            onClick = { PanelPreferences.setClearAllFabIcon(context, iconItem) },
+                                            label = { Text(iconItem.label, fontSize = 11.sp) },
+                                            shape = chipShape,
+                                            border = null,
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                                containerColor = MaterialTheme.colorScheme.background,
+                                                labelColor = MaterialTheme.colorScheme.onSurface
+                                            ),
+                                            modifier = Modifier.testTag("clear_all_fab_icon_${iconItem.id}")
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     val pinnedCardsMap = mapOf<String, @Composable (androidx.compose.ui.graphics.Shape) -> Unit>(
         "qqs_icon_size_card" to qqsIconSizeCard,
         "qqs_icon_quantity_card" to qqsIconQuantityCard,
         "tile_shape_selection_card" to tileShapeSelectionCard,
         "tile_outline_card" to tileOutlineCard,
         "qs_tile_gradient_card" to qsTileGradientCard,
+        "clear_all_fab_card" to clearAllFabCard,
         "show_carrier_card" to showCarrierCard,
         "carrier_divider_card" to carrierDividerCard,
         "hide_carrier_in_expanded_card" to hideCarrierInExpandedCard,
@@ -2981,6 +3263,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         if (!pinnedIds.contains("tile_shape_selection_card")) unpinnedTileShapes.add(tileShapeSelectionCard)
         if (!pinnedIds.contains("tile_outline_card")) unpinnedTileShapes.add(tileOutlineCard)
         if (!pinnedIds.contains("qs_tile_gradient_card")) unpinnedTileShapes.add(qsTileGradientCard)
+        if (!pinnedIds.contains("clear_all_fab_card")) unpinnedTileShapes.add(clearAllFabCard)
 
         if (unpinnedTileShapes.isNotEmpty()) {
             CollapsibleSubheaderSection(
@@ -3068,6 +3351,16 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             onShapeImported = { importedItem ->
                 PanelPreferences.setEnabledTileShapeId(context, importedItem.id)
                 showImportDialog = false
+            }
+        )
+    }
+
+    if (showFabImportDialog) {
+        ImportXmlShapeDialog(
+            onDismiss = { showFabImportDialog = false },
+            onShapeImported = { importedItem ->
+                PanelPreferences.setClearAllFabShapeId(context, importedItem.id)
+                showFabImportDialog = false
             }
         )
     }

@@ -38,6 +38,9 @@ class NotificationListView @JvmOverloads constructor(
     private val tvHeaderTitle: TextView
     private val ivHeaderIcon: ImageView
     private val llHeader: View
+    private val flFloatingClearAllContainer: FrameLayout
+    private val btnFloatingClearAllFab: FrameLayout
+    private val ivFloatingClearAllIcon: ImageView
 
     private var adapter: NotificationAdapter? = null
 
@@ -111,6 +114,10 @@ class NotificationListView @JvmOverloads constructor(
         tvHeaderTitle = root.findViewById(R.id.tv_notif_header_title)
         ivHeaderIcon = root.findViewById(R.id.iv_notif_header_icon)
         llHeader = root.findViewById(R.id.ll_notif_header)
+
+        flFloatingClearAllContainer = root.findViewById(R.id.fl_floating_clear_all_container)
+        btnFloatingClearAllFab = root.findViewById(R.id.btn_floating_clear_all_fab)
+        ivFloatingClearAllIcon = root.findViewById(R.id.iv_floating_clear_all_icon)
 
         // Enable completely free, unconstrained scrolling with native physics
         rvNotifications.layoutManager = LinearLayoutManager(context, RecyclerView.VERTICAL, false)
@@ -465,20 +472,12 @@ class NotificationListView @JvmOverloads constructor(
         // 1. Resolve Monet Dynamic Colors
         val primaryAccent = primaryColor ?: MonetThemeHelper.getPrimaryAccent(context, isDark)
         val textPrimary = if (disableNotifMonet) {
-            if (!showMonetSurface) {
-                android.graphics.Color.WHITE
-            } else {
-                if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
-            }
+            if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
         } else {
             MonetThemeHelper.getTextPrimary(context, isDark)
         }
         val textSecondary = if (disableNotifMonet) {
-            if (!showMonetSurface) {
-                android.graphics.Color.WHITE
-            } else {
-                if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
-            }
+            if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
         } else {
             MonetThemeHelper.getTextSecondary(context, isDark)
         }
@@ -490,18 +489,22 @@ class NotificationListView @JvmOverloads constructor(
         adapter?.disableMonetNotifText = disableNotifMonet
 
         // 2. Style Header Row ("Notifications" section label)
-        val headerLabelColor = if (disableNotifMonet) {
-            if (!showMonetSurface) {
-                android.graphics.Color.WHITE
-            } else {
-                if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
-            }
+        val defaultHeaderColor = if (disableNotifMonet) {
+            if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
         } else {
             primaryAccent
         }
+
+        val headerLabelColor = if (!showMonetSurface) {
+            android.graphics.Color.WHITE
+        } else {
+            defaultHeaderColor
+        }
+
         tvHeaderTitle.setTextColor(headerLabelColor)
-        ivHeaderIcon.setColorFilter(headerLabelColor)
-        ivSettingsBtn.setColorFilter(headerLabelColor)
+        val iconHeaderColor = if (!isDark) headerLabelColor else defaultHeaderColor
+        ivHeaderIcon.setColorFilter(iconHeaderColor)
+        ivSettingsBtn.setColorFilter(iconHeaderColor)
 
         // 3. Style Permission Banner Card
         val cardRadius = PanelPreferences.panelOuterCorner.value * density
@@ -518,14 +521,20 @@ class NotificationListView @JvmOverloads constructor(
         ivEmptyIcon.setColorFilter(textSecondary)
         tvEmptyText.setTextColor(textSecondary)
 
-        // 5. Update Visibility and Data (Footer inside RecyclerView)
+        // 5. Update Visibility and Data (Floating FAB vs Footer inside RecyclerView)
         val hideEmptyNotifLabels = PanelPreferences.hideQqsEmptyNotifLabels.value
+        val useClearAllFab = PanelPreferences.useClearAllFab.value
+        val disableClearAllBg = PanelPreferences.disableClearAllBackground.value
+        val fabPos = PanelPreferences.clearAllFabPosition.value
+        val fabShapeId = PanelPreferences.clearAllFabShapeId.value
+        val fabIcon = PanelPreferences.clearAllFabIcon.value
 
         if (!isPermissionGranted) {
             llHeader.visibility = View.VISIBLE
             flPermissionCard.visibility = View.VISIBLE
             flEmptyCard.visibility = View.GONE
             rvNotifications.visibility = View.GONE
+            flFloatingClearAllContainer.visibility = View.GONE
         } else if (notifications.isEmpty()) {
             flPermissionCard.visibility = View.GONE
             if (hideEmptyNotifLabels) {
@@ -536,6 +545,7 @@ class NotificationListView @JvmOverloads constructor(
                 flEmptyCard.visibility = View.VISIBLE
             }
             rvNotifications.visibility = View.GONE
+            flFloatingClearAllContainer.visibility = View.GONE
         } else {
             llHeader.visibility = View.VISIBLE
             flPermissionCard.visibility = View.GONE
@@ -543,7 +553,52 @@ class NotificationListView @JvmOverloads constructor(
             rvNotifications.visibility = View.VISIBLE
             
             val hasClearable = notifications.any { it.isClearable }
-            adapter?.showFooter = hasClearable
+            
+            if (useClearAllFab && hasClearable) {
+                flFloatingClearAllContainer.visibility = View.VISIBLE
+
+                // Position floating FAB at the bottom (Left, Center, or Right)
+                val lp = btnFloatingClearAllFab.layoutParams as FrameLayout.LayoutParams
+                lp.gravity = when (fabPos) {
+                    com.example.data.ClearAllFabPosition.LEFT -> android.view.Gravity.START or android.view.Gravity.BOTTOM
+                    com.example.data.ClearAllFabPosition.RIGHT -> android.view.Gravity.END or android.view.Gravity.BOTTOM
+                    com.example.data.ClearAllFabPosition.CENTER -> android.view.Gravity.CENTER_HORIZONTAL or android.view.Gravity.BOTTOM
+                }
+                btnFloatingClearAllFab.layoutParams = lp
+
+                ivFloatingClearAllIcon.setImageResource(fabIcon.drawableRes)
+
+                if (disableClearAllBg) {
+                    btnFloatingClearAllFab.background = null
+                    btnFloatingClearAllFab.elevation = 0f
+                    ivFloatingClearAllIcon.setColorFilter(primaryAccent)
+                } else {
+                    btnFloatingClearAllFab.elevation = 6f * density
+                    val shapeDrawable = com.example.ui.shape.QsShapeManager.createDrawable(fabShapeId, primaryAccent)
+                    val maskDrawable = com.example.ui.shape.QsShapeManager.createDrawable(fabShapeId, android.graphics.Color.WHITE)
+                    val rippleColor = if (isDark) android.graphics.Color.parseColor("#44FFFFFF") else android.graphics.Color.parseColor("#33000000")
+                    btnFloatingClearAllFab.background = android.graphics.drawable.RippleDrawable(
+                        android.content.res.ColorStateList.valueOf(rippleColor),
+                        shapeDrawable,
+                        maskDrawable
+                    )
+                    val iconTint = if (isDark) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+                    ivFloatingClearAllIcon.setColorFilter(iconTint)
+                }
+
+                btnFloatingClearAllFab.setOnClickListener {
+                    onClearAll?.invoke()
+                }
+
+                // Generous bottom padding so notification list items are never obscured under the floating FAB
+                rvNotifications.setPadding(0, 0, 0, (88 * density).toInt())
+                adapter?.showFooter = false
+            } else {
+                flFloatingClearAllContainer.visibility = View.GONE
+                rvNotifications.setPadding(0, 0, 0, 0)
+                adapter?.showFooter = hasClearable
+            }
+
             adapter?.submitList(notifications)
         }
     }

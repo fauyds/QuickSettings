@@ -1074,9 +1074,11 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
         var avatarBmp: Bitmap? = null
         var isMessaging = messagingStyle != null
 
-        // 1. Primary: Extract latest message from NotificationCompat.MessagingStyle
-        if (messagingStyle != null && messagingStyle.messages.isNotEmpty()) {
-            val lastMsg = messagingStyle.messages.lastOrNull()
+        // 1. Primary: Extract latest message from NotificationCompat.MessagingStyle (including historic messages sorted by timestamp)
+        if (messagingStyle != null && (messagingStyle.messages.isNotEmpty() || messagingStyle.historicMessages.isNotEmpty())) {
+            val allMsgs = messagingStyle.messages + messagingStyle.historicMessages
+            val lastMsg = allMsgs.maxByOrNull { if (it.timestamp > 0L) it.timestamp else Long.MIN_VALUE }
+                ?: messagingStyle.messages.lastOrNull()
             if (lastMsg != null) {
                 val textCandidate = lastMsg.text?.toString()
                 if (!textCandidate.isNullOrBlank()) {
@@ -1100,7 +1102,7 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
             }
         }
 
-        // 2. Secondary: Fallback to Notification.EXTRA_MESSAGES bundle array
+        // 2. Secondary: Fallback to Notification.EXTRA_MESSAGES bundle array (sorted by time)
         if (latestMessageText == null) {
             try {
                 val rawMessages = when (val raw = extras.get(Notification.EXTRA_MESSAGES)) {
@@ -1110,7 +1112,9 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                 }
                 if (!rawMessages.isNullOrEmpty()) {
                     isMessaging = true
-                    val lastMsgBundle = rawMessages.filterIsInstance<Bundle>().lastOrNull()
+                    val lastMsgBundle = rawMessages.filterIsInstance<Bundle>()
+                        .maxByOrNull { it.getLong("time", 0L) }
+                        ?: rawMessages.filterIsInstance<Bundle>().lastOrNull()
                     if (lastMsgBundle != null) {
                         val textCandidate = lastMsgBundle.getCharSequence("text")?.toString()
                         val type = lastMsgBundle.getString("type")
@@ -1144,6 +1148,23 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                     }
                 }
             } catch (_: Throwable) {}
+        }
+
+        // 3. Fallback check for InboxStyle lines or multi-line text
+        if (latestMessageText == null) {
+            val lines = extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)
+            if (!lines.isNullOrEmpty()) {
+                val lastLine = lines.lastOrNull { !it.isNullOrBlank() }?.toString()
+                if (!lastLine.isNullOrBlank()) {
+                    latestMessageText = lastLine
+                }
+            }
+        }
+        if (latestMessageText == null && fallbackText.contains("\n")) {
+            val lastLine = fallbackText.lines().lastOrNull { it.isNotBlank() }
+            if (!lastLine.isNullOrBlank()) {
+                latestMessageText = lastLine
+            }
         }
 
         // 3. Fallback check for template, category, or messaging packages

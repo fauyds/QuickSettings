@@ -249,8 +249,13 @@ object MonetThemeHelper {
     /**
      * Creates a prominent primary colored pill drawable (e.g. Clear all, Enable button).
      */
-    fun createMonetPrimaryPillDrawable(context: Context, isDark: Boolean, cornerRadiusPx: Float): RippleDrawable {
-        val primaryColor = getPrimaryAccent(context, isDark)
+    fun createMonetPrimaryPillDrawable(
+        context: Context,
+        isDark: Boolean,
+        cornerRadiusPx: Float,
+        customBgColor: Int? = null
+    ): RippleDrawable {
+        val primaryColor = customBgColor ?: getPrimaryAccent(context, isDark)
         val rippleColor = if (isDark) Color.parseColor("#44FFFFFF") else Color.parseColor("#33000000")
 
         val contentShape = GradientDrawable().apply {
@@ -262,6 +267,50 @@ object MonetThemeHelper {
         val maskShape = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = cornerRadiusPx
+            setColor(Color.WHITE)
+        }
+
+        return RippleDrawable(ColorStateList.valueOf(rippleColor), contentShape, maskShape)
+    }
+
+    /**
+     * Creates a custom FAB shape drawable based on selected ClearAllFabShape.
+     */
+    fun createFabShapeDrawable(
+        context: Context,
+        isDark: Boolean,
+        fabShape: com.example.data.ClearAllFabShape,
+        density: Float,
+        customBgColor: Int? = null
+    ): RippleDrawable {
+        val primaryColor = customBgColor ?: getPrimaryAccent(context, isDark)
+        val rippleColor = if (isDark) Color.parseColor("#44FFFFFF") else Color.parseColor("#33000000")
+
+        val contentShape = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            setColor(primaryColor)
+            when (fabShape) {
+                com.example.data.ClearAllFabShape.CIRCLE -> {
+                    shape = GradientDrawable.OVAL
+                }
+                com.example.data.ClearAllFabShape.PILL -> {
+                    cornerRadius = 14f * density
+                }
+                com.example.data.ClearAllFabShape.ROUNDED -> {
+                    cornerRadius = 10f * density
+                }
+                com.example.data.ClearAllFabShape.CUT_CORNER -> {
+                    cornerRadius = 4f * density
+                }
+                com.example.data.ClearAllFabShape.STAR -> {
+                    cornerRadius = 24f * density
+                }
+            }
+        }
+
+        val maskShape = GradientDrawable().apply {
+            shape = contentShape.shape
+            cornerRadius = contentShape.cornerRadius
             setColor(Color.WHITE)
         }
 

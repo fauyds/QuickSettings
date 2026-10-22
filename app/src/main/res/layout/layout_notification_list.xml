@@ -1,11 +1,17 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/ll_notif_list_container"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/fl_notif_root_container"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:background="@android:color/transparent"
-    android:paddingTop="4dp"
-    android:paddingBottom="4dp">
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent">
+
+    <LinearLayout
+        android:id="@+id/ll_notif_list_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@android:color/transparent"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp">
 
     <!-- Header Row -->
     <LinearLayout
@@ -163,4 +169,36 @@
         android:overScrollMode="never"
         android:scrollbars="vertical"
         android:fadeScrollbars="true" />
-</LinearLayout>
+    </LinearLayout>
+
+    <!-- Floating Clear All FAB Container (Floats at the very bottom of the screen) -->
+    <FrameLayout
+        android:id="@+id/fl_floating_clear_all_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:paddingBottom="16dp"
+        android:paddingHorizontal="16dp"
+        android:visibility="gone">
+
+        <FrameLayout
+            android:id="@+id/btn_floating_clear_all_fab"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_gravity="center_horizontal|bottom"
+            android:clickable="true"
+            android:focusable="true"
+            android:elevation="6dp">
+
+            <ImageView
+                android:id="@+id/iv_floating_clear_all_icon"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_gravity="center"
+                android:contentDescription="Clear all"
+                android:src="@drawable/ic_notif_clear_all" />
+        </FrameLayout>
+    </FrameLayout>
+</FrameLayout>

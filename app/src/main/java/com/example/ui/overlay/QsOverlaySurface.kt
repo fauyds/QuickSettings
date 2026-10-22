@@ -384,6 +384,8 @@ fun QsOverlaySurface(
     val sliderInactiveColor = com.example.ui.theme.getInactiveTilesElementColor(isPanelDark)
 
     val resolvedSliderStyle = if (config.sliderSyncAll) config.progressBarStyle else config.brightnessSliderStyle
+    val qqsBrightnessOffset = if (resolvedSliderStyle == ProgressBarStyle.STRAIGHT || resolvedSliderStyle == ProgressBarStyle.WAVY) (-4).dp else 0.dp
+    val qqsContainerOffset = if (resolvedSliderStyle == ProgressBarStyle.STRAIGHT || resolvedSliderStyle == ProgressBarStyle.WAVY) 8.dp else 0.dp
 
     // Tile settings & colors
     val tileAccentColor = if (config.qsTilesColorTertiary) {
@@ -409,6 +411,7 @@ fun QsOverlaySurface(
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .offset(y = qqsContainerOffset)
             .clip(RoundedCornerShape(outerCorner))
             .background(monetSurfaceBg)
             .testTag(testTagPrefix)
@@ -588,7 +591,9 @@ fun QsOverlaySurface(
                         ) {
                             // Brightness Slider row inside container
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .offset(y = qqsBrightnessOffset),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
@@ -705,7 +710,9 @@ fun QsOverlaySurface(
                 } else {
                     // Standard separate slider and tiles container for other sections
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .offset(y = qqsBrightnessOffset),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {

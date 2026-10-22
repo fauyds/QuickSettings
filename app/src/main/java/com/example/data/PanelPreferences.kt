@@ -81,6 +81,34 @@ enum class DatePosition(val id: String, val label: String) {
     }
 }
 
+enum class BatteryPercentageLocation(val id: String, val label: String) {
+    HEADER("header", "In Header"),
+    QQS_RIGHT("qqs_right", "In QQS (Right)"),
+    HIDDEN("hidden", "Hidden");
+
+    companion object {
+        fun fromId(id: String?): BatteryPercentageLocation =
+            entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: HEADER
+    }
+}
+
+enum class SettingsIconLocation(val id: String, val label: String) {
+    HEADER("header", "In header"),
+    EXPANDED_QS("expanded_qs", "In expanded QS alongside power icon"),
+    CARRIER_RIGHT("carrier_right", "In carrier container at right side"),
+    HIDDEN("hidden", "Hidden");
+
+    companion object {
+        fun fromId(id: String?): SettingsIconLocation =
+            entries.firstOrNull { 
+                it.id.equals(id, ignoreCase = true) ||
+                (it == HEADER && id.equals("in header", ignoreCase = true)) ||
+                (it == EXPANDED_QS && (id.equals("in expanded qs", ignoreCase = true) || id.equals("expanded", ignoreCase = true))) ||
+                (it == CARRIER_RIGHT && id.equals("carrier right", ignoreCase = true))
+            } ?: EXPANDED_QS
+    }
+}
+
 enum class TileShape(val id: String, val label: String, val description: String) {
     CIRCLE("circle", "Circle", "Classic round tile shape"),
     SQUIRCLE("squircle", "Squircle", "Rounded square with 14dp corners"),
@@ -136,8 +164,51 @@ enum class QsSliderTarget(val id: String, val label: String) {
     }
 }
 
+enum class ClearAllFabPosition(val id: String, val label: String) {
+    CENTER("center", "Centered"),
+    LEFT("left", "Left Side"),
+    RIGHT("right", "Right Side");
+
+    companion object {
+        fun fromId(id: String?): ClearAllFabPosition =
+            entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: CENTER
+    }
+}
+
+enum class ClearAllFabShape(val id: String, val label: String) {
+    CIRCLE("circle", "Circle"),
+    PILL("pill", "Squircle / Pill"),
+    ROUNDED("rounded", "Rounded Square"),
+    CUT_CORNER("cut_corner", "Cut Corner / Diamond"),
+    STAR("star", "Star / Tile");
+
+    companion object {
+        fun fromId(id: String?): ClearAllFabShape =
+            entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: CIRCLE
+    }
+}
+
+enum class ClearAllFabIcon(val id: String, val label: String, val drawableRes: Int) {
+    CLEAR_ALL("clear_all", "Clear All / Sweep", com.example.R.drawable.ic_notif_clear_all),
+    DELETE("delete", "Delete / Trash", com.example.R.drawable.ic_notif_trash),
+    DONE_ALL("done_all", "Done All", com.example.R.drawable.ic_notif_done_all),
+    CLOSE("close", "Close", com.example.R.drawable.ic_notif_close),
+    REFRESH("refresh", "Refresh", com.example.R.drawable.ic_notif_refresh);
+
+    companion object {
+        fun fromId(id: String?): ClearAllFabIcon =
+            entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: CLEAR_ALL
+    }
+}
+
 object PanelPreferences {
     const val PREFS_NAME = "quickpanel_prefs"
+    private const val KEY_DISABLE_CLEAR_ALL_BG = "disable_clear_all_bg"
+    private const val KEY_USE_CLEAR_ALL_FAB = "use_clear_all_fab"
+    private const val KEY_CLEAR_ALL_FAB_POSITION = "clear_all_fab_position"
+    private const val KEY_CLEAR_ALL_FAB_SHAPE = "clear_all_fab_shape"
+    private const val KEY_CLEAR_ALL_FAB_SHAPE_ID = "clear_all_fab_shape_id"
+    private const val KEY_CLEAR_ALL_FAB_ICON = "clear_all_fab_icon"
     private const val KEY_THEME_MODE = "theme_mode"
     private const val KEY_GRID_LAYOUT = "qs_grid_layout"
     private const val KEY_QQS_TILE_SIZE = "qqs_tile_size"
@@ -758,6 +829,30 @@ object PanelPreferences {
     private val _datePosition = MutableStateFlow(DatePosition.BELOW_TIME)
     val datePosition: StateFlow<DatePosition> = _datePosition.asStateFlow()
 
+    private val _batteryPercentageLocation = MutableStateFlow(BatteryPercentageLocation.HEADER)
+    val batteryPercentageLocation: StateFlow<BatteryPercentageLocation> = _batteryPercentageLocation.asStateFlow()
+
+    private val _settingsIconLocation = MutableStateFlow(SettingsIconLocation.EXPANDED_QS)
+    val settingsIconLocation: StateFlow<SettingsIconLocation> = _settingsIconLocation.asStateFlow()
+
+    private val _disableClearAllBackground = MutableStateFlow(false)
+    val disableClearAllBackground: StateFlow<Boolean> = _disableClearAllBackground.asStateFlow()
+
+    private val _useClearAllFab = MutableStateFlow(false)
+    val useClearAllFab: StateFlow<Boolean> = _useClearAllFab.asStateFlow()
+
+    private val _clearAllFabPosition = MutableStateFlow(ClearAllFabPosition.CENTER)
+    val clearAllFabPosition: StateFlow<ClearAllFabPosition> = _clearAllFabPosition.asStateFlow()
+
+    private val _clearAllFabShape = MutableStateFlow(ClearAllFabShape.CIRCLE)
+    val clearAllFabShape: StateFlow<ClearAllFabShape> = _clearAllFabShape.asStateFlow()
+
+    private val _clearAllFabShapeId = MutableStateFlow("circle")
+    val clearAllFabShapeId: StateFlow<String> = _clearAllFabShapeId.asStateFlow()
+
+    private val _clearAllFabIcon = MutableStateFlow(ClearAllFabIcon.CLEAR_ALL)
+    val clearAllFabIcon: StateFlow<ClearAllFabIcon> = _clearAllFabIcon.asStateFlow()
+
     private val _enabledTileShapeId = MutableStateFlow("circle")
     val enabledTileShapeId: StateFlow<String> = _enabledTileShapeId.asStateFlow()
 
@@ -900,6 +995,21 @@ object PanelPreferences {
             _datePosition.value = if (legacyInline) DatePosition.NEXT_TO_TIME else DatePosition.BELOW_TIME
             _showDateInQqsHeader.value = legacyInline
         }
+
+        val savedBatteryLoc = prefs.getString("battery_percentage_location", BatteryPercentageLocation.HEADER.id)
+        _batteryPercentageLocation.value = BatteryPercentageLocation.fromId(savedBatteryLoc)
+
+        val savedSettingsLoc = prefs.getString("settings_icon_location", SettingsIconLocation.EXPANDED_QS.id)
+        _settingsIconLocation.value = SettingsIconLocation.fromId(savedSettingsLoc)
+
+        _disableClearAllBackground.value = prefs.getBoolean(KEY_DISABLE_CLEAR_ALL_BG, false)
+        _useClearAllFab.value = prefs.getBoolean(KEY_USE_CLEAR_ALL_FAB, false)
+        _clearAllFabPosition.value = ClearAllFabPosition.fromId(prefs.getString(KEY_CLEAR_ALL_FAB_POSITION, null))
+        _clearAllFabShape.value = ClearAllFabShape.fromId(prefs.getString(KEY_CLEAR_ALL_FAB_SHAPE, null))
+        val savedFabShapeId = prefs.getString(KEY_CLEAR_ALL_FAB_SHAPE_ID, null)
+            ?: prefs.getString(KEY_CLEAR_ALL_FAB_SHAPE, "circle") ?: "circle"
+        _clearAllFabShapeId.value = savedFabShapeId
+        _clearAllFabIcon.value = ClearAllFabIcon.fromId(prefs.getString(KEY_CLEAR_ALL_FAB_ICON, null))
         com.example.ui.shape.QsShapeManager.init(context)
         val savedEnabledTileShape = prefs.getString(KEY_ENABLED_TILE_SHAPE, null) ?: prefs.getString(KEY_TILE_SHAPE, null)
         if (savedEnabledTileShape != null) {
@@ -1332,6 +1442,63 @@ object PanelPreferences {
             .putString(KEY_DATE_POSITION, position.id)
             .putBoolean(KEY_SHOW_DATE_IN_QQS_HEADER, position == DatePosition.NEXT_TO_TIME)
             .apply()
+    }
+
+    fun setBatteryPercentageLocation(context: Context, location: BatteryPercentageLocation) {
+        _batteryPercentageLocation.value = location
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString("battery_percentage_location", location.id).apply()
+    }
+
+    fun setSettingsIconLocation(context: Context, location: SettingsIconLocation) {
+        _settingsIconLocation.value = location
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString("settings_icon_location", location.id).apply()
+    }
+
+    fun setDisableClearAllBackground(context: Context, disable: Boolean) {
+        _disableClearAllBackground.value = disable
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_DISABLE_CLEAR_ALL_BG, disable).apply()
+    }
+
+    fun setUseClearAllFab(context: Context, use: Boolean) {
+        _useClearAllFab.value = use
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_USE_CLEAR_ALL_FAB, use).apply()
+    }
+
+    fun setClearAllFabPosition(context: Context, pos: ClearAllFabPosition) {
+        _clearAllFabPosition.value = pos
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_CLEAR_ALL_FAB_POSITION, pos.id).apply()
+    }
+
+    fun setClearAllFabShape(context: Context, shape: ClearAllFabShape) {
+        _clearAllFabShape.value = shape
+        _clearAllFabShapeId.value = shape.id
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString(KEY_CLEAR_ALL_FAB_SHAPE, shape.id)
+            .putString(KEY_CLEAR_ALL_FAB_SHAPE_ID, shape.id)
+            .apply()
+    }
+
+    fun setClearAllFabShapeId(context: Context, shapeId: String) {
+        _clearAllFabShapeId.value = shapeId
+        val shape = ClearAllFabShape.fromId(shapeId)
+        _clearAllFabShape.value = shape
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString(KEY_CLEAR_ALL_FAB_SHAPE_ID, shapeId)
+            .putString(KEY_CLEAR_ALL_FAB_SHAPE, shapeId)
+            .apply()
+    }
+
+    fun setClearAllFabIcon(context: Context, icon: ClearAllFabIcon) {
+        _clearAllFabIcon.value = icon
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_CLEAR_ALL_FAB_ICON, icon.id).apply()
     }
 
     fun setShowDateInQqsHeader(context: Context, enabled: Boolean) {

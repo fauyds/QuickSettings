@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.runtime.DisposableEffect
 import com.example.data.EditButtonPosition
 import com.example.data.TileShape
+import com.example.data.ProgressBarStyle
 import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.os.Build
@@ -38,6 +39,7 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.zIndex
@@ -1109,26 +1111,31 @@ fun QsHeaderBar(
                 )
             }
 
+            val batteryLoc by PanelPreferences.batteryPercentageLocation.collectAsState()
+            val settingsLoc by PanelPreferences.settingsIconLocation.collectAsState()
+
             // Battery Indicator in QQS Header
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier
-                    .padding(horizontal = 4.dp, vertical = 2.dp)
-                    .testTag("qqs_header_battery_indicator")
-            ) {
-                Icon(
-                    imageVector = if (batteryInfo.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
-                    contentDescription = "Battery ${batteryInfo.percentage}%",
-                    tint = if (batteryInfo.isCharging) Color(0xFF4CAF50) else if (batteryInfo.percentage <= 15) Color(0xFFFF5252) else headerTextColor,
-                    modifier = Modifier.size(15.dp)
-                )
-                Text(
-                    text = "${batteryInfo.percentage}%",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = headerTextColor
-                )
+            if (batteryLoc == com.example.data.BatteryPercentageLocation.HEADER) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                        .testTag("qqs_header_battery_indicator")
+                ) {
+                    Icon(
+                        imageVector = if (batteryInfo.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
+                        contentDescription = "Battery ${batteryInfo.percentage}%",
+                        tint = if (batteryInfo.isCharging) Color(0xFF4CAF50) else if (batteryInfo.percentage <= 15) Color(0xFFFF5252) else headerTextColor,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Text(
+                        text = "${batteryInfo.percentage}%",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = headerTextColor
+                    )
+                }
             }
 
             if (!isEditingTiles) {
@@ -1147,16 +1154,18 @@ fun QsHeaderBar(
                 }
             }
 
-            IconButton(
-                onClick = onSettingsClick,
-                modifier = Modifier.size(36.dp).testTag("header_settings_button")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = "System Settings",
-                    tint = headerIconTint,
-                    modifier = Modifier.size(20.dp)
-                )
+            if (settingsLoc == com.example.data.SettingsIconLocation.HEADER) {
+                IconButton(
+                    onClick = onSettingsClick,
+                    modifier = Modifier.size(36.dp).testTag("header_settings_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "System Settings",
+                        tint = headerIconTint,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }
@@ -1907,6 +1916,17 @@ fun UnifiedQsPanel(
     val brightnessInQqs by PanelPreferences.brightnessInQqs.collectAsState()
     val datePosition by PanelPreferences.datePosition.collectAsState()
     val context = LocalContext.current
+    val batteryInfo = rememberQqsBatteryState()
+    val onSettingsClick = remember {
+        {
+            try {
+                val intent = Intent(Settings.ACTION_SETTINGS).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent)
+            } catch (_: Exception) {}
+        }
+    }
     val coroutineScope = rememberCoroutineScope()
     val disablePanelAnimations by PanelPreferences.disablePanelAnimations.collectAsState()
     val carrierName = remember(context) {
@@ -2013,6 +2033,15 @@ fun UnifiedQsPanel(
             val effectiveOuterCorner = panelOuterCorner.dp
             val effectiveInnerCorner = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner).dp
 
+            val sliderSyncAll by PanelPreferences.sliderSyncAll.collectAsState()
+            val globalProgressStyle by PanelPreferences.progressBarStyle.collectAsState()
+            val brightnessStyle by PanelPreferences.brightnessSliderStyle.collectAsState()
+            val resolvedBrightnessStyle = if (sliderSyncAll) globalProgressStyle else brightnessStyle
+            val isStraightOrWavyBrightness = resolvedBrightnessStyle == ProgressBarStyle.STRAIGHT || resolvedBrightnessStyle == ProgressBarStyle.WAVY
+
+            val isQqsOnly = expansionStage == QsExpansionStage.QQS || (morphProgress < 0.5f && !isLandscape)
+            val qqsContainerYOffset = 0.dp
+
             ContainerCard(
                 shape = if (isSplitCarrier) {
                     RoundedCornerShape(
@@ -2028,6 +2057,7 @@ fun UnifiedQsPanel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentHeight()
+                    .offset(y = qqsContainerYOffset)
                     .animateContentSize(
                         animationSpec = spring(
                             dampingRatio = 0.80f,
@@ -2043,16 +2073,34 @@ fun UnifiedQsPanel(
                 )
 
                 val topPadding = if (isSplitCarrier) 16.dp else 12.dp
-                val bottomPadding = if (isSplitCarrier) {
+                val baseBottomPadding = if (isSplitCarrier) {
                     if (shouldReduceQqsContainer) 14.dp else 16.dp
                 } else {
                     if (shouldReduceQqsContainer) 10.dp else 12.dp
                 }
+                val extraHeightForStraightOrWavy = if (isQqsOnly && isStraightOrWavyBrightness) {
+                    if (isBottomSliderInQqs) (-16).dp else 0.dp
+                } else 0.dp
+                val rawBottomPadding = baseBottomPadding + extraHeightForStraightOrWavy
+                val bottomPadding = rawBottomPadding.coerceAtLeast(0.dp)
+                val overflowCropDp = if (rawBottomPadding < 0.dp) -rawBottomPadding else 0.dp
 
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .wrapContentHeight()
+                        .then(
+                            if (overflowCropDp > 0.dp) {
+                                Modifier.layout { measurable, constraints ->
+                                    val placeable = measurable.measure(constraints)
+                                    val cropPx = overflowCropDp.roundToPx()
+                                    val newHeight = (placeable.height - cropPx).coerceAtLeast(0)
+                                    layout(placeable.width, newHeight) {
+                                        placeable.placeRelative(0, 0)
+                                    }
+                                }
+                            } else Modifier
+                        )
                         .padding(start = 14.dp, end = 14.dp, top = topPadding, bottom = bottomPadding)
                 ) {
                     if (isEditingTiles) {
@@ -2066,67 +2114,118 @@ fun UnifiedQsPanel(
                             onDone = onToggleEditMode
                         )
                     } else {
-                        // 0. Very top QQS Row (Date & Carrier above tiles)
+                        // 0. Very top QQS Row (Date, Carrier, Right Battery / Settings)
                         val hideDateInExpanded by PanelPreferences.hideDateInExpanded.collectAsState()
                         val isExpandedQs = expansionStage == QsExpansionStage.FULL_QS || morphProgress > 0.5f
                         val isQqsDate = !(hideDateInExpanded && isExpandedQs) && datePosition == com.example.data.DatePosition.QQS_PANEL
                         val showInlineCarrier = isCarrierVisible && !isSplitCarrier
-                        if (isQqsDate || showInlineCarrier) {
+                        val batteryLocTop by PanelPreferences.batteryPercentageLocation.collectAsState()
+                        val settingsLocTop by PanelPreferences.settingsIconLocation.collectAsState()
+                        val showQqsRightBattery = batteryLocTop == com.example.data.BatteryPercentageLocation.QQS_RIGHT
+                        val showInlineSettings = !isSplitCarrier && settingsLocTop == com.example.data.SettingsIconLocation.CARRIER_RIGHT
+
+                        if (isQqsDate || showInlineCarrier || showQqsRightBattery || showInlineSettings) {
                             val dateYOffset = if (isExpandedQs) 2.dp else (-4).dp
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .offset(y = dateYOffset)
-                                    .padding(start = 2.dp, bottom = 8.dp)
-                                    .clickable(
+                                    .padding(start = 2.dp, end = 2.dp, bottom = 8.dp)
+                                    .testTag("qqs_panel_date_top")
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                    modifier = Modifier.clickable(
                                         enabled = isQqsDate,
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null,
                                         onClick = { launchCalendarApp(context) }
                                     )
-                                    .testTag("qqs_panel_date_top")
-                            ) {
-                                val textColor = if (isDark) Color.LightGray.copy(alpha = 0.9f) else Color(0xFF333333)
-                                if (isQqsDate) {
-                                    val currentDate = remember {
-                                        val sdf = SimpleDateFormat("EEE, MMM d", Locale.getDefault())
-                                        sdf.format(Date())
-                                    }
-                                    Icon(
-                                        imageVector = Icons.Default.CalendarToday,
-                                        contentDescription = "Date",
-                                        tint = textColor,
-                                        modifier = Modifier.size(13.dp)
-                                    )
-                                    Text(
-                                        text = currentDate,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = textColor
-                                    )
-                                    if (showInlineCarrier) {
+                                ) {
+                                    val textColor = if (isDark) Color.LightGray.copy(alpha = 0.9f) else Color(0xFF333333)
+                                    if (isQqsDate) {
+                                        val currentDate = remember {
+                                            val sdf = SimpleDateFormat("EEE, MMM d", Locale.getDefault())
+                                            sdf.format(Date())
+                                        }
+                                        Icon(
+                                            imageVector = Icons.Default.CalendarToday,
+                                            contentDescription = "Date",
+                                            tint = textColor,
+                                            modifier = Modifier.size(13.dp)
+                                        )
                                         Text(
-                                            text = "•",
-                                            fontSize = 12.sp,
-                                            color = textColor.copy(alpha = 0.6f)
+                                            text = currentDate,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = textColor
+                                        )
+                                        if (showInlineCarrier) {
+                                            Text(
+                                                text = "•",
+                                                fontSize = 12.sp,
+                                                color = textColor.copy(alpha = 0.6f)
+                                            )
+                                        }
+                                    }
+                                    if (showInlineCarrier) {
+                                        Icon(
+                                            imageVector = Icons.Default.CellTower,
+                                            contentDescription = null,
+                                            tint = textColor,
+                                            modifier = Modifier.size(13.dp)
+                                        )
+                                        Text(
+                                            text = carrierName,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = textColor
                                         )
                                     }
                                 }
-                                if (showInlineCarrier) {
-                                    Icon(
-                                        imageVector = Icons.Default.CellTower,
-                                        contentDescription = null,
-                                        tint = textColor,
-                                        modifier = Modifier.size(13.dp)
-                                    )
-                                    Text(
-                                        text = carrierName,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = textColor
-                                    )
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    val textColor = if (isDark) Color.LightGray.copy(alpha = 0.9f) else Color(0xFF333333)
+                                    if (showQqsRightBattery) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            modifier = Modifier.testTag("qqs_right_battery_indicator")
+                                        ) {
+                                            Icon(
+                                                imageVector = if (batteryInfo.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
+                                                contentDescription = "Battery ${batteryInfo.percentage}%",
+                                                tint = if (batteryInfo.isCharging) Color(0xFF4CAF50) else if (batteryInfo.percentage <= 15) Color(0xFFFF5252) else textColor,
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                            Text(
+                                                text = "${batteryInfo.percentage}%",
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = textColor
+                                            )
+                                        }
+                                    }
+
+                                    if (showInlineSettings) {
+                                        IconButton(
+                                            onClick = onSettingsClick,
+                                            modifier = Modifier.size(24.dp).testTag("inline_settings_button")
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Settings,
+                                                contentDescription = "System Settings",
+                                                tint = textColor,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -2139,7 +2238,7 @@ fun UnifiedQsPanel(
                             exit = shrinkVertically(spring(dampingRatio = 0.80f, stiffness = 380f)) + fadeOut(tween(160))
                         ) {
                             val sliderHeight = 44.dp
-                            BrightnessSliderRow(brightness, onBrightnessChange, 1f, sliderHeight, isAtBottom = false)
+                            BrightnessSliderRow(brightness, onBrightnessChange, 1f, sliderHeight, isAtBottom = false, isQqs = !isFullQs)
                         }
 
                         val spacerHeight = if (isSplitCarrier) 3.dp else 6.dp
@@ -2281,7 +2380,7 @@ fun UnifiedQsPanel(
                             val bottomSpacerHeight = 10.dp
                             Column {
                                 Spacer(modifier = Modifier.height(bottomSpacerHeight))
-                                BrightnessSliderRow(brightness, onBrightnessChange, 1f, sliderHeight, isAtBottom = true, verticalOffset = 0.dp)
+                                BrightnessSliderRow(brightness, onBrightnessChange, 1f, sliderHeight, isAtBottom = true, verticalOffset = 0.dp, isQqs = !isFullQs)
                             }
                         }
 
@@ -2417,6 +2516,23 @@ fun UnifiedQsPanel(
                                         }
                                     }
 
+                                    val settingsLocFooter by PanelPreferences.settingsIconLocation.collectAsState()
+                                    if (settingsLocFooter == com.example.data.SettingsIconLocation.EXPANDED_QS) {
+                                        IconButton(
+                                            onClick = onSettingsClick,
+                                            modifier = Modifier
+                                                .size(32.dp)
+                                                .testTag("footer_settings_button")
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Settings,
+                                                contentDescription = "System Settings",
+                                                tint = footerTint,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+
                                     IconButton(
                                         onClick = {
                                             val opened = QuickPanelAccessibilityService.openPowerDialog()
@@ -2463,7 +2579,10 @@ fun UnifiedQsPanel(
                     bottomEnd = effectiveOuterCorner
                 ),
                 containerColor = com.example.ui.theme.getQsPanelBackgroundColor(isDark),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .offset(y = qqsContainerYOffset)
+                    .then(shadeDragModifier)
             ) {
                 Box(
                     modifier = Modifier
@@ -2489,6 +2608,25 @@ fun UnifiedQsPanel(
                             fontWeight = FontWeight.Bold,
                             color = carrierColor
                         )
+                    }
+
+                    val settingsLocCarrier by PanelPreferences.settingsIconLocation.collectAsState()
+                    if (settingsLocCarrier == com.example.data.SettingsIconLocation.CARRIER_RIGHT) {
+                        IconButton(
+                            onClick = onSettingsClick,
+                            modifier = Modifier
+                                .size(28.dp)
+                                .align(Alignment.CenterEnd)
+                                .testTag("carrier_settings_button")
+                        ) {
+                            val carrierColor = if (isDark) Color.LightGray.copy(alpha = 0.9f) else Color(0xFF333333)
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "System Settings",
+                                tint = carrierColor,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
 
                     if (!hideQqsDragHandle) {
@@ -3732,13 +3870,23 @@ fun BrightnessSliderRow(
     sliderAlpha: Float,
     sliderHeight: androidx.compose.ui.unit.Dp,
     isAtBottom: Boolean = false,
-    verticalOffset: androidx.compose.ui.unit.Dp = 0.dp
+    verticalOffset: androidx.compose.ui.unit.Dp = 0.dp,
+    isQqs: Boolean = false
 ) {
     val hideBrightnessPercentage by PanelPreferences.hideBrightnessPercentage.collectAsState()
     val hideBrightnessIcon by PanelPreferences.hideBrightnessIcon.collectAsState()
     val showBrightnessPlusMinus by PanelPreferences.showBrightnessPlusMinus.collectAsState()
     val minBrightness by PanelPreferences.minBrightness.collectAsState()
     val maxBrightness by PanelPreferences.maxBrightness.collectAsState()
+
+    val sliderSyncAll by PanelPreferences.sliderSyncAll.collectAsState()
+    val globalProgressStyle by PanelPreferences.progressBarStyle.collectAsState()
+    val brightnessStyle by PanelPreferences.brightnessSliderStyle.collectAsState()
+    val resolvedStyle = if (sliderSyncAll) globalProgressStyle else brightnessStyle
+
+    val isStraightOrWavy = resolvedStyle == ProgressBarStyle.STRAIGHT || resolvedStyle == ProgressBarStyle.WAVY
+    val styleOffset = if (isQqs && isStraightOrWavy) (-4).dp else 0.dp
+    val totalVerticalOffset = verticalOffset + styleOffset
 
     val isDark = LocalIsDarkTheme.current
     if (sliderAlpha > 0.01f) {
@@ -3754,7 +3902,7 @@ fun BrightnessSliderRow(
                         Modifier
                     }
                 )
-                .offset(y = verticalOffset)
+                .offset(y = totalVerticalOffset)
         ) {
             val sliderAccentColor = com.example.ui.theme.getSlidersElementColor(isDark)
 
