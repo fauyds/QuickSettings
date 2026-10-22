@@ -19,8 +19,10 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BrightnessMedium
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.FlashlightOn
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.Wifi
@@ -110,7 +112,12 @@ data class QsOverlaySurfaceConfig(
     val straightThumbRadius: Float = 6f,
     val a12InactiveThickness: Float = 16f,
     val a12CornerRadius: Float = 8f,
-    val qsPanelBackgroundColor: Int? = null
+    val qsPanelBackgroundColor: Int? = null,
+    val hideBrightnessPercentage: Boolean = false,
+    val hideBrightnessIcon: Boolean = false,
+    val showBrightnessPlusMinus: Boolean = false,
+    val minBrightness: Int = 1,
+    val maxBrightness: Int = 2047
 ) {
     @Composable
     fun getSliderElementColor(isDark: Boolean): Color {
@@ -142,6 +149,11 @@ data class QsOverlaySurfaceConfig(
             val volumeStyle by PanelPreferences.volumeSliderStyle.collectAsState()
             val mediaStyle by PanelPreferences.mediaSliderStyle.collectAsState()
             val syncAll by PanelPreferences.sliderSyncAll.collectAsState()
+            val hideBrightnessPercentage by PanelPreferences.hideBrightnessPercentage.collectAsState()
+            val hideBrightnessIcon by PanelPreferences.hideBrightnessIcon.collectAsState()
+            val showBrightnessPlusMinus by PanelPreferences.showBrightnessPlusMinus.collectAsState()
+            val minBrightness by PanelPreferences.minBrightness.collectAsState()
+            val maxBrightness by PanelPreferences.maxBrightness.collectAsState()
 
             val showHeaderImg by PanelPreferences.showCustomHeaderImage.collectAsState()
             val headerImgUri by PanelPreferences.customHeaderImageUri.collectAsState()
@@ -227,7 +239,12 @@ data class QsOverlaySurfaceConfig(
                 straightThumbRadius = straightThumb,
                 a12InactiveThickness = a12InactThick,
                 a12CornerRadius = a12Corner,
-                qsPanelBackgroundColor = qsPanelBg
+                qsPanelBackgroundColor = qsPanelBg,
+                hideBrightnessPercentage = hideBrightnessPercentage,
+                hideBrightnessIcon = hideBrightnessIcon,
+                showBrightnessPlusMinus = showBrightnessPlusMinus,
+                minBrightness = minBrightness,
+                maxBrightness = maxBrightness
             )
         }
 
@@ -252,6 +269,8 @@ data class QsOverlaySurfaceConfig(
                     showQsTileGradient = json.optBoolean("show_qs_tile_gradient", false),
                     progressBarStyle = ProgressBarStyle.entries.firstOrNull { it.id == progressStyleStr } ?: ProgressBarStyle.DEFAULT,
                     brightnessSliderStyle = ProgressBarStyle.entries.firstOrNull { it.id == brightnessStyleStr } ?: ProgressBarStyle.DEFAULT,
+                    minBrightness = json.optInt("min_brightness", 1),
+                    maxBrightness = json.optInt("max_brightness", 2047),
                     sliderSyncAll = json.optBoolean("slider_sync_all", true),
                     panelOuterCorner = outerCorner,
                     panelInnerCorner = innerCorner,
@@ -573,28 +592,39 @@ fun QsOverlaySurface(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(30.dp)
-                                        .clip(CircleShape)
-                                        .background(sliderAccentColor.copy(alpha = 0.15f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
+                                if (!config.hideBrightnessIcon) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(30.dp)
+                                            .clip(CircleShape)
+                                            .background(sliderAccentColor.copy(alpha = 0.15f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.BrightnessMedium,
+                                            contentDescription = null,
+                                            tint = sliderAccentColor,
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                    }
+                                }
+
+                                if (config.showBrightnessPlusMinus) {
                                     Icon(
-                                        imageVector = Icons.Default.BrightnessMedium,
+                                        imageVector = Icons.Default.Remove,
                                         contentDescription = null,
                                         tint = sliderAccentColor,
-                                        modifier = Modifier.size(15.dp)
+                                        modifier = Modifier.size(16.dp)
                                     )
                                 }
 
                                 QsProgressSlider(
-                                    value = if (onBrightnessChange != null) brightnessValue else localBrightness,
+                                    value = (if (onBrightnessChange != null) brightnessValue else localBrightness).coerceIn(config.minBrightness.toFloat(), config.maxBrightness.toFloat()),
                                     onValueChange = {
                                         localBrightness = it
                                         onBrightnessChange?.invoke(it)
                                     },
-                                    valueRange = 0f..255f,
+                                    valueRange = config.minBrightness.toFloat()..config.maxBrightness.toFloat(),
                                     style = resolvedSliderStyle,
                                     sliderTarget = QsSliderTarget.BRIGHTNESS,
                                     isPlaying = (resolvedSliderStyle == ProgressBarStyle.WAVY),
@@ -603,6 +633,27 @@ fun QsOverlaySurface(
                                     thumbColor = sliderAccentColor,
                                     modifier = Modifier.weight(1f)
                                 )
+
+                                if (config.showBrightnessPlusMinus) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = null,
+                                        tint = sliderAccentColor,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+
+                                if (!config.hideBrightnessPercentage) {
+                                    val currentB = (if (onBrightnessChange != null) brightnessValue else localBrightness).coerceIn(config.minBrightness.toFloat(), config.maxBrightness.toFloat())
+                                    val range = (config.maxBrightness - config.minBrightness).coerceAtLeast(1)
+                                    val pct = (((currentB - config.minBrightness) / range) * 100).toInt().coerceIn(0, 100)
+                                    Text(
+                                        text = "$pct%",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isPanelDark) Color.White else Color(0xFF333333)
+                                    )
+                                }
                             }
 
                             // Tiles Row inside container
@@ -658,28 +709,39 @@ fun QsOverlaySurface(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(30.dp)
-                                .clip(CircleShape)
-                                .background(sliderAccentColor.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
+                        if (!config.hideBrightnessIcon) {
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .clip(CircleShape)
+                                    .background(sliderAccentColor.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.BrightnessMedium,
+                                    contentDescription = null,
+                                    tint = sliderAccentColor,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                            }
+                        }
+
+                        if (config.showBrightnessPlusMinus) {
                             Icon(
-                                imageVector = Icons.Default.BrightnessMedium,
+                                imageVector = Icons.Default.Remove,
                                 contentDescription = null,
                                 tint = sliderAccentColor,
-                                modifier = Modifier.size(15.dp)
+                                modifier = Modifier.size(16.dp)
                             )
                         }
 
                         QsProgressSlider(
-                            value = if (onBrightnessChange != null) brightnessValue else localBrightness,
+                            value = (if (onBrightnessChange != null) brightnessValue else localBrightness).coerceIn(config.minBrightness.toFloat(), config.maxBrightness.toFloat()),
                             onValueChange = {
                                 localBrightness = it
                                 onBrightnessChange?.invoke(it)
                             },
-                            valueRange = 0f..255f,
+                            valueRange = config.minBrightness.toFloat()..config.maxBrightness.toFloat(),
                             style = resolvedSliderStyle,
                             sliderTarget = QsSliderTarget.BRIGHTNESS,
                             isPlaying = (resolvedSliderStyle == ProgressBarStyle.WAVY),
@@ -688,6 +750,27 @@ fun QsOverlaySurface(
                             thumbColor = sliderAccentColor,
                             modifier = Modifier.weight(1f)
                         )
+
+                        if (config.showBrightnessPlusMinus) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                tint = sliderAccentColor,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+
+                        if (!config.hideBrightnessPercentage) {
+                            val currentB = (if (onBrightnessChange != null) brightnessValue else localBrightness).coerceIn(config.minBrightness.toFloat(), config.maxBrightness.toFloat())
+                            val range = (config.maxBrightness - config.minBrightness).coerceAtLeast(1)
+                            val pct = (((currentB - config.minBrightness) / range) * 100).toInt().coerceIn(0, 100)
+                            Text(
+                                text = "$pct%",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isPanelDark) Color.White else Color(0xFF333333)
+                            )
+                        }
                     }
 
                     // TILES CONTAINER CARD

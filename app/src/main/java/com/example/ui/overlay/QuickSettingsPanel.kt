@@ -102,8 +102,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BrightnessLow
 import androidx.compose.material.icons.filled.BrightnessMedium
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.CellTower
 import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.Close
@@ -3732,6 +3734,12 @@ fun BrightnessSliderRow(
     isAtBottom: Boolean = false,
     verticalOffset: androidx.compose.ui.unit.Dp = 0.dp
 ) {
+    val hideBrightnessPercentage by PanelPreferences.hideBrightnessPercentage.collectAsState()
+    val hideBrightnessIcon by PanelPreferences.hideBrightnessIcon.collectAsState()
+    val showBrightnessPlusMinus by PanelPreferences.showBrightnessPlusMinus.collectAsState()
+    val minBrightness by PanelPreferences.minBrightness.collectAsState()
+    val maxBrightness by PanelPreferences.maxBrightness.collectAsState()
+
     val isDark = LocalIsDarkTheme.current
     if (sliderAlpha > 0.01f) {
         Box(
@@ -3753,30 +3761,47 @@ fun BrightnessSliderRow(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(sliderAccentColor.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (brightness > 128) Icons.Default.BrightnessMedium else Icons.Default.BrightnessLow,
-                        contentDescription = "Brightness",
-                        tint = sliderAccentColor,
-                        modifier = Modifier.size(16.dp)
-                    )
+                if (!hideBrightnessIcon) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(sliderAccentColor.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (brightness > (minBrightness + maxBrightness) / 2) Icons.Default.BrightnessMedium else Icons.Default.BrightnessLow,
+                            contentDescription = "Brightness",
+                            tint = sliderAccentColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
 
-                val isDark = LocalIsDarkTheme.current
+                if (showBrightnessPlusMinus) {
+                    IconButton(
+                        onClick = { onBrightnessChange((brightness - 15).coerceAtLeast(minBrightness)) },
+                        modifier = Modifier
+                            .size(32.dp)
+                            .testTag("brightness_minus_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Remove,
+                            contentDescription = "Decrease brightness",
+                            tint = sliderAccentColor,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
                 val inactiveTrackColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
 
                 QsProgressSlider(
-                    value = brightness.toFloat(),
+                    value = brightness.toFloat().coerceIn(minBrightness.toFloat(), maxBrightness.toFloat()),
                     onValueChange = { onBrightnessChange(it.toInt()) },
-                    valueRange = 5f..255f,
+                    valueRange = minBrightness.toFloat()..maxBrightness.toFloat(),
                     sliderTarget = com.example.data.QsSliderTarget.BRIGHTNESS,
                     activeColor = sliderAccentColor,
                     inactiveColor = inactiveTrackColor,
@@ -3786,14 +3811,35 @@ fun BrightnessSliderRow(
                         .testTag("brightness_slider")
                 )
 
-                val percentageColor = if (isDark) Color.White else Color(0xFF333333)
+                if (showBrightnessPlusMinus) {
+                    IconButton(
+                        onClick = { onBrightnessChange((brightness + 15).coerceAtMost(maxBrightness)) },
+                        modifier = Modifier
+                            .size(32.dp)
+                            .testTag("brightness_plus_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Increase brightness",
+                            tint = sliderAccentColor,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
 
-                Text(
-                    text = "${((brightness / 255f) * 100).toInt()}%",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = percentageColor
-                )
+                if (!hideBrightnessPercentage) {
+                    val percentageColor = if (isDark) Color.White else Color(0xFF333333)
+                    val clampedB = brightness.coerceIn(minBrightness, maxBrightness)
+                    val range = (maxBrightness - minBrightness).coerceAtLeast(1)
+                    val pct = (((clampedB - minBrightness).toFloat() / range) * 100).toInt().coerceIn(0, 100)
+
+                    Text(
+                        text = "$pct%",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = percentageColor
+                    )
+                }
             }
         }
     }

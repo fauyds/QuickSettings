@@ -298,6 +298,7 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                     }
 
                     Column(
+                        modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(1.dp)
                     ) {
                         Row(
@@ -310,7 +311,8 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                                 fontWeight = FontWeight.Bold,
                                 lineHeight = 17.sp,
                                 style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f, fill = false)
                             )
                             Surface(
                                 color = MaterialTheme.colorScheme.secondaryContainer,
@@ -318,10 +320,11 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                             ) {
                                 Text(
                                     text = "A12-A15",
-                                    fontSize = 9.sp,
+                                    fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }
                         }
@@ -460,15 +463,6 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                                 inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
                             )
                         )
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("0 ms (Instant)", fontSize = 10.sp, color = Color.Gray)
-                            Text("Default (0 ms)", fontSize = 10.sp, color = Color.Gray)
-                            Text("1000 ms (1.0s)", fontSize = 10.sp, color = Color.Gray)
-                        }
 
                         // Quick Preset Buttons
                         Row(
@@ -641,15 +635,6 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                                 inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
                             )
                         )
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("10 ms", fontSize = 10.sp, color = Color.Gray)
-                            Text("Default (280 ms)", fontSize = 10.sp, color = Color.Gray)
-                            Text("1000 ms", fontSize = 10.sp, color = Color.Gray)
-                        }
                     }
 
                     HorizontalDivider(

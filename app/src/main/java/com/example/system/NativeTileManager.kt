@@ -25,6 +25,7 @@ import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
+import com.example.data.PanelPreferences
 import com.example.model.PrivilegeMode
 import com.example.model.QsTileModel
 import com.example.model.TileState
@@ -1188,7 +1189,9 @@ class NativeTileManager(
     }
 
     fun setBrightness(value: Int) {
-        val clamped = value.coerceIn(5, 255)
+        val minB = PanelPreferences.minBrightness.value
+        val maxB = PanelPreferences.maxBrightness.value
+        val clamped = value.coerceIn(minB, maxB)
         _brightness.value = clamped
         if (privilegeEngine.hasWriteSettingsPermission()) {
             try {

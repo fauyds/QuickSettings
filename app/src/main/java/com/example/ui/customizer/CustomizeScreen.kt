@@ -51,6 +51,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.LocalTextStyle
+
 @Composable
 fun CustomizeScreen(modifier: Modifier = Modifier) {
     // null means user is on the Category Buttons Hub screen
@@ -61,11 +64,16 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
         selectedCategory = null
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(com.example.ui.theme.getSettingsScreenBackgroundColor(com.example.ui.theme.LocalIsDarkTheme.current))
+    CompositionLocalProvider(
+        LocalTextStyle provides LocalTextStyle.current.copy(
+            platformStyle = PlatformTextStyle(includeFontPadding = false)
+        )
     ) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(com.example.ui.theme.getSettingsScreenBackgroundColor(com.example.ui.theme.LocalIsDarkTheme.current))
+        ) {
         if (selectedCategory == null) {
             // ==========================================
             // SCREEN 1: CATEGORY BUTTONS HUB (NO TABS)
@@ -274,6 +282,7 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
             }
         }
     }
+}
 }
 
 /**

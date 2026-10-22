@@ -188,12 +188,14 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
+                    .padding(start = 20.dp, end = 20.dp, top = 36.dp, bottom = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .offset(y = (-16).dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -256,15 +258,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
                     )
                 )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("32 dp", fontSize = 10.sp, color = Color.Gray)
-                    Text("Default (48 dp)", fontSize = 10.sp, color = Color.Gray)
-                    Text("64 dp", fontSize = 10.sp, color = Color.Gray)
-                }
                 }
             }
         }
@@ -279,12 +272,14 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
+                    .padding(start = 20.dp, end = 20.dp, top = 36.dp, bottom = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .offset(y = (-16).dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -348,15 +343,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
                     )
                 )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("2 icons", fontSize = 10.sp, color = Color.Gray)
-                    Text("Default (6 icons)", fontSize = 10.sp, color = Color.Gray)
-                    Text("6 icons", fontSize = 10.sp, color = Color.Gray)
-                }
             }
         }
     }
@@ -411,12 +397,14 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 text = "Tile Shapes (XML Paths)",
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "All QS shapes are rendered via vector XML drawable paths. You can paste path data, XML, or import files.",
                                 fontSize = 12.sp,
                                 lineHeight = 16.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -480,11 +468,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             text = "Enabled Tile Shape",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Choose the shape when a tile is active/ON",
                             fontSize = 12.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -551,11 +541,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             text = "Disabled Tile Shape",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Choose the shape when a tile is inactive/OFF",
                             fontSize = 12.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -623,6 +615,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             text = "Imported Custom Shapes (${customShapes.size})",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MaterialTheme.colorScheme.onSurface
                         )
 
@@ -743,11 +736,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 text = "1.2dp Tile Outline",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "Enable a 1.2dp stroke outline on Quick Settings tiles with the inner background hidden.",
                                 fontSize = 12.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -896,11 +891,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             text = "QS Tile Diagonal Gradient",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Enable a smooth diagonal gradient from Primary to Tertiary Monet accent color across active tiles.",
                             fontSize = 12.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -965,11 +962,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             text = "Show SIM Card Carrier",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Show the dynamic SIM card network operator name on the bottom left of the QQS container.",
                             fontSize = 12.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -1033,11 +1032,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                     text = "Divider Between Carrier & QQS Tiles",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = "Show a divider line separating the SIM card carrier name and QQS tiles",
                                     fontSize = 12.sp,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -1101,11 +1102,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                     text = "Hide Carrier in Expanded QS",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = "Hide the SIM card carrier label when Quick Settings is fully expanded",
                                     fontSize = 12.sp,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -1622,7 +1625,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                    .padding(start = 20.dp, end = 20.dp, top = 32.dp, bottom = 16.dp)
+                    .offset(y = (-16).dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -2252,14 +2256,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                         activeTrackColor = MaterialTheme.colorScheme.primary
                                     )
                                 )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text("2 dp (Thin)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("Default (38 dp Full)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("38 dp (Pill)", fontSize = 10.sp, color = Color.Gray)
-                                }
                             }
 
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -2292,15 +2288,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                         activeTrackColor = MaterialTheme.colorScheme.primary
                                     )
                                 )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text("0 dp (Square)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("10 dp (Rounded)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("19 dp (Pill)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("24 dp (Max)", fontSize = 10.sp, color = Color.Gray)
-                                }
                             }
                         }
 
@@ -2335,14 +2322,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                         activeTrackColor = MaterialTheme.colorScheme.primary
                                     )
                                 )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text("1 dp (Thin)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("Default (4 dp)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("10 dp (Thick)", fontSize = 10.sp, color = Color.Gray)
-                                }
                             }
 
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -2375,14 +2354,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                         activeTrackColor = MaterialTheme.colorScheme.primary
                                     )
                                 )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text("1 dp (Thin)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("Default (4 dp)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("16 dp (Thick)", fontSize = 10.sp, color = Color.Gray)
-                                }
                             }
 
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -2415,15 +2386,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                         activeTrackColor = MaterialTheme.colorScheme.primary
                                     )
                                 )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text("0 dp (Square)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("4 dp (Default)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("19 dp (Pill)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("24 dp (Max)", fontSize = 10.sp, color = Color.Gray)
-                                }
                             }
 
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -2456,14 +2418,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                         activeTrackColor = MaterialTheme.colorScheme.primary
                                     )
                                 )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text("0.5 dp (Subtle)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("Default (3.5 dp)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("10 dp (Extreme)", fontSize = 10.sp, color = Color.Gray)
-                                }
                             }
 
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -2496,14 +2450,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                         activeTrackColor = MaterialTheme.colorScheme.primary
                                     )
                                 )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text("10 dp (Dense)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("Default (26 dp)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("60 dp (Wide)", fontSize = 10.sp, color = Color.Gray)
-                                }
                             }
 
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -2536,14 +2482,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                         activeTrackColor = MaterialTheme.colorScheme.primary
                                     )
                                 )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text("2 dp (Tiny)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("Default (6 dp)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("12 dp (Large)", fontSize = 10.sp, color = Color.Gray)
-                                }
                             }
 
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -2576,14 +2514,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                         activeTrackColor = MaterialTheme.colorScheme.primary
                                     )
                                 )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text("300 ms (Fast)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("1300 ms (Default)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("3000 ms (Slow)", fontSize = 10.sp, color = Color.Gray)
-                                }
                             }
                         }
 
@@ -2618,14 +2548,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                         activeTrackColor = MaterialTheme.colorScheme.primary
                                     )
                                 )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text("1 dp (Thin)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("Default (4 dp)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("12 dp (Thick)", fontSize = 10.sp, color = Color.Gray)
-                                }
                             }
 
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -2658,14 +2580,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                         activeTrackColor = MaterialTheme.colorScheme.primary
                                     )
                                 )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text("1 dp (Thin)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("Default (4 dp)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("16 dp (Thick)", fontSize = 10.sp, color = Color.Gray)
-                                }
                             }
 
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -2698,14 +2612,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                         activeTrackColor = MaterialTheme.colorScheme.primary
                                     )
                                 )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text("0 dp (Square)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("4 dp (Default)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("24 dp (Max)", fontSize = 10.sp, color = Color.Gray)
-                                }
                             }
 
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -2738,14 +2644,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                         activeTrackColor = MaterialTheme.colorScheme.primary
                                     )
                                 )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text("2 dp (Tiny)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("Default (6 dp)", fontSize = 10.sp, color = Color.Gray)
-                                    Text("12 dp (Large)", fontSize = 10.sp, color = Color.Gray)
-                                }
                             }
                         }
 
@@ -2971,14 +2869,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 activeTrackColor = MaterialTheme.colorScheme.primary
                             )
                         )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("0 dp (Square)", fontSize = 10.sp, color = Color.Gray)
-                            Text("20 dp (Default)", fontSize = 10.sp, color = Color.Gray)
-                            Text("36 dp (Max)", fontSize = 10.sp, color = Color.Gray)
-                        }
                     }
 
                     if (panelGlobalCornerEnabled) {
@@ -3040,14 +2930,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                     activeTrackColor = MaterialTheme.colorScheme.primary
                                 )
                             )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text("0 dp (Square)", fontSize = 10.sp, color = Color.Gray)
-                                Text("5 dp (Default)", fontSize = 10.sp, color = Color.Gray)
-                                Text("36 dp (Max)", fontSize = 10.sp, color = Color.Gray)
-                            }
                         }
                     }
                 }

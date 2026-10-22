@@ -2,6 +2,7 @@ package com.example.service
 
 import android.app.Notification
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -355,7 +356,16 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification?, rankingMap: RankingMap?) {
         super.onNotificationPosted(sbn, rankingMap)
-        // Handled in onNotificationPosted(sbn) which super calls
+        if (sbn == null) return
+        val n = sbn.notification ?: return
+
+        // Skip 1-second ticker/progress updates from active media notifications from flooding the shade or heads-up
+        if (isMediaNotification(sbn, n)) {
+            return
+        }
+
+        refreshActiveNotifications()
+        triggerHeadsUpIfNeeded(sbn, rankingMap)
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -369,10 +379,10 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
         }
 
         refreshActiveNotifications()
-        triggerHeadsUpIfNeeded(sbn)
+        triggerHeadsUpIfNeeded(sbn, currentRanking)
     }
 
-    private fun triggerHeadsUpIfNeeded(sbn: StatusBarNotification) {
+    private fun triggerHeadsUpIfNeeded(sbn: StatusBarNotification, rankingMap: RankingMap? = null) {
         if (!PanelPreferences.enableHeadsUpOverlay.value) return
 
         val n = sbn.notification ?: return
@@ -401,35 +411,112 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                 title.contains("アラーム", ignoreCase = true) ||
                 subText?.contains("alarm", ignoreCase = true) == true
 
-        val isCall = category == Notification.CATEGORY_CALL ||
-                category == Notification.CATEGORY_MISSED_CALL ||
-                sbn.packageName.contains("dialer", ignoreCase = true) ||
+        // Check if this is a missed call notification (which should dismiss any active call heads-up)
+        val isMissedCall = category == Notification.CATEGORY_MISSED_CALL ||
+                category.equals("missed_call", ignoreCase = true) ||
+                title.contains("missed call", ignoreCase = true) ||
+                title.contains("пропущенный", ignoreCase = true) ||
+                text.contains("missed call", ignoreCase = true) ||
+                text.contains("пропущенный", ignoreCase = true)
+
+        if (isMissedCall) {
+            HeadsUpOverlayManager.dismissIfMatching(sbn.key)
+            resetPinnedLock(sbn.key)
+        }
+
+        // Comprehensive incoming call detection:
+        val template = extras.getString(Notification.EXTRA_TEMPLATE) ?: ""
+        val isCallStyle = template.contains("CallStyle", ignoreCase = true) ||
+                extras.containsKey("android.callType")
+
+        val hasCallPerson = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            try {
+                extras.getParcelable("android.callPerson", android.app.Person::class.java) != null
+            } catch (_: Throwable) {
+                extras.containsKey("android.callPerson")
+            }
+        } else extras.containsKey("android.callPerson")
+
+        val hasAnswerIntent = extras.containsKey("android.answerIntent") ||
+                extras.containsKey("android.declineIntent")
+
+        val isCallCategory = category == Notification.CATEGORY_CALL ||
+                category.equals("call", ignoreCase = true)
+
+        val isDialerOrPhonePkg = sbn.packageName.contains("dialer", ignoreCase = true) ||
                 sbn.packageName.contains("incallui", ignoreCase = true) ||
                 sbn.packageName.contains("telecom", ignoreCase = true) ||
                 sbn.packageName.contains("phone", ignoreCase = true) ||
                 sbn.packageName == "com.google.android.dialer" ||
                 sbn.packageName == "com.samsung.android.incallui" ||
-                sbn.packageName == "com.android.incallui" ||
-                n.fullScreenIntent != null ||
-                title.contains("incoming call", ignoreCase = true) ||
+                sbn.packageName == "com.samsung.android.dialer" ||
+                sbn.packageName == "com.android.phone" ||
+                sbn.packageName == "com.android.server.telecom"
+
+        val hasAnswerDeclineActions = n.actions?.any { action ->
+            val at = action.title?.toString() ?: ""
+            at.contains("Answer", ignoreCase = true) ||
+            at.contains("Decline", ignoreCase = true) ||
+            at.contains("Accept", ignoreCase = true) ||
+            at.contains("Reject", ignoreCase = true) ||
+            at.contains("Ответить", ignoreCase = true) ||
+            at.contains("Отклонить", ignoreCase = true) ||
+            at.contains("Responder", ignoreCase = true) ||
+            at.contains("Rechazar", ignoreCase = true) ||
+            at.contains("Répondre", ignoreCase = true) ||
+            at.contains("Refuser", ignoreCase = true) ||
+            at.contains("Annehmen", ignoreCase = true) ||
+            at.contains("Ablehnen", ignoreCase = true) ||
+            at.contains("Atender", ignoreCase = true) ||
+            at.contains("Recusar", ignoreCase = true) ||
+            at.contains("Rispondi", ignoreCase = true) ||
+            at.contains("Rifiuta", ignoreCase = true) ||
+            at.contains("接听", ignoreCase = true) ||
+            at.contains("挂断", ignoreCase = true) ||
+            at.contains("통화", ignoreCase = true) ||
+            at.contains("응답", ignoreCase = true) ||
+            at.contains("거절", ignoreCase = true) ||
+            at.contains("応答", ignoreCase = true) ||
+            at.contains("拒否", ignoreCase = true) ||
+            at.contains("Yanıtla", ignoreCase = true) ||
+            at.contains("Reddet", ignoreCase = true) ||
+            at.contains("Odbierz", ignoreCase = true) ||
+            at.contains("Odrzuć", ignoreCase = true) ||
+            at.contains("Відповісти", ignoreCase = true) ||
+            at.contains("Відхилити", ignoreCase = true)
+        } == true
+
+        val hasCallText = title.contains("incoming call", ignoreCase = true) ||
+                title.contains("calling", ignoreCase = true) ||
+                title.contains("звонок", ignoreCase = true) ||
+                title.contains("вызов", ignoreCase = true) ||
+                title.contains("llamada", ignoreCase = true) ||
+                title.contains("appel", ignoreCase = true) ||
+                title.contains("anruf", ignoreCase = true) ||
+                title.contains("chiamata", ignoreCase = true) ||
                 title.contains("着信", ignoreCase = true) ||
                 title.contains("通話", ignoreCase = true) ||
                 text.contains("incoming call", ignoreCase = true) ||
-                text.contains("着信", ignoreCase = true) ||
-                n.actions?.any { action ->
-                    val at = action.title?.toString() ?: ""
-                    at.contains("Answer", ignoreCase = true) ||
-                            at.contains("Decline", ignoreCase = true) ||
-                            at.contains("Accept", ignoreCase = true) ||
-                            at.contains("Reject", ignoreCase = true) ||
-                            at.contains("応答", ignoreCase = true) ||
-                            at.contains("拒否", ignoreCase = true)
-                } == true
+                text.contains("calling", ignoreCase = true) ||
+                text.contains("звонок", ignoreCase = true) ||
+                text.contains("вызов", ignoreCase = true) ||
+                text.contains("llamada", ignoreCase = true) ||
+                text.contains("appel", ignoreCase = true) ||
+                text.contains("anruf", ignoreCase = true) ||
+                text.contains("着信", ignoreCase = true)
+
+        val isCall = !isMissedCall && (
+                isCallStyle ||
+                hasCallPerson ||
+                hasAnswerIntent ||
+                (isCallCategory && (hasAnswerDeclineActions || isDialerOrPhonePkg || n.fullScreenIntent != null)) ||
+                hasAnswerDeclineActions ||
+                (isDialerOrPhonePkg && (n.fullScreenIntent != null || hasCallText))
+        )
 
         val isCallOrAlarm = isAlarm || isCall
 
         // Ignore group summary container notifications from chat apps (e.g. Telegram, WhatsApp, Gmail).
-        // Alerting on group summaries causes flickering and repeats older conversation summaries.
         val isGroupSummary = (n.flags and Notification.FLAG_GROUP_SUMMARY != 0)
         if (isGroupSummary && !isCallOrAlarm) {
             Log.d(TAG, "Ignoring group summary notification from ${sbn.packageName} for Heads-Up")
@@ -450,7 +537,7 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
                 val ranking = Ranking()
-                if (currentRanking?.getRanking(sbn.key, ranking) == true) {
+                if (rankingMap?.getRanking(sbn.key, ranking) == true || currentRanking?.getRanking(sbn.key, ranking) == true) {
                     if (ranking.importance >= NotificationManager.IMPORTANCE_HIGH) {
                         isHighImportance = true
                     }
@@ -476,27 +563,38 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
             return
         }
 
+        // Extract caller name if this is a CallStyle notification where EXTRA_TITLE is empty
+        var callCallerName: String? = null
+        if (isCall) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                try {
+                    val person = extras.getParcelable("android.callPerson", android.app.Person::class.java)
+                    callCallerName = person?.name?.toString()
+                } catch (_: Throwable) {}
+            }
+            if (callCallerName.isNullOrBlank()) {
+                callCallerName = extras.getCharSequence("android.callPerson")?.toString()
+            }
+        }
+
         // Extract latest individual message cleanly if MessagingStyle is present
         val (resolvedTitle, resolvedText) = extractLatestMessageContent(extras, title, text)
 
-        if (resolvedTitle.isBlank() && resolvedText.isBlank() && n.fullScreenIntent == null) {
-            return
+        val finalTitle = when {
+            !callCallerName.isNullOrBlank() -> callCallerName
+            resolvedTitle.isNotBlank() -> resolvedTitle
+            else -> ""
         }
 
-        val isPinnedTarget = isAlarm || isCall
+        val finalText = when {
+            resolvedText.isNotBlank() -> resolvedText
+            !subText.isNullOrBlank() -> subText
+            isCall -> "Incoming call"
+            else -> ""
+        }
 
-        // 1. Active Lock for Alarms & Calls (Freeze on First Frame)
-        if (isPinnedTarget) {
-            // IF activePinnedKey is already locked for this key: IMMEDIATELY RETURN.
-            // Ignore all sub-second ticker, time, and rank updates completely.
-            if (activePinnedKey != null && activePinnedKey == sbn.key) {
-                Log.d(TAG, "activePinnedKey is locked ($activePinnedKey) — ignoring sub-second update for ${sbn.key}")
-                return
-            }
-            if (activePinnedKey == null) {
-                activePinnedKey = sbn.key
-                HeadsUpOverlayManager.activePinnedKey = sbn.key
-            }
+        if (finalTitle.isBlank() && finalText.isBlank() && n.fullScreenIntent == null) {
+            return
         }
 
         val pm = packageManager
@@ -533,15 +631,62 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
             }
         }
 
+        // If CallStyle has answer/decline intents and actions are missing, populate them automatically
+        if (isCall) {
+            val hasAnswerInList = actionsList.any {
+                it.title.contains("Answer", ignoreCase = true) ||
+                it.title.contains("Accept", ignoreCase = true) ||
+                it.title.contains("Ответить", ignoreCase = true) ||
+                it.title.contains("Responder", ignoreCase = true) ||
+                it.title.contains("接听", ignoreCase = true)
+            }
+            val hasDeclineInList = actionsList.any {
+                it.title.contains("Decline", ignoreCase = true) ||
+                it.title.contains("Reject", ignoreCase = true) ||
+                it.title.contains("Отклонить", ignoreCase = true) ||
+                it.title.contains("Rechazar", ignoreCase = true) ||
+                it.title.contains("挂断", ignoreCase = true)
+            }
+
+            @Suppress("DEPRECATION")
+            val answerPendingIntent: PendingIntent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                try {
+                    extras.getParcelable("android.answerIntent", PendingIntent::class.java)
+                } catch (_: Throwable) {
+                    extras.getParcelable("android.answerIntent") as? PendingIntent
+                }
+            } else {
+                extras.getParcelable("android.answerIntent") as? PendingIntent
+            }
+
+            @Suppress("DEPRECATION")
+            val declinePendingIntent: PendingIntent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                try {
+                    extras.getParcelable("android.declineIntent", PendingIntent::class.java)
+                } catch (_: Throwable) {
+                    extras.getParcelable("android.declineIntent") as? PendingIntent
+                }
+            } else {
+                extras.getParcelable("android.declineIntent") as? PendingIntent
+            }
+
+            if (!hasAnswerInList && answerPendingIntent != null) {
+                actionsList.add(0, NotificationActionModel(title = "Answer", actionIntent = answerPendingIntent))
+            }
+            if (!hasDeclineInList && declinePendingIntent != null) {
+                actionsList.add(NotificationActionModel(title = "Decline", actionIntent = declinePendingIntent))
+            }
+        }
+
         // Generate content-specific ID so identical internal updates don't reset timers or flicker
-        val contentHash = "${resolvedTitle.hashCode()}_${resolvedText.hashCode()}"
+        val contentHash = "${finalTitle.hashCode()}_${finalText.hashCode()}"
         val headsUpData = HeadsUpOverlayManager.HeadsUpData(
             id = "${sbn.key}_$contentHash",
             key = sbn.key,
             packageName = sbn.packageName,
             appName = appName,
-            title = if (resolvedTitle.isNotBlank()) resolvedTitle else appName,
-            text = resolvedText,
+            title = if (finalTitle.isNotBlank()) finalTitle else appName,
+            text = finalText,
             subText = subText,
             appIcon = appIcon,
             avatarBitmap = avatarBitmap,

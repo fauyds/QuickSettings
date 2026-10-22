@@ -188,7 +188,7 @@ fun ThemesSection(modifier: Modifier = Modifier) {
                             modifier = Modifier
                                 .weight(1f)
                                 .testTag("theme_name_input"),
-                            textStyle = TextStyle(fontSize = 13.sp)
+                            textStyle = TextStyle(fontSize = 13.sp, platformStyle = PlatformTextStyle(includeFontPadding = false))
                         )
 
                         Button(

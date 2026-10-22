@@ -18,9 +18,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Close
@@ -87,6 +90,8 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
     val disablePanelAnimations by PanelPreferences.disablePanelAnimations.collectAsState()
     val usePrimeCoreAffinity by PanelPreferences.usePrimeCoreAffinity.collectAsState()
     val enableCustomVolumePanel by PanelPreferences.enableCustomVolumePanel.collectAsState()
+    val minBrightness by PanelPreferences.minBrightness.collectAsState()
+    val maxBrightness by PanelPreferences.maxBrightness.collectAsState()
 
     val invisibleStatusBarTrigger by PanelPreferences.invisibleStatusBarTrigger.collectAsState()
     val autoSystemPanelClosing by PanelPreferences.autoSystemPanelClosing.collectAsState()
@@ -450,6 +455,7 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                         }
 
                         Column(
+                            modifier = Modifier.weight(1f),
                             verticalArrangement = Arrangement.spacedBy(1.dp)
                         ) {
                             Row(
@@ -462,7 +468,8 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                                     fontWeight = FontWeight.Bold,
                                     lineHeight = 17.sp,
                                     style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f, fill = false)
                                 )
                                 Surface(
                                     color = MaterialTheme.colorScheme.secondaryContainer,
@@ -470,10 +477,11 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                                 ) {
                                     Text(
                                         text = "A12-A15",
-                                        fontSize = 9.sp,
+                                        fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
+                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                                         color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                     )
                                 }
                             }
@@ -616,15 +624,6 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                                     inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
                                 )
                             )
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text("0 ms (Instant)", fontSize = 10.sp, color = Color.Gray)
-                                Text("Default (0 ms)", fontSize = 10.sp, color = Color.Gray)
-                                Text("1000 ms (1.0s)", fontSize = 10.sp, color = Color.Gray)
-                            }
 
                             // Quick Preset Buttons
                             Row(
@@ -801,15 +800,6 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                                     inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
                                 )
                             )
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text("10 ms", fontSize = 10.sp, color = Color.Gray)
-                                Text("Default (280 ms)", fontSize = 10.sp, color = Color.Gray)
-                                Text("1000 ms", fontSize = 10.sp, color = Color.Gray)
-                            }
                         }
 
                         HorizontalDivider(
@@ -888,7 +878,7 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                                     modifier = Modifier
                                         .weight(1f)
                                         .testTag("add_whitelist_pkg_input"),
-                                    textStyle = TextStyle(fontSize = 12.sp)
+                                    textStyle = TextStyle(fontSize = 12.sp, platformStyle = PlatformTextStyle(includeFontPadding = false))
                                 )
 
                                 Button(
@@ -1022,7 +1012,7 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                                     modifier = Modifier
                                         .weight(1f)
                                         .testTag("add_blacklist_input"),
-                                    textStyle = TextStyle(fontSize = 12.sp)
+                                    textStyle = TextStyle(fontSize = 12.sp, platformStyle = PlatformTextStyle(includeFontPadding = false))
                                 )
 
                                 Button(
@@ -1125,6 +1115,162 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
         }
     }
 
+    // 9. Minimum Brightness Card
+    val minBrightnessCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("min_brightness_card", CustomizeCategory.MISCELLANEOUS, "Minimum Brightness") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FlashOn,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                        ) {
+                            Text(
+                                text = "Minimum Brightness",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 17.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Lowest brightness limit (up to 2047). Default: 1.",
+                                fontSize = 12.sp,
+                                lineHeight = 15.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    var textVal by remember(minBrightness) { mutableStateOf(minBrightness.toString()) }
+                    OutlinedTextField(
+                        value = textVal,
+                        onValueChange = { input ->
+                            val filtered = input.filter { it.isDigit() }.take(4)
+                            textVal = filtered
+                            val num = filtered.toIntOrNull()
+                            if (num != null) {
+                                PanelPreferences.setMinBrightness(context, num)
+                            }
+                        },
+                        modifier = Modifier
+                            .width(88.dp)
+                            .testTag("min_brightness_input"),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        textStyle = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, platformStyle = PlatformTextStyle(includeFontPadding = false))
+                    )
+                }
+            }
+        }
+    }
+
+    // 10. Maximum Brightness Card
+    val maxBrightnessCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("max_brightness_card", CustomizeCategory.MISCELLANEOUS, "Maximum Brightness") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FlashOn,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                        ) {
+                            Text(
+                                text = "Maximum Brightness",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 17.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Highest brightness limit (up to 2047). Default: 2047.",
+                                fontSize = 12.sp,
+                                lineHeight = 15.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    var textVal by remember(maxBrightness) { mutableStateOf(maxBrightness.toString()) }
+                    OutlinedTextField(
+                        value = textVal,
+                        onValueChange = { input ->
+                            val filtered = input.filter { it.isDigit() }.take(4)
+                            textVal = filtered
+                            val num = filtered.toIntOrNull()
+                            if (num != null) {
+                                PanelPreferences.setMaxBrightness(context, num)
+                            }
+                        },
+                        modifier = Modifier
+                            .width(88.dp)
+                            .testTag("max_brightness_input"),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        textStyle = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, platformStyle = PlatformTextStyle(includeFontPadding = false))
+                    )
+                }
+            }
+        }
+    }
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing)
@@ -1139,6 +1285,8 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
         if (pinnedIds.contains("panel_replacement_delay_card")) pinnedCards.add(panelReplacementDelayCard)
         if (pinnedIds.contains("stock_shade_override_card")) pinnedCards.add(stockShadeOverrideCard)
         if (pinnedIds.contains("force_show_media_preview_card")) pinnedCards.add(forceShowMediaPreviewCard)
+        if (pinnedIds.contains("min_brightness_card")) pinnedCards.add(minBrightnessCard)
+        if (pinnedIds.contains("max_brightness_card")) pinnedCards.add(maxBrightnessCard)
 
         if (pinnedCards.isNotEmpty()) {
             ListSubheader(
@@ -1194,7 +1342,23 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
             }
         }
 
-        // 5. Unpinned Debug
+        // 5. Unpinned Brightness Limits
+        val unpinnedBrightness = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
+        if (!pinnedIds.contains("min_brightness_card")) unpinnedBrightness.add(minBrightnessCard)
+        if (!pinnedIds.contains("max_brightness_card")) unpinnedBrightness.add(maxBrightnessCard)
+
+        if (unpinnedBrightness.isNotEmpty()) {
+            CollapsibleSubheaderSection(
+                title = "Brightness Bounds",
+                icon = Icons.Default.FlashOn
+            ) {
+                unpinnedBrightness.forEachIndexed { index, card ->
+                    card(CustomizeCardShapes.getShapeForIndex(index, unpinnedBrightness.size))
+                }
+            }
+        }
+
+        // 6. Unpinned Debug
         if (!pinnedIds.contains("force_show_media_preview_card")) {
             CollapsibleSubheaderSection(
                 title = "Debug",

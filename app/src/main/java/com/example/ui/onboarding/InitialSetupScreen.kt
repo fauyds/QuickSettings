@@ -1877,7 +1877,8 @@ private fun TriggerTogglesStep() {
                             text = "Use auto system panel closing",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f, fill = false)
                         )
                         Surface(
                             color = MaterialTheme.colorScheme.secondaryContainer,
@@ -1885,10 +1886,10 @@ private fun TriggerTogglesStep() {
                         ) {
                             Text(
                                 text = "A12-A15",
-                                fontSize = 9.sp,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
                     }

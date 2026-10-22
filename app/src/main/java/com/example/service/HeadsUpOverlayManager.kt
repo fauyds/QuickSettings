@@ -275,12 +275,6 @@ object HeadsUpOverlayManager {
         // If an onNotificationPosted arrives for an already displayed key, update the content smoothly in-place
         // WITHOUT removing or re-inflating the view in WindowManager.
         if (currentComposeView != null) {
-            val isPinnedTarget = data.isAlarm || data.isCall
-            if (isPinnedTarget && activePinnedKey != null && activePinnedKey == targetKey) {
-                Log.d(TAG, "Static WindowManager View: Freezing first frame for pinned key $activePinnedKey (ignoring dynamic update)")
-                return
-            }
-
             val existing = _currentDataFlow.value
             val isSameNotification = existing != null && (
                     (data.key != null && existing.key == data.key) ||
@@ -288,25 +282,29 @@ object HeadsUpOverlayManager {
             )
 
             if (isSameNotification && existing != null) {
-                // Check if content is identical (e.g. background ticker, ranking, read-status update)
+                // Check if content and actions are identical
                 val isIdentical = existing.title == data.title &&
                         existing.text == data.text &&
-                        existing.subText == data.subText
+                        existing.subText == data.subText &&
+                        existing.actions.size == data.actions.size
 
                 if (isIdentical) {
                     Log.d(TAG, "Identical notification update for key $targetKey ignored — preventing banner flicker.")
                     return
                 }
 
-                // Genuinely new message in the same conversation thread:
-                // Smoothly update the reactive data flow in-place (WITHOUT recreating or flickering the Window)
+                // Genuinely new content, action update, or caller name in the same call/notification:
                 _currentDataFlow.value = data
                 currentOnTriggerQs = onTriggerQs
                 currentOnActionClick = onActionClick
                 currentNotificationId = data.id
                 displayedHeadsUpKeys.add(targetKey)
                 recordAlert(data)
-                Log.d(TAG, "In-place smooth update for active conversation key $targetKey: '${data.text}'")
+                if (data.isAlarm || data.isCall) {
+                    activePinnedKey = targetKey
+                    QuickPanelNotificationListenerService.activePinnedKey = activePinnedKey
+                }
+                Log.d(TAG, "In-place smooth update for active key $targetKey: '${data.title}' - '${data.text}'")
                 return
             }
 
@@ -318,6 +316,10 @@ object HeadsUpOverlayManager {
                 currentNotificationId = data.id
                 displayedHeadsUpKeys.add(targetKey)
                 recordAlert(data)
+                if (data.isAlarm || data.isCall) {
+                    activePinnedKey = targetKey
+                    QuickPanelNotificationListenerService.activePinnedKey = activePinnedKey
+                }
                 Log.d(TAG, "Replacing active banner with incoming key $targetKey")
                 return
             }
@@ -558,6 +560,12 @@ object HeadsUpOverlayManager {
      * Trigger a Test Incoming Call Heads-Up notification with Answer and Decline Action Buttons!
      */
     fun showTestCallHeadsUp(context: Context) {
+        if (!PanelPreferences.enableHeadsUpOverlay.value) {
+            PanelPreferences.setEnableHeadsUpOverlay(context, true)
+            Toast.makeText(context, "Enabled Heads-Up Overlay", Toast.LENGTH_SHORT).show()
+        }
+        resetPinnedLock()
+
         val pm = context.packageManager
         val myAppIcon = try {
             pm.getApplicationIcon(context.packageName)
@@ -1087,11 +1095,25 @@ object HeadsUpOverlayManager {
                                 data.actions.forEach { action ->
                                     val isAnswerAction = action.title.contains("Answer", ignoreCase = true) ||
                                             action.title.contains("Accept", ignoreCase = true) ||
+                                            action.title.contains("Ответить", ignoreCase = true) ||
+                                            action.title.contains("Responder", ignoreCase = true) ||
+                                            action.title.contains("Répondre", ignoreCase = true) ||
+                                            action.title.contains("Annehmen", ignoreCase = true) ||
+                                            action.title.contains("Atender", ignoreCase = true) ||
+                                            action.title.contains("Rispondi", ignoreCase = true) ||
+                                            action.title.contains("接听", ignoreCase = true) ||
                                             action.title.contains("応答", ignoreCase = true) ||
                                             action.title.contains("通話", ignoreCase = true)
 
                                     val isDeclineAction = action.title.contains("Decline", ignoreCase = true) ||
                                             action.title.contains("Reject", ignoreCase = true) ||
+                                            action.title.contains("Отклонить", ignoreCase = true) ||
+                                            action.title.contains("Rechazar", ignoreCase = true) ||
+                                            action.title.contains("Refuser", ignoreCase = true) ||
+                                            action.title.contains("Ablehnen", ignoreCase = true) ||
+                                            action.title.contains("Recusar", ignoreCase = true) ||
+                                            action.title.contains("Rifiuta", ignoreCase = true) ||
+                                            action.title.contains("挂断", ignoreCase = true) ||
                                             action.title.contains("拒否", ignoreCase = true) ||
                                             action.title.contains("Hang up", ignoreCase = true)
 
@@ -1105,19 +1127,23 @@ object HeadsUpOverlayManager {
                                             action.title.contains("Repeat", ignoreCase = true) ||
                                             action.title.contains("スヌーズ", ignoreCase = true)
 
-                                    // Brighter button background in light mode, darker button background in dark mode
-                                    val btnBgColor = if (!isDark) {
-                                        MaterialTheme.colorScheme.surfaceContainerHighest
-                                    } else {
-                                        MaterialTheme.colorScheme.surfaceContainerHigh
+                                    // Vibrant action button styling for incoming calls (green for answer, red for decline)
+                                    val btnBgColor = when {
+                                        isAnswerAction -> Color(0xFF2E7D32)
+                                        isDeclineAction -> Color(0xFFC62828)
+                                        !isDark -> MaterialTheme.colorScheme.surfaceContainerHighest
+                                        else -> MaterialTheme.colorScheme.surfaceContainerHigh
                                     }
 
-                                    val btnTextColor = monetOnSurface
+                                    val btnTextColor = when {
+                                        isAnswerAction || isDeclineAction -> Color.White
+                                        else -> monetOnSurface
+                                    }
 
-                                    val btnBorderColor = if (!isDark) {
-                                        MaterialTheme.colorScheme.outlineVariant
-                                    } else {
-                                        MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                    val btnBorderColor = when {
+                                        isAnswerAction || isDeclineAction -> Color.Transparent
+                                        !isDark -> MaterialTheme.colorScheme.outlineVariant
+                                        else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
                                     }
 
                                     val iconVector = when {

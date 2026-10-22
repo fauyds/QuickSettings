@@ -156,6 +156,11 @@ object PanelPreferences {
     private const val KEY_HIDE_CARRIER_IN_EXPANDED = "hide_carrier_in_expanded"
     private const val KEY_BRIGHTNESS_AT_BOTTOM = "brightness_at_bottom"
     private const val KEY_BRIGHTNESS_IN_QQS = "brightness_in_qqs"
+    private const val KEY_HIDE_BRIGHTNESS_PERCENTAGE = "hide_brightness_percentage"
+    private const val KEY_HIDE_BRIGHTNESS_ICON = "hide_brightness_icon"
+    private const val KEY_SHOW_BRIGHTNESS_PLUS_MINUS = "show_brightness_plus_minus"
+    private const val KEY_MIN_BRIGHTNESS = "min_brightness"
+    private const val KEY_MAX_BRIGHTNESS = "max_brightness"
     private const val KEY_WAVY_PROGRESS_BARS = "wavy_progress_bars"
     private const val KEY_PROGRESS_BAR_STYLE = "progress_bar_style"
     private const val KEY_ENABLE_CONTAINER_BLUR = "enable_container_blur"
@@ -797,6 +802,21 @@ object PanelPreferences {
     private val _brightnessInQqs = MutableStateFlow(false)
     val brightnessInQqs: StateFlow<Boolean> = _brightnessInQqs.asStateFlow()
 
+    private val _hideBrightnessPercentage = MutableStateFlow(false)
+    val hideBrightnessPercentage: StateFlow<Boolean> = _hideBrightnessPercentage.asStateFlow()
+
+    private val _hideBrightnessIcon = MutableStateFlow(false)
+    val hideBrightnessIcon: StateFlow<Boolean> = _hideBrightnessIcon.asStateFlow()
+
+    private val _showBrightnessPlusMinus = MutableStateFlow(false)
+    val showBrightnessPlusMinus: StateFlow<Boolean> = _showBrightnessPlusMinus.asStateFlow()
+
+    private val _minBrightness = MutableStateFlow(1)
+    val minBrightness: StateFlow<Int> = _minBrightness.asStateFlow()
+
+    private val _maxBrightness = MutableStateFlow(2047)
+    val maxBrightness: StateFlow<Int> = _maxBrightness.asStateFlow()
+
     private val _progressBarStyle = MutableStateFlow(ProgressBarStyle.DEFAULT)
     val progressBarStyle: StateFlow<ProgressBarStyle> = _progressBarStyle.asStateFlow()
 
@@ -907,6 +927,11 @@ object PanelPreferences {
         _hideCarrierInExpanded.value = prefs.getBoolean(KEY_HIDE_CARRIER_IN_EXPANDED, false)
         _brightnessAtBottom.value = prefs.getBoolean(KEY_BRIGHTNESS_AT_BOTTOM, false)
         _brightnessInQqs.value = prefs.getBoolean(KEY_BRIGHTNESS_IN_QQS, false)
+        _hideBrightnessPercentage.value = prefs.getBoolean(KEY_HIDE_BRIGHTNESS_PERCENTAGE, false)
+        _hideBrightnessIcon.value = prefs.getBoolean(KEY_HIDE_BRIGHTNESS_ICON, false)
+        _showBrightnessPlusMinus.value = prefs.getBoolean(KEY_SHOW_BRIGHTNESS_PLUS_MINUS, false)
+        _minBrightness.value = prefs.getInt(KEY_MIN_BRIGHTNESS, 1)
+        _maxBrightness.value = prefs.getInt(KEY_MAX_BRIGHTNESS, 2047)
         val savedStyleId = prefs.getString(KEY_PROGRESS_BAR_STYLE, null)
         val resolvedStyle = if (savedStyleId != null) {
             ProgressBarStyle.fromId(savedStyleId)
@@ -1392,6 +1417,40 @@ object PanelPreferences {
         _brightnessInQqs.value = value
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_BRIGHTNESS_IN_QQS, value).apply()
+    }
+
+    fun setHideBrightnessPercentage(context: Context, value: Boolean) {
+        _hideBrightnessPercentage.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_HIDE_BRIGHTNESS_PERCENTAGE, value).apply()
+    }
+
+    fun setHideBrightnessIcon(context: Context, value: Boolean) {
+        _hideBrightnessIcon.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_HIDE_BRIGHTNESS_ICON, value).apply()
+    }
+
+    fun setShowBrightnessPlusMinus(context: Context, value: Boolean) {
+        _showBrightnessPlusMinus.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_SHOW_BRIGHTNESS_PLUS_MINUS, value).apply()
+    }
+
+    fun setMinBrightness(context: Context, value: Int) {
+        val clampedMin = value.coerceIn(1, 2047)
+        val finalMin = if (clampedMin > _maxBrightness.value) _maxBrightness.value else clampedMin
+        _minBrightness.value = finalMin
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(KEY_MIN_BRIGHTNESS, finalMin).apply()
+    }
+
+    fun setMaxBrightness(context: Context, value: Int) {
+        val clampedMax = value.coerceIn(1, 2047)
+        val finalMax = if (clampedMax < _minBrightness.value) _minBrightness.value else clampedMax
+        _maxBrightness.value = finalMax
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(KEY_MAX_BRIGHTNESS, finalMax).apply()
     }
 
     fun setProgressBarStyle(context: Context, style: ProgressBarStyle) {

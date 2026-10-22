@@ -113,6 +113,7 @@ fun HiddenNotificationManagerScreen(
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.1.sp,
+                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                 color = colorScheme.primary
             )
 
@@ -124,6 +125,7 @@ fun HiddenNotificationManagerScreen(
                     text = if (isGranted) "Active" else "Permission Needed",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.SemiBold,
+                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                     color = if (isGranted) colorScheme.onPrimaryContainer else Color.White,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                 )
@@ -162,12 +164,14 @@ fun HiddenNotificationManagerScreen(
                             text = "Notification Access Required",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = Color.White
                         )
                     }
                     Text(
                         text = "To block active ongoing notifications, hide system notifications, or restore previously blacklisted notification rules, please grant Notification Listener access in the system settings.",
                         fontSize = 12.sp,
+                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                         color = Color.White.copy(alpha = 0.9f)
                     )
                     Button(
@@ -179,7 +183,12 @@ fun HiddenNotificationManagerScreen(
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Grant Notification Listener Permission", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "Grant Notification Listener Permission",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                        )
                     }
                 }
             }

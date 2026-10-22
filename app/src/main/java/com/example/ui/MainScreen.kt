@@ -1,13 +1,19 @@
 package com.example.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,17 +21,20 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Build
@@ -34,10 +43,12 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Layers
-import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Visibility
@@ -55,7 +66,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -65,8 +78,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -161,87 +182,13 @@ fun MainScreen(viewModel: MainViewModel) {
         containerColor = settingsScreenBackgroundColor,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .border(
-                        0.5.dp,
-                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
-                        RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
-                    )
-                    .background(MaterialTheme.colorScheme.surfaceContainer)
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                    .testTag("bottom_nav_bar"),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // All navigation items (Tile Studio and Hardware tabs retained in code and routing, hidden from navigation bar)
-                val showTileStudioInNavBar = false
-                val showHardwareInNavBar = false
-                val allNavItems = listOf(
-                    Triple("Overlay", Icons.Default.Dashboard, 0),
-                    Triple("App Status", Icons.Default.Info, 9),
-                    Triple("Tile Studio", Icons.Default.Tune, 1),
-                    Triple("Tile Commands", Icons.Default.Terminal, 6),
-                    Triple("Visibility", Icons.Default.Visibility, 7),
-                    Triple("Hardware", Icons.Default.Build, 2),
-                    Triple("Privileges", Icons.Default.Security, 4),
-                    Triple("Customize", Icons.Default.Layers, 5),
-                    Triple("Notif Hub", Icons.Default.NotificationsOff, 8),
-                    Triple("About", Icons.Default.Info, 10)
-                )
-                val visibleNavItems = allNavItems.filter { item ->
-                    when (item.third) {
-                        1 -> showTileStudioInNavBar
-                        2 -> showHardwareInNavBar
-                        else -> true
-                    }
-                }
-
-                visibleNavItems.forEach { (label, icon, index) ->
-                    val isSelected = selectedTab == index
-                    Column(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable(
-                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                                indication = null
-                            ) { viewModel.setSelectedTab(index) }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                            .testTag("nav_tab_$index"),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(
-                                    if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                                    else Color.Transparent
-                                )
-                                .padding(horizontal = 16.dp, vertical = 4.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = label,
-                                tint = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Text(
-                            text = label,
-                            fontSize = 11.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
+            SettingsBottomNavigationBar(
+                selectedTab = selectedTab,
+                isOverlayRunning = isOverlayRunning,
+                isRootAvail = isRootAvail,
+                isShizukuAvail = isShizukuAvail,
+                onTabSelected = { viewModel.setSelectedTab(it) }
+            )
         }
     ) { innerPadding ->
         Column(
@@ -401,6 +348,236 @@ fun MainScreen(viewModel: MainViewModel) {
                         com.example.ui.customizer.AboutSection()
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsBottomNavigationBar(
+    selectedTab: Int,
+    isOverlayRunning: Boolean,
+    isRootAvail: Boolean,
+    isShizukuAvail: Boolean,
+    onTabSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
+    val scrollState = rememberScrollState()
+
+    // All navigation items (Tile Studio and Hardware tabs retained in routing, hidden from navigation bar)
+    val showTileStudioInNavBar = false
+    val showHardwareInNavBar = false
+    val allNavItems = listOf(
+        Triple("Overlay", Icons.Default.Dashboard, 0),
+        Triple("App Status", Icons.Default.Speed, 9),
+        Triple("Tile Studio", Icons.Default.Tune, 1),
+        Triple("Tile Commands", Icons.Default.Terminal, 6),
+        Triple("Visibility", Icons.Default.Visibility, 7),
+        Triple("Hardware", Icons.Default.Build, 2),
+        Triple("Privileges", Icons.Default.Security, 4),
+        Triple("Customize", Icons.Default.Layers, 5),
+        Triple("Notif Hub", Icons.Default.Notifications, 8),
+        Triple("About", Icons.Default.Info, 10)
+    )
+    val visibleNavItems = remember {
+        allNavItems.filter { item ->
+            when (item.third) {
+                1 -> showTileStudioInNavBar
+                2 -> showHardwareInNavBar
+                else -> true
+            }
+        }
+    }
+
+    LaunchedEffect(selectedTab) {
+        val targetIndex = visibleNavItems.indexOfFirst { it.third == selectedTab }
+        if (targetIndex >= 0) {
+            val itemWidthPx = with(density) { 76.dp.toPx() }
+            val screenWidthPx = with(density) { 360.dp.toPx() }
+            val targetScroll = (targetIndex * itemWidthPx - (screenWidthPx / 2f - itemWidthPx / 2f)).toInt().coerceAtLeast(0)
+            scrollState.animateScrollTo(
+                targetScroll,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
+            )
+        }
+    }
+
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("bottom_nav_bar"),
+        shape = RectangleShape,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        tonalElevation = 3.dp,
+        shadowElevation = 0.dp,
+        border = BorderStroke(
+            width = 0.5.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .height(64.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .horizontalScroll(scrollState)
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                visibleNavItems.forEach { (label, icon, index) ->
+                    val isSelected = selectedTab == index
+
+                    val pillBgColor by animateColorAsState(
+                        targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                        label = "pill_bg_$index"
+                    )
+                    val iconTint by animateColorAsState(
+                        targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                        label = "icon_tint_$index"
+                    )
+                    val labelColor by animateColorAsState(
+                        targetValue = if (isSelected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
+                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                        label = "label_color_$index"
+                    )
+                    val scale by animateFloatAsState(
+                        targetValue = if (isSelected) 1.0f else 0.94f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        ),
+                        label = "scale_$index"
+                    )
+
+                    Column(
+                        modifier = Modifier
+                            .height(56.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = ripple(color = MaterialTheme.colorScheme.primary)
+                            ) {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onTabSelected(index)
+                            }
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .graphicsLayer {
+                                scaleX = scale
+                                scaleY = scale
+                            }
+                            .testTag("nav_tab_$index"),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(pillBgColor)
+                                .padding(horizontal = if (isSelected) 14.dp else 10.dp, vertical = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            BadgedBox(
+                                badge = {
+                                    if (index == 9 && isOverlayRunning) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(7.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFF22C55E))
+                                        )
+                                    } else if (index == 4 && (isRootAvail || isShizukuAvail)) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(7.dp)
+                                                .clip(CircleShape)
+                                                .background(MaterialTheme.colorScheme.primary)
+                                        )
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = label,
+                                    tint = iconTint,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = label,
+                            fontSize = 10.5.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = labelColor,
+                            maxLines = 1,
+                            style = TextStyle(
+                                platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                lineHeightStyle = LineHeightStyle(
+                                    alignment = LineHeightStyle.Alignment.Center,
+                                    trim = LineHeightStyle.Trim.Both
+                                )
+                            )
+                        )
+                    }
+                }
+            }
+
+            // Left gradient fade hint for scrollable overflow
+            AnimatedVisibility(
+                visible = scrollState.canScrollBackward,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.CenterStart)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(20.dp)
+                        .fillMaxHeight()
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.surfaceContainer,
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+            }
+
+            // Right gradient fade hint for scrollable overflow
+            AnimatedVisibility(
+                visible = scrollState.canScrollForward,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.CenterEnd)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(20.dp)
+                        .fillMaxHeight()
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(
+                                    Color.Transparent,
+                                    MaterialTheme.colorScheme.surfaceContainer
+                                )
+                            )
+                        )
+                )
             }
         }
     }
