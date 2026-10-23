@@ -22,6 +22,7 @@ import android.text.format.DateUtils
 import com.example.data.local.TileEntity
 import com.example.model.TileCategory
 import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -170,6 +171,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -624,21 +627,7 @@ fun QuickSettingsPanel(
             }
 
             if (showCustomHeaderMonetGradient) {
-                val headerGradientColorTertiary by PanelPreferences.headerGradientColorTertiary.collectAsState()
-                val isDark = com.example.ui.theme.LocalIsDarkTheme.current
-                val gradientStartColor = if (isDark) {
-                    if (headerGradientColorTertiary) {
-                        androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer
-                    } else {
-                        androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer
-                    }
-                } else {
-                    if (headerGradientColorTertiary) {
-                        androidx.compose.material3.MaterialTheme.colorScheme.tertiary
-                    } else {
-                        androidx.compose.material3.MaterialTheme.colorScheme.primary
-                    }
-                }
+                val gradientStartColor = com.example.ui.theme.getHeaderGradientElementColor(isDark)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -2470,12 +2459,7 @@ fun UnifiedQsPanel(
                                             val positionDiff = kotlin.math.abs(pageIdx - viewPagerScrollPosition)
                                             val progress = (1f - positionDiff).coerceIn(0f, 1f)
                                             val dotSize = androidx.compose.ui.unit.lerp(4.5.dp, 7.dp, progress)
-                                            val miscElementsColorTertiary by PanelPreferences.miscElementsColorTertiary.collectAsState()
-                                            val miscDotColor = if (miscElementsColorTertiary) {
-                                                androidx.compose.material3.MaterialTheme.colorScheme.tertiary
-                                            } else {
-                                                androidx.compose.material3.MaterialTheme.colorScheme.primary
-                                            }
+                                            val miscDotColor = com.example.ui.theme.getMiscElementColor(isDark)
                                             val dotColor = androidx.compose.ui.graphics.lerp(
                                                 footerTint.copy(alpha = 0.35f),
                                                 miscDotColor,
@@ -2677,12 +2661,7 @@ fun UnifiedQsPanel(
             val panelInnerCorner by PanelPreferences.panelInnerCorner.collectAsState()
             val effectiveInnerCorner = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner).dp
 
-            val miscElementsColorTertiary by PanelPreferences.miscElementsColorTertiary.collectAsState()
-            val mediaAccentColor = if (miscElementsColorTertiary) {
-                androidx.compose.material3.MaterialTheme.colorScheme.tertiary
-            } else {
-                androidx.compose.material3.MaterialTheme.colorScheme.primary
-            }
+            val mediaAccentColor = com.example.ui.theme.getMiscElementColor(isDark)
             AdaptiveMediaPlayerCard(
                 mediaState = media,
                 isExpanded = isMediaExpanded,
@@ -2996,6 +2975,7 @@ fun NotificationsCard(
     val clearAllFabPos by PanelPreferences.clearAllFabPosition.collectAsState()
     val clearAllFabShapeId by PanelPreferences.clearAllFabShapeId.collectAsState()
     val clearAllFabIcon by PanelPreferences.clearAllFabIcon.collectAsState()
+    val clearAllFabSize by PanelPreferences.clearAllFabSize.collectAsState()
     val disableClearAllBg by PanelPreferences.disableClearAllBackground.collectAsState()
 
     val hostView = androidx.compose.ui.platform.LocalView.current
@@ -3886,6 +3866,7 @@ fun BrightnessSliderRow(
     val hideBrightnessPercentage by PanelPreferences.hideBrightnessPercentage.collectAsState()
     val hideBrightnessIcon by PanelPreferences.hideBrightnessIcon.collectAsState()
     val showBrightnessPlusMinus by PanelPreferences.showBrightnessPlusMinus.collectAsState()
+    val showBrightnessGradient by PanelPreferences.showBrightnessGradient.collectAsState()
     val minBrightness by PanelPreferences.minBrightness.collectAsState()
     val maxBrightness by PanelPreferences.maxBrightness.collectAsState()
 
@@ -3899,6 +3880,7 @@ fun BrightnessSliderRow(
     val totalVerticalOffset = verticalOffset + styleOffset
 
     val isDark = LocalIsDarkTheme.current
+    val tertiaryThemeColor = androidx.compose.material3.MaterialTheme.colorScheme.tertiary
     if (sliderAlpha > 0.01f) {
         Box(
             modifier = Modifier
@@ -3915,6 +3897,9 @@ fun BrightnessSliderRow(
                 .offset(y = totalVerticalOffset)
         ) {
             val sliderAccentColor = com.example.ui.theme.getSlidersElementColor(isDark)
+            val brightnessGradientBrush = remember(sliderAccentColor, tertiaryThemeColor) {
+                Brush.horizontalGradient(listOf(sliderAccentColor, tertiaryThemeColor))
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -3922,20 +3907,14 @@ fun BrightnessSliderRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (!hideBrightnessIcon) {
-                    Box(
+                    Icon(
+                        imageVector = if (brightness > (minBrightness + maxBrightness) / 2) Icons.Default.BrightnessMedium else Icons.Default.BrightnessLow,
+                        contentDescription = "Brightness",
+                        tint = sliderAccentColor,
                         modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(sliderAccentColor.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = if (brightness > (minBrightness + maxBrightness) / 2) Icons.Default.BrightnessMedium else Icons.Default.BrightnessLow,
-                            contentDescription = "Brightness",
-                            tint = sliderAccentColor,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
+                            .padding(horizontal = 4.dp)
+                            .size(22.dp)
+                    )
                 }
 
                 if (showBrightnessPlusMinus) {
@@ -3962,6 +3941,7 @@ fun BrightnessSliderRow(
                     valueRange = minBrightness.toFloat()..maxBrightness.toFloat(),
                     sliderTarget = com.example.data.QsSliderTarget.BRIGHTNESS,
                     activeColor = sliderAccentColor,
+                    activeBrush = if (showBrightnessGradient) brightnessGradientBrush else null,
                     inactiveColor = inactiveTrackColor,
                     thumbColor = sliderAccentColor,
                     modifier = Modifier
@@ -4019,11 +3999,46 @@ fun BlurredContainerCard(
     onLongClick: (() -> Unit)? = null,
     content: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit
 ) {
+    val enablePanelShadows by PanelPreferences.enablePanelShadows.collectAsState()
+    val panelShadowElevation by PanelPreferences.panelShadowElevation.collectAsState()
+    val panelShadowOffsetY by PanelPreferences.panelShadowOffsetY.collectAsState()
     Box(
         modifier = modifier
             .fillMaxWidth()
             .wrapContentHeight()
-            .clip(shape)
+            .then(
+                if (enablePanelShadows) {
+                    Modifier
+                        .drawBehind {
+                            val shadowRadius = panelShadowElevation.dp.toPx()
+                            val offsetY = panelShadowOffsetY.dp.toPx()
+                            if (shadowRadius > 0f) {
+                                drawIntoCanvas { canvas ->
+                                    val paint = androidx.compose.ui.graphics.Paint()
+                                    val frameworkPaint = paint.asFrameworkPaint()
+                                    frameworkPaint.color = android.graphics.Color.TRANSPARENT
+                                    frameworkPaint.setShadowLayer(
+                                        shadowRadius,
+                                        0f,
+                                        offsetY,
+                                        android.graphics.Color.argb((0.35f * 255).toInt(), 0, 0, 0)
+                                    )
+                                    canvas.drawOutline(
+                                        outline = shape.createOutline(size, layoutDirection, this),
+                                        paint = paint
+                                    )
+                                }
+                            }
+                        }
+                        .graphicsLayer {
+                            shadowElevation = panelShadowElevation.dp.toPx()
+                            this.shape = shape
+                            clip = false
+                        }
+                } else {
+                    Modifier.clip(shape)
+                }
+            )
             .background(containerColor, shape)
             .then(
                 if (onClick != null || onLongClick != null) {

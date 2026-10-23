@@ -150,6 +150,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val hideCarrierInExpanded by PanelPreferences.hideCarrierInExpanded.collectAsState()
     val brightnessAtBottom by PanelPreferences.brightnessAtBottom.collectAsState()
     val brightnessInQqs by PanelPreferences.brightnessInQqs.collectAsState()
+    val showBrightnessGradient by PanelPreferences.showBrightnessGradient.collectAsState()
     val showCustomHeaderImage by PanelPreferences.showCustomHeaderImage.collectAsState()
     val customHeaderImageUri by PanelPreferences.customHeaderImageUri.collectAsState()
     val customHeaderImageHeight by PanelPreferences.customHeaderImageHeight.collectAsState()
@@ -1789,6 +1790,87 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     }
     }
 
+    // Brightness Bar Gradient Card
+    val brightnessGradientCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("brightness_gradient_card", CustomizeCategory.QS_DESIGN, "Brightness Bar Gradient") {
+            SettingsCard(
+                shape = shape
+            ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Gradient,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            text = "Brightness Bar Gradient",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            style = TextStyle(
+                                platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                lineHeightStyle = LineHeightStyle(
+                                    alignment = LineHeightStyle.Alignment.Center,
+                                    trim = LineHeightStyle.Trim.Both
+                                )
+                            )
+                        )
+                        Text(
+                            text = "Apply a smooth horizontal Monet accent gradient across the active track of the brightness slider.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = TextStyle(
+                                platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                lineHeightStyle = LineHeightStyle(
+                                    alignment = LineHeightStyle.Alignment.Center,
+                                    trim = LineHeightStyle.Trim.Both
+                                )
+                            )
+                        )
+                    }
+                }
+
+                Switch(
+                    checked = showBrightnessGradient,
+                    onCheckedChange = { PanelPreferences.setShowBrightnessGradient(context, it) },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                    ),
+                    modifier = Modifier.testTag("brightness_gradient_toggle")
+                )
+            }
+        }
+    }
+    }
+
     // Progress Bar & Slider Style Card
     val progressBarSliderStyleCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         var previewSliderValue by remember { mutableFloatStateOf(0.65f) }
@@ -3200,14 +3282,24 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                         FilterChip(
                                             selected = isSelected,
                                             onClick = { PanelPreferences.setClearAllFabIcon(context, iconItem) },
+                                            leadingIcon = {
+                                                Icon(
+                                                    painter = androidx.compose.ui.res.painterResource(id = iconItem.drawableRes),
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(16.dp),
+                                                    tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+                                                )
+                                            },
                                             label = { Text(iconItem.label, fontSize = 11.sp) },
                                             shape = chipShape,
                                             border = null,
                                             colors = FilterChipDefaults.filterChipColors(
                                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
                                                 selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                                selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
                                                 containerColor = MaterialTheme.colorScheme.background,
-                                                labelColor = MaterialTheme.colorScheme.onSurface
+                                                labelColor = MaterialTheme.colorScheme.onSurface,
+                                                iconColor = MaterialTheme.colorScheme.primary
                                             ),
                                             modifier = Modifier.testTag("clear_all_fab_icon_${iconItem.id}")
                                         )
@@ -3236,6 +3328,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         "element_colors_preference_card" to elementColorsPreferenceCard,
         "move_brightness_bottom_card" to moveBrightnessBottomCard,
         "brightness_in_qqs_card" to brightnessInQqsCard,
+        "brightness_gradient_card" to brightnessGradientCard,
         "progress_bar_slider_style_card" to progressBarSliderStyleCard,
         "panel_corner_styling_card" to panelCornerStylingCard
     )
@@ -3316,6 +3409,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         val unpinnedBrightness = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
         if (!pinnedIds.contains("move_brightness_bottom_card")) unpinnedBrightness.add(moveBrightnessBottomCard)
         if (!pinnedIds.contains("brightness_in_qqs_card")) unpinnedBrightness.add(brightnessInQqsCard)
+        if (!pinnedIds.contains("brightness_gradient_card")) unpinnedBrightness.add(brightnessGradientCard)
         if (!pinnedIds.contains("progress_bar_slider_style_card")) unpinnedBrightness.add(progressBarSliderStyleCard)
 
         if (unpinnedBrightness.isNotEmpty()) {

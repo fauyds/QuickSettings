@@ -112,7 +112,11 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     val disableClearAllBackground by PanelPreferences.disableClearAllBackground.collectAsState()
     val clearAllFabOffsetX by PanelPreferences.clearAllFabOffsetX.collectAsState()
     val clearAllFabOffsetY by PanelPreferences.clearAllFabOffsetY.collectAsState()
+    val clearAllFabSize by PanelPreferences.clearAllFabSize.collectAsState()
     val useClearAllFab by PanelPreferences.useClearAllFab.collectAsState()
+    val enablePanelShadows by PanelPreferences.enablePanelShadows.collectAsState()
+    val panelShadowElevation by PanelPreferences.panelShadowElevation.collectAsState()
+    val panelShadowOffsetY by PanelPreferences.panelShadowOffsetY.collectAsState()
 
     var fontSizesExpanded by rememberSaveable { mutableStateOf(false) }
 
@@ -1357,6 +1361,206 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         }
     }
 
+    val enablePanelShadowsCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("enable_panel_shadows_card", CustomizeCategory.QS_TWEAKS) {
+            SettingsCard(
+                shape = shape
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Tune,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(1.dp)
+                            ) {
+                                Text(
+                                    text = "Panel & Notification Shadows",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    lineHeight = 17.sp,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Enable depth shadows under QS panel cards, notification items, and the Clear All button.",
+                                    fontSize = 12.sp,
+                                    lineHeight = 15.sp,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            if (enablePanelShadows && (panelShadowElevation != 8f || panelShadowOffsetY != 0f)) {
+                                IconButton(
+                                    onClick = { PanelPreferences.resetPanelShadowParams(context) },
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .testTag("panel_shadow_reset_btn")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.RestartAlt,
+                                        contentDescription = "Reset Shadow Parameters",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+
+                            Switch(
+                                checked = enablePanelShadows,
+                                onCheckedChange = { PanelPreferences.setEnablePanelShadows(context, it) },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                    uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                    uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                                ),
+                                modifier = Modifier.testTag("enable_panel_shadows_toggle")
+                            )
+                        }
+                    }
+
+                    AnimatedVisibility(
+                        visible = enablePanelShadows,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                            // 1. Shadow Elevation / Size Slider
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "Shadow Size / Elevation",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = if (panelShadowElevation.toInt() == 8) "Default (8 dp)"
+                                                   else if (panelShadowElevation < 8) "Subtle Shadow"
+                                                   else "Deep Shadow",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Text(
+                                        text = "${panelShadowElevation.toInt()} dp",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+
+                                Slider(
+                                    value = panelShadowElevation,
+                                    onValueChange = { PanelPreferences.setPanelShadowElevation(context, Math.round(it).toFloat()) },
+                                    valueRange = 2f..32f,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("panel_shadow_elevation_slider"),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                                        inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                    )
+                                )
+                            }
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                            // 2. Vertical Offset Slider
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "Shadow Vertical Offset",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = if (panelShadowOffsetY.toInt() == 0) "Default (Centered / 0 dp)"
+                                                   else if (panelShadowOffsetY < 0) "Moved Upwards"
+                                                   else "Moved Downwards",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Text(
+                                        text = "${if (panelShadowOffsetY.toInt() > 0) "+" else ""}${panelShadowOffsetY.toInt()} dp",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+
+                                Slider(
+                                    value = panelShadowOffsetY,
+                                    onValueChange = { PanelPreferences.setPanelShadowOffsetY(context, Math.round(it).toFloat()) },
+                                    valueRange = -20f..20f,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("panel_shadow_offset_y_slider"),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                                        inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     val clearAllFabOffsetsCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("clear_all_fab_offset_card", CustomizeCategory.QS_TWEAKS) {
             SettingsCard(
@@ -1398,7 +1602,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                                 verticalArrangement = Arrangement.spacedBy(1.dp)
                             ) {
                                 Text(
-                                    text = "Clear All FAB Position",
+                                    text = "Clear All FAB Position & Size",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     lineHeight = 17.sp,
@@ -1406,7 +1610,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "Adjust the horizontal and vertical position of the floating Clear All button.",
+                                    text = "Adjust the horizontal position, vertical position, and size of the floating Clear All button.",
                                     fontSize = 12.sp,
                                     lineHeight = 15.sp,
                                     style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
@@ -1415,7 +1619,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                             }
                         }
 
-                        if (clearAllFabOffsetX != 0f || clearAllFabOffsetY != 0f) {
+                        if (clearAllFabOffsetX != 0f || clearAllFabOffsetY != 0f || clearAllFabSize != 64) {
                             IconButton(
                                 onClick = { PanelPreferences.resetClearAllFabOffsets(context) },
                                 modifier = Modifier
@@ -1424,7 +1628,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.RestartAlt,
-                                    contentDescription = "Reset FAB Offsets",
+                                    contentDescription = "Reset FAB Offsets and Size",
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -1475,27 +1679,6 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                                 inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
                             )
                         )
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "◀ Left (-180dp)",
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
-                            Text(
-                                text = "Default (0dp)",
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
-                            Text(
-                                text = "Right (+180dp) ▶",
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
-                        }
                     }
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
@@ -1543,27 +1726,53 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                                 inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
                             )
                         )
+                    }
 
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                    // 3. FAB Button Size Slider
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
+                            Column {
+                                Text(
+                                    text = "FAB Button Size",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = if (clearAllFabSize == 64) "Default Size (64 dp)"
+                                           else if (clearAllFabSize < 64) "Compact"
+                                           else "Large",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                             Text(
-                                text = "▼ Down (-40dp)",
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
-                            Text(
-                                text = "Default (0dp)",
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
-                            Text(
-                                text = "Up (+180dp) ▲",
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                text = "$clearAllFabSize dp",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
+
+                        Slider(
+                            value = clearAllFabSize.toFloat(),
+                            onValueChange = { PanelPreferences.setClearAllFabSize(context, Math.round(it)) },
+                            valueRange = 40f..96f,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("clear_all_fab_size_slider"),
+                            colors = SliderDefaults.colors(
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                                inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                            )
+                        )
                     }
 
                     if (!useClearAllFab) {
@@ -1600,6 +1809,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         if (pinnedIds.contains("hide_brightness_percentage_card")) pinnedCards.add(hideBrightnessPercentageCard)
         if (pinnedIds.contains("hide_brightness_icon_card")) pinnedCards.add(hideBrightnessIconCard)
         if (pinnedIds.contains("show_brightness_plus_minus_card")) pinnedCards.add(showBrightnessPlusMinusCard)
+        if (pinnedIds.contains("enable_panel_shadows_card")) pinnedCards.add(enablePanelShadowsCard)
         if (pinnedIds.contains("disable_clear_all_bg_card")) pinnedCards.add(disableClearAllBgCard)
         if (pinnedIds.contains("clear_all_fab_offset_card")) pinnedCards.add(clearAllFabOffsetsCard)
 
@@ -1639,6 +1849,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         if (!pinnedIds.contains("battery_percentage_location_card")) unpinnedHeaderControls.add(batteryPercentageLocationCard)
         if (!pinnedIds.contains("settings_icon_location_card")) unpinnedHeaderControls.add(settingsIconLocationCard)
         if (!pinnedIds.contains("edit_pencil_location_card")) unpinnedHeaderControls.add(editPencilLocationCard)
+        if (!pinnedIds.contains("enable_panel_shadows_card")) unpinnedHeaderControls.add(enablePanelShadowsCard)
         if (!pinnedIds.contains("disable_clear_all_bg_card")) unpinnedHeaderControls.add(disableClearAllBgCard)
         if (!pinnedIds.contains("clear_all_fab_offset_card")) unpinnedHeaderControls.add(clearAllFabOffsetsCard)
 

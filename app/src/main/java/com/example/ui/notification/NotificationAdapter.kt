@@ -162,9 +162,15 @@ class NotificationAdapter(
                 tvClearAllText.setTextColor(clearAllTextColor)
                 ivClearAllIcon.setColorFilter(clearAllTextColor)
 
+                val enablePanelShadows = com.example.data.PanelPreferences.enablePanelShadows.value
+                val shadowElevation = com.example.data.PanelPreferences.panelShadowElevation.value
                 if (disableBg) {
                     btnClearAll.background = null
+                    btnClearAll.elevation = 0f
+                    btnClearAll.translationY = 0f
                 } else {
+                    btnClearAll.elevation = if (enablePanelShadows) shadowElevation * density else 0f
+                    btnClearAll.translationY = 0f
                     btnClearAll.background = MonetThemeHelper.createMonetPrimaryPillDrawable(context, isDarkTheme, 14f * density)
                 }
             } else {
@@ -176,16 +182,18 @@ class NotificationAdapter(
                 }
 
                 tvClearAllText.visibility = View.GONE
+                val fabSize = com.example.data.PanelPreferences.clearAllFabSize.value
                 val params = btnClearAll.layoutParams as ViewGroup.MarginLayoutParams
-                params.width = (64 * density).toInt()
-                params.height = (64 * density).toInt()
+                params.width = (fabSize * density).toInt()
+                params.height = (fabSize * density).toInt()
                 btnClearAll.layoutParams = params
                 btnClearAll.setPadding(0, 0, 0, 0)
                 btnClearAll.gravity = android.view.Gravity.CENTER
 
                 val iconParams = ivClearAllIcon.layoutParams as ViewGroup.MarginLayoutParams
-                iconParams.width = (30 * density).toInt()
-                iconParams.height = (30 * density).toInt()
+                val iconSize = (fabSize * (30f / 64f) * density).toInt()
+                iconParams.width = iconSize
+                iconParams.height = iconSize
                 iconParams.marginStart = 0
                 ivClearAllIcon.layoutParams = iconParams
                 ivClearAllIcon.setImageResource(fabIcon.drawableRes)
@@ -197,9 +205,15 @@ class NotificationAdapter(
                 }
                 ivClearAllIcon.setColorFilter(tintColor)
 
+                val enablePanelShadows = com.example.data.PanelPreferences.enablePanelShadows.value
+                val shadowElevation = com.example.data.PanelPreferences.panelShadowElevation.value
                 if (disableBg) {
                     btnClearAll.background = null
+                    btnClearAll.elevation = 0f
+                    btnClearAll.translationY = 0f
                 } else {
+                    btnClearAll.elevation = if (enablePanelShadows) shadowElevation * density else 0f
+                    btnClearAll.translationY = 0f
                     val primaryColor = MonetThemeHelper.getPrimaryAccent(context, isDarkTheme)
                     val shapeDrawable = com.example.ui.shape.QsShapeManager.createDrawable(fabShapeId, primaryColor)
                     val maskDrawable = com.example.ui.shape.QsShapeManager.createDrawable(fabShapeId, android.graphics.Color.WHITE)
@@ -323,6 +337,10 @@ class NotificationAdapter(
 
             val cardBg = customCardBackgroundColor ?: MonetThemeHelper.getCardBackground(context, isDark)
             flRoot.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, radii, customBgColor = cardBg)
+            val enablePanelShadows = com.example.data.PanelPreferences.enablePanelShadows.value
+            val shadowElevation = com.example.data.PanelPreferences.panelShadowElevation.value
+            flRoot.elevation = if (enablePanelShadows) shadowElevation * density else 0f
+            flRoot.translationY = 0f
 
             // Outline provider for crisp clipping to the dynamic shape
             flRoot.outlineProvider = object : ViewOutlineProvider() {

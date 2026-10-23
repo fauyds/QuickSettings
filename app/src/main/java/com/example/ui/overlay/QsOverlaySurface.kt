@@ -136,6 +136,7 @@ data class QsOverlaySurfaceConfig(
     companion object {
         @Composable
         fun collectFromCurrentState(): QsOverlaySurfaceConfig {
+            val isDark = com.example.ui.theme.LocalIsDarkTheme.current
             val themeMode by PanelPreferences.themeMode.collectAsState()
             val outerCorner by PanelPreferences.panelOuterCorner.collectAsState()
             val innerCorner by PanelPreferences.panelInnerCorner.collectAsState()
@@ -164,7 +165,7 @@ data class QsOverlaySurfaceConfig(
             val monetGradHeight by PanelPreferences.customHeaderMonetGradientHeight.collectAsState()
             val showMonetSurf by PanelPreferences.showMonetSurfaceBackground.collectAsState()
 
-            val headerGradTertiary by PanelPreferences.headerGradientColorTertiary.collectAsState()
+            val headerGradTertiary by PanelPreferences.getHeaderGradientColorTertiary(isDark).collectAsState()
             val slidersTertiary by PanelPreferences.slidersColorTertiary.collectAsState()
             val slidersTertiaryLight by PanelPreferences.slidersColorTertiaryLight.collectAsState()
             val slidersTertiaryDark by PanelPreferences.slidersColorTertiaryDark.collectAsState()
@@ -598,20 +599,14 @@ fun QsOverlaySurface(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 if (!config.hideBrightnessIcon) {
-                                    Box(
+                                    Icon(
+                                        imageVector = Icons.Default.BrightnessMedium,
+                                        contentDescription = null,
+                                        tint = sliderAccentColor,
                                         modifier = Modifier
-                                            .size(30.dp)
-                                            .clip(CircleShape)
-                                            .background(sliderAccentColor.copy(alpha = 0.15f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.BrightnessMedium,
-                                            contentDescription = null,
-                                            tint = sliderAccentColor,
-                                            modifier = Modifier.size(15.dp)
-                                        )
-                                    }
+                                            .padding(horizontal = 4.dp)
+                                            .size(22.dp)
+                                    )
                                 }
 
                                 if (config.showBrightnessPlusMinus) {
@@ -717,20 +712,14 @@ fun QsOverlaySurface(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         if (!config.hideBrightnessIcon) {
-                            Box(
+                            Icon(
+                                imageVector = Icons.Default.BrightnessMedium,
+                                contentDescription = null,
+                                tint = sliderAccentColor,
                                 modifier = Modifier
-                                    .size(30.dp)
-                                    .clip(CircleShape)
-                                    .background(sliderAccentColor.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.BrightnessMedium,
-                                    contentDescription = null,
-                                    tint = sliderAccentColor,
-                                    modifier = Modifier.size(15.dp)
-                                )
-                            }
+                                    .padding(horizontal = 4.dp)
+                                    .size(22.dp)
+                            )
                         }
 
                         if (config.showBrightnessPlusMinus) {

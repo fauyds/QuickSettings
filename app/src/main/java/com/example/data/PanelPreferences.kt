@@ -190,9 +190,20 @@ enum class ClearAllFabShape(val id: String, val label: String) {
 
 enum class ClearAllFabIcon(val id: String, val label: String, val drawableRes: Int) {
     CLEAR_ALL("clear_all", "Clear All / Sweep", com.example.R.drawable.ic_notif_clear_all),
+    BARS("bars", "Bars / Lines", com.example.R.drawable.ic_notif_bars),
+    BROOM("broom", "Broom / Clean", com.example.R.drawable.ic_notif_broom),
     DELETE("delete", "Delete / Trash", com.example.R.drawable.ic_notif_trash),
     DONE_ALL("done_all", "Done All", com.example.R.drawable.ic_notif_done_all),
-    CLOSE("close", "Close", com.example.R.drawable.ic_notif_close),
+    CHECK_CIRCLE("check_circle", "Check Circle", com.example.R.drawable.ic_notif_check_circle),
+    BELL_OFF("bell_off", "Bell Off", com.example.R.drawable.ic_notif_bell_off),
+    SPARKLES("sparkles", "Sparkles", com.example.R.drawable.ic_notif_sparkles),
+    ARCHIVE("archive", "Archive", com.example.R.drawable.ic_notif_archive),
+    LAYERS_CLEAR("layers_clear", "Layers Clear", com.example.R.drawable.ic_notif_layers_clear),
+    PLAYLIST_REMOVE("playlist_remove", "List Dismiss", com.example.R.drawable.ic_notif_playlist_remove),
+    CANCEL("cancel", "Cancel Circle", com.example.R.drawable.ic_notif_cancel),
+    CLOSE("close", "Close / X", com.example.R.drawable.ic_notif_close),
+    BRUSH("brush", "Brush", com.example.R.drawable.ic_notif_brush),
+    DOUBLE_ARROW("double_arrow", "Double Arrow", com.example.R.drawable.ic_notif_double_arrow),
     REFRESH("refresh", "Refresh", com.example.R.drawable.ic_notif_refresh);
 
     companion object {
@@ -204,6 +215,9 @@ enum class ClearAllFabIcon(val id: String, val label: String, val drawableRes: I
 object PanelPreferences {
     const val PREFS_NAME = "quickpanel_prefs"
     private const val KEY_DISABLE_CLEAR_ALL_BG = "disable_clear_all_bg"
+    private const val KEY_ENABLE_PANEL_SHADOWS = "enable_panel_shadows"
+    private const val KEY_PANEL_SHADOW_ELEVATION = "panel_shadow_elevation"
+    private const val KEY_PANEL_SHADOW_OFFSET_Y = "panel_shadow_offset_y"
     private const val KEY_USE_CLEAR_ALL_FAB = "use_clear_all_fab"
     private const val KEY_CLEAR_ALL_FAB_POSITION = "clear_all_fab_position"
     private const val KEY_CLEAR_ALL_FAB_SHAPE = "clear_all_fab_shape"
@@ -211,6 +225,7 @@ object PanelPreferences {
     private const val KEY_CLEAR_ALL_FAB_ICON = "clear_all_fab_icon"
     private const val KEY_CLEAR_ALL_FAB_OFFSET_X = "clear_all_fab_offset_x"
     private const val KEY_CLEAR_ALL_FAB_OFFSET_Y = "clear_all_fab_offset_y"
+    private const val KEY_CLEAR_ALL_FAB_SIZE = "clear_all_fab_size"
     private const val KEY_THEME_MODE = "theme_mode"
     private const val KEY_GRID_LAYOUT = "qs_grid_layout"
     private const val KEY_QQS_TILE_SIZE = "qqs_tile_size"
@@ -233,6 +248,7 @@ object PanelPreferences {
     private const val KEY_HIDE_BRIGHTNESS_PERCENTAGE = "hide_brightness_percentage"
     private const val KEY_HIDE_BRIGHTNESS_ICON = "hide_brightness_icon"
     private const val KEY_SHOW_BRIGHTNESS_PLUS_MINUS = "show_brightness_plus_minus"
+    private const val KEY_SHOW_BRIGHTNESS_GRADIENT = "show_brightness_gradient"
     private const val KEY_MIN_BRIGHTNESS = "min_brightness"
     private const val KEY_MAX_BRIGHTNESS = "max_brightness"
     private const val KEY_WAVY_PROGRESS_BARS = "wavy_progress_bars"
@@ -683,6 +699,9 @@ object PanelPreferences {
     private val _showQsTileGradient = MutableStateFlow(false)
     val showQsTileGradient: StateFlow<Boolean> = _showQsTileGradient.asStateFlow()
 
+    private val _showBrightnessGradient = MutableStateFlow(false)
+    val showBrightnessGradient: StateFlow<Boolean> = _showBrightnessGradient.asStateFlow()
+
     private val _qsTileLabelFontSize = MutableStateFlow(12.0f)
     val qsTileLabelFontSize: StateFlow<Float> = _qsTileLabelFontSize.asStateFlow()
 
@@ -840,6 +859,15 @@ object PanelPreferences {
     private val _disableClearAllBackground = MutableStateFlow(false)
     val disableClearAllBackground: StateFlow<Boolean> = _disableClearAllBackground.asStateFlow()
 
+    private val _enablePanelShadows = MutableStateFlow(false)
+    val enablePanelShadows: StateFlow<Boolean> = _enablePanelShadows.asStateFlow()
+
+    private val _panelShadowElevation = MutableStateFlow(8f)
+    val panelShadowElevation: StateFlow<Float> = _panelShadowElevation.asStateFlow()
+
+    private val _panelShadowOffsetY = MutableStateFlow(0f)
+    val panelShadowOffsetY: StateFlow<Float> = _panelShadowOffsetY.asStateFlow()
+
     private val _useClearAllFab = MutableStateFlow(false)
     val useClearAllFab: StateFlow<Boolean> = _useClearAllFab.asStateFlow()
 
@@ -860,6 +888,9 @@ object PanelPreferences {
 
     private val _clearAllFabOffsetY = MutableStateFlow(0f)
     val clearAllFabOffsetY: StateFlow<Float> = _clearAllFabOffsetY.asStateFlow()
+
+    private val _clearAllFabSize = MutableStateFlow(64)
+    val clearAllFabSize: StateFlow<Int> = _clearAllFabSize.asStateFlow()
 
     private val _enabledTileShapeId = MutableStateFlow("circle")
     val enabledTileShapeId: StateFlow<String> = _enabledTileShapeId.asStateFlow()
@@ -1011,6 +1042,9 @@ object PanelPreferences {
         _settingsIconLocation.value = SettingsIconLocation.fromId(savedSettingsLoc)
 
         _disableClearAllBackground.value = prefs.getBoolean(KEY_DISABLE_CLEAR_ALL_BG, false)
+        _enablePanelShadows.value = prefs.getBoolean(KEY_ENABLE_PANEL_SHADOWS, false)
+        _panelShadowElevation.value = prefs.getFloat(KEY_PANEL_SHADOW_ELEVATION, 8f)
+        _panelShadowOffsetY.value = prefs.getFloat(KEY_PANEL_SHADOW_OFFSET_Y, 0f)
         _useClearAllFab.value = prefs.getBoolean(KEY_USE_CLEAR_ALL_FAB, false)
         _clearAllFabPosition.value = ClearAllFabPosition.fromId(prefs.getString(KEY_CLEAR_ALL_FAB_POSITION, null))
         _clearAllFabShape.value = ClearAllFabShape.fromId(prefs.getString(KEY_CLEAR_ALL_FAB_SHAPE, null))
@@ -1020,6 +1054,7 @@ object PanelPreferences {
         _clearAllFabIcon.value = ClearAllFabIcon.fromId(prefs.getString(KEY_CLEAR_ALL_FAB_ICON, null))
         _clearAllFabOffsetX.value = prefs.getFloat(KEY_CLEAR_ALL_FAB_OFFSET_X, 0f)
         _clearAllFabOffsetY.value = prefs.getFloat(KEY_CLEAR_ALL_FAB_OFFSET_Y, 0f)
+        _clearAllFabSize.value = prefs.getInt(KEY_CLEAR_ALL_FAB_SIZE, 64)
         com.example.ui.shape.QsShapeManager.init(context)
         val savedEnabledTileShape = prefs.getString(KEY_ENABLED_TILE_SHAPE, null) ?: prefs.getString(KEY_TILE_SHAPE, null)
         if (savedEnabledTileShape != null) {
@@ -1055,6 +1090,7 @@ object PanelPreferences {
         _hideBrightnessPercentage.value = prefs.getBoolean(KEY_HIDE_BRIGHTNESS_PERCENTAGE, false)
         _hideBrightnessIcon.value = prefs.getBoolean(KEY_HIDE_BRIGHTNESS_ICON, false)
         _showBrightnessPlusMinus.value = prefs.getBoolean(KEY_SHOW_BRIGHTNESS_PLUS_MINUS, false)
+        _showBrightnessGradient.value = prefs.getBoolean(KEY_SHOW_BRIGHTNESS_GRADIENT, false)
         _minBrightness.value = prefs.getInt(KEY_MIN_BRIGHTNESS, 1)
         _maxBrightness.value = prefs.getInt(KEY_MAX_BRIGHTNESS, 2047)
         val savedStyleId = prefs.getString(KEY_PROGRESS_BAR_STYLE, null)
@@ -1472,6 +1508,34 @@ object PanelPreferences {
         prefs.edit().putBoolean(KEY_DISABLE_CLEAR_ALL_BG, disable).apply()
     }
 
+    fun setEnablePanelShadows(context: Context, enable: Boolean) {
+        _enablePanelShadows.value = enable
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_ENABLE_PANEL_SHADOWS, enable).apply()
+    }
+
+    fun setPanelShadowElevation(context: Context, elevation: Float) {
+        _panelShadowElevation.value = elevation
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_PANEL_SHADOW_ELEVATION, elevation).apply()
+    }
+
+    fun setPanelShadowOffsetY(context: Context, offset: Float) {
+        _panelShadowOffsetY.value = offset
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_PANEL_SHADOW_OFFSET_Y, offset).apply()
+    }
+
+    fun resetPanelShadowParams(context: Context) {
+        _panelShadowElevation.value = 8f
+        _panelShadowOffsetY.value = 0f
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(KEY_PANEL_SHADOW_ELEVATION, 8f)
+            .putFloat(KEY_PANEL_SHADOW_OFFSET_Y, 0f)
+            .apply()
+    }
+
     fun setUseClearAllFab(context: Context, use: Boolean) {
         _useClearAllFab.value = use
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -1523,13 +1587,21 @@ object PanelPreferences {
         prefs.edit().putFloat(KEY_CLEAR_ALL_FAB_OFFSET_Y, offset).apply()
     }
 
+    fun setClearAllFabSize(context: Context, size: Int) {
+        _clearAllFabSize.value = size
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(KEY_CLEAR_ALL_FAB_SIZE, size).apply()
+    }
+
     fun resetClearAllFabOffsets(context: Context) {
         _clearAllFabOffsetX.value = 0f
         _clearAllFabOffsetY.value = 0f
+        _clearAllFabSize.value = 64
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
             .putFloat(KEY_CLEAR_ALL_FAB_OFFSET_X, 0f)
             .putFloat(KEY_CLEAR_ALL_FAB_OFFSET_Y, 0f)
+            .putInt(KEY_CLEAR_ALL_FAB_SIZE, 64)
             .apply()
     }
 
@@ -1645,6 +1717,12 @@ object PanelPreferences {
         _showBrightnessPlusMinus.value = value
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_SHOW_BRIGHTNESS_PLUS_MINUS, value).apply()
+    }
+
+    fun setShowBrightnessGradient(context: Context, value: Boolean) {
+        _showBrightnessGradient.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_SHOW_BRIGHTNESS_GRADIENT, value).apply()
     }
 
     fun setMinBrightness(context: Context, value: Int) {
@@ -2062,13 +2140,14 @@ object PanelPreferences {
     }
 
     fun setHeaderGradientColorTertiary(context: Context, isDark: Boolean, enabled: Boolean) {
+        _headerGradientColorTertiary.value = enabled
         if (isDark) {
             _headerGradientColorTertiaryDark.value = enabled
         } else {
             _headerGradientColorTertiaryLight.value = enabled
         }
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(
+        prefs.edit().putBoolean(KEY_ELEM_HEADER_GRADIENT_TERTIARY, enabled).putBoolean(
             if (isDark) KEY_ELEM_HEADER_GRADIENT_TERTIARY_DARK else KEY_ELEM_HEADER_GRADIENT_TERTIARY_LIGHT,
             enabled
         ).apply()
@@ -2129,13 +2208,14 @@ object PanelPreferences {
     }
 
     fun setMiscElementsColorTertiary(context: Context, isDark: Boolean, enabled: Boolean) {
+        _miscElementsColorTertiary.value = enabled
         if (isDark) {
             _miscElementsColorTertiaryDark.value = enabled
         } else {
             _miscElementsColorTertiaryLight.value = enabled
         }
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(
+        prefs.edit().putBoolean(KEY_ELEM_MISC_ELEMENTS_TERTIARY, enabled).putBoolean(
             if (isDark) KEY_ELEM_MISC_ELEMENTS_TERTIARY_DARK else KEY_ELEM_MISC_ELEMENTS_TERTIARY_LIGHT,
             enabled
         ).apply()

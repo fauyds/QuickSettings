@@ -124,6 +124,9 @@ class NotificationListView @JvmOverloads constructor(
         rvNotifications.isNestedScrollingEnabled = false
         rvNotifications.overScrollMode = View.OVER_SCROLL_NEVER
         rvNotifications.clipToPadding = false
+        rvNotifications.clipChildren = false
+        this.clipToPadding = false
+        this.clipChildren = false
         rvNotifications.setHasFixedSize(false)
         rvNotifications.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
 
@@ -507,9 +510,14 @@ class NotificationListView @JvmOverloads constructor(
         ivSettingsBtn.setColorFilter(iconHeaderColor)
 
         // 3. Style Permission Banner Card
+        val enablePanelShadows = PanelPreferences.enablePanelShadows.value
+        val shadowElevation = PanelPreferences.panelShadowElevation.value
+        val shadowOffsetY = PanelPreferences.panelShadowOffsetY.value
         val cardRadius = PanelPreferences.panelOuterCorner.value * density
         val cardBg = panelCardBackgroundColor ?: MonetThemeHelper.getCardBackground(context, isDark)
         flPermissionCard.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, cardRadius, customBgColor = cardBg)
+        flPermissionCard.elevation = if (enablePanelShadows) shadowElevation * density else 0f
+        flPermissionCard.translationY = 0f
         ivPermissionIcon.setColorFilter(MonetThemeHelper.getTertiaryAccent(context, isDark))
         tvPermissionTitle.setTextColor(textPrimary)
         tvPermissionSub.setTextColor(textSecondary)
@@ -518,6 +526,8 @@ class NotificationListView @JvmOverloads constructor(
 
         // 4. Style Empty State Card ("No new notifications")
         flEmptyCard.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, cardRadius, customBgColor = cardBg)
+        flEmptyCard.elevation = if (enablePanelShadows) shadowElevation * density else 0f
+        flEmptyCard.translationY = 0f
         ivEmptyIcon.setColorFilter(textSecondary)
         tvEmptyText.setTextColor(textSecondary)
 
@@ -528,6 +538,7 @@ class NotificationListView @JvmOverloads constructor(
         val fabPos = PanelPreferences.clearAllFabPosition.value
         val fabShapeId = PanelPreferences.clearAllFabShapeId.value
         val fabIcon = PanelPreferences.clearAllFabIcon.value
+        val fabSize = PanelPreferences.clearAllFabSize.value
 
         if (!isPermissionGranted) {
             llHeader.visibility = View.VISIBLE
@@ -557,14 +568,23 @@ class NotificationListView @JvmOverloads constructor(
             if (useClearAllFab && hasClearable) {
                 flFloatingClearAllContainer.visibility = View.VISIBLE
 
-                // Position floating FAB at the bottom (Left, Center, or Right)
+                // Position and size floating FAB at the bottom (Left, Center, or Right)
                 val lp = btnFloatingClearAllFab.layoutParams as FrameLayout.LayoutParams
+                val sizePx = (fabSize * density).toInt()
+                lp.width = sizePx
+                lp.height = sizePx
                 lp.gravity = when (fabPos) {
                     com.example.data.ClearAllFabPosition.LEFT -> android.view.Gravity.START or android.view.Gravity.BOTTOM
                     com.example.data.ClearAllFabPosition.RIGHT -> android.view.Gravity.END or android.view.Gravity.BOTTOM
                     com.example.data.ClearAllFabPosition.CENTER -> android.view.Gravity.CENTER_HORIZONTAL or android.view.Gravity.BOTTOM
                 }
                 btnFloatingClearAllFab.layoutParams = lp
+
+                val iconLp = ivFloatingClearAllIcon.layoutParams as FrameLayout.LayoutParams
+                val iconSizePx = (fabSize * (30f / 64f) * density).toInt()
+                iconLp.width = iconSizePx
+                iconLp.height = iconSizePx
+                ivFloatingClearAllIcon.layoutParams = iconLp
 
                 // Apply horizontal and vertical offset adjustments
                 val fabOffsetX = PanelPreferences.clearAllFabOffsetX.value
@@ -579,7 +599,7 @@ class NotificationListView @JvmOverloads constructor(
                     btnFloatingClearAllFab.elevation = 0f
                     ivFloatingClearAllIcon.setColorFilter(primaryAccent)
                 } else {
-                    btnFloatingClearAllFab.elevation = 6f * density
+                    btnFloatingClearAllFab.elevation = if (enablePanelShadows) shadowElevation * density else 6f * density
                     val shapeDrawable = com.example.ui.shape.QsShapeManager.createDrawable(fabShapeId, primaryAccent)
                     val maskDrawable = com.example.ui.shape.QsShapeManager.createDrawable(fabShapeId, android.graphics.Color.WHITE)
                     val rippleColor = if (isDark) android.graphics.Color.parseColor("#44FFFFFF") else android.graphics.Color.parseColor("#33000000")
@@ -597,7 +617,7 @@ class NotificationListView @JvmOverloads constructor(
                 }
 
                 // Generous bottom padding so notification list items are never obscured under the floating FAB
-                val bottomPaddingDp = (88f + maxOf(0f, fabOffsetY)).toInt()
+                val bottomPaddingDp = ((fabSize + 24f) + maxOf(0f, fabOffsetY)).toInt()
                 rvNotifications.setPadding(0, 0, 0, (bottomPaddingDp * density).toInt())
                 adapter?.showFooter = false
             } else {

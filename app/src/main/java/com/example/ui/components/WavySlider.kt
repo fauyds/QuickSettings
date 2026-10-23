@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -72,6 +73,7 @@ fun WavySlider(
     isWavy: Boolean = true,
     isPlaying: Boolean = false,
     activeColor: Color = MaterialTheme.colorScheme.primary,
+    activeBrush: Brush? = null,
     inactiveColor: Color = MaterialTheme.colorScheme.surfaceVariant,
     thumbColor: Color = activeColor,
     showThumb: Boolean = true,
@@ -250,20 +252,38 @@ fun WavySlider(
                     }
                     path.lineTo(currentThumbX, centerY)
 
-                    drawPath(
-                        path = path,
-                        color = activeColor,
-                        style = Stroke(width = strokePx, cap = capStyle)
-                    )
+                    if (activeBrush != null) {
+                        drawPath(
+                            path = path,
+                            brush = activeBrush,
+                            style = Stroke(width = strokePx, cap = capStyle)
+                        )
+                    } else {
+                        drawPath(
+                            path = path,
+                            color = activeColor,
+                            style = Stroke(width = strokePx, cap = capStyle)
+                        )
+                    }
                 } else {
                     // Straight active line
-                    drawLine(
-                        color = activeColor,
-                        start = Offset(startX, centerY),
-                        end = Offset(currentThumbX, centerY),
-                        strokeWidth = strokePx,
-                        cap = capStyle
-                    )
+                    if (activeBrush != null) {
+                        drawLine(
+                            brush = activeBrush,
+                            start = Offset(startX, centerY),
+                            end = Offset(currentThumbX, centerY),
+                            strokeWidth = strokePx,
+                            cap = capStyle
+                        )
+                    } else {
+                        drawLine(
+                            color = activeColor,
+                            start = Offset(startX, centerY),
+                            end = Offset(currentThumbX, centerY),
+                            strokeWidth = strokePx,
+                            cap = capStyle
+                        )
+                    }
                 }
             }
 
@@ -332,6 +352,7 @@ fun Android12Slider(
     enabled: Boolean = true,
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
     activeColor: Color = MaterialTheme.colorScheme.primary,
+    activeBrush: Brush? = null,
     inactiveColor: Color = MaterialTheme.colorScheme.surfaceVariant,
     height: Dp = 38.dp,
     inactiveTrackThickness: Dp = height,
@@ -407,7 +428,13 @@ fun Android12Slider(
                 .fillMaxHeight()
                 .align(Alignment.CenterStart)
                 .clip(RoundedCornerShape(activeCorner))
-                .background(activeColor)
+                .then(
+                    if (activeBrush != null) {
+                        Modifier.background(activeBrush)
+                    } else {
+                        Modifier.background(activeColor)
+                    }
+                )
         )
     }
 }
@@ -431,6 +458,7 @@ fun QsProgressSlider(
     sliderTarget: QsSliderTarget = QsSliderTarget.BRIGHTNESS,
     isPlaying: Boolean = false,
     activeColor: Color = MaterialTheme.colorScheme.primary,
+    activeBrush: Brush? = null,
     inactiveColor: Color = MaterialTheme.colorScheme.surfaceVariant,
     thumbColor: Color = activeColor,
     strokeWidth: Dp? = null,
@@ -504,6 +532,7 @@ fun QsProgressSlider(
                 isWavy = false,
                 isPlaying = false,
                 activeColor = activeColor,
+                activeBrush = activeBrush,
                 inactiveColor = inactiveColor,
                 thumbColor = thumbColor,
                 strokeWidth = effectiveStraightWidth,
@@ -532,6 +561,7 @@ fun QsProgressSlider(
                 isWavy = true,
                 isPlaying = isPlaying,
                 activeColor = activeColor,
+                activeBrush = activeBrush,
                 inactiveColor = inactiveColor,
                 thumbColor = thumbColor,
                 strokeWidth = effectiveStrokeWidth,
@@ -553,6 +583,7 @@ fun QsProgressSlider(
                 enabled = enabled,
                 valueRange = valueRange,
                 activeColor = activeColor,
+                activeBrush = activeBrush,
                 inactiveColor = inactiveColor,
                 height = 38.dp,
                 inactiveTrackThickness = effectiveA12InactiveHeight,
