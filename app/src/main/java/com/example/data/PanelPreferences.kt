@@ -209,6 +209,8 @@ object PanelPreferences {
     private const val KEY_CLEAR_ALL_FAB_SHAPE = "clear_all_fab_shape"
     private const val KEY_CLEAR_ALL_FAB_SHAPE_ID = "clear_all_fab_shape_id"
     private const val KEY_CLEAR_ALL_FAB_ICON = "clear_all_fab_icon"
+    private const val KEY_CLEAR_ALL_FAB_OFFSET_X = "clear_all_fab_offset_x"
+    private const val KEY_CLEAR_ALL_FAB_OFFSET_Y = "clear_all_fab_offset_y"
     private const val KEY_THEME_MODE = "theme_mode"
     private const val KEY_GRID_LAYOUT = "qs_grid_layout"
     private const val KEY_QQS_TILE_SIZE = "qqs_tile_size"
@@ -853,6 +855,12 @@ object PanelPreferences {
     private val _clearAllFabIcon = MutableStateFlow(ClearAllFabIcon.CLEAR_ALL)
     val clearAllFabIcon: StateFlow<ClearAllFabIcon> = _clearAllFabIcon.asStateFlow()
 
+    private val _clearAllFabOffsetX = MutableStateFlow(0f)
+    val clearAllFabOffsetX: StateFlow<Float> = _clearAllFabOffsetX.asStateFlow()
+
+    private val _clearAllFabOffsetY = MutableStateFlow(0f)
+    val clearAllFabOffsetY: StateFlow<Float> = _clearAllFabOffsetY.asStateFlow()
+
     private val _enabledTileShapeId = MutableStateFlow("circle")
     val enabledTileShapeId: StateFlow<String> = _enabledTileShapeId.asStateFlow()
 
@@ -1010,6 +1018,8 @@ object PanelPreferences {
             ?: prefs.getString(KEY_CLEAR_ALL_FAB_SHAPE, "circle") ?: "circle"
         _clearAllFabShapeId.value = savedFabShapeId
         _clearAllFabIcon.value = ClearAllFabIcon.fromId(prefs.getString(KEY_CLEAR_ALL_FAB_ICON, null))
+        _clearAllFabOffsetX.value = prefs.getFloat(KEY_CLEAR_ALL_FAB_OFFSET_X, 0f)
+        _clearAllFabOffsetY.value = prefs.getFloat(KEY_CLEAR_ALL_FAB_OFFSET_Y, 0f)
         com.example.ui.shape.QsShapeManager.init(context)
         val savedEnabledTileShape = prefs.getString(KEY_ENABLED_TILE_SHAPE, null) ?: prefs.getString(KEY_TILE_SHAPE, null)
         if (savedEnabledTileShape != null) {
@@ -1499,6 +1509,28 @@ object PanelPreferences {
         _clearAllFabIcon.value = icon
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putString(KEY_CLEAR_ALL_FAB_ICON, icon.id).apply()
+    }
+
+    fun setClearAllFabOffsetX(context: Context, offset: Float) {
+        _clearAllFabOffsetX.value = offset
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_CLEAR_ALL_FAB_OFFSET_X, offset).apply()
+    }
+
+    fun setClearAllFabOffsetY(context: Context, offset: Float) {
+        _clearAllFabOffsetY.value = offset
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_CLEAR_ALL_FAB_OFFSET_Y, offset).apply()
+    }
+
+    fun resetClearAllFabOffsets(context: Context) {
+        _clearAllFabOffsetX.value = 0f
+        _clearAllFabOffsetY.value = 0f
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(KEY_CLEAR_ALL_FAB_OFFSET_X, 0f)
+            .putFloat(KEY_CLEAR_ALL_FAB_OFFSET_Y, 0f)
+            .apply()
     }
 
     fun setShowDateInQqsHeader(context: Context, enabled: Boolean) {

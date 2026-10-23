@@ -2988,6 +2988,16 @@ fun NotificationsCard(
     val primaryColor = androidx.compose.material3.MaterialTheme.colorScheme.primary.toArgb()
     val notifBgColor = com.example.ui.theme.getQsNotificationContainerColor(isDark)
     val notifBgColorInt = notifBgColor.toArgb()
+
+    // Observe Clear All FAB preferences for reactive live updates
+    val clearAllFabOffsetX by PanelPreferences.clearAllFabOffsetX.collectAsState()
+    val clearAllFabOffsetY by PanelPreferences.clearAllFabOffsetY.collectAsState()
+    val useClearAllFab by PanelPreferences.useClearAllFab.collectAsState()
+    val clearAllFabPos by PanelPreferences.clearAllFabPosition.collectAsState()
+    val clearAllFabShapeId by PanelPreferences.clearAllFabShapeId.collectAsState()
+    val clearAllFabIcon by PanelPreferences.clearAllFabIcon.collectAsState()
+    val disableClearAllBg by PanelPreferences.disableClearAllBackground.collectAsState()
+
     val hostView = androidx.compose.ui.platform.LocalView.current
     val panelRootView = remember(hostView) {
         var parent = hostView.parent

@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -109,6 +110,9 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     val hideBrightnessIcon by PanelPreferences.hideBrightnessIcon.collectAsState()
     val showBrightnessPlusMinus by PanelPreferences.showBrightnessPlusMinus.collectAsState()
     val disableClearAllBackground by PanelPreferences.disableClearAllBackground.collectAsState()
+    val clearAllFabOffsetX by PanelPreferences.clearAllFabOffsetX.collectAsState()
+    val clearAllFabOffsetY by PanelPreferences.clearAllFabOffsetY.collectAsState()
+    val useClearAllFab by PanelPreferences.useClearAllFab.collectAsState()
 
     var fontSizesExpanded by rememberSaveable { mutableStateOf(false) }
 
@@ -1353,6 +1357,229 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         }
     }
 
+    val clearAllFabOffsetsCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("clear_all_fab_offset_card", CustomizeCategory.QS_TWEAKS) {
+            SettingsCard(
+                shape = shape
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Header Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Tune,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(1.dp)
+                            ) {
+                                Text(
+                                    text = "Clear All FAB Position",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    lineHeight = 17.sp,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Adjust the horizontal and vertical position of the floating Clear All button.",
+                                    fontSize = 12.sp,
+                                    lineHeight = 15.sp,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        if (clearAllFabOffsetX != 0f || clearAllFabOffsetY != 0f) {
+                            IconButton(
+                                onClick = { PanelPreferences.resetClearAllFabOffsets(context) },
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .testTag("clear_all_fab_reset_offsets_btn")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.RestartAlt,
+                                    contentDescription = "Reset FAB Offsets",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // 1. Horizontal Offset Slider
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Horizontal Offset",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = if (clearAllFabOffsetX.toInt() == 0) "Default (Centered / Anchored)"
+                                           else if (clearAllFabOffsetX < 0) "Shifted Left"
+                                           else "Shifted Right",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(
+                                text = "${if (clearAllFabOffsetX.toInt() > 0) "+" else ""}${clearAllFabOffsetX.toInt()} dp",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        Slider(
+                            value = clearAllFabOffsetX,
+                            onValueChange = { PanelPreferences.setClearAllFabOffsetX(context, Math.round(it).toFloat()) },
+                            valueRange = -180f..180f,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("clear_all_fab_offset_x_slider"),
+                            colors = SliderDefaults.colors(
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                                inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                            )
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "◀ Left (-180dp)",
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                            Text(
+                                text = "Default (0dp)",
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                            Text(
+                                text = "Right (+180dp) ▶",
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                    // 2. Vertical Offset Slider
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Vertical Offset",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = if (clearAllFabOffsetY.toInt() == 0) "Default (Bottom Floating)"
+                                           else if (clearAllFabOffsetY < 0) "Lowered towards Edge"
+                                           else "Raised Upwards",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(
+                                text = "${if (clearAllFabOffsetY.toInt() > 0) "+" else ""}${clearAllFabOffsetY.toInt()} dp",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        Slider(
+                            value = clearAllFabOffsetY,
+                            onValueChange = { PanelPreferences.setClearAllFabOffsetY(context, Math.round(it).toFloat()) },
+                            valueRange = -40f..180f,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("clear_all_fab_offset_y_slider"),
+                            colors = SliderDefaults.colors(
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                                inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                            )
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "▼ Down (-40dp)",
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                            Text(
+                                text = "Default (0dp)",
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                            Text(
+                                text = "Up (+180dp) ▲",
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+
+                    if (!useClearAllFab) {
+                        Text(
+                            text = "Note: Enable \"Clear All FAB Button\" under Customize → QS Design to display the floating button.",
+                            fontSize = 11.sp,
+                            lineHeight = 14.sp,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)
@@ -1374,6 +1601,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         if (pinnedIds.contains("hide_brightness_icon_card")) pinnedCards.add(hideBrightnessIconCard)
         if (pinnedIds.contains("show_brightness_plus_minus_card")) pinnedCards.add(showBrightnessPlusMinusCard)
         if (pinnedIds.contains("disable_clear_all_bg_card")) pinnedCards.add(disableClearAllBgCard)
+        if (pinnedIds.contains("clear_all_fab_offset_card")) pinnedCards.add(clearAllFabOffsetsCard)
 
         if (pinnedCards.isNotEmpty()) {
             ListSubheader(
@@ -1412,6 +1640,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         if (!pinnedIds.contains("settings_icon_location_card")) unpinnedHeaderControls.add(settingsIconLocationCard)
         if (!pinnedIds.contains("edit_pencil_location_card")) unpinnedHeaderControls.add(editPencilLocationCard)
         if (!pinnedIds.contains("disable_clear_all_bg_card")) unpinnedHeaderControls.add(disableClearAllBgCard)
+        if (!pinnedIds.contains("clear_all_fab_offset_card")) unpinnedHeaderControls.add(clearAllFabOffsetsCard)
 
         if (unpinnedHeaderControls.isNotEmpty()) {
             CollapsibleSubheaderSection(

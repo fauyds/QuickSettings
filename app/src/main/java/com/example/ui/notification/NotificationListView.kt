@@ -566,6 +566,12 @@ class NotificationListView @JvmOverloads constructor(
                 }
                 btnFloatingClearAllFab.layoutParams = lp
 
+                // Apply horizontal and vertical offset adjustments
+                val fabOffsetX = PanelPreferences.clearAllFabOffsetX.value
+                val fabOffsetY = PanelPreferences.clearAllFabOffsetY.value
+                btnFloatingClearAllFab.translationX = fabOffsetX * density
+                btnFloatingClearAllFab.translationY = -fabOffsetY * density
+
                 ivFloatingClearAllIcon.setImageResource(fabIcon.drawableRes)
 
                 if (disableClearAllBg) {
@@ -591,10 +597,13 @@ class NotificationListView @JvmOverloads constructor(
                 }
 
                 // Generous bottom padding so notification list items are never obscured under the floating FAB
-                rvNotifications.setPadding(0, 0, 0, (88 * density).toInt())
+                val bottomPaddingDp = (88f + maxOf(0f, fabOffsetY)).toInt()
+                rvNotifications.setPadding(0, 0, 0, (bottomPaddingDp * density).toInt())
                 adapter?.showFooter = false
             } else {
                 flFloatingClearAllContainer.visibility = View.GONE
+                btnFloatingClearAllFab.translationX = 0f
+                btnFloatingClearAllFab.translationY = 0f
                 rvNotifications.setPadding(0, 0, 0, 0)
                 adapter?.showFooter = hasClearable
             }
