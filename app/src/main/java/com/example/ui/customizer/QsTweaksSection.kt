@@ -117,6 +117,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     val enablePanelShadows by PanelPreferences.enablePanelShadows.collectAsState()
     val panelShadowElevation by PanelPreferences.panelShadowElevation.collectAsState()
     val panelShadowOffsetY by PanelPreferences.panelShadowOffsetY.collectAsState()
+    val panelShadowAlpha by PanelPreferences.panelShadowAlpha.collectAsState()
 
     var fontSizesExpanded by rememberSaveable { mutableStateOf(false) }
 
@@ -1362,6 +1363,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     }
 
     val enablePanelShadowsCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        var panelShadowsExpanded by rememberSaveable { mutableStateOf(false) }
         PinnableCardWrapper("enable_panel_shadows_card", CustomizeCategory.QS_TWEAKS) {
             SettingsCard(
                 shape = shape
@@ -1380,7 +1382,11 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .then(
+                                    if (collapseExpandOptions) Modifier.clickable { panelShadowsExpanded = !panelShadowsExpanded } else Modifier
+                                )
                         ) {
                             Box(
                                 modifier = Modifier
@@ -1422,7 +1428,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            if (enablePanelShadows && (panelShadowElevation != 8f || panelShadowOffsetY != 0f)) {
+                            if (enablePanelShadows && (panelShadowElevation != 8f || panelShadowOffsetY != 0f || Math.abs(panelShadowAlpha - 0.35f) > 0.01f)) {
                                 IconButton(
                                     onClick = { PanelPreferences.resetPanelShadowParams(context) },
                                     modifier = Modifier
@@ -1434,6 +1440,21 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                                         contentDescription = "Reset Shadow Parameters",
                                         tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+
+                            if (collapseExpandOptions) {
+                                IconButton(
+                                    onClick = { panelShadowsExpanded = !panelShadowsExpanded },
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .testTag("toggle_expand_panel_shadows")
+                                ) {
+                                    Icon(
+                                        imageVector = if (panelShadowsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                        contentDescription = if (panelShadowsExpanded) "Collapse" else "Expand",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -1453,7 +1474,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                     }
 
                     AnimatedVisibility(
-                        visible = enablePanelShadows,
+                        visible = enablePanelShadows && (!collapseExpandOptions || panelShadowsExpanded),
                         enter = expandVertically() + fadeIn(),
                         exit = shrinkVertically() + fadeOut()
                     ) {
@@ -1554,6 +1575,53 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                                     )
                                 )
                             }
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                            // 3. Shadow Transparency / Opacity Slider
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "Shadow Transparency",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = if (Math.abs(panelShadowAlpha - 0.35f) < 0.03f) "Default (35% Opacity)"
+                                                   else if (panelShadowAlpha < 0.35f) "More Transparent"
+                                                   else "More Opaque",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Text(
+                                        text = "${Math.round(panelShadowAlpha * 100)}%",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+
+                                Slider(
+                                    value = panelShadowAlpha,
+                                    onValueChange = { PanelPreferences.setPanelShadowAlpha(context, it) },
+                                    valueRange = 0.05f..0.90f,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("panel_shadow_transparency_slider"),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                                        inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                    )
+                                )
+                            }
                         }
                     }
                 }
@@ -1562,6 +1630,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     }
 
     val clearAllFabOffsetsCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        var clearAllFabOffsetsExpanded by rememberSaveable { mutableStateOf(false) }
         PinnableCardWrapper("clear_all_fab_offset_card", CustomizeCategory.QS_TWEAKS) {
             SettingsCard(
                 shape = shape
@@ -1581,7 +1650,11 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .then(
+                                    if (collapseExpandOptions) Modifier.clickable { clearAllFabOffsetsExpanded = !clearAllFabOffsetsExpanded } else Modifier
+                                )
                         ) {
                             Box(
                                 modifier = Modifier
@@ -1619,170 +1692,201 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                             }
                         }
 
-                        if (clearAllFabOffsetX != 0f || clearAllFabOffsetY != 0f || clearAllFabSize != 64) {
-                            IconButton(
-                                onClick = { PanelPreferences.resetClearAllFabOffsets(context) },
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .testTag("clear_all_fab_reset_offsets_btn")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.RestartAlt,
-                                    contentDescription = "Reset FAB Offsets and Size",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    // 1. Horizontal Offset Slider
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Column {
-                                Text(
-                                    text = "Horizontal Offset",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = if (clearAllFabOffsetX.toInt() == 0) "Default (Centered / Anchored)"
-                                           else if (clearAllFabOffsetX < 0) "Shifted Left"
-                                           else "Shifted Right",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                            if (clearAllFabOffsetX != 0f || clearAllFabOffsetY != 0f || clearAllFabSize != 64) {
+                                IconButton(
+                                    onClick = { PanelPreferences.resetClearAllFabOffsets(context) },
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .testTag("clear_all_fab_reset_offsets_btn")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.RestartAlt,
+                                        contentDescription = "Reset FAB Offsets and Size",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
                             }
-                            Text(
-                                text = "${if (clearAllFabOffsetX.toInt() > 0) "+" else ""}${clearAllFabOffsetX.toInt()} dp",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
 
-                        Slider(
-                            value = clearAllFabOffsetX,
-                            onValueChange = { PanelPreferences.setClearAllFabOffsetX(context, Math.round(it).toFloat()) },
-                            valueRange = -180f..180f,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("clear_all_fab_offset_x_slider"),
-                            colors = SliderDefaults.colors(
-                                thumbColor = MaterialTheme.colorScheme.primary,
-                                activeTrackColor = MaterialTheme.colorScheme.primary,
-                                inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
-                            )
-                        )
+                            if (collapseExpandOptions) {
+                                IconButton(
+                                    onClick = { clearAllFabOffsetsExpanded = !clearAllFabOffsetsExpanded },
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .testTag("toggle_expand_clear_all_fab_offsets")
+                                ) {
+                                    Icon(
+                                        imageVector = if (clearAllFabOffsetsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                        contentDescription = if (clearAllFabOffsetsExpanded) "Collapse" else "Expand",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
                     }
 
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
-                    // 2. Vertical Offset Slider
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Row(
+                    AnimatedVisibility(
+                        visible = !collapseExpandOptions || clearAllFabOffsetsExpanded,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Column(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Column {
-                                Text(
-                                    text = "Vertical Offset",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = if (clearAllFabOffsetY.toInt() == 0) "Default (Bottom Floating)"
-                                           else if (clearAllFabOffsetY < 0) "Lowered towards Edge"
-                                           else "Raised Upwards",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                            // 1. Horizontal Offset Slider
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "Horizontal Offset",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = if (clearAllFabOffsetX.toInt() == 0) "Default (Centered / Anchored)"
+                                                   else if (clearAllFabOffsetX < 0) "Shifted Left"
+                                                   else "Shifted Right",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Text(
+                                        text = "${if (clearAllFabOffsetX.toInt() > 0) "+" else ""}${clearAllFabOffsetX.toInt()} dp",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+
+                                Slider(
+                                    value = clearAllFabOffsetX,
+                                    onValueChange = { PanelPreferences.setClearAllFabOffsetX(context, Math.round(it).toFloat()) },
+                                    valueRange = -180f..180f,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("clear_all_fab_offset_x_slider"),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                                        inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                    )
                                 )
                             }
-                            Text(
-                                text = "${if (clearAllFabOffsetY.toInt() > 0) "+" else ""}${clearAllFabOffsetY.toInt()} dp",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
 
-                        Slider(
-                            value = clearAllFabOffsetY,
-                            onValueChange = { PanelPreferences.setClearAllFabOffsetY(context, Math.round(it).toFloat()) },
-                            valueRange = -40f..180f,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("clear_all_fab_offset_y_slider"),
-                            colors = SliderDefaults.colors(
-                                thumbColor = MaterialTheme.colorScheme.primary,
-                                activeTrackColor = MaterialTheme.colorScheme.primary,
-                                inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
-                            )
-                        )
-                    }
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                            // 2. Vertical Offset Slider
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "Vertical Offset",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = if (clearAllFabOffsetY.toInt() == 0) "Default (Bottom Floating)"
+                                                   else if (clearAllFabOffsetY < 0) "Lowered towards Edge"
+                                                   else "Raised Upwards",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Text(
+                                        text = "${if (clearAllFabOffsetY.toInt() > 0) "+" else ""}${clearAllFabOffsetY.toInt()} dp",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
 
-                    // 3. FAB Button Size Slider
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = "FAB Button Size",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = if (clearAllFabSize == 64) "Default Size (64 dp)"
-                                           else if (clearAllFabSize < 64) "Compact"
-                                           else "Large",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                Slider(
+                                    value = clearAllFabOffsetY,
+                                    onValueChange = { PanelPreferences.setClearAllFabOffsetY(context, Math.round(it).toFloat()) },
+                                    valueRange = -40f..180f,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("clear_all_fab_offset_y_slider"),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                                        inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                    )
                                 )
                             }
-                            Text(
-                                text = "$clearAllFabSize dp",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                            // 3. FAB Button Size Slider
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "FAB Button Size",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = if (clearAllFabSize == 64) "Default Size (64 dp)"
+                                                   else if (clearAllFabSize < 64) "Compact"
+                                                   else "Large",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Text(
+                                        text = "$clearAllFabSize dp",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+
+                                Slider(
+                                    value = clearAllFabSize.toFloat(),
+                                    onValueChange = { PanelPreferences.setClearAllFabSize(context, Math.round(it)) },
+                                    valueRange = 40f..96f,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("clear_all_fab_size_slider"),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                                        inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                    )
+                                )
+                            }
+
+                            if (!useClearAllFab) {
+                                Text(
+                                    text = "Note: Enable \"Clear All FAB Button\" under Customize → QS Design to display the floating button.",
+                                    fontSize = 11.sp,
+                                    lineHeight = 14.sp,
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                )
+                            }
                         }
-
-                        Slider(
-                            value = clearAllFabSize.toFloat(),
-                            onValueChange = { PanelPreferences.setClearAllFabSize(context, Math.round(it)) },
-                            valueRange = 40f..96f,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("clear_all_fab_size_slider"),
-                            colors = SliderDefaults.colors(
-                                thumbColor = MaterialTheme.colorScheme.primary,
-                                activeTrackColor = MaterialTheme.colorScheme.primary,
-                                inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
-                            )
-                        )
-                    }
-
-                    if (!useClearAllFab) {
-                        Text(
-                            text = "Note: Enable \"Clear All FAB Button\" under Customize → QS Design to display the floating button.",
-                            fontSize = 11.sp,
-                            lineHeight = 14.sp,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
-                        )
                     }
                 }
             }

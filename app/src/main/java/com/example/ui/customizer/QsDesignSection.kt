@@ -3033,6 +3033,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     }
 
     val clearAllFabCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        var clearAllFabExpanded by rememberSaveable { mutableStateOf(false) }
         PinnableCardWrapper("clear_all_fab_card", CustomizeCategory.QS_DESIGN, "Clear All FAB Button") {
             SettingsCard(
                 shape = shape,
@@ -3052,7 +3053,11 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .then(
+                                    if (collapseExpandOptions) Modifier.clickable { clearAllFabExpanded = !clearAllFabExpanded } else Modifier
+                                )
                         ) {
                             Box(
                                 modifier = Modifier
@@ -3090,21 +3095,41 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             }
                         }
 
-                        Switch(
-                            checked = useClearAllFab,
-                            onCheckedChange = { PanelPreferences.setUseClearAllFab(context, it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
-                            ),
-                            modifier = Modifier.testTag("use_clear_all_fab_toggle")
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            if (collapseExpandOptions) {
+                                IconButton(
+                                    onClick = { clearAllFabExpanded = !clearAllFabExpanded },
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .testTag("toggle_expand_clear_all_fab")
+                                ) {
+                                    Icon(
+                                        imageVector = if (clearAllFabExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                        contentDescription = if (clearAllFabExpanded) "Collapse" else "Expand",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            Switch(
+                                checked = useClearAllFab,
+                                onCheckedChange = { PanelPreferences.setUseClearAllFab(context, it) },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                    uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                    uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                                ),
+                                modifier = Modifier.testTag("use_clear_all_fab_toggle")
+                            )
+                        }
                     }
 
                     AnimatedVisibility(
-                        visible = useClearAllFab,
+                        visible = useClearAllFab && (!collapseExpandOptions || clearAllFabExpanded),
                         enter = expandVertically() + fadeIn(),
                         exit = shrinkVertically() + fadeOut()
                     ) {

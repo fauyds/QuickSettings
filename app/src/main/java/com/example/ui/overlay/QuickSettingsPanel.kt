@@ -2047,12 +2047,6 @@ fun UnifiedQsPanel(
                     .fillMaxWidth()
                     .wrapContentHeight()
                     .offset(y = qqsContainerYOffset)
-                    .animateContentSize(
-                        animationSpec = spring(
-                            dampingRatio = 0.80f,
-                            stiffness = 380f
-                        )
-                    )
                     .then(shadeDragModifier)
             ) {
                 val isQqsMode = morphProgress < 0.5f && !isLandscape
@@ -2078,6 +2072,12 @@ fun UnifiedQsPanel(
                     modifier = Modifier
                         .fillMaxWidth()
                         .wrapContentHeight()
+                        .animateContentSize(
+                            animationSpec = spring(
+                                dampingRatio = 0.80f,
+                                stiffness = 380f
+                            )
+                        )
                         .then(
                             if (overflowCropDp > 0.dp) {
                                 Modifier.layout { measurable, constraints ->
@@ -2762,12 +2762,6 @@ fun UnifiedQsPanel(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .animateContentSize(
-                    animationSpec = spring(
-                        dampingRatio = 0.80f,
-                        stiffness = 380f
-                    )
-                )
                 .then(
                     if (isFullQs && !isEditingTiles) {
                         Modifier.wrapContentHeight()
@@ -2990,6 +2984,8 @@ fun NotificationsCard(
     AndroidView(
         factory = { ctx ->
             com.example.ui.notification.NotificationListView(ctx).apply {
+                clipChildren = false
+                clipToPadding = false
                 this.onNotificationClick = onNotificationClick
                 this.onNotificationDismiss = onNotificationDismiss
                 this.onActionClick = onActionClick
@@ -3002,6 +2998,8 @@ fun NotificationsCard(
             }
         },
         update = { view ->
+            view.clipChildren = false
+            view.clipToPadding = false
             view.onNotificationClick = onNotificationClick
             view.onNotificationDismiss = onNotificationDismiss
             view.onActionClick = onActionClick
@@ -3102,6 +3100,7 @@ fun NotificationItemRow(
                     .graphicsLayer {
                         translationX = offsetX
                         alpha = (1f - (kotlin.math.abs(offsetX) / 350f)).coerceIn(0f, 1f)
+                        clip = false
                     }
                     .testTag("notification_item_${item.key}")
             ) {
@@ -4002,58 +4001,69 @@ fun BlurredContainerCard(
     val enablePanelShadows by PanelPreferences.enablePanelShadows.collectAsState()
     val panelShadowElevation by PanelPreferences.panelShadowElevation.collectAsState()
     val panelShadowOffsetY by PanelPreferences.panelShadowOffsetY.collectAsState()
+    val panelShadowAlpha by PanelPreferences.panelShadowAlpha.collectAsState()
+    val shadowModifier = if (enablePanelShadows && panelShadowElevation > 0f) {
+        Modifier
+            .drawBehind {
+                val shadowRadius = panelShadowElevation.dp.toPx()
+                val offsetY = panelShadowOffsetY.dp.toPx()
+                if (shadowRadius > 0f) {
+                    drawIntoCanvas { canvas ->
+                        val paint = androidx.compose.ui.graphics.Paint()
+                        val frameworkPaint = paint.asFrameworkPaint()
+                        frameworkPaint.color = android.graphics.Color.argb((panelShadowAlpha * 255).toInt(), 0, 0, 0)
+                        frameworkPaint.maskFilter = android.graphics.BlurMaskFilter(
+                            shadowRadius,
+                            android.graphics.BlurMaskFilter.Blur.NORMAL
+                        )
+                        canvas.save()
+                        canvas.translate(0f, offsetY)
+                        canvas.drawOutline(
+                            outline = shape.createOutline(size, layoutDirection, this),
+                            paint = paint
+                        )
+                        canvas.restore()
+                    }
+                }
+            }
+            .graphicsLayer {
+                shadowElevation = panelShadowElevation.dp.toPx()
+                this.shape = shape
+                clip = false
+                ambientShadowColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = panelShadowAlpha)
+                spotShadowColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = panelShadowAlpha)
+            }
+    } else {
+        Modifier
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
             .wrapContentHeight()
-            .then(
-                if (enablePanelShadows) {
-                    Modifier
-                        .drawBehind {
-                            val shadowRadius = panelShadowElevation.dp.toPx()
-                            val offsetY = panelShadowOffsetY.dp.toPx()
-                            if (shadowRadius > 0f) {
-                                drawIntoCanvas { canvas ->
-                                    val paint = androidx.compose.ui.graphics.Paint()
-                                    val frameworkPaint = paint.asFrameworkPaint()
-                                    frameworkPaint.color = android.graphics.Color.TRANSPARENT
-                                    frameworkPaint.setShadowLayer(
-                                        shadowRadius,
-                                        0f,
-                                        offsetY,
-                                        android.graphics.Color.argb((0.35f * 255).toInt(), 0, 0, 0)
-                                    )
-                                    canvas.drawOutline(
-                                        outline = shape.createOutline(size, layoutDirection, this),
-                                        paint = paint
-                                    )
-                                }
-                            }
-                        }
-                        .graphicsLayer {
-                            shadowElevation = panelShadowElevation.dp.toPx()
-                            this.shape = shape
-                            clip = false
-                        }
-                } else {
-                    Modifier.clip(shape)
-                }
-            )
-            .background(containerColor, shape)
-            .then(
-                if (onClick != null || onLongClick != null) {
-                    Modifier.combinedClickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = { onClick?.invoke() },
-                        onLongClick = onLongClick
-                    )
-                } else {
-                    Modifier
-                }
-            )
+            .then(shadowModifier)
     ) {
-        content()
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .clip(shape)
+                .background(containerColor)
+                .then(
+                    if (onClick != null || onLongClick != null) {
+                        Modifier.combinedClickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { onClick?.invoke() },
+                            onLongClick = onLongClick
+                        )
+                    } else {
+                        Modifier
+                    }
+                )
+        ) {
+            content()
+        }
     }
 }
 

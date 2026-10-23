@@ -1502,10 +1502,8 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                                     alpha = panelAlpha.value
                                     scaleX = panelScale.value
                                     scaleY = panelScale.value
-                                    clip = true
-                                    compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
+                                    clip = false
                                 }
-                                .clipToBounds()
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null,

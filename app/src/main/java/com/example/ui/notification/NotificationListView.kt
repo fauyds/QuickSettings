@@ -127,6 +127,14 @@ class NotificationListView @JvmOverloads constructor(
         rvNotifications.clipChildren = false
         this.clipToPadding = false
         this.clipChildren = false
+        flPermissionCard.clipChildren = false
+        flPermissionCard.clipToPadding = false
+        flEmptyCard.clipChildren = false
+        flEmptyCard.clipToPadding = false
+        root.findViewById<ViewGroup>(R.id.ll_notif_list_container)?.apply {
+            clipChildren = false
+            clipToPadding = false
+        }
         rvNotifications.setHasFixedSize(false)
         rvNotifications.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
 

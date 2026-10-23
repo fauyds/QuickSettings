@@ -61,6 +61,9 @@ import com.example.ui.components.QsProgressSlider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.palette.graphics.Palette
@@ -209,22 +212,64 @@ fun AdaptiveMediaPlayerCard(
 
     val cardColor = artworkColor ?: backgroundColor
 
-    Surface(
-        shape = cardShape,
-        color = cardColor,
+    val enablePanelShadows by PanelPreferences.enablePanelShadows.collectAsState()
+    val panelShadowElevation by PanelPreferences.panelShadowElevation.collectAsState()
+    val panelShadowOffsetY by PanelPreferences.panelShadowOffsetY.collectAsState()
+    val panelShadowAlpha by PanelPreferences.panelShadowAlpha.collectAsState()
+
+    val shadowModifier = if (enablePanelShadows && panelShadowElevation > 0f) {
+        Modifier
+            .drawBehind {
+                val shadowRadius = panelShadowElevation.dp.toPx()
+                val offsetY = panelShadowOffsetY.dp.toPx()
+                if (shadowRadius > 0f) {
+                    drawIntoCanvas { canvas ->
+                        val paint = androidx.compose.ui.graphics.Paint()
+                        val frameworkPaint = paint.asFrameworkPaint()
+                        frameworkPaint.color = android.graphics.Color.argb((panelShadowAlpha * 255).toInt(), 0, 0, 0)
+                        frameworkPaint.maskFilter = android.graphics.BlurMaskFilter(
+                            shadowRadius,
+                            android.graphics.BlurMaskFilter.Blur.NORMAL
+                        )
+                        canvas.save()
+                        canvas.translate(0f, offsetY)
+                        canvas.drawOutline(
+                            outline = cardShape.createOutline(size, layoutDirection, this),
+                            paint = paint
+                        )
+                        canvas.restore()
+                    }
+                }
+            }
+            .graphicsLayer {
+                shadowElevation = panelShadowElevation.dp.toPx()
+                this.shape = cardShape
+                clip = false
+                ambientShadowColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = panelShadowAlpha)
+                spotShadowColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = panelShadowAlpha)
+            }
+    } else {
+        Modifier
+    }
+
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .graphicsLayer {
-                compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
-            }
-            .clip(cardShape)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onCardClick
-            )
-            .testTag(if (isExpanded) "expanded_media_card" else "compact_media_card")
+            .then(shadowModifier)
     ) {
+        Surface(
+            shape = cardShape,
+            color = cardColor,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(cardShape)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onCardClick
+                )
+                .testTag(if (isExpanded) "expanded_media_card" else "compact_media_card")
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -613,6 +658,7 @@ fun AdaptiveMediaPlayerCard(
                 }
             }
         }
+    }
     }
 }
 

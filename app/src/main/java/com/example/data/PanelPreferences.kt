@@ -218,6 +218,7 @@ object PanelPreferences {
     private const val KEY_ENABLE_PANEL_SHADOWS = "enable_panel_shadows"
     private const val KEY_PANEL_SHADOW_ELEVATION = "panel_shadow_elevation"
     private const val KEY_PANEL_SHADOW_OFFSET_Y = "panel_shadow_offset_y"
+    private const val KEY_PANEL_SHADOW_ALPHA = "panel_shadow_alpha"
     private const val KEY_USE_CLEAR_ALL_FAB = "use_clear_all_fab"
     private const val KEY_CLEAR_ALL_FAB_POSITION = "clear_all_fab_position"
     private const val KEY_CLEAR_ALL_FAB_SHAPE = "clear_all_fab_shape"
@@ -868,6 +869,9 @@ object PanelPreferences {
     private val _panelShadowOffsetY = MutableStateFlow(0f)
     val panelShadowOffsetY: StateFlow<Float> = _panelShadowOffsetY.asStateFlow()
 
+    private val _panelShadowAlpha = MutableStateFlow(0.35f)
+    val panelShadowAlpha: StateFlow<Float> = _panelShadowAlpha.asStateFlow()
+
     private val _useClearAllFab = MutableStateFlow(false)
     val useClearAllFab: StateFlow<Boolean> = _useClearAllFab.asStateFlow()
 
@@ -1045,6 +1049,7 @@ object PanelPreferences {
         _enablePanelShadows.value = prefs.getBoolean(KEY_ENABLE_PANEL_SHADOWS, false)
         _panelShadowElevation.value = prefs.getFloat(KEY_PANEL_SHADOW_ELEVATION, 8f)
         _panelShadowOffsetY.value = prefs.getFloat(KEY_PANEL_SHADOW_OFFSET_Y, 0f)
+        _panelShadowAlpha.value = prefs.getFloat(KEY_PANEL_SHADOW_ALPHA, 0.35f)
         _useClearAllFab.value = prefs.getBoolean(KEY_USE_CLEAR_ALL_FAB, false)
         _clearAllFabPosition.value = ClearAllFabPosition.fromId(prefs.getString(KEY_CLEAR_ALL_FAB_POSITION, null))
         _clearAllFabShape.value = ClearAllFabShape.fromId(prefs.getString(KEY_CLEAR_ALL_FAB_SHAPE, null))
@@ -1526,13 +1531,21 @@ object PanelPreferences {
         prefs.edit().putFloat(KEY_PANEL_SHADOW_OFFSET_Y, offset).apply()
     }
 
+    fun setPanelShadowAlpha(context: Context, alpha: Float) {
+        _panelShadowAlpha.value = alpha
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_PANEL_SHADOW_ALPHA, alpha).apply()
+    }
+
     fun resetPanelShadowParams(context: Context) {
         _panelShadowElevation.value = 8f
         _panelShadowOffsetY.value = 0f
+        _panelShadowAlpha.value = 0.35f
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
             .putFloat(KEY_PANEL_SHADOW_ELEVATION, 8f)
             .putFloat(KEY_PANEL_SHADOW_OFFSET_Y, 0f)
+            .putFloat(KEY_PANEL_SHADOW_ALPHA, 0.35f)
             .apply()
     }
 

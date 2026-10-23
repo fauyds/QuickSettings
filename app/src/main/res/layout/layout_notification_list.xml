@@ -11,6 +11,8 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:background="@android:color/transparent"
         android:paddingTop="4dp"
         android:paddingBottom="4dp">
@@ -68,6 +70,8 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:background="@drawable/bg_notif_card"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:visibility="gone">
 
         <LinearLayout
@@ -133,6 +137,8 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:background="@drawable/bg_notif_card"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:visibility="gone">
 
         <LinearLayout
@@ -167,6 +173,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:clipChildren="false"
         android:clipToPadding="false"
         android:overScrollMode="never"
         android:scrollbars="vertical"

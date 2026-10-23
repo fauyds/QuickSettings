@@ -341,8 +341,10 @@ class NotificationAdapter(
             val shadowElevation = com.example.data.PanelPreferences.panelShadowElevation.value
             flRoot.elevation = if (enablePanelShadows) shadowElevation * density else 0f
             flRoot.translationY = 0f
+            flRoot.clipChildren = false
+            flRoot.clipToPadding = false
 
-            // Outline provider for crisp clipping to the dynamic shape
+            // Outline provider for casting elevation shadow to the dynamic shape without clipping bounds
             flRoot.outlineProvider = object : ViewOutlineProvider() {
                 private val path = Path()
                 override fun getOutline(view: View, outline: Outline) {
@@ -361,7 +363,7 @@ class NotificationAdapter(
                     }
                 }
             }
-            flRoot.clipToOutline = true
+            flRoot.clipToOutline = false
 
             // Distance between notifications: 3dp
             val lp = flRoot.layoutParams as? ViewGroup.MarginLayoutParams
