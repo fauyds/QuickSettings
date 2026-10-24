@@ -126,7 +126,7 @@ class NotificationListView @JvmOverloads constructor(
         rvNotifications.clipToPadding = false
         rvNotifications.clipChildren = true
         this.clipToPadding = false
-        this.clipChildren = true
+        this.clipChildren = false
         flPermissionCard.clipChildren = true
         flPermissionCard.clipToPadding = false
         flEmptyCard.clipChildren = true
@@ -472,7 +472,8 @@ class NotificationListView @JvmOverloads constructor(
         isPermissionGranted: Boolean,
         isDark: Boolean,
         primaryColor: Int? = null,
-        panelCardBackgroundColor: Int? = null
+        panelCardBackgroundColor: Int? = null,
+        isMediaCardShown: Boolean = false
     ) {
         val density = context.resources.displayMetrics.density
 
@@ -549,14 +550,17 @@ class NotificationListView @JvmOverloads constructor(
         val fabSize = PanelPreferences.clearAllFabSize.value
 
         if (!isPermissionGranted) {
-            llHeader.visibility = View.VISIBLE
+            llHeader.visibility = if (isMediaCardShown) View.GONE else View.VISIBLE
             flPermissionCard.visibility = View.VISIBLE
             flEmptyCard.visibility = View.GONE
             rvNotifications.visibility = View.GONE
             flFloatingClearAllContainer.visibility = View.GONE
         } else if (notifications.isEmpty()) {
             flPermissionCard.visibility = View.GONE
-            if (hideEmptyNotifLabels) {
+            if (isMediaCardShown) {
+                llHeader.visibility = View.GONE
+                flEmptyCard.visibility = View.GONE
+            } else if (hideEmptyNotifLabels) {
                 llHeader.visibility = View.GONE
                 flEmptyCard.visibility = View.GONE
             } else {
@@ -566,7 +570,7 @@ class NotificationListView @JvmOverloads constructor(
             rvNotifications.visibility = View.GONE
             flFloatingClearAllContainer.visibility = View.GONE
         } else {
-            llHeader.visibility = View.VISIBLE
+            llHeader.visibility = if (isMediaCardShown) View.GONE else View.VISIBLE
             flPermissionCard.visibility = View.GONE
             flEmptyCard.visibility = View.GONE
             rvNotifications.visibility = View.VISIBLE

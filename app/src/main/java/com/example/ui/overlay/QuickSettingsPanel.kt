@@ -2991,38 +2991,45 @@ fun NotificationsCard(
     val forceShowMediaPreview by PanelPreferences.forceShowMediaPreview.collectAsState()
     val context = androidx.compose.ui.platform.LocalContext.current
 
-    val shouldShowPlayerInNotification = showMediaInNotifContainer &&
+    val isMediaShown = showMediaInNotifContainer &&
             (liveMediaState != null || forceShowMediaPreview)
+    val mediaState = if (isMediaShown) {
+        liveMediaState ?: if (forceShowMediaPreview || showMediaInNotifContainer) MediaState.Preview else null
+    } else null
+    val hasActiveMediaCard = isMediaShown && mediaState != null
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .testTag("notifications_card"),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        if (shouldShowPlayerInNotification) {
-            val media = liveMediaState ?: if (forceShowMediaPreview || showMediaInNotifContainer) MediaState.Preview else null
-            if (media != null) {
-                AndroidQMediaNotificationCard(
-                    mediaState = media,
-                    onPlayPauseClick = { com.example.service.MediaSessionManagerHelper.playPause() },
-                    onPreviousClick = { com.example.service.MediaSessionManagerHelper.previous() },
-                    onNextClick = { com.example.service.MediaSessionManagerHelper.next() },
-                    onShuffleClick = { com.example.service.MediaSessionManagerHelper.toggleShuffle() },
-                    onRepeatClick = { com.example.service.MediaSessionManagerHelper.toggleRepeat() },
-                    onFavoriteClick = { com.example.service.MediaSessionManagerHelper.toggleFavorite() },
-                    onSeek = { com.example.service.MediaSessionManagerHelper.seekTo(it) },
-                    onCardClick = {
-                        com.example.service.MediaSessionManagerHelper.openActivePlayerApp(context)
-                    }
-                )
-            }
+        if (hasActiveMediaCard && mediaState != null) {
+            NotificationHeaderRow(
+                isDark = isDark,
+                primaryColor = primaryColor,
+                onOpenNotificationManager = onOpenNotificationManager
+            )
+
+            AndroidQMediaNotificationCard(
+                mediaState = mediaState,
+                onPlayPauseClick = { com.example.service.MediaSessionManagerHelper.playPause() },
+                onPreviousClick = { com.example.service.MediaSessionManagerHelper.previous() },
+                onNextClick = { com.example.service.MediaSessionManagerHelper.next() },
+                onShuffleClick = { com.example.service.MediaSessionManagerHelper.toggleShuffle() },
+                onRepeatClick = { com.example.service.MediaSessionManagerHelper.toggleRepeat() },
+                onFavoriteClick = { com.example.service.MediaSessionManagerHelper.toggleFavorite() },
+                onSeek = { com.example.service.MediaSessionManagerHelper.seekTo(it) },
+                onCardClick = {
+                    com.example.service.MediaSessionManagerHelper.openActivePlayerApp(context)
+                }
+            )
         }
 
         AndroidView(
             factory = { ctx ->
                 com.example.ui.notification.NotificationListView(ctx).apply {
-                    clipChildren = true
+                    clipChildren = false
                     clipToPadding = false
                     this.onNotificationClick = onNotificationClick
                     this.onNotificationDismiss = onNotificationDismiss
@@ -3036,7 +3043,7 @@ fun NotificationsCard(
                 }
             },
             update = { view ->
-                view.clipChildren = true
+                view.clipChildren = false
                 view.clipToPadding = false
                 view.onNotificationClick = onNotificationClick
                 view.onNotificationDismiss = onNotificationDismiss
@@ -3052,13 +3059,78 @@ fun NotificationsCard(
                     isPermissionGranted = isPermissionGranted,
                     isDark = isDark,
                     primaryColor = primaryColor,
-                    panelCardBackgroundColor = notifBgColorInt
+                    panelCardBackgroundColor = notifBgColorInt,
+                    isMediaCardShown = hasActiveMediaCard
                 )
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f, fill = false)
         )
+    }
+}
+
+@Composable
+fun NotificationHeaderRow(
+    isDark: Boolean,
+    primaryColor: Int,
+    onOpenNotificationManager: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val disableNotifMonet by PanelPreferences.disableMonetNotifText.collectAsState()
+    val showMonetSurface by PanelPreferences.showMonetSurfaceBackground.collectAsState()
+
+    val defaultHeaderColorInt = if (disableNotifMonet) {
+        if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
+    } else {
+        primaryColor
+    }
+
+    val headerLabelColorInt = if (!showMonetSurface) {
+        android.graphics.Color.WHITE
+    } else {
+        defaultHeaderColorInt
+    }
+
+    val headerColor = androidx.compose.ui.graphics.Color(headerLabelColorInt)
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.ic_notif_bell),
+                contentDescription = "Notifications",
+                tint = headerColor,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "NOTIFICATIONS",
+                color = headerColor,
+                fontSize = 11.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                letterSpacing = 0.08.sp
+            )
+        }
+        IconButton(
+            onClick = { onOpenNotificationManager() },
+            modifier = Modifier.size(28.dp)
+        ) {
+            Icon(
+                painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.ic_notif_tune),
+                contentDescription = "Notification Settings",
+                tint = headerColor,
+                modifier = Modifier.size(16.dp)
+            )
+        }
     }
 }
 

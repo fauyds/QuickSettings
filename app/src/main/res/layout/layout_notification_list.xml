@@ -2,7 +2,7 @@
     android:id="@+id/fl_notif_root_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:clipChildren="true"
+    android:clipChildren="false"
     android:clipToPadding="false"
     android:background="@android:color/transparent">
 
