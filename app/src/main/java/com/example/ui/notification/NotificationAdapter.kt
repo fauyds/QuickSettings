@@ -29,6 +29,16 @@ import com.example.model.NotificationItem
 import com.example.service.QuickPanelNotificationListenerService
 import java.util.Date
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.unit.dp
+import com.example.data.PanelPreferences
+import com.example.model.MediaState
+import com.example.service.MediaSessionManagerHelper
+import com.example.ui.overlay.AndroidQMediaNotificationCard
+
 class NotificationDiffCallback : DiffUtil.ItemCallback<NotificationItem>() {
     override fun areItemsTheSame(oldItem: NotificationItem, newItem: NotificationItem): Boolean {
         return oldItem.key == newItem.key
@@ -51,6 +61,8 @@ class NotificationAdapter(
     var customCardBackgroundColor: Int? = null
     var showFooter: Boolean = false
     var disableMonetNotifText: Boolean = false
+    var isMediaCardShown: Boolean = false
+    var mediaSessions: List<MediaState> = emptyList()
 
     private val expandedStateMap = mutableMapOf<String, Boolean>()
 
@@ -59,8 +71,9 @@ class NotificationAdapter(
     }
 
     companion object {
-        private const val TYPE_NOTIFICATION = 0
-        private const val TYPE_FOOTER = 1
+        private const val TYPE_MEDIA_PLAYER = 0
+        private const val TYPE_NOTIFICATION = 1
+        private const val TYPE_FOOTER = 2
     }
 
     private var attachedRecyclerView: RecyclerView? = null
@@ -81,38 +94,63 @@ class NotificationAdapter(
     ) {
         super.onCurrentListChanged(previousList, currentList)
         attachedRecyclerView?.post {
-            if (currentList.isNotEmpty()) {
-                notifyItemChanged(0)
-                if (currentList.size > 1) {
-                    notifyItemChanged(1)
-                    notifyItemChanged(currentList.size - 1)
-                }
-            }
+            notifyDataSetChanged()
         }
     }
 
     override fun getItemCount(): Int {
-        return currentList.size + if (showFooter && currentList.isNotEmpty()) 1 else 0
+        val mediaCount = mediaSessions.size
+        val notifCount = currentList.size
+        val footerCount = if (showFooter && notifCount > 0) 1 else 0
+        return mediaCount + notifCount + footerCount
     }
 
     override fun getItemViewType(position: Int): Int {
-        return if (showFooter && position == currentList.size) TYPE_FOOTER else TYPE_NOTIFICATION
+        val mediaCount = mediaSessions.size
+        val notifCount = currentList.size
+        return when {
+            position < mediaCount -> TYPE_MEDIA_PLAYER
+            position < mediaCount + notifCount -> TYPE_NOTIFICATION
+            else -> TYPE_FOOTER
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-        return if (viewType == TYPE_FOOTER) {
-            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_notification_footer, parent, false)
-            FooterViewHolder(view)
-        } else {
-            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_notification_card, parent, false)
-            NotificationViewHolder(view)
+        return when (viewType) {
+            TYPE_MEDIA_PLAYER -> {
+                val composeView = ComposeView(parent.context).apply {
+                    layoutParams = ViewGroup.MarginLayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        bottomMargin = (4f * resources.displayMetrics.density).toInt()
+                    }
+                    setViewCompositionStrategy(
+                        ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+                    )
+                }
+                MediaPlayerViewHolder(composeView)
+            }
+            TYPE_FOOTER -> {
+                val view = LayoutInflater.from(parent.context).inflate(R.layout.item_notification_footer, parent, false)
+                FooterViewHolder(view)
+            }
+            else -> {
+                val view = LayoutInflater.from(parent.context).inflate(R.layout.item_notification_card, parent, false)
+                NotificationViewHolder(view)
+            }
         }
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        if (holder is NotificationViewHolder) {
-            val item = getItem(position) ?: return
-            holder.bind(item, position, currentList.size)
+        val totalCount = mediaSessions.size + currentList.size
+        if (holder is MediaPlayerViewHolder) {
+            val mediaState = mediaSessions.getOrNull(position) ?: return
+            holder.bind(mediaState, position, totalCount)
+        } else if (holder is NotificationViewHolder) {
+            val notifIndex = position - mediaSessions.size
+            val item = getItem(notifIndex) ?: return
+            holder.bind(item, position, totalCount)
         } else if (holder is FooterViewHolder) {
             holder.bind()
         }
@@ -229,6 +267,68 @@ class NotificationAdapter(
 
             btnClearAll.setOnClickListener {
                 onClearAll?.invoke()
+            }
+        }
+    }
+
+    inner class MediaPlayerViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        fun bind(mediaState: MediaState, position: Int, totalCount: Int) {
+            val context = itemView.context
+
+            val panelGlobalCornerEnabled = PanelPreferences.panelGlobalCornerEnabled.value
+            val panelOuterCorner = PanelPreferences.panelOuterCorner.value
+            val panelInnerCorner = PanelPreferences.panelInnerCorner.value
+
+            val outerCornerDp = panelOuterCorner.dp
+            val innerCornerDp = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner).dp
+
+            val shape = when {
+                totalCount <= 1 -> RoundedCornerShape(outerCornerDp)
+                position == 0 -> RoundedCornerShape(
+                    topStart = outerCornerDp,
+                    topEnd = outerCornerDp,
+                    bottomStart = innerCornerDp,
+                    bottomEnd = innerCornerDp
+                )
+                position == totalCount - 1 -> RoundedCornerShape(
+                    topStart = innerCornerDp,
+                    topEnd = innerCornerDp,
+                    bottomStart = outerCornerDp,
+                    bottomEnd = outerCornerDp
+                )
+                else -> RoundedCornerShape(innerCornerDp)
+            }
+
+            (itemView as ComposeView).setContent {
+                val ctx = LocalContext.current
+                AndroidQMediaNotificationCard(
+                    mediaState = mediaState,
+                    shape = shape,
+                    onPlayPauseClick = {
+                        MediaSessionManagerHelper.playPauseForSession(mediaState.sessionIndex)
+                    },
+                    onPreviousClick = {
+                        MediaSessionManagerHelper.previousForSession(mediaState.sessionIndex)
+                    },
+                    onNextClick = {
+                        MediaSessionManagerHelper.nextForSession(mediaState.sessionIndex)
+                    },
+                    onShuffleClick = {
+                        MediaSessionManagerHelper.toggleShuffleForSession(mediaState.sessionIndex)
+                    },
+                    onRepeatClick = {
+                        MediaSessionManagerHelper.toggleRepeatForSession(mediaState.sessionIndex)
+                    },
+                    onFavoriteClick = {
+                        MediaSessionManagerHelper.toggleFavoriteForSession(mediaState.sessionIndex)
+                    },
+                    onSeek = { progress ->
+                        MediaSessionManagerHelper.seekToForSession(mediaState.sessionIndex, progress)
+                    },
+                    onCardClick = {
+                        MediaSessionManagerHelper.openActivePlayerAppForSession(ctx, mediaState.sessionIndex)
+                    }
+                )
             }
         }
     }
@@ -366,12 +466,12 @@ class NotificationAdapter(
             }
             flRoot.clipToOutline = false
 
-            // Distance between notifications: 3dp
+            // Distance between notifications & media cards: 4dp
             val lp = flRoot.layoutParams as? ViewGroup.MarginLayoutParams
             if (lp != null) {
-                val margin3dp = (3f * density).toInt()
-                if (lp.bottomMargin != margin3dp) {
-                    lp.bottomMargin = margin3dp
+                val margin4dp = (4f * density).toInt()
+                if (lp.bottomMargin != margin4dp) {
+                    lp.bottomMargin = margin4dp
                     flRoot.layoutParams = lp
                 }
             }

@@ -429,6 +429,46 @@ object MediaSessionManagerHelper {
         }
     }
 
+    fun playPauseForSession(sessionIndex: Int) {
+        _selectedSessionIndex.value = sessionIndex
+        playPause()
+    }
+
+    fun previousForSession(sessionIndex: Int) {
+        _selectedSessionIndex.value = sessionIndex
+        previous()
+    }
+
+    fun nextForSession(sessionIndex: Int) {
+        _selectedSessionIndex.value = sessionIndex
+        next()
+    }
+
+    fun seekToForSession(sessionIndex: Int, newProgress: Float) {
+        _selectedSessionIndex.value = sessionIndex
+        seekTo(newProgress)
+    }
+
+    fun toggleFavoriteForSession(sessionIndex: Int) {
+        _selectedSessionIndex.value = sessionIndex
+        toggleFavorite()
+    }
+
+    fun toggleRepeatForSession(sessionIndex: Int) {
+        _selectedSessionIndex.value = sessionIndex
+        toggleRepeat()
+    }
+
+    fun toggleShuffleForSession(sessionIndex: Int) {
+        _selectedSessionIndex.value = sessionIndex
+        toggleShuffle()
+    }
+
+    fun openActivePlayerAppForSession(context: Context, sessionIndex: Int) {
+        _selectedSessionIndex.value = sessionIndex
+        openActivePlayerApp(context)
+    }
+
     fun playPause() {
         val targetIdx = _selectedSessionIndex.value
         val controller = activeControllers.getOrNull(targetIdx) ?: activeControllers.firstOrNull()

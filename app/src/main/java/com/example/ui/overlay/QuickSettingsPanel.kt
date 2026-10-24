@@ -2987,45 +2987,29 @@ fun NotificationsCard(
     }
 
     val showMediaInNotifContainer by PanelPreferences.showMediaInNotificationContainer.collectAsState()
-    val liveMediaState by com.example.service.MediaSessionManagerHelper.mediaState.collectAsState()
+    val mediaSessionsList by com.example.service.MediaSessionManagerHelper.sessionsList.collectAsState()
     val forceShowMediaPreview by PanelPreferences.forceShowMediaPreview.collectAsState()
     val context = androidx.compose.ui.platform.LocalContext.current
 
-    val isMediaShown = showMediaInNotifContainer &&
-            (liveMediaState != null || forceShowMediaPreview)
-    val mediaState = if (isMediaShown) {
-        liveMediaState ?: if (forceShowMediaPreview || showMediaInNotifContainer) MediaState.Preview else null
-    } else null
-    val hasActiveMediaCard = isMediaShown && mediaState != null
+    val activeMediaSessions = remember(showMediaInNotifContainer, mediaSessionsList, forceShowMediaPreview) {
+        if (showMediaInNotifContainer) {
+            if (mediaSessionsList.isNotEmpty()) {
+                mediaSessionsList
+            } else if (forceShowMediaPreview) {
+                listOf(MediaState.Preview)
+            } else {
+                emptyList()
+            }
+        } else {
+            emptyList()
+        }
+    }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .testTag("notifications_card"),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+            .testTag("notifications_card")
     ) {
-        if (hasActiveMediaCard && mediaState != null) {
-            NotificationHeaderRow(
-                isDark = isDark,
-                primaryColor = primaryColor,
-                onOpenNotificationManager = onOpenNotificationManager
-            )
-
-            AndroidQMediaNotificationCard(
-                mediaState = mediaState,
-                onPlayPauseClick = { com.example.service.MediaSessionManagerHelper.playPause() },
-                onPreviousClick = { com.example.service.MediaSessionManagerHelper.previous() },
-                onNextClick = { com.example.service.MediaSessionManagerHelper.next() },
-                onShuffleClick = { com.example.service.MediaSessionManagerHelper.toggleShuffle() },
-                onRepeatClick = { com.example.service.MediaSessionManagerHelper.toggleRepeat() },
-                onFavoriteClick = { com.example.service.MediaSessionManagerHelper.toggleFavorite() },
-                onSeek = { com.example.service.MediaSessionManagerHelper.seekTo(it) },
-                onCardClick = {
-                    com.example.service.MediaSessionManagerHelper.openActivePlayerApp(context)
-                }
-            )
-        }
-
         AndroidView(
             factory = { ctx ->
                 com.example.ui.notification.NotificationListView(ctx).apply {
@@ -3060,12 +3044,10 @@ fun NotificationsCard(
                     isDark = isDark,
                     primaryColor = primaryColor,
                     panelCardBackgroundColor = notifBgColorInt,
-                    isMediaCardShown = hasActiveMediaCard
+                    mediaSessions = activeMediaSessions
                 )
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f, fill = false)
+            modifier = Modifier.fillMaxSize()
         )
     }
 }

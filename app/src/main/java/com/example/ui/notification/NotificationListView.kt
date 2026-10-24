@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.R
+import com.example.model.MediaState
 import com.example.model.NotificationActionModel
 import com.example.model.NotificationItem
 import com.example.ui.overlay.QsExpansionStage
@@ -473,7 +474,7 @@ class NotificationListView @JvmOverloads constructor(
         isDark: Boolean,
         primaryColor: Int? = null,
         panelCardBackgroundColor: Int? = null,
-        isMediaCardShown: Boolean = false
+        mediaSessions: List<MediaState> = emptyList()
     ) {
         val density = context.resources.displayMetrics.density
 
@@ -495,10 +496,14 @@ class NotificationListView @JvmOverloads constructor(
         }
         val onPrimary = MonetThemeHelper.getOnPrimaryText(context, isDark)
 
+        val hasMediaCards = mediaSessions.isNotEmpty()
+
         adapter?.isDark = isDark
         adapter?.customPrimaryColor = primaryAccent
         adapter?.customCardBackgroundColor = panelCardBackgroundColor
         adapter?.disableMonetNotifText = disableNotifMonet
+        adapter?.mediaSessions = mediaSessions
+        adapter?.isMediaCardShown = hasMediaCards
 
         // 2. Style Header Row ("Notifications" section label)
         val defaultHeaderColor = if (disableNotifMonet) {
@@ -550,17 +555,14 @@ class NotificationListView @JvmOverloads constructor(
         val fabSize = PanelPreferences.clearAllFabSize.value
 
         if (!isPermissionGranted) {
-            llHeader.visibility = if (isMediaCardShown) View.GONE else View.VISIBLE
+            llHeader.visibility = View.VISIBLE
             flPermissionCard.visibility = View.VISIBLE
             flEmptyCard.visibility = View.GONE
             rvNotifications.visibility = View.GONE
             flFloatingClearAllContainer.visibility = View.GONE
-        } else if (notifications.isEmpty()) {
+        } else if (notifications.isEmpty() && mediaSessions.isEmpty()) {
             flPermissionCard.visibility = View.GONE
-            if (isMediaCardShown) {
-                llHeader.visibility = View.GONE
-                flEmptyCard.visibility = View.GONE
-            } else if (hideEmptyNotifLabels) {
+            if (hideEmptyNotifLabels) {
                 llHeader.visibility = View.GONE
                 flEmptyCard.visibility = View.GONE
             } else {
@@ -570,7 +572,7 @@ class NotificationListView @JvmOverloads constructor(
             rvNotifications.visibility = View.GONE
             flFloatingClearAllContainer.visibility = View.GONE
         } else {
-            llHeader.visibility = if (isMediaCardShown) View.GONE else View.VISIBLE
+            llHeader.visibility = View.VISIBLE
             flPermissionCard.visibility = View.GONE
             flEmptyCard.visibility = View.GONE
             rvNotifications.visibility = View.VISIBLE
@@ -643,6 +645,7 @@ class NotificationListView @JvmOverloads constructor(
             }
 
             adapter?.submitList(notifications)
+            adapter?.notifyDataSetChanged()
         }
     }
 }

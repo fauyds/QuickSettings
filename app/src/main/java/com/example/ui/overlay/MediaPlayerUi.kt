@@ -783,6 +783,7 @@ fun CompactMediaTile(
 fun AndroidQMediaNotificationCard(
     mediaState: MediaState,
     modifier: Modifier = Modifier,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(16.dp),
     onPlayPauseClick: () -> Unit = {},
     onPreviousClick: () -> Unit = {},
     onNextClick: () -> Unit = {},
@@ -869,10 +870,10 @@ fun AndroidQMediaNotificationCard(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(shape)
             .clickable { onCardClick() }
             .testTag("android_q_media_notification_card"),
-        shape = RoundedCornerShape(16.dp),
+        shape = shape,
         color = cardBgColor,
         shadowElevation = 2.dp
     ) {
