@@ -8,15 +8,15 @@ import androidx.compose.runtime.Immutable
  */
 @Immutable
 data class MediaState(
-    val title: String = "Never Let You Go",
-    val artist: String = "Kygo",
-    val appName: String = "MUSER",
-    val packageName: String = "com.spotify.music",
+    val title: String = "",
+    val artist: String = "",
+    val appName: String = "",
+    val packageName: String = "",
     val isPlaying: Boolean = false,
     val isFavorite: Boolean = false,
-    val progress: Float = 0.02f, // 0.0f to 1.0f
-    val currentPositionMs: Long = 4000L, // 00:04
-    val totalDurationMs: Long = 232000L, // 03:52
+    val progress: Float = 0.0f, // 0.0f to 1.0f
+    val currentPositionMs: Long = 0L,
+    val totalDurationMs: Long = 0L,
     val outputDevice: String = "Phone speaker",
     val isHeadphonesOrBluetooth: Boolean = false,
     val artworkBitmap: Bitmap? = null,
@@ -42,14 +42,14 @@ data class MediaState(
         }
 
         val Preview = MediaState(
-            title = "Never Let You Go",
-            artist = "Kygo",
-            appName = "MUSER",
+            title = "Track Title",
+            artist = "Artist Name",
+            appName = "Music Player",
             isPlaying = false,
             isFavorite = false,
-            progress = 0.02f,
-            currentPositionMs = 4000L,
-            totalDurationMs = 232000L,
+            progress = 0.25f,
+            currentPositionMs = 54000L,
+            totalDurationMs = 216000L,
             outputDevice = "Phone speaker",
             supportsRepeat = true,
             repeatMode = 0,

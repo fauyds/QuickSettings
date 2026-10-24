@@ -267,6 +267,7 @@ object PanelPreferences {
     private const val KEY_DRAG_HANDLE_VERTICAL_OFFSET = "drag_handle_vertical_offset"
     private const val KEY_DRAG_HANDLE_LENGTH = "drag_handle_length"
     private const val KEY_FORCE_SHOW_MEDIA_PREVIEW = "force_show_media_preview"
+    private const val KEY_SHOW_MEDIA_IN_NOTIFICATION_CONTAINER = "show_media_in_notification_container"
     private const val KEY_ENABLE_CUSTOM_VOLUME_PANEL = "enable_custom_volume_panel"
     private const val KEY_ANIMATION_SPEED_SCALE = "animation_speed_scale"
     private const val KEY_DISABLE_PANEL_ANIMATIONS = "disable_panel_animations"
@@ -1017,6 +1018,9 @@ object PanelPreferences {
     private val _forceShowMediaPreview = MutableStateFlow(false)
     val forceShowMediaPreview: StateFlow<Boolean> = _forceShowMediaPreview.asStateFlow()
 
+    private val _showMediaInNotificationContainer = MutableStateFlow(false)
+    val showMediaInNotificationContainer: StateFlow<Boolean> = _showMediaInNotificationContainer.asStateFlow()
+
     fun init(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val themeSaved = prefs.getString(KEY_THEME_MODE, ThemeMode.SYSTEM.id)
@@ -1137,6 +1141,7 @@ object PanelPreferences {
             _customBlacklistClasses.value = savedBlacklistClasses
         }
         _forceShowMediaPreview.value = prefs.getBoolean(KEY_FORCE_SHOW_MEDIA_PREVIEW, false)
+        _showMediaInNotificationContainer.value = prefs.getBoolean(KEY_SHOW_MEDIA_IN_NOTIFICATION_CONTAINER, false)
         _enableCustomVolumePanel.value = prefs.getBoolean(KEY_ENABLE_CUSTOM_VOLUME_PANEL, true)
         _enableSystemHeadsUp.value = prefs.getBoolean(KEY_ENABLE_SYSTEM_HEADS_UP, true)
         _enableHeadsUpOverlay.value = prefs.getBoolean(KEY_ENABLE_HEADS_UP_OVERLAY, true)
@@ -1435,6 +1440,12 @@ object PanelPreferences {
         _forceShowMediaPreview.value = force
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_FORCE_SHOW_MEDIA_PREVIEW, force).apply()
+    }
+
+    fun setShowMediaInNotificationContainer(context: Context, show: Boolean) {
+        _showMediaInNotificationContainer.value = show
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_SHOW_MEDIA_IN_NOTIFICATION_CONTAINER, show).apply()
     }
 
     fun setAnimationSpeedScale(context: Context, value: Float) {

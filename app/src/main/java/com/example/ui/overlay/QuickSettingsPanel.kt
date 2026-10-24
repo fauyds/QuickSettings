@@ -2650,9 +2650,14 @@ fun UnifiedQsPanel(
         com.example.service.MediaSessionManagerHelper.refreshState()
     }
 
+    val showMediaInNotifContainer by PanelPreferences.showMediaInNotificationContainer.collectAsState()
+    val forceShowMediaPreview by PanelPreferences.forceShowMediaPreview.collectAsState()
+    val shouldShowPlayerInNotification = showMediaInNotifContainer &&
+            (liveMediaState != null || forceShowMediaPreview)
+
     val mediaCardContent: @Composable () -> Unit = {
-        if (!isEditingTiles && liveMediaState != null) {
-            val media = liveMediaState!!
+        val media = liveMediaState ?: if (forceShowMediaPreview) MediaState.Preview else null
+        if (!isEditingTiles && media != null && !shouldShowPlayerInNotification) {
             val isMediaExpanded = isFullQs || isLandscape
             val mediaTopGap = 10.dp
             Spacer(modifier = Modifier.height(mediaTopGap))
@@ -2981,46 +2986,80 @@ fun NotificationsCard(
         parent as? android.view.View ?: hostView
     }
 
-    AndroidView(
-        factory = { ctx ->
-            com.example.ui.notification.NotificationListView(ctx).apply {
-                clipChildren = false
-                clipToPadding = false
-                this.onNotificationClick = onNotificationClick
-                this.onNotificationDismiss = onNotificationDismiss
-                this.onActionClick = onActionClick
-                this.onClearAll = onClearAll
-                this.onRequestPermission = onRequestPermission
-                this.onOpenNotificationManager = onOpenNotificationManager
-                this.rootPanelView = panelRootView
-                this.onStageChange = onStageChange
-                this.currentExpansionStage = expansionStage
-            }
-        },
-        update = { view ->
-            view.clipChildren = false
-            view.clipToPadding = false
-            view.onNotificationClick = onNotificationClick
-            view.onNotificationDismiss = onNotificationDismiss
-            view.onActionClick = onActionClick
-            view.onClearAll = onClearAll
-            view.onRequestPermission = onRequestPermission
-            view.onOpenNotificationManager = onOpenNotificationManager
-            view.rootPanelView = panelRootView
-            view.onStageChange = onStageChange
-            view.currentExpansionStage = expansionStage
-            view.updateData(
-                notifications = notifications,
-                isPermissionGranted = isPermissionGranted,
-                isDark = isDark,
-                primaryColor = primaryColor,
-                panelCardBackgroundColor = notifBgColorInt
-            )
-        },
+    val showMediaInNotifContainer by PanelPreferences.showMediaInNotificationContainer.collectAsState()
+    val liveMediaState by com.example.service.MediaSessionManagerHelper.mediaState.collectAsState()
+    val forceShowMediaPreview by PanelPreferences.forceShowMediaPreview.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    val shouldShowPlayerInNotification = showMediaInNotifContainer &&
+            (liveMediaState != null || forceShowMediaPreview)
+
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .testTag("notifications_card")
-    )
+            .testTag("notifications_card"),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        if (shouldShowPlayerInNotification) {
+            val media = liveMediaState ?: if (forceShowMediaPreview || showMediaInNotifContainer) MediaState.Preview else null
+            if (media != null) {
+                AndroidQMediaNotificationCard(
+                    mediaState = media,
+                    onPlayPauseClick = { com.example.service.MediaSessionManagerHelper.playPause() },
+                    onPreviousClick = { com.example.service.MediaSessionManagerHelper.previous() },
+                    onNextClick = { com.example.service.MediaSessionManagerHelper.next() },
+                    onShuffleClick = { com.example.service.MediaSessionManagerHelper.toggleShuffle() },
+                    onRepeatClick = { com.example.service.MediaSessionManagerHelper.toggleRepeat() },
+                    onFavoriteClick = { com.example.service.MediaSessionManagerHelper.toggleFavorite() },
+                    onSeek = { com.example.service.MediaSessionManagerHelper.seekTo(it) },
+                    onCardClick = {
+                        com.example.service.MediaSessionManagerHelper.openActivePlayerApp(context)
+                    }
+                )
+            }
+        }
+
+        AndroidView(
+            factory = { ctx ->
+                com.example.ui.notification.NotificationListView(ctx).apply {
+                    clipChildren = false
+                    clipToPadding = false
+                    this.onNotificationClick = onNotificationClick
+                    this.onNotificationDismiss = onNotificationDismiss
+                    this.onActionClick = onActionClick
+                    this.onClearAll = onClearAll
+                    this.onRequestPermission = onRequestPermission
+                    this.onOpenNotificationManager = onOpenNotificationManager
+                    this.rootPanelView = panelRootView
+                    this.onStageChange = onStageChange
+                    this.currentExpansionStage = expansionStage
+                }
+            },
+            update = { view ->
+                view.clipChildren = false
+                view.clipToPadding = false
+                view.onNotificationClick = onNotificationClick
+                view.onNotificationDismiss = onNotificationDismiss
+                view.onActionClick = onActionClick
+                view.onClearAll = onClearAll
+                view.onRequestPermission = onRequestPermission
+                view.onOpenNotificationManager = onOpenNotificationManager
+                view.rootPanelView = panelRootView
+                view.onStageChange = onStageChange
+                view.currentExpansionStage = expansionStage
+                view.updateData(
+                    notifications = notifications,
+                    isPermissionGranted = isPermissionGranted,
+                    isDark = isDark,
+                    primaryColor = primaryColor,
+                    panelCardBackgroundColor = notifBgColorInt
+                )
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f, fill = false)
+        )
+    }
 }
 
 /**

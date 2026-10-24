@@ -168,6 +168,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val clearAllFabShapeId by PanelPreferences.clearAllFabShapeId.collectAsState()
     val clearAllFabShape by PanelPreferences.clearAllFabShape.collectAsState()
     val clearAllFabIcon by PanelPreferences.clearAllFabIcon.collectAsState()
+    val showMediaInNotifContainer by PanelPreferences.showMediaInNotificationContainer.collectAsState()
 
     var tileShapesExpanded by rememberSaveable { mutableStateOf(false) }
     var progressBarSliderExpanded by rememberSaveable { mutableStateOf(false) }
@@ -3338,6 +3339,81 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         }
     }
 
+    val showMediaInNotifContainerCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("show_media_in_notif_container_card", CustomizeCategory.QS_DESIGN, "Music Player Notification") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("show_media_in_notif_container_card")
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.GraphicEq,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(1.dp)
+                            ) {
+                                Text(
+                                    text = "Music Player Notification",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    lineHeight = 17.sp,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Display an Android Q style media player notification inside the notification container.",
+                                    fontSize = 12.sp,
+                                    lineHeight = 15.sp,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Switch(
+                            checked = showMediaInNotifContainer,
+                            onCheckedChange = { PanelPreferences.setShowMediaInNotificationContainer(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("show_media_in_notif_container_toggle")
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     val pinnedCardsMap = mapOf<String, @Composable (androidx.compose.ui.graphics.Shape) -> Unit>(
         "qqs_icon_size_card" to qqsIconSizeCard,
         "qqs_icon_quantity_card" to qqsIconQuantityCard,
@@ -3345,6 +3421,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         "tile_outline_card" to tileOutlineCard,
         "qs_tile_gradient_card" to qsTileGradientCard,
         "clear_all_fab_card" to clearAllFabCard,
+        "show_media_in_notif_container_card" to showMediaInNotifContainerCard,
         "show_carrier_card" to showCarrierCard,
         "carrier_divider_card" to carrierDividerCard,
         "hide_carrier_in_expanded_card" to hideCarrierInExpandedCard,
@@ -3382,6 +3459,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         if (!pinnedIds.contains("tile_outline_card")) unpinnedTileShapes.add(tileOutlineCard)
         if (!pinnedIds.contains("qs_tile_gradient_card")) unpinnedTileShapes.add(qsTileGradientCard)
         if (!pinnedIds.contains("clear_all_fab_card")) unpinnedTileShapes.add(clearAllFabCard)
+        if (!pinnedIds.contains("show_media_in_notif_container_card")) unpinnedTileShapes.add(showMediaInNotifContainerCard)
 
         if (unpinnedTileShapes.isNotEmpty()) {
             CollapsibleSubheaderSection(

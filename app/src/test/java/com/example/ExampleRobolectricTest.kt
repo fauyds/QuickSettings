@@ -11,6 +11,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import androidx.compose.ui.graphics.toArgb
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
@@ -432,6 +433,78 @@ class ExampleRobolectricTest {
         assertEquals(1.3f, com.example.data.PanelPreferences.getSurfaceBgVal(isDark = false).value, 0.001f)
         assertEquals(false, com.example.data.PanelPreferences.getInactiveTilesColorTertiary(isDark = false).value)
         assertEquals(-60f, com.example.data.PanelPreferences.getInactiveTilesHue(isDark = false).value, 0.001f)
+    }
+
+    @Test
+    fun `test second most colorful color extraction from album art`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val bmp = android.graphics.BitmapFactory.decodeResource(context.resources, R.drawable.album_art_kygo_1790704645442)
+        assertNotNull(bmp)
+        val palette = androidx.palette.graphics.Palette.from(bmp).maximumColorCount(32).generate()
+
+        val secondColor = com.example.ui.overlay.extractSecondMostColorfulColor(palette)
+        assertNotNull(secondColor)
+
+        val colors = com.example.ui.overlay.extractAndroidQNotificationColors(bmp, palette)
+        assertNotNull(colors.backgroundColor)
+        assertNotNull(colors.accentColor)
+        val bgLum = androidx.core.graphics.ColorUtils.calculateLuminance(colors.backgroundColor.toArgb())
+        org.junit.Assert.assertTrue("Kygo background should be dark (lum < 0.15)", bgLum < 0.15)
+        val contrast = androidx.core.graphics.ColorUtils.calculateContrast(
+            colors.accentColor.toArgb(),
+            colors.backgroundColor.toArgb()
+        )
+        org.junit.Assert.assertTrue("Kygo accent should contrast with background", contrast >= 3.0)
+    }
+
+    @Test
+    fun `test black with red artwork extracts black background with red elements`() {
+        val bmp = android.graphics.Bitmap.createBitmap(120, 120, android.graphics.Bitmap.Config.ARGB_8888)
+        bmp.eraseColor(android.graphics.Color.BLACK)
+        val pixels = IntArray(60 * 60) { android.graphics.Color.RED }
+        bmp.setPixels(pixels, 0, 60, 30, 30, 60, 60)
+
+        val palette = androidx.palette.graphics.Palette.from(bmp).maximumColorCount(32).clearFilters().generate()
+        val colors = com.example.ui.overlay.extractAndroidQNotificationColors(bmp, palette)
+
+        val bgArgb = colors.backgroundColor.toArgb()
+        val bgLum = androidx.core.graphics.ColorUtils.calculateLuminance(bgArgb)
+        assertEquals("Black with red artwork must use black background", 0.0, bgLum, 0.05)
+
+        val accentArgb = colors.accentColor.toArgb()
+        val hsl = FloatArray(3)
+        androidx.core.graphics.ColorUtils.colorToHSL(accentArgb, hsl)
+        val hue = hsl[0]
+        val isRedHue = (hue <= 30f || hue >= 330f)
+        org.junit.Assert.assertTrue("Accent must be in the red hue family (was $hue)", isRedHue)
+        org.junit.Assert.assertTrue("Accent must be saturated (sat >= 0.65, was ${hsl[1]})", hsl[1] >= 0.65f)
+        val contrast = androidx.core.graphics.ColorUtils.calculateContrast(accentArgb, bgArgb)
+        org.junit.Assert.assertTrue("Red accent must contrast with black background (contrast >= 4.5, was $contrast)", contrast >= 4.5)
+    }
+
+    @Test
+    fun `test white with blue artwork extracts white background with blue elements`() {
+        val bmp = android.graphics.Bitmap.createBitmap(120, 120, android.graphics.Bitmap.Config.ARGB_8888)
+        bmp.eraseColor(android.graphics.Color.WHITE)
+        val pixels = IntArray(60 * 60) { android.graphics.Color.BLUE }
+        bmp.setPixels(pixels, 0, 60, 30, 30, 60, 60)
+
+        val palette = androidx.palette.graphics.Palette.from(bmp).maximumColorCount(32).clearFilters().generate()
+        val colors = com.example.ui.overlay.extractAndroidQNotificationColors(bmp, palette)
+
+        val bgArgb = colors.backgroundColor.toArgb()
+        val bgLum = androidx.core.graphics.ColorUtils.calculateLuminance(bgArgb)
+        assertEquals("White with blue artwork must use white background", 1.0, bgLum, 0.05)
+
+        val accentArgb = colors.accentColor.toArgb()
+        val hsl = FloatArray(3)
+        androidx.core.graphics.ColorUtils.colorToHSL(accentArgb, hsl)
+        val hue = hsl[0]
+        val isBlueHue = (hue in 190f..260f)
+        org.junit.Assert.assertTrue("Accent must be in the blue hue family (was $hue)", isBlueHue)
+        org.junit.Assert.assertTrue("Accent must be saturated (sat >= 0.65, was ${hsl[1]})", hsl[1] >= 0.65f)
+        val contrast = androidx.core.graphics.ColorUtils.calculateContrast(accentArgb, bgArgb)
+        org.junit.Assert.assertTrue("Blue accent must contrast with white background (contrast >= 4.0, was $contrast)", contrast >= 4.0)
     }
 }
 

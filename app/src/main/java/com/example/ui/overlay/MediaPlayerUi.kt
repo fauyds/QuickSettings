@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -35,6 +36,23 @@ import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Headphones
 import androidx.compose.material.icons.outlined.PhoneAndroid
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.ThumbDown
+import androidx.compose.material.icons.filled.ThumbDownOffAlt
+import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.filled.ThumbUpOffAlt
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.ui.graphics.toArgb
+import android.graphics.Bitmap
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -91,10 +109,23 @@ fun AlbumArtworkView(
     cornerRadius: Dp,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val shape = RoundedCornerShape(cornerRadius)
 
-    val dominantColor = remember(mediaState.artworkBitmap) {
-        mediaState.artworkBitmap?.let {
+    val fallbackArtwork = remember {
+        try {
+            android.graphics.BitmapFactory.decodeResource(
+                context.resources,
+                com.example.R.drawable.album_art_kygo_1790704645442
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+    val effectiveArtwork = mediaState.artworkBitmap ?: fallbackArtwork
+
+    val dominantColor = remember(effectiveArtwork) {
+        effectiveArtwork?.let {
             Palette.from(it).generate().dominantSwatch?.rgb?.let { color -> Color(color) }
         } ?: Color(0xFF2E3440) // Fallback
     }
@@ -106,9 +137,9 @@ fun AlbumArtworkView(
             .background(dominantColor),
         contentAlignment = Alignment.Center
     ) {
-        if (mediaState.artworkBitmap != null) {
+        if (effectiveArtwork != null) {
             Image(
-                bitmap = mediaState.artworkBitmap.asImageBitmap(),
+                bitmap = effectiveArtwork.asImageBitmap(),
                 contentDescription = "Album Artwork",
                 modifier = Modifier.size(size),
                 contentScale = ContentScale.Crop
@@ -186,11 +217,22 @@ fun AdaptiveMediaPlayerCard(
     }
 
     val currentHeaderState = activeSessions.getOrElse(pagerState.currentPage.coerceIn(0 until activeSessions.size)) { mediaState }
-    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val isDark = com.example.ui.theme.LocalIsDarkTheme.current
     val playPauseColor = if (isDark) Color.White else Color.Black.copy(alpha = 0.8f)
     val progressBarStyle by PanelPreferences.progressBarStyle.collectAsState()
 
-    val artworkBitmap = currentHeaderState.artworkBitmap
+    val context = LocalContext.current
+    val fallbackArtwork = remember {
+        try {
+            android.graphics.BitmapFactory.decodeResource(
+                context.resources,
+                com.example.R.drawable.album_art_kygo_1790704645442
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+    val artworkBitmap = currentHeaderState.artworkBitmap ?: fallbackArtwork
     val artworkColor = remember(artworkBitmap, isDark) {
         artworkBitmap?.let {
             Palette.from(it).generate().dominantSwatch?.rgb?.let { colorInt ->
@@ -732,4 +774,630 @@ fun CompactMediaTile(
         onNextClick = onNextClick,
         onCardClick = onTileClick
     )
+}
+
+/**
+ * Android Q Beta 2 Style Music Player Notification Card (Placed inside Notifications Container)
+ */
+@Composable
+fun AndroidQMediaNotificationCard(
+    mediaState: MediaState,
+    modifier: Modifier = Modifier,
+    onPlayPauseClick: () -> Unit = {},
+    onPreviousClick: () -> Unit = {},
+    onNextClick: () -> Unit = {},
+    onShuffleClick: () -> Unit = {},
+    onRepeatClick: () -> Unit = {},
+    onFavoriteClick: () -> Unit = {},
+    onSeek: (Float) -> Unit = {},
+    onCardClick: () -> Unit = {}
+) {
+    val context = LocalContext.current
+    var isSeekBarVisible by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
+    var localProgress by remember(mediaState.progress) { mutableFloatStateOf(mediaState.progress) }
+    var isDraggingSlider by remember { mutableStateOf(false) }
+
+    // Dynamic background and precise accents extracted from album art using Palette
+    val fallbackArtwork = remember {
+        try {
+            android.graphics.BitmapFactory.decodeResource(
+                context.resources,
+                com.example.R.drawable.album_art_kygo_1790704645442
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+    val artwork = mediaState.artworkBitmap ?: fallbackArtwork
+    val palette = remember(artwork) {
+        artwork?.let {
+            Palette.from(it)
+                .maximumColorCount(32)
+                .clearFilters()
+                .generate()
+        }
+    }
+    val extractedColors = remember(artwork, palette) {
+        extractAndroidQNotificationColors(artwork, palette)
+    }
+    val cardBgColor = extractedColors.backgroundColor
+    val accentColor = extractedColors.accentColor
+    val subTextColor = remember(accentColor) {
+        accentColor.copy(alpha = 0.80f)
+    }
+
+    // Dynamic App Source & Icon
+    val displayAppName = remember(mediaState.appName, mediaState.packageName) {
+        if (mediaState.appName.isNotBlank() && mediaState.appName != "MUSER") {
+            mediaState.appName
+        } else if (mediaState.packageName.isNotBlank()) {
+            try {
+                val pm = context.packageManager
+                val info = pm.getApplicationInfo(mediaState.packageName, 0)
+                pm.getApplicationLabel(info).toString()
+            } catch (e: Exception) {
+                "Music Player"
+            }
+        } else {
+            "Music Player"
+        }
+    }
+
+    val appIconBitmap = remember(mediaState.packageName) {
+        if (mediaState.packageName.isNotBlank()) {
+            try {
+                val pm = context.packageManager
+                val drawable = pm.getApplicationIcon(mediaState.packageName)
+                val bmp = Bitmap.createBitmap(
+                    drawable.intrinsicWidth.coerceAtLeast(48),
+                    drawable.intrinsicHeight.coerceAtLeast(48),
+                    Bitmap.Config.ARGB_8888
+                )
+                val canvas = android.graphics.Canvas(bmp)
+                drawable.setBounds(0, 0, canvas.width, canvas.height)
+                drawable.draw(canvas)
+                bmp
+            } catch (e: Exception) {
+                null
+            }
+        } else null
+    }
+
+    val displayTitle = mediaState.title.ifBlank { "Track Title" }
+    val displayArtist = mediaState.artist.ifBlank { "" }
+
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable { onCardClick() }
+            .testTag("android_q_media_notification_card"),
+        shape = RoundedCornerShape(16.dp),
+        color = cardBgColor,
+        shadowElevation = 2.dp
+    ) {
+        Box(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Album art covering the WHOLE right side, without any extra paddings
+            Box(
+                modifier = Modifier.matchParentSize()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .width(130.dp)
+                        .align(Alignment.CenterEnd)
+                ) {
+                    if (artwork != null) {
+                        Image(
+                            bitmap = artwork.asImageBitmap(),
+                            contentDescription = "Album Art",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.horizontalGradient(
+                                        colors = listOf(
+                                            cardBgColor,
+                                            cardBgColor.copy(alpha = 0.8f),
+                                            cardBgColor.copy(alpha = 0.3f),
+                                            Color.Transparent
+                                        )
+                                    )
+                                )
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(accentColor.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MusicNote,
+                                contentDescription = null,
+                                tint = accentColor.copy(alpha = 0.35f),
+                                modifier = Modifier.size(44.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 14.dp, end = 14.dp, top = 10.dp, bottom = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // 1. Top Bar: App Badge + Name + Hide/Show Seekbar Arrow
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.weight(1f, fill = false)
+                    ) {
+                        if (appIconBitmap != null) {
+                            Image(
+                                bitmap = appIconBitmap.asImageBitmap(),
+                                contentDescription = displayAppName,
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clip(CircleShape)
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clip(CircleShape)
+                                    .background(accentColor),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    tint = cardBgColor,
+                                    modifier = Modifier.size(11.dp)
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = displayAppName,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = accentColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    // Arrow toggles seekbar visibility
+                    IconButton(
+                        onClick = { isSeekBarVisible = !isSeekBarVisible },
+                        modifier = Modifier
+                            .size(28.dp)
+                            .testTag("android_q_media_toggle_seekbar_btn")
+                    ) {
+                        Icon(
+                            imageVector = if (isSeekBarVisible) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                            contentDescription = if (isSeekBarVisible) "Hide Seekbar" else "Show Seekbar",
+                            tint = accentColor,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                // 2. Song Title & Artist
+                Column(
+                    modifier = Modifier.fillMaxWidth(0.68f),
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                ) {
+                    Text(
+                        text = displayTitle,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = accentColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (displayArtist.isNotBlank()) {
+                        Text(
+                            text = displayArtist,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = subTextColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                // 3. Playback Control Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(0.72f),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp, Alignment.Start),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Dynamically shown Shuffle button
+                    if (mediaState.supportsShuffle) {
+                        IconButton(
+                            onClick = onShuffleClick,
+                            modifier = Modifier
+                                .size(30.dp)
+                                .testTag("android_q_media_shuffle_btn")
+                        ) {
+                            val isShuffleActive = mediaState.shuffleMode != 0 && mediaState.shuffleMode != -1
+                            Icon(
+                                imageVector = Icons.Default.Shuffle,
+                                contentDescription = "Shuffle",
+                                tint = if (isShuffleActive) accentColor else subTextColor.copy(alpha = 0.45f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    // Previous Button
+                    IconButton(
+                        onClick = onPreviousClick,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .testTag("android_q_media_prev_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SkipPrevious,
+                            contentDescription = "Previous",
+                            tint = accentColor,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    // Play / Pause Button
+                    IconButton(
+                        onClick = onPlayPauseClick,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .testTag("android_q_media_play_pause_btn")
+                    ) {
+                        Icon(
+                            imageVector = if (mediaState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (mediaState.isPlaying) "Pause" else "Play",
+                            tint = accentColor,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+
+                    // Next Button
+                    IconButton(
+                        onClick = onNextClick,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .testTag("android_q_media_next_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SkipNext,
+                            contentDescription = "Next",
+                            tint = accentColor,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    // Dynamically shown Repeat button
+                    if (mediaState.supportsRepeat) {
+                        IconButton(
+                            onClick = onRepeatClick,
+                            modifier = Modifier
+                                .size(30.dp)
+                                .testTag("android_q_media_repeat_btn")
+                        ) {
+                            val isRepeatActive = mediaState.repeatMode != 0 && mediaState.repeatMode != -1
+                            Icon(
+                                imageVector = if (mediaState.repeatMode == 1) Icons.Default.RepeatOne else Icons.Default.Repeat,
+                                contentDescription = "Repeat",
+                                tint = if (isRepeatActive) accentColor else subTextColor.copy(alpha = 0.45f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    // Dynamically shown Like button
+                    if (mediaState.supportsFavorite) {
+                        IconButton(
+                            onClick = onFavoriteClick,
+                            modifier = Modifier
+                                .size(30.dp)
+                                .testTag("android_q_media_like_btn")
+                        ) {
+                            Icon(
+                                imageVector = if (mediaState.isFavorite) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
+                                contentDescription = if (mediaState.isFavorite) "Liked" else "Like",
+                                tint = if (mediaState.isFavorite) accentColor else subTextColor.copy(alpha = 0.6f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+
+                // 4. Collapsible Progress Slider & Timestamps (Full Width on top of artwork)
+                AnimatedVisibility(
+                    visible = isSeekBarVisible,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(1.dp)
+                    ) {
+                        val displayProgress = if (isDraggingSlider) localProgress else mediaState.progress.coerceIn(0f, 1f)
+
+                        Slider(
+                            value = displayProgress,
+                            onValueChange = {
+                                isDraggingSlider = true
+                                localProgress = it
+                            },
+                            onValueChangeFinished = {
+                                isDraggingSlider = false
+                                onSeek(localProgress)
+                            },
+                            colors = SliderDefaults.colors(
+                                thumbColor = accentColor,
+                                activeTrackColor = accentColor,
+                                inactiveTrackColor = accentColor.copy(alpha = 0.25f)
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(20.dp)
+                                .testTag("android_q_media_progress_slider")
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val currMs = if (isDraggingSlider) (displayProgress * mediaState.totalDurationMs).toLong() else mediaState.currentPositionMs
+                            Text(
+                                text = MediaState.formatDuration(currMs),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = accentColor
+                            )
+                            Text(
+                                text = if (mediaState.totalDurationMs > 0) mediaState.formattedTotalTime else "--:--",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = accentColor
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+data class MediaNotificationColors(
+    val backgroundColor: Color,
+    val accentColor: Color
+)
+
+/**
+ * Extracts precise background and accent colors for the Android Q media notification design.
+ *
+ * Rules:
+ * 1. Background color (backgroundColor):
+ *    - Accurately captures artwork canvas / dominant tone.
+ *    - Black canvas (e.g. black with red artwork) -> pure black / dark canvas.
+ *    - White canvas (e.g. white with blue artwork) -> pure white / light canvas.
+ *    - Preserves gradient blend with artwork left edge.
+ * 2. Accent color (accentColor for labels, buttons, seekbar):
+ *    - When artwork has a single colorful accent (e.g. red on black, or blue on white), extracts that accent.
+ *    - When artwork has multiple distinct colorful hues (e.g. Kygo with cyan & yellow), extracts the second most colorful color.
+ *    - Enforces contrast: bright & vivid on dark backgrounds, deep & saturated on light backgrounds.
+ */
+fun extractAndroidQNotificationColors(
+    bitmap: Bitmap?,
+    palette: Palette?
+): MediaNotificationColors {
+    val cardBgColor = extractNotificationBackgroundColor(bitmap, palette)
+    val bgArgb = cardBgColor.toArgb()
+    val bgLuminance = ColorUtils.calculateLuminance(bgArgb)
+    val isDarkBg = bgLuminance < 0.5f
+
+    val accentColor = extractNotificationAccentColor(palette, isDarkBg, bgArgb)
+
+    return MediaNotificationColors(
+        backgroundColor = cardBgColor,
+        accentColor = accentColor
+    )
+}
+
+fun extractNotificationBackgroundColor(bitmap: Bitmap?, palette: Palette?): Color {
+    var edgeLuminanceAvg: Float? = null
+    var edgeSampleCount = 0
+    var edgeLumSum = 0.0
+
+    if (bitmap != null && bitmap.width > 0 && bitmap.height > 0) {
+        try {
+            val swBitmap = if (bitmap.config == Bitmap.Config.HARDWARE) {
+                bitmap.copy(Bitmap.Config.ARGB_8888, false)
+            } else {
+                bitmap
+            }
+            if (swBitmap != null) {
+                val stepY = maxOf(1, swBitmap.height / 8)
+                for (y in 0 until swBitmap.height step stepY) {
+                    val pixel = swBitmap.getPixel(0, y)
+                    val alpha = (pixel ushr 24) and 0xFF
+                    if (alpha >= 50) {
+                        edgeLumSum += ColorUtils.calculateLuminance(pixel)
+                        edgeSampleCount++
+                    }
+                }
+                val cornerTopRight = swBitmap.getPixel(swBitmap.width - 1, 0)
+                val cornerBottomRight = swBitmap.getPixel(swBitmap.width - 1, swBitmap.height - 1)
+                val alphaTR = (cornerTopRight ushr 24) and 0xFF
+                val alphaBR = (cornerBottomRight ushr 24) and 0xFF
+                if (alphaTR >= 50) {
+                    edgeLumSum += ColorUtils.calculateLuminance(cornerTopRight)
+                    edgeSampleCount++
+                }
+                if (alphaBR >= 50) {
+                    edgeLumSum += ColorUtils.calculateLuminance(cornerBottomRight)
+                    edgeSampleCount++
+                }
+
+                if (edgeSampleCount > 0) {
+                    edgeLuminanceAvg = (edgeLumSum / edgeSampleCount).toFloat()
+                }
+            }
+        } catch (_: Exception) {
+            // Safe fallback if bitmap sampling fails
+        }
+    }
+
+    val dominantSwatch = palette?.dominantSwatch
+
+    // If edge sampling clearly indicates black canvas (luminance < 0.08)
+    if (edgeLuminanceAvg != null && edgeLuminanceAvg < 0.08f) {
+        return Color(0xFF000000)
+    }
+    // If edge sampling clearly indicates white canvas (luminance > 0.88)
+    if (edgeLuminanceAvg != null && edgeLuminanceAvg > 0.88f) {
+        return Color(0xFFFFFFFF)
+    }
+
+    if (dominantSwatch != null) {
+        val domLum = ColorUtils.calculateLuminance(dominantSwatch.rgb).toFloat()
+        // Pure black or near-black dominant canvas
+        if (domLum < 0.04f) {
+            val r = android.graphics.Color.red(dominantSwatch.rgb)
+            val g = android.graphics.Color.green(dominantSwatch.rgb)
+            val b = android.graphics.Color.blue(dominantSwatch.rgb)
+            if (r <= 14 && g <= 14 && b <= 14) {
+                return Color(0xFF000000)
+            }
+            return Color(dominantSwatch.rgb)
+        }
+        // Pure white or near-white dominant canvas
+        if (domLum > 0.88f) {
+            val r = android.graphics.Color.red(dominantSwatch.rgb)
+            val g = android.graphics.Color.green(dominantSwatch.rgb)
+            val b = android.graphics.Color.blue(dominantSwatch.rgb)
+            if (r >= 242 && g >= 242 && b >= 242) {
+                return Color(0xFFFFFFFF)
+            }
+            return Color(dominantSwatch.rgb)
+        }
+
+        // Mid-tones: check edge average if available
+        if (edgeLuminanceAvg != null) {
+            if (edgeLuminanceAvg < 0.12f) return Color(0xFF000000)
+            if (edgeLuminanceAvg > 0.82f) return Color(0xFFFFFFFF)
+        }
+
+        val domHsl = dominantSwatch.hsl
+        return if (domHsl[2] < 0.22f) {
+            Color(dominantSwatch.rgb)
+        } else if (domHsl[2] > 0.78f) {
+            Color(dominantSwatch.rgb)
+        } else {
+            palette.darkMutedSwatch?.rgb?.let { Color(it) }
+                ?: palette.mutedSwatch?.rgb?.let { Color(it) }
+                ?: Color(dominantSwatch.rgb)
+        }
+    }
+
+    return Color(0xFF121212)
+}
+
+fun extractNotificationAccentColor(
+    palette: Palette?,
+    isDarkBg: Boolean,
+    bgArgb: Int
+): Color {
+    if (palette == null) {
+        return if (isDarkBg) Color(0xFFE5B15D) else Color(0xFF1A56DB)
+    }
+
+    val swatches = palette.swatches
+    if (swatches.isEmpty()) {
+        val fallbackInt = if (isDarkBg) {
+            palette.vibrantSwatch?.rgb ?: palette.lightVibrantSwatch?.rgb ?: 0xFFE5B15D.toInt()
+        } else {
+            palette.darkVibrantSwatch?.rgb ?: palette.vibrantSwatch?.rgb ?: 0xFF1A56DB.toInt()
+        }
+        return Color(fallbackInt)
+    }
+
+    // Filter swatches that have noticeable saturation and some contrast with the background
+    val colorfulCandidates = swatches.filter { swatch ->
+        val s = swatch.hsl[1]
+        val contrast = ColorUtils.calculateContrast(swatch.rgb, bgArgb)
+        s >= 0.15f && contrast >= 1.5
+    }.sortedByDescending { it.hsl[1] } // highest saturation first
+
+    if (colorfulCandidates.isEmpty()) {
+        // Monochrome fallback
+        return if (isDarkBg) Color(0xFFF2F2F2) else Color(0xFF1C1C1E)
+    }
+
+    val mostColorful = colorfulCandidates.first()
+
+    // Check for a second distinct colorful hue (>= 25 degrees hue difference)
+    val distinctHueCandidates = colorfulCandidates.filter { swatch ->
+        val h1 = mostColorful.hsl[0]
+        val h2 = swatch.hsl[0]
+        val diff = kotlin.math.abs(h1 - h2)
+        val hueDistance = kotlin.math.min(diff, 360f - diff)
+        hueDistance >= 25f
+    }
+
+    // If multiple distinct colorful hues exist (like Kygo), choose the second distinct colorful hue.
+    // Otherwise (like black+red or white+blue where all colorful pixels share the same hue family),
+    // choose that primary colorful hue!
+    val chosenSwatch = if (distinctHueCandidates.isNotEmpty()) {
+        distinctHueCandidates.first()
+    } else {
+        mostColorful
+    }
+
+    // Ensure legibility and contrast against the card background:
+    // Dark bg -> bright, vivid accent (lightness >= 0.50)
+    // Light bg -> deep, saturated accent (lightness <= 0.42)
+    val hsl = chosenSwatch.hsl.clone()
+    if (isDarkBg) {
+        if (hsl[2] < 0.48f) {
+            hsl[2] = 0.52f
+        }
+        if (hsl[1] < 0.65f) {
+            hsl[1] = 0.75f
+        }
+    } else {
+        if (hsl[2] > 0.44f) {
+            hsl[2] = 0.40f
+        }
+        if (hsl[1] < 0.65f) {
+            hsl[1] = 0.75f
+        }
+    }
+
+    return Color(ColorUtils.HSLToColor(hsl))
+}
+
+/**
+ * Extracts the second most colorful (vibrant and distinct) color from the Palette.
+ * Maintained as a compatibility helper.
+ */
+fun extractSecondMostColorfulColor(palette: Palette?): Color {
+    return extractNotificationAccentColor(palette, isDarkBg = true, bgArgb = android.graphics.Color.BLACK)
 }

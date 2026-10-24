@@ -201,6 +201,14 @@ object MediaSessionManagerHelper {
         } else if (forcePreview) {
             val totalPreviewDur = 232000L
             val previewProgress = (previewPositionMs.toFloat() / totalPreviewDur.toFloat()).coerceIn(0f, 1f)
+            val kygoBmp = try {
+                android.graphics.BitmapFactory.decodeResource(
+                    context.resources,
+                    com.example.R.drawable.album_art_kygo_1790704645442
+                )
+            } catch (e: Exception) {
+                null
+            }
 
             val preview1 = MediaState(
                 title = "Never Let You Go",
@@ -214,7 +222,13 @@ object MediaSessionManagerHelper {
                 totalDurationMs = totalPreviewDur,
                 outputDevice = getActiveOutputDevice(context).name,
                 isHeadphonesOrBluetooth = getActiveOutputDevice(context).isHeadphonesOrBluetooth,
-                sessionIndex = 0
+                artworkBitmap = kygoBmp,
+                sessionIndex = 0,
+                supportsRepeat = true,
+                repeatMode = 1,
+                supportsShuffle = true,
+                shuffleMode = 1,
+                supportsFavorite = true
             )
             val preview2 = MediaState(
                 title = "Higher Love",
@@ -228,7 +242,13 @@ object MediaSessionManagerHelper {
                 totalDurationMs = 215000L,
                 outputDevice = getActiveOutputDevice(context).name,
                 isHeadphonesOrBluetooth = getActiveOutputDevice(context).isHeadphonesOrBluetooth,
-                sessionIndex = 1
+                artworkBitmap = kygoBmp,
+                sessionIndex = 1,
+                supportsRepeat = true,
+                repeatMode = 0,
+                supportsShuffle = true,
+                shuffleMode = 0,
+                supportsFavorite = true
             )
             val preview3 = MediaState(
                 title = "Synthwave Nights",
@@ -242,7 +262,13 @@ object MediaSessionManagerHelper {
                 totalDurationMs = 250000L,
                 outputDevice = getActiveOutputDevice(context).name,
                 isHeadphonesOrBluetooth = getActiveOutputDevice(context).isHeadphonesOrBluetooth,
-                sessionIndex = 2
+                artworkBitmap = kygoBmp,
+                sessionIndex = 2,
+                supportsRepeat = false,
+                repeatMode = 0,
+                supportsShuffle = false,
+                shuffleMode = 0,
+                supportsFavorite = false
             )
 
             val previews = listOf(preview1, preview2, preview3)
