@@ -76,6 +76,7 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
     val inactiveTilesColorPrimary by PanelPreferences.getInactiveTilesColorPrimary(isEditingDark).collectAsState()
     val slidersColorTertiary by PanelPreferences.getSlidersColorTertiary(isEditingDark).collectAsState()
     val miscElementsColorTertiary by PanelPreferences.getMiscElementsColorTertiary(isEditingDark).collectAsState()
+    val clearAllColorTertiary by PanelPreferences.getClearAllColorTertiary(isEditingDark).collectAsState()
 
     val surfaceBgHue by PanelPreferences.getSurfaceBgHue(isEditingDark).collectAsState()
     val surfaceBgSat by PanelPreferences.getSurfaceBgSat(isEditingDark).collectAsState()
@@ -104,6 +105,10 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
     val miscElementsHue by PanelPreferences.getMiscElementsHue(isEditingDark).collectAsState()
     val miscElementsSat by PanelPreferences.getMiscElementsSat(isEditingDark).collectAsState()
     val miscElementsVal by PanelPreferences.getMiscElementsVal(isEditingDark).collectAsState()
+
+    val clearAllHue by PanelPreferences.getClearAllHue(isEditingDark).collectAsState()
+    val clearAllSat by PanelPreferences.getClearAllSat(isEditingDark).collectAsState()
+    val clearAllVal by PanelPreferences.getClearAllVal(isEditingDark).collectAsState()
 
     Scaffold(
         topBar = {
@@ -381,8 +386,22 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                     sat = miscElementsSat,
                     valFactor = miscElementsVal,
                     onHsbChange = { h, s, v -> PanelPreferences.setMiscElementsHsb(context, isEditingDark, h, s, v) },
-                    shape = CustomizeCardShapes.BottomCard,
+                    shape = CustomizeCardShapes.CenterCard,
                     testTag = "activity_misc_elements_tertiary_toggle"
+                )
+
+                // 8. Clear All Button / FAB
+                ExpandableElementColorCard(
+                    title = "8. Clear All Button / FAB",
+                    subtitle = "Floating Clear All button and notification list footer button",
+                    isTertiary = clearAllColorTertiary,
+                    onCheckedChange = { PanelPreferences.setClearAllColorTertiary(context, isEditingDark, it) },
+                    hue = clearAllHue,
+                    sat = clearAllSat,
+                    valFactor = clearAllVal,
+                    onHsbChange = { h, s, v -> PanelPreferences.setClearAllHsb(context, isEditingDark, h, s, v) },
+                    shape = CustomizeCardShapes.BottomCard,
+                    testTag = "activity_clear_all_tertiary_toggle"
                 )
             }
 

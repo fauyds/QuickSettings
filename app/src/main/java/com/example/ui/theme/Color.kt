@@ -278,6 +278,20 @@ fun getMiscElementColor(isDark: Boolean): Color {
     return applyHsvAdjustments(baseColor, hue, sat, valFactor)
 }
 
+@Composable
+fun getClearAllElementColor(isDark: Boolean): Color {
+    val isTertiary = PanelPreferences.getClearAllColorTertiary(isDark).collectAsState().value
+    val baseColor = if (isTertiary) {
+        androidx.compose.material3.MaterialTheme.colorScheme.tertiary
+    } else {
+        androidx.compose.material3.MaterialTheme.colorScheme.primary
+    }
+    val hue = PanelPreferences.getClearAllHue(isDark).collectAsState().value
+    val sat = PanelPreferences.getClearAllSat(isDark).collectAsState().value
+    val valFactor = PanelPreferences.getClearAllVal(isDark).collectAsState().value
+    return applyHsvAdjustments(baseColor, hue, sat, valFactor)
+}
+
 /**
  * 2. Settings Root Screen / Scaffold Background (`settingsScreenBackgroundColor`).
  * Light: Gray 7% (#ECECEC), Dark: #121212

@@ -165,9 +165,9 @@ enum class QsSliderTarget(val id: String, val label: String) {
 }
 
 enum class ClearAllFabPosition(val id: String, val label: String) {
-    CENTER("center", "Centered"),
-    LEFT("left", "Left Side"),
-    RIGHT("right", "Right Side");
+    CENTER("center", "Anchor to center"),
+    LEFT("left", "Anchor to left side"),
+    RIGHT("right", "Anchor to right side");
 
     companion object {
         fun fromId(id: String?): ClearAllFabPosition =
@@ -323,6 +323,7 @@ object PanelPreferences {
     private const val KEY_ELEM_INACTIVE_TILES_PRIMARY = "elem_inactive_tiles_primary"
     private const val KEY_ELEM_SLIDERS_TERTIARY = "elem_sliders_tertiary"
     private const val KEY_ELEM_MISC_ELEMENTS_TERTIARY = "elem_misc_elements_tertiary"
+    private const val KEY_ELEM_CLEAR_ALL_TERTIARY = "elem_clear_all_tertiary"
     private const val KEY_DISABLE_MONET_NOTIF_TEXT = "disable_monet_notif_text"
 
     private const val KEY_ELEM_SURFACE_BG_HUE = "elem_surface_bg_hue"
@@ -353,6 +354,10 @@ object PanelPreferences {
     private const val KEY_ELEM_MISC_ELEMENTS_SAT = "elem_misc_elements_sat"
     private const val KEY_ELEM_MISC_ELEMENTS_VAL = "elem_misc_elements_val"
 
+    private const val KEY_ELEM_CLEAR_ALL_HUE = "elem_clear_all_hue"
+    private const val KEY_ELEM_CLEAR_ALL_SAT = "elem_clear_all_sat"
+    private const val KEY_ELEM_CLEAR_ALL_VAL = "elem_clear_all_val"
+
     // Per-mode keys: Light mode
     private const val KEY_ELEM_SURFACE_BG_TERTIARY_LIGHT = "elem_surface_bg_tertiary_light"
     private const val KEY_ELEM_PANEL_CONTAINER_TERTIARY_LIGHT = "elem_panel_container_tertiary_light"
@@ -362,6 +367,7 @@ object PanelPreferences {
     private const val KEY_ELEM_INACTIVE_TILES_PRIMARY_LIGHT = "elem_inactive_tiles_primary_light"
     private const val KEY_ELEM_SLIDERS_TERTIARY_LIGHT = "elem_sliders_tertiary_light"
     private const val KEY_ELEM_MISC_ELEMENTS_TERTIARY_LIGHT = "elem_misc_elements_tertiary_light"
+    private const val KEY_ELEM_CLEAR_ALL_TERTIARY_LIGHT = "elem_clear_all_tertiary_light"
 
     private const val KEY_ELEM_SURFACE_BG_HUE_LIGHT = "elem_surface_bg_hue_light"
     private const val KEY_ELEM_SURFACE_BG_SAT_LIGHT = "elem_surface_bg_sat_light"
@@ -391,6 +397,10 @@ object PanelPreferences {
     private const val KEY_ELEM_MISC_ELEMENTS_SAT_LIGHT = "elem_misc_elements_sat_light"
     private const val KEY_ELEM_MISC_ELEMENTS_VAL_LIGHT = "elem_misc_elements_val_light"
 
+    private const val KEY_ELEM_CLEAR_ALL_HUE_LIGHT = "elem_clear_all_hue_light"
+    private const val KEY_ELEM_CLEAR_ALL_SAT_LIGHT = "elem_clear_all_sat_light"
+    private const val KEY_ELEM_CLEAR_ALL_VAL_LIGHT = "elem_clear_all_val_light"
+
     // Per-mode keys: Dark mode
     private const val KEY_ELEM_SURFACE_BG_TERTIARY_DARK = "elem_surface_bg_tertiary_dark"
     private const val KEY_ELEM_PANEL_CONTAINER_TERTIARY_DARK = "elem_panel_container_tertiary_dark"
@@ -400,6 +410,7 @@ object PanelPreferences {
     private const val KEY_ELEM_INACTIVE_TILES_PRIMARY_DARK = "elem_inactive_tiles_primary_dark"
     private const val KEY_ELEM_SLIDERS_TERTIARY_DARK = "elem_sliders_tertiary_dark"
     private const val KEY_ELEM_MISC_ELEMENTS_TERTIARY_DARK = "elem_misc_elements_tertiary_dark"
+    private const val KEY_ELEM_CLEAR_ALL_TERTIARY_DARK = "elem_clear_all_tertiary_dark"
 
     private const val KEY_ELEM_SURFACE_BG_HUE_DARK = "elem_surface_bg_hue_dark"
     private const val KEY_ELEM_SURFACE_BG_SAT_DARK = "elem_surface_bg_sat_dark"
@@ -428,6 +439,10 @@ object PanelPreferences {
     private const val KEY_ELEM_MISC_ELEMENTS_HUE_DARK = "elem_misc_elements_hue_dark"
     private const val KEY_ELEM_MISC_ELEMENTS_SAT_DARK = "elem_misc_elements_sat_dark"
     private const val KEY_ELEM_MISC_ELEMENTS_VAL_DARK = "elem_misc_elements_val_dark"
+
+    private const val KEY_ELEM_CLEAR_ALL_HUE_DARK = "elem_clear_all_hue_dark"
+    private const val KEY_ELEM_CLEAR_ALL_SAT_DARK = "elem_clear_all_sat_dark"
+    private const val KEY_ELEM_CLEAR_ALL_VAL_DARK = "elem_clear_all_val_dark"
     private const val KEY_QS_BACKGROUND_COLOR = "qs_background_color"
     private const val KEY_QS_PANEL_BACKGROUND_COLOR = "qs_panel_background_color"
     private const val KEY_QS_BACKGROUND_CORNER = "qs_background_corner"
@@ -505,6 +520,9 @@ object PanelPreferences {
     private val _miscElementsColorTertiary = MutableStateFlow(false)
     val miscElementsColorTertiary: StateFlow<Boolean> = _miscElementsColorTertiary.asStateFlow()
 
+    private val _clearAllColorTertiary = MutableStateFlow(false)
+    val clearAllColorTertiary: StateFlow<Boolean> = _clearAllColorTertiary.asStateFlow()
+
     // Surface Bg HSB
     private val _surfaceBgHue = MutableStateFlow(0f)
     val surfaceBgHue: StateFlow<Float> = _surfaceBgHue.asStateFlow()
@@ -561,6 +579,14 @@ object PanelPreferences {
     private val _miscElementsVal = MutableStateFlow(1f)
     val miscElementsVal: StateFlow<Float> = _miscElementsVal.asStateFlow()
 
+    // Clear All HSB
+    private val _clearAllHue = MutableStateFlow(0f)
+    val clearAllHue: StateFlow<Float> = _clearAllHue.asStateFlow()
+    private val _clearAllSat = MutableStateFlow(1f)
+    val clearAllSat: StateFlow<Float> = _clearAllSat.asStateFlow()
+    private val _clearAllVal = MutableStateFlow(1f)
+    val clearAllVal: StateFlow<Float> = _clearAllVal.asStateFlow()
+
     private val _disableMonetNotifText = MutableStateFlow(false)
     val disableMonetNotifText: StateFlow<Boolean> = _disableMonetNotifText.asStateFlow()
 
@@ -581,6 +607,8 @@ object PanelPreferences {
     val slidersColorTertiaryLight: StateFlow<Boolean> = _slidersColorTertiaryLight.asStateFlow()
     private val _miscElementsColorTertiaryLight = MutableStateFlow(false)
     val miscElementsColorTertiaryLight: StateFlow<Boolean> = _miscElementsColorTertiaryLight.asStateFlow()
+    private val _clearAllColorTertiaryLight = MutableStateFlow(false)
+    val clearAllColorTertiaryLight: StateFlow<Boolean> = _clearAllColorTertiaryLight.asStateFlow()
 
     private val _surfaceBgHueLight = MutableStateFlow(0f)
     val surfaceBgHueLight: StateFlow<Float> = _surfaceBgHueLight.asStateFlow()
@@ -631,6 +659,13 @@ object PanelPreferences {
     private val _miscElementsValLight = MutableStateFlow(1f)
     val miscElementsValLight: StateFlow<Float> = _miscElementsValLight.asStateFlow()
 
+    private val _clearAllHueLight = MutableStateFlow(0f)
+    val clearAllHueLight: StateFlow<Float> = _clearAllHueLight.asStateFlow()
+    private val _clearAllSatLight = MutableStateFlow(1f)
+    val clearAllSatLight: StateFlow<Float> = _clearAllSatLight.asStateFlow()
+    private val _clearAllValLight = MutableStateFlow(1f)
+    val clearAllValLight: StateFlow<Float> = _clearAllValLight.asStateFlow()
+
     // Per-mode state flows: Dark Mode
     private val _surfaceBgColorTertiaryDark = MutableStateFlow(false)
     val surfaceBgColorTertiaryDark: StateFlow<Boolean> = _surfaceBgColorTertiaryDark.asStateFlow()
@@ -648,6 +683,8 @@ object PanelPreferences {
     val slidersColorTertiaryDark: StateFlow<Boolean> = _slidersColorTertiaryDark.asStateFlow()
     private val _miscElementsColorTertiaryDark = MutableStateFlow(false)
     val miscElementsColorTertiaryDark: StateFlow<Boolean> = _miscElementsColorTertiaryDark.asStateFlow()
+    private val _clearAllColorTertiaryDark = MutableStateFlow(false)
+    val clearAllColorTertiaryDark: StateFlow<Boolean> = _clearAllColorTertiaryDark.asStateFlow()
 
     private val _surfaceBgHueDark = MutableStateFlow(0f)
     val surfaceBgHueDark: StateFlow<Float> = _surfaceBgHueDark.asStateFlow()
@@ -697,6 +734,13 @@ object PanelPreferences {
     val miscElementsSatDark: StateFlow<Float> = _miscElementsSatDark.asStateFlow()
     private val _miscElementsValDark = MutableStateFlow(1f)
     val miscElementsValDark: StateFlow<Float> = _miscElementsValDark.asStateFlow()
+
+    private val _clearAllHueDark = MutableStateFlow(0f)
+    val clearAllHueDark: StateFlow<Float> = _clearAllHueDark.asStateFlow()
+    private val _clearAllSatDark = MutableStateFlow(1f)
+    val clearAllSatDark: StateFlow<Float> = _clearAllSatDark.asStateFlow()
+    private val _clearAllValDark = MutableStateFlow(1f)
+    val clearAllValDark: StateFlow<Float> = _clearAllValDark.asStateFlow()
 
     private val _showQsTileGradient = MutableStateFlow(false)
     val showQsTileGradient: StateFlow<Boolean> = _showQsTileGradient.asStateFlow()
@@ -1247,6 +1291,10 @@ object PanelPreferences {
         _miscElementsColorTertiaryLight.value = prefs.getBoolean(KEY_ELEM_MISC_ELEMENTS_TERTIARY_LIGHT, defMiscElementsTertiary)
         _miscElementsColorTertiaryDark.value = prefs.getBoolean(KEY_ELEM_MISC_ELEMENTS_TERTIARY_DARK, defMiscElementsTertiary)
 
+        val defClearAllTertiary = _clearAllColorTertiary.value
+        _clearAllColorTertiaryLight.value = prefs.getBoolean(KEY_ELEM_CLEAR_ALL_TERTIARY_LIGHT, defClearAllTertiary)
+        _clearAllColorTertiaryDark.value = prefs.getBoolean(KEY_ELEM_CLEAR_ALL_TERTIARY_DARK, defClearAllTertiary)
+
         val defSurfaceBgHue = _surfaceBgHue.value
         val defSurfaceBgSat = _surfaceBgSat.value
         val defSurfaceBgVal = _surfaceBgVal.value
@@ -1316,6 +1364,17 @@ object PanelPreferences {
         _miscElementsHueDark.value = prefs.getFloat(KEY_ELEM_MISC_ELEMENTS_HUE_DARK, defMiscElementsHue)
         _miscElementsSatDark.value = prefs.getFloat(KEY_ELEM_MISC_ELEMENTS_SAT_DARK, defMiscElementsSat)
         _miscElementsValDark.value = prefs.getFloat(KEY_ELEM_MISC_ELEMENTS_VAL_DARK, defMiscElementsVal)
+
+        val defClearAllHue = _clearAllHue.value
+        val defClearAllSat = _clearAllSat.value
+        val defClearAllVal = _clearAllVal.value
+        _clearAllHueLight.value = prefs.getFloat(KEY_ELEM_CLEAR_ALL_HUE_LIGHT, defClearAllHue)
+        _clearAllSatLight.value = prefs.getFloat(KEY_ELEM_CLEAR_ALL_SAT_LIGHT, defClearAllSat)
+        _clearAllValLight.value = prefs.getFloat(KEY_ELEM_CLEAR_ALL_VAL_LIGHT, defClearAllVal)
+        _clearAllHueDark.value = prefs.getFloat(KEY_ELEM_CLEAR_ALL_HUE_DARK, defClearAllHue)
+        _clearAllSatDark.value = prefs.getFloat(KEY_ELEM_CLEAR_ALL_SAT_DARK, defClearAllSat)
+        _clearAllValDark.value = prefs.getFloat(KEY_ELEM_CLEAR_ALL_VAL_DARK, defClearAllVal)
+
         _disableMonetNotifText.value = prefs.getBoolean(KEY_DISABLE_MONET_NOTIF_TEXT, false)
         _showQsTileGradient.value = prefs.getBoolean(KEY_SHOW_QS_TILE_GRADIENT, false)
         _qsTileLabelFontSize.value = prefs.getFloat(KEY_QS_TILE_LABEL_FONT_SIZE, 12.0f)
@@ -2245,6 +2304,20 @@ object PanelPreferences {
         ).apply()
     }
 
+    fun setClearAllColorTertiary(context: Context, isDark: Boolean, enabled: Boolean) {
+        _clearAllColorTertiary.value = enabled
+        if (isDark) {
+            _clearAllColorTertiaryDark.value = enabled
+        } else {
+            _clearAllColorTertiaryLight.value = enabled
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_ELEM_CLEAR_ALL_TERTIARY, enabled).putBoolean(
+            if (isDark) KEY_ELEM_CLEAR_ALL_TERTIARY_DARK else KEY_ELEM_CLEAR_ALL_TERTIARY_LIGHT,
+            enabled
+        ).apply()
+    }
+
     fun setSurfaceBgHsb(context: Context, isDark: Boolean, hue: Float, sat: Float, valFactor: Float) {
         if (isDark) {
             _surfaceBgHueDark.value = hue
@@ -2371,6 +2444,24 @@ object PanelPreferences {
             .apply()
     }
 
+    fun setClearAllHsb(context: Context, isDark: Boolean, hue: Float, sat: Float, valFactor: Float) {
+        if (isDark) {
+            _clearAllHueDark.value = hue
+            _clearAllSatDark.value = sat
+            _clearAllValDark.value = valFactor
+        } else {
+            _clearAllHueLight.value = hue
+            _clearAllSatLight.value = sat
+            _clearAllValLight.value = valFactor
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(if (isDark) KEY_ELEM_CLEAR_ALL_HUE_DARK else KEY_ELEM_CLEAR_ALL_HUE_LIGHT, hue)
+            .putFloat(if (isDark) KEY_ELEM_CLEAR_ALL_SAT_DARK else KEY_ELEM_CLEAR_ALL_SAT_LIGHT, sat)
+            .putFloat(if (isDark) KEY_ELEM_CLEAR_ALL_VAL_DARK else KEY_ELEM_CLEAR_ALL_VAL_LIGHT, valFactor)
+            .apply()
+    }
+
     fun getSurfaceBgColorTertiary(isDark: Boolean): StateFlow<Boolean> = if (isDark) surfaceBgColorTertiaryDark else surfaceBgColorTertiaryLight
     fun getPanelContainerColorTertiary(isDark: Boolean): StateFlow<Boolean> = if (isDark) panelContainerColorTertiaryDark else panelContainerColorTertiaryLight
     fun getHeaderGradientColorTertiary(isDark: Boolean): StateFlow<Boolean> = if (isDark) headerGradientColorTertiaryDark else headerGradientColorTertiaryLight
@@ -2379,6 +2470,7 @@ object PanelPreferences {
     fun getInactiveTilesColorPrimary(isDark: Boolean): StateFlow<Boolean> = if (isDark) inactiveTilesColorPrimaryDark else inactiveTilesColorPrimaryLight
     fun getSlidersColorTertiary(isDark: Boolean): StateFlow<Boolean> = if (isDark) slidersColorTertiaryDark else slidersColorTertiaryLight
     fun getMiscElementsColorTertiary(isDark: Boolean): StateFlow<Boolean> = if (isDark) miscElementsColorTertiaryDark else miscElementsColorTertiaryLight
+    fun getClearAllColorTertiary(isDark: Boolean): StateFlow<Boolean> = if (isDark) clearAllColorTertiaryDark else clearAllColorTertiaryLight
 
     fun getSurfaceBgHue(isDark: Boolean): StateFlow<Float> = if (isDark) surfaceBgHueDark else surfaceBgHueLight
     fun getSurfaceBgSat(isDark: Boolean): StateFlow<Float> = if (isDark) surfaceBgSatDark else surfaceBgSatLight
@@ -2406,7 +2498,11 @@ object PanelPreferences {
 
     fun getMiscElementsHue(isDark: Boolean): StateFlow<Float> = if (isDark) miscElementsHueDark else miscElementsHueLight
     fun getMiscElementsSat(isDark: Boolean): StateFlow<Float> = if (isDark) miscElementsSatDark else miscElementsSatLight
-    fun getMiscElementsVal(isDark: Boolean): StateFlow<Float> = if (isDark) miscElementsValDark else miscElementsValLight
+    fun getMiscElementsVal(isDark:Boolean): StateFlow<Float> = if (isDark) miscElementsValDark else miscElementsValLight
+
+    fun getClearAllHue(isDark: Boolean): StateFlow<Float> = if (isDark) clearAllHueDark else clearAllHueLight
+    fun getClearAllSat(isDark: Boolean): StateFlow<Float> = if (isDark) clearAllSatDark else clearAllSatLight
+    fun getClearAllVal(isDark: Boolean): StateFlow<Float> = if (isDark) clearAllValDark else clearAllValLight
 
     fun syncElementColors(context: Context, fromDark: Boolean) {
         val toDark = !fromDark
@@ -2418,6 +2514,7 @@ object PanelPreferences {
         setInactiveTilesColorPrimary(context, toDark, getInactiveTilesColorPrimary(fromDark).value)
         setSlidersColorTertiary(context, toDark, getSlidersColorTertiary(fromDark).value)
         setMiscElementsColorTertiary(context, toDark, getMiscElementsColorTertiary(fromDark).value)
+        setClearAllColorTertiary(context, toDark, getClearAllColorTertiary(fromDark).value)
 
         setSurfaceBgHsb(context, toDark, getSurfaceBgHue(fromDark).value, getSurfaceBgSat(fromDark).value, getSurfaceBgVal(fromDark).value)
         setPanelContainerHsb(context, toDark, getPanelContainerHue(fromDark).value, getPanelContainerSat(fromDark).value, getPanelContainerVal(fromDark).value)
@@ -2426,6 +2523,7 @@ object PanelPreferences {
         setInactiveTilesHsb(context, toDark, getInactiveTilesHue(fromDark).value, getInactiveTilesSat(fromDark).value, getInactiveTilesVal(fromDark).value)
         setSlidersHsb(context, toDark, getSlidersHue(fromDark).value, getSlidersSat(fromDark).value, getSlidersVal(fromDark).value)
         setMiscElementsHsb(context, toDark, getMiscElementsHue(fromDark).value, getMiscElementsSat(fromDark).value, getMiscElementsVal(fromDark).value)
+        setClearAllHsb(context, toDark, getClearAllHue(fromDark).value, getClearAllSat(fromDark).value, getClearAllVal(fromDark).value)
     }
 
     fun setShowQsTileGradient(context: Context, enabled: Boolean) {

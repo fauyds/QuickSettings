@@ -154,8 +154,9 @@ class NotificationAdapter(
                 ivClearAllIcon.layoutParams = iconParams
                 ivClearAllIcon.setImageResource(R.drawable.ic_notif_clear_all)
 
+                val clearAllAccent = MonetThemeHelper.getClearAllAccent(context, isDarkTheme)
                 val clearAllTextColor = if (disableBg) {
-                    MonetThemeHelper.getPrimaryAccent(context, isDarkTheme)
+                    clearAllAccent
                 } else {
                     if (isDarkTheme) android.graphics.Color.BLACK else android.graphics.Color.WHITE
                 }
@@ -171,7 +172,7 @@ class NotificationAdapter(
                 } else {
                     btnClearAll.elevation = if (enablePanelShadows) shadowElevation * density else 0f
                     btnClearAll.translationY = 0f
-                    btnClearAll.background = MonetThemeHelper.createMonetPrimaryPillDrawable(context, isDarkTheme, 14f * density)
+                    btnClearAll.background = MonetThemeHelper.createMonetPrimaryPillDrawable(context, isDarkTheme, 14f * density, customBgColor = clearAllAccent)
                 }
             } else {
                 // When FAB button is enabled: positioned according to fabPos and bigger (64dp)

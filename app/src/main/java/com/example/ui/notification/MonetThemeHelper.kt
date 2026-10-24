@@ -26,6 +26,25 @@ object MonetThemeHelper {
         return if (isDark) Color.parseColor("#D0BCFF") else Color.parseColor("#6750A4")
     }
 
+    fun getClearAllAccent(context: Context, isDark: Boolean): Int {
+        val isTertiary = com.example.data.PanelPreferences.getClearAllColorTertiary(isDark).value
+        val baseColor = if (isTertiary) getTertiaryAccent(context, isDark) else getPrimaryAccent(context, isDark)
+        val hue = com.example.data.PanelPreferences.getClearAllHue(isDark).value
+        val sat = com.example.data.PanelPreferences.getClearAllSat(isDark).value
+        val valFactor = com.example.data.PanelPreferences.getClearAllVal(isDark).value
+        if (hue == 0f && sat == 1f && valFactor == 1f) return baseColor
+        val hsv = FloatArray(3)
+        Color.colorToHSV(baseColor, hsv)
+        hsv[0] = (hsv[0] + hue).let { h ->
+            var mod = h % 360f
+            if (mod < 0) mod += 360f
+            mod
+        }
+        hsv[1] = (hsv[1] * sat).coerceIn(0f, 1f)
+        hsv[2] = (hsv[2] * valFactor).coerceIn(0f, 1f)
+        return Color.HSVToColor(Color.alpha(baseColor), hsv)
+    }
+
     fun getSecondaryAccent(context: Context, isDark: Boolean): Int {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {

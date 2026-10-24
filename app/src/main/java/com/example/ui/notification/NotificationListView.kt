@@ -124,15 +124,15 @@ class NotificationListView @JvmOverloads constructor(
         rvNotifications.isNestedScrollingEnabled = false
         rvNotifications.overScrollMode = View.OVER_SCROLL_NEVER
         rvNotifications.clipToPadding = false
-        rvNotifications.clipChildren = false
+        rvNotifications.clipChildren = true
         this.clipToPadding = false
-        this.clipChildren = false
-        flPermissionCard.clipChildren = false
+        this.clipChildren = true
+        flPermissionCard.clipChildren = true
         flPermissionCard.clipToPadding = false
-        flEmptyCard.clipChildren = false
+        flEmptyCard.clipChildren = true
         flEmptyCard.clipToPadding = false
         root.findViewById<ViewGroup>(R.id.ll_notif_list_container)?.apply {
-            clipChildren = false
+            clipChildren = true
             clipToPadding = false
         }
         rvNotifications.setHasFixedSize(false)
@@ -602,13 +602,15 @@ class NotificationListView @JvmOverloads constructor(
 
                 ivFloatingClearAllIcon.setImageResource(fabIcon.drawableRes)
 
+                val clearAllAccent = MonetThemeHelper.getClearAllAccent(context, isDark)
+
                 if (disableClearAllBg) {
                     btnFloatingClearAllFab.background = null
                     btnFloatingClearAllFab.elevation = 0f
-                    ivFloatingClearAllIcon.setColorFilter(primaryAccent)
+                    ivFloatingClearAllIcon.setColorFilter(clearAllAccent)
                 } else {
                     btnFloatingClearAllFab.elevation = if (enablePanelShadows) shadowElevation * density else 6f * density
-                    val shapeDrawable = com.example.ui.shape.QsShapeManager.createDrawable(fabShapeId, primaryAccent)
+                    val shapeDrawable = com.example.ui.shape.QsShapeManager.createDrawable(fabShapeId, clearAllAccent)
                     val maskDrawable = com.example.ui.shape.QsShapeManager.createDrawable(fabShapeId, android.graphics.Color.WHITE)
                     val rippleColor = if (isDark) android.graphics.Color.parseColor("#44FFFFFF") else android.graphics.Color.parseColor("#33000000")
                     btnFloatingClearAllFab.background = android.graphics.drawable.RippleDrawable(

@@ -2,7 +2,7 @@
     android:id="@+id/fl_notif_root_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:clipChildren="false"
+    android:clipChildren="true"
     android:clipToPadding="false"
     android:background="@android:color/transparent">
 
@@ -11,7 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:clipChildren="false"
+        android:clipChildren="true"
         android:clipToPadding="false"
         android:background="@android:color/transparent"
         android:paddingTop="4dp"
@@ -173,7 +173,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:clipChildren="false"
+        android:clipChildren="true"
         android:clipToPadding="false"
         android:overScrollMode="never"
         android:scrollbars="vertical"

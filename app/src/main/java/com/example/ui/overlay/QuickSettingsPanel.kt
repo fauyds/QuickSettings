@@ -3022,7 +3022,7 @@ fun NotificationsCard(
         AndroidView(
             factory = { ctx ->
                 com.example.ui.notification.NotificationListView(ctx).apply {
-                    clipChildren = false
+                    clipChildren = true
                     clipToPadding = false
                     this.onNotificationClick = onNotificationClick
                     this.onNotificationDismiss = onNotificationDismiss
@@ -3036,7 +3036,7 @@ fun NotificationsCard(
                 }
             },
             update = { view ->
-                view.clipChildren = false
+                view.clipChildren = true
                 view.clipToPadding = false
                 view.onNotificationClick = onNotificationClick
                 view.onNotificationDismiss = onNotificationDismiss

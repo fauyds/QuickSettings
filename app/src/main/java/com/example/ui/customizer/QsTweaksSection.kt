@@ -69,6 +69,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.Settings
 import com.example.data.BatteryPercentageLocation
+import com.example.data.ClearAllFabPosition
 import com.example.data.DatePosition
 import com.example.data.EditButtonPosition
 import com.example.data.PanelPreferences
@@ -113,6 +114,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     val clearAllFabOffsetX by PanelPreferences.clearAllFabOffsetX.collectAsState()
     val clearAllFabOffsetY by PanelPreferences.clearAllFabOffsetY.collectAsState()
     val clearAllFabSize by PanelPreferences.clearAllFabSize.collectAsState()
+    val clearAllFabPosition by PanelPreferences.clearAllFabPosition.collectAsState()
     val useClearAllFab by PanelPreferences.useClearAllFab.collectAsState()
     val enablePanelShadows by PanelPreferences.enablePanelShadows.collectAsState()
     val panelShadowElevation by PanelPreferences.panelShadowElevation.collectAsState()
@@ -1738,6 +1740,49 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                             modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
+                            // 0. Anchor Alignment Preset
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(
+                                    text = "Anchor Alignment Preset",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    val allPositions = ClearAllFabPosition.entries
+                                    allPositions.forEach { pos ->
+                                        val isSelected = clearAllFabPosition == pos
+                                        val chipShape = SegmentedButtonShapes.getShape(
+                                            item = pos,
+                                            items = allPositions,
+                                            selectedItem = clearAllFabPosition
+                                        )
+                                        FilterChip(
+                                            selected = isSelected,
+                                            onClick = { PanelPreferences.setClearAllFabPosition(context, pos) },
+                                            label = { Text(pos.label, fontSize = 11.sp) },
+                                            shape = chipShape,
+                                            border = null,
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                                containerColor = MaterialTheme.colorScheme.background,
+                                                labelColor = MaterialTheme.colorScheme.onSurface
+                                            ),
+                                            modifier = Modifier.testTag("clear_all_fab_pos_${pos.id}")
+                                        )
+                                    }
+                                }
+                            }
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
                             // 1. Horizontal Offset Slider
                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Row(
