@@ -1139,24 +1139,19 @@ fun AndroidQMediaNotificationCard(
                     ) {
                         val displayProgress = if (isDraggingSlider) localProgress else mediaState.progress.coerceIn(0f, 1f)
 
-                        Slider(
+                        QsProgressSlider(
                             value = displayProgress,
                             onValueChange = {
-                                isDraggingSlider = true
                                 localProgress = it
+                                onSeek(it)
                             },
-                            onValueChangeFinished = {
-                                isDraggingSlider = false
-                                onSeek(localProgress)
-                            },
-                            colors = SliderDefaults.colors(
-                                thumbColor = accentColor,
-                                activeTrackColor = accentColor,
-                                inactiveTrackColor = accentColor.copy(alpha = 0.25f)
-                            ),
+                            sliderTarget = QsSliderTarget.MEDIA,
+                            isPlaying = mediaState.isPlaying,
+                            activeColor = accentColor,
+                            inactiveColor = accentColor.copy(alpha = 0.25f),
+                            thumbColor = accentColor,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(20.dp)
                                 .testTag("android_q_media_progress_slider")
                         )
 
