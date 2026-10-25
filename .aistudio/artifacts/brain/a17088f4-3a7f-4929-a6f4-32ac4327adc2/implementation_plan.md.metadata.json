@@ -1,6 +1,0 @@
-{
-  "summary":  "Implementation plan to fix card/feature pinning across customization sections so that pinned cards appear at the top of their sections, without modifying any internal preference elements.",
-  "updatedAt":  "2026-10-20T20:32:38.911471452Z",
-  "requestFeedback":  true,
-  "userFacing":  true
-}
