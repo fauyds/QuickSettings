@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.example.ui.view.MediaCardLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/media_card_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="4dp"
+    android:clickable="true"
+    android:focusable="true">
+
+    <!-- Album Art covering the right side (strictly sized to card content height) -->
+    <ImageView
+        android:id="@+id/iv_media_artwork"
+        android:layout_width="130dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="end"
+        android:scaleType="centerCrop"
+        android:contentDescription="@null" />
+
+    <!-- Smooth horizontal gradient blend from card background to transparent -->
+    <View
+        android:id="@+id/v_media_artwork_gradient"
+        android:layout_width="130dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="end" />
+
+    <!-- Fallback artwork placeholder: clean music note icon on neutral background -->
+    <FrameLayout
+        android:id="@+id/fl_media_artwork_fallback"
+        android:layout_width="100dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="end"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/iv_media_artwork_fallback"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_media_music_note"
+            android:contentDescription="@null" />
+    </FrameLayout>
+
+    <!-- Content container: Drives the height of the card -->
+    <LinearLayout
+        android:id="@+id/ll_media_content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
+
+        <!-- 1. Top Bar: App Icon + App Name + Hide/Show Seekbar Chevron -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:id="@+id/iv_media_app_icon"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginEnd="6dp"
+                android:contentDescription="@null" />
+
+            <TextView
+                android:id="@+id/tv_media_app_name"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:singleLine="true"
+                android:ellipsize="end" />
+
+            <ImageButton
+                android:id="@+id/btn_media_toggle_seekbar"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_notif_chevron_up"
+                android:padding="2dp"
+                android:contentDescription="Toggle Seekbar" />
+        </LinearLayout>
+
+        <!-- 2. Song Title & Artist -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginEnd="75dp"
+            android:layout_marginTop="2dp">
+
+            <TextView
+                android:id="@+id/tv_media_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:singleLine="true"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/tv_media_artist"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:layout_marginTop="1dp" />
+        </LinearLayout>
+
+        <!-- 3. Playback Control Buttons -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="4dp">
+
+            <ImageButton
+                android:id="@+id/btn_media_shuffle"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_media_shuffle"
+                android:padding="5dp"
+                android:contentDescription="Shuffle" />
+
+            <ImageButton
+                android:id="@+id/btn_media_previous"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_media_previous"
+                android:padding="4dp"
+                android:contentDescription="Previous" />
+
+            <ImageButton
+                android:id="@+id/btn_media_play_pause"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_media_play"
+                android:padding="4dp"
+                android:contentDescription="Play/Pause" />
+
+            <ImageButton
+                android:id="@+id/btn_media_next"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_media_next"
+                android:padding="4dp"
+                android:contentDescription="Next" />
+
+            <ImageButton
+                android:id="@+id/btn_media_repeat"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_media_repeat"
+                android:padding="5dp"
+                android:contentDescription="Repeat" />
+
+            <ImageButton
+                android:id="@+id/btn_media_favorite"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_heart_outline"
+                android:padding="5dp"
+                android:contentDescription="Favorite" />
+        </LinearLayout>
+
+        <!-- 4. Collapsible Seekbar & Timestamps -->
+        <LinearLayout
+            android:id="@+id/ll_media_seekbar_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="2dp">
+
+            <com.example.ui.view.WavyProgressView
+                android:id="@+id/v_media_wavy_seekbar"
+                android:layout_width="match_parent"
+                android:layout_height="22dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tv_media_curr_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:text="0:00" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/tv_media_total_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:text="--:--" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</com.example.ui.view.MediaCardLayout>

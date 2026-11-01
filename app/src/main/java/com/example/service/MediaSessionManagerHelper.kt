@@ -201,14 +201,6 @@ object MediaSessionManagerHelper {
         } else if (forcePreview) {
             val totalPreviewDur = 232000L
             val previewProgress = (previewPositionMs.toFloat() / totalPreviewDur.toFloat()).coerceIn(0f, 1f)
-            val kygoBmp = try {
-                android.graphics.BitmapFactory.decodeResource(
-                    context.resources,
-                    com.example.R.drawable.album_art_kygo_1790704645442
-                )
-            } catch (e: Exception) {
-                null
-            }
 
             val preview1 = MediaState(
                 title = "Never Let You Go",
@@ -222,7 +214,7 @@ object MediaSessionManagerHelper {
                 totalDurationMs = totalPreviewDur,
                 outputDevice = getActiveOutputDevice(context).name,
                 isHeadphonesOrBluetooth = getActiveOutputDevice(context).isHeadphonesOrBluetooth,
-                artworkBitmap = kygoBmp,
+                artworkBitmap = null,
                 sessionIndex = 0,
                 supportsRepeat = true,
                 repeatMode = 1,
@@ -242,7 +234,7 @@ object MediaSessionManagerHelper {
                 totalDurationMs = 215000L,
                 outputDevice = getActiveOutputDevice(context).name,
                 isHeadphonesOrBluetooth = getActiveOutputDevice(context).isHeadphonesOrBluetooth,
-                artworkBitmap = kygoBmp,
+                artworkBitmap = null,
                 sessionIndex = 1,
                 supportsRepeat = true,
                 repeatMode = 0,
@@ -262,7 +254,7 @@ object MediaSessionManagerHelper {
                 totalDurationMs = 250000L,
                 outputDevice = getActiveOutputDevice(context).name,
                 isHeadphonesOrBluetooth = getActiveOutputDevice(context).isHeadphonesOrBluetooth,
-                artworkBitmap = kygoBmp,
+                artworkBitmap = null,
                 sessionIndex = 2,
                 supportsRepeat = false,
                 repeatMode = 0,

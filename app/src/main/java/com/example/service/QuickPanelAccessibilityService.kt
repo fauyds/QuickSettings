@@ -14,14 +14,17 @@ import android.graphics.Color as AndroidColor
 import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.PixelFormat
+import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Shader
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.os.Process
 import android.provider.Settings
 import android.util.Log
+import android.view.Display
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -536,16 +539,20 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         val cls = event.className?.toString() ?: ""
         val text = try { event.text.joinToString(" ") } catch (e: Exception) { "" }
         val desc = event.contentDescription?.toString() ?: ""
+        val bounds = Rect()
         val viewId = try {
             val src = event.source
             val id = src?.viewIdResourceName ?: ""
+            try {
+                src?.getBoundsInScreen(bounds)
+            } catch (e: Exception) {}
             src?.recycle()
             id
         } catch (e: Exception) { "" }
         val now = System.currentTimeMillis()
 
         serviceScope.launch(Dispatchers.Default) {
-            processEventOptimized(now, pkg, cls, text, desc, viewId)
+            processEventOptimized(now, pkg, cls, text, desc, viewId, bounds)
         }
     }
 
@@ -555,20 +562,107 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         cls: String,
         text: String,
         desc: String,
-        viewId: String
+        viewId: String,
+        bounds: Rect
     ) {
         if (isPanelShowing || !isInterceptionEnabled) {
             return
         }
 
-        // Keyguard & Immersive Check
+        // 1. PowerManager interactive check (Screen off / AOD)
+        val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
+        if (powerManager?.isInteractive == false) {
+            return
+        }
+
+        // 2. Display state check (AOD / Doze / Screen Off)
+        val displayState = try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                display?.state
+            } else {
+                @Suppress("DEPRECATION")
+                val wm = getSystemService(Context.WINDOW_SERVICE) as? WindowManager
+                wm?.defaultDisplay?.state
+            }
+        } catch (e: Exception) { null }
+
+        if (displayState == Display.STATE_OFF ||
+            displayState == Display.STATE_DOZE ||
+            displayState == Display.STATE_DOZE_SUSPEND
+        ) {
+            return
+        }
+
+        // 3. Keyguard & Immersive Check
         val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
         val isCurrentlyLocked = keyguardManager?.isKeyguardLocked == true || keyguardManager?.inKeyguardRestrictedInputMode() == true
         if (isCurrentlyLocked || isImmersiveModeActive()) {
             return
         }
 
-        // 1. Dynamic Custom Blacklist Check:
+        // 4. AOD & Ambient Check (Always On Display keywords)
+        val isAodOrAmbient = cls.contains("aod", ignoreCase = true) ||
+                cls.contains("doze", ignoreCase = true) ||
+                cls.contains("ambient", ignoreCase = true) ||
+                cls.contains("alwayson", ignoreCase = true) ||
+                cls.contains("always_on", ignoreCase = true) ||
+                viewId.contains("aod", ignoreCase = true) ||
+                viewId.contains("doze", ignoreCase = true) ||
+                viewId.contains("ambient", ignoreCase = true) ||
+                desc.contains("always on", ignoreCase = true) ||
+                desc.contains("aod", ignoreCase = true) ||
+                text.contains("always on", ignoreCase = true) ||
+                pkg.contains("aod", ignoreCase = true)
+
+        if (isAodOrAmbient) {
+            return
+        }
+
+        // 5. Screenshot check (Ignore screenshot notifications, preview windows, and action chips)
+        val isScreenshot = cls.contains("screenshot", ignoreCase = true) ||
+                cls.contains("screen_capture", ignoreCase = true) ||
+                cls.contains("screencap", ignoreCase = true) ||
+                cls.contains("captur", ignoreCase = true) ||
+                viewId.contains("screenshot", ignoreCase = true) ||
+                viewId.contains("screen_capture", ignoreCase = true) ||
+                viewId.contains("screencap", ignoreCase = true) ||
+                text.contains("screenshot", ignoreCase = true) ||
+                desc.contains("screenshot", ignoreCase = true) ||
+                pkg.contains("screenshot", ignoreCase = true)
+
+        if (isScreenshot) {
+            return
+        }
+
+        // 6. Pop-up alerts & floating window check (Toasts, Heads-Up Notifications, Bubbles, Dialogs)
+        val isPopupOrAlert = cls.contains("toast", ignoreCase = true) ||
+                cls.contains("heads_up", ignoreCase = true) ||
+                cls.contains("headsup", ignoreCase = true) ||
+                cls.contains("bubble", ignoreCase = true) ||
+                cls.contains("clipboard", ignoreCase = true) ||
+                cls.contains("popup", ignoreCase = true) ||
+                cls.contains("alert", ignoreCase = true) ||
+                cls.contains("dialog", ignoreCase = true) ||
+                cls.contains("floating", ignoreCase = true) ||
+                cls.contains("pip", ignoreCase = true) ||
+                cls.contains("volume_dialog", ignoreCase = true) ||
+                cls.contains("power_dialog", ignoreCase = true) ||
+                cls.contains("magnification", ignoreCase = true) ||
+                cls.contains("select_to_speak", ignoreCase = true) ||
+                viewId.contains("heads_up", ignoreCase = true) ||
+                viewId.contains("toast", ignoreCase = true) ||
+                viewId.contains("bubble", ignoreCase = true) ||
+                viewId.contains("clipboard", ignoreCase = true) ||
+                viewId.contains("popup", ignoreCase = true) ||
+                viewId.contains("alert", ignoreCase = true) ||
+                viewId.contains("dialog", ignoreCase = true) ||
+                viewId.contains("volume", ignoreCase = true)
+
+        if (isPopupOrAlert) {
+            return
+        }
+
+        // 7. Dynamic Custom Blacklist Check:
         val blacklistPkgs = PanelPreferences.customBlacklistPackages.value
         val blacklistClasses = PanelPreferences.customBlacklistClasses.value
 
@@ -579,7 +673,7 @@ class QuickPanelAccessibilityService : AccessibilityService() {
             return
         }
 
-        // 2. Strict Whitelist by Default:
+        // 8. Strict Whitelist by Default:
         val whitelistPkgs = PanelPreferences.stockShadeWhitelist.value
         val isWhitelistedPkg = pkg.isEmpty() ||
                 whitelistPkgs.any { allowedPkg ->
@@ -591,6 +685,28 @@ class QuickPanelAccessibilityService : AccessibilityService() {
 
         if (!isWhitelistedPkg) {
             return
+        }
+
+        // 9. Strict Shade Detection Checks:
+        if (PanelPreferences.strictShadeDetection.value) {
+            val screenWidth = resources.displayMetrics.widthPixels
+            val screenHeight = resources.displayMetrics.heightPixels
+            if (!bounds.isEmpty) {
+                val isSmallWindow = bounds.width() < (screenWidth * 0.70f) ||
+                        bounds.height() < (screenHeight * 0.20f)
+                if (isSmallWindow) {
+                    return
+                }
+            }
+
+            // Must have a recent physical touch or swipe down at the top of the screen (status bar area)
+            val lastTopTouch = TriggerContainerLayout.lastTopTouchTimestamp
+            val lastTopSwipe = TriggerContainerLayout.lastTopSwipeDownTimestamp
+            val recentTopTouch = (now - lastTopTouch in 0..2500L)
+            val recentTopSwipe = (now - lastTopSwipe in 0..2500L)
+            if (!recentTopTouch && !recentTopSwipe) {
+                return
+            }
         }
 
         val targetClasses = setOf(
@@ -1702,6 +1818,7 @@ class AccessibilityStatusTriggerView(context: Context) : View(context) {
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                TriggerContainerLayout.recordTopTouch()
                 startY = event.rawY
                 startX = event.rawX
                 isDragging = true
@@ -1711,11 +1828,13 @@ class AccessibilityStatusTriggerView(context: Context) : View(context) {
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
+                TriggerContainerLayout.recordTopTouch()
                 QuickPanelAccessibilityService.instance?.notifyUserDragging(true)
                 val diffY = event.rawY - startY
                 val diffX = Math.abs(event.rawX - startX)
 
                 if (isDragging && diffY >= immediateSwipeThresholdPx && diffY > (diffX * 0.3f)) {
+                    TriggerContainerLayout.recordTopSwipeDown()
                     val service = QuickPanelAccessibilityService.instance
                     if (service?.isPanelShowing != true) {
                         service?.showOverlayPanel(if (diffY > deepSwipeThresholdPx) QsExpansionStage.FULL_QS else QsExpansionStage.QQS)
@@ -1731,8 +1850,10 @@ class AccessibilityStatusTriggerView(context: Context) : View(context) {
                 if (isDragging) {
                     val service = QuickPanelAccessibilityService.instance
                     if (service?.isPanelShowing == true) {
+                        TriggerContainerLayout.recordTopSwipeDown()
                         service.onPullDownReleased(diffY, isFlick = diffY >= (10 * density))
                     } else if (diffY >= (4 * density) && diffY > (diffX * 0.3f)) {
+                        TriggerContainerLayout.recordTopSwipeDown()
                         service?.showOverlayPanel(if (diffY > deepSwipeThresholdPx) QsExpansionStage.FULL_QS else QsExpansionStage.QQS)
                         onSwipeDownDetected?.invoke(diffY > deepSwipeThresholdPx)
                     }

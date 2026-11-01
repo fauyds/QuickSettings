@@ -112,17 +112,7 @@ fun AlbumArtworkView(
     val context = LocalContext.current
     val shape = RoundedCornerShape(cornerRadius)
 
-    val fallbackArtwork = remember {
-        try {
-            android.graphics.BitmapFactory.decodeResource(
-                context.resources,
-                com.example.R.drawable.album_art_kygo_1790704645442
-            )
-        } catch (e: Exception) {
-            null
-        }
-    }
-    val effectiveArtwork = mediaState.artworkBitmap ?: fallbackArtwork
+    val effectiveArtwork = mediaState.artworkBitmap
 
     val dominantColor = remember(effectiveArtwork) {
         effectiveArtwork?.let {
@@ -221,18 +211,7 @@ fun AdaptiveMediaPlayerCard(
     val playPauseColor = if (isDark) Color.White else Color.Black.copy(alpha = 0.8f)
     val progressBarStyle by PanelPreferences.progressBarStyle.collectAsState()
 
-    val context = LocalContext.current
-    val fallbackArtwork = remember {
-        try {
-            android.graphics.BitmapFactory.decodeResource(
-                context.resources,
-                com.example.R.drawable.album_art_kygo_1790704645442
-            )
-        } catch (e: Exception) {
-            null
-        }
-    }
-    val artworkBitmap = currentHeaderState.artworkBitmap ?: fallbackArtwork
+    val artworkBitmap = currentHeaderState.artworkBitmap
     val artworkColor = remember(artworkBitmap, isDark) {
         artworkBitmap?.let {
             Palette.from(it).generate().dominantSwatch?.rgb?.let { colorInt ->
@@ -799,17 +778,7 @@ fun AndroidQMediaNotificationCard(
     var isDraggingSlider by remember { mutableStateOf(false) }
 
     // Dynamic background and precise accents extracted from album art using Palette
-    val fallbackArtwork = remember {
-        try {
-            android.graphics.BitmapFactory.decodeResource(
-                context.resources,
-                com.example.R.drawable.album_art_kygo_1790704645442
-            )
-        } catch (e: Exception) {
-            null
-        }
-    }
-    val artwork = mediaState.artworkBitmap ?: fallbackArtwork
+    val artwork = mediaState.artworkBitmap
     val palette = remember(artwork) {
         artwork?.let {
             Palette.from(it)
@@ -818,8 +787,15 @@ fun AndroidQMediaNotificationCard(
                 .generate()
         }
     }
-    val extractedColors = remember(artwork, palette) {
-        extractAndroidQNotificationColors(artwork, palette)
+    val isDark = com.example.ui.theme.LocalIsDarkTheme.current
+    val extractedColors = remember(artwork, palette, isDark) {
+        if (artwork != null) {
+            extractAndroidQNotificationColors(artwork, palette)
+        } else {
+            val neutralBg = if (isDark) Color(0xFF25262B) else Color(0xFFEAEBEF)
+            val neutralAccent = if (isDark) Color(0xFFE5B15D) else Color(0xFF1A56DB)
+            MediaNotificationColors(backgroundColor = neutralBg, accentColor = neutralAccent)
+        }
     }
     val cardBgColor = extractedColors.backgroundColor
     val accentColor = extractedColors.accentColor

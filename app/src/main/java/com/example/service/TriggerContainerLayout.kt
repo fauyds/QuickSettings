@@ -36,6 +36,22 @@ class TriggerContainerLayout @JvmOverloads constructor(
 
     companion object {
         private const val TAG = "ImmersiveCheck"
+
+        @Volatile
+        var lastTopTouchTimestamp: Long = 0L
+
+        @Volatile
+        var lastTopSwipeDownTimestamp: Long = 0L
+
+        fun recordTopTouch() {
+            lastTopTouchTimestamp = System.currentTimeMillis()
+        }
+
+        fun recordTopSwipeDown() {
+            val now = System.currentTimeMillis()
+            lastTopTouchTimestamp = now
+            lastTopSwipeDownTimestamp = now
+        }
     }
 
     private var childTriggerView: View? = null
@@ -139,6 +155,7 @@ class TriggerContainerLayout @JvmOverloads constructor(
 
         when (ev.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                recordTopTouch()
                 touchDownY = ev.rawY
                 touchDownX = ev.rawX
                 touchDownTime = System.currentTimeMillis()
@@ -148,11 +165,13 @@ class TriggerContainerLayout @JvmOverloads constructor(
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
+                recordTopTouch()
                 if (isTrackingSwipe) {
                     val diffY = ev.rawY - touchDownY
                     val diffX = Math.abs(ev.rawX - touchDownX)
 
                     if (diffY >= immediateSwipeThresholdPx && diffY > (diffX * 0.3f)) {
+                        recordTopSwipeDown()
                         if (QuickPanelAccessibilityService.isRunning) {
                             QuickPanelAccessibilityService.instance?.let { service ->
                                 if (!service.isPanelShowing) service.showOverlayPanel(com.example.ui.overlay.QsExpansionStage.QQS)
@@ -185,6 +204,7 @@ class TriggerContainerLayout @JvmOverloads constructor(
 
                     isTrackingSwipe = false
                     if (diffY >= (8f * density) && diffY > (diffX * 0.3f)) {
+                        recordTopSwipeDown()
                         Log.d(TAG, "[INSTANT FLICK OPEN] diffY=$diffY elapsed=$elapsed ms -> Opening panel!")
                         QuickPanelAccessibilityService.collapseStockNotificationShade()
                         onSwipeDownToOpen?.invoke(false)

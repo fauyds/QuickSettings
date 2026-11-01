@@ -258,6 +258,7 @@ object PanelPreferences {
     private const val KEY_INVISIBLE_STATUS_BAR_TRIGGER = "invisible_status_bar_trigger"
     private const val KEY_FORCE_IMMERSIVE_TRIGGER = "force_immersive_trigger"
     private const val KEY_OVERRIDE_SYSTEM_QS = "override_system_qs"
+    private const val KEY_STRICT_SHADE_DETECTION = "strict_shade_detection"
     private const val KEY_AUTO_SYSTEM_PANEL_CLOSING = "auto_system_panel_closing"
     private const val KEY_STOCK_SHADE_WHITELIST = "stock_shade_whitelist"
     private const val KEY_CUSTOM_BLACKLIST_PACKAGES = "custom_blacklist_packages"
@@ -1022,6 +1023,9 @@ object PanelPreferences {
     private val _overrideSystemQs = MutableStateFlow(false)
     val overrideSystemQs: StateFlow<Boolean> = _overrideSystemQs.asStateFlow()
 
+    private val _strictShadeDetection = MutableStateFlow(false)
+    val strictShadeDetection: StateFlow<Boolean> = _strictShadeDetection.asStateFlow()
+
     private val _autoSystemPanelClosing = MutableStateFlow(android.os.Build.VERSION.SDK_INT in 31..35)
     val autoSystemPanelClosing: StateFlow<Boolean> = _autoSystemPanelClosing.asStateFlow()
 
@@ -1162,6 +1166,7 @@ object PanelPreferences {
         _invisibleStatusBarTrigger.value = prefs.getBoolean(KEY_INVISIBLE_STATUS_BAR_TRIGGER, false)
         _forceImmersiveTrigger.value = prefs.getBoolean(KEY_FORCE_IMMERSIVE_TRIGGER, false)
         _overrideSystemQs.value = prefs.getBoolean(KEY_OVERRIDE_SYSTEM_QS, false)
+        _strictShadeDetection.value = prefs.getBoolean(KEY_STRICT_SHADE_DETECTION, false)
         _autoSystemPanelClosing.value = prefs.getBoolean(
             KEY_AUTO_SYSTEM_PANEL_CLOSING,
             android.os.Build.VERSION.SDK_INT in 31..35
@@ -1907,6 +1912,12 @@ object PanelPreferences {
         _overrideSystemQs.value = enabled
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_OVERRIDE_SYSTEM_QS, enabled).apply()
+    }
+
+    fun setStrictShadeDetection(context: Context, enabled: Boolean) {
+        _strictShadeDetection.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_STRICT_SHADE_DETECTION, enabled).apply()
     }
 
     fun setAutoSystemPanelClosing(context: Context, enabled: Boolean) {

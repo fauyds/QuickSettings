@@ -158,6 +158,7 @@ object HeadsUpOverlayManager {
     private var currentComposeView: ComposeView? = null
     private var currentLifecycleOwner: OverlayLifecycleOwner? = null
     private var currentWindowManager: WindowManager? = null
+    private var currentLayoutParams: WindowManager.LayoutParams? = null
     private var currentNotificationId: String? = null
     private var dismissAnimatedCallback: (() -> Unit)? = null
 
@@ -264,7 +265,7 @@ object HeadsUpOverlayManager {
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_DISPLAY)
             com.example.system.CpuPerformanceManager.getInstance(context).onInteractionStart()
         } catch (_: Exception) {}
-        if (!PanelPreferences.enableHeadsUpOverlay.value) {
+        if (!PanelPreferences.enableHeadsUpOverlay.value && !data.isCall && !data.isAlarm) {
             Log.d(TAG, "Heads-Up overlay is disabled in PanelPreferences.")
             return
         }
@@ -304,6 +305,21 @@ object HeadsUpOverlayManager {
                     activePinnedKey = targetKey
                     QuickPanelNotificationListenerService.activePinnedKey = activePinnedKey
                 }
+                if (data.isCall || data.isAlarm || ScreenWakeHelper.isScreenOff(context) || ScreenWakeHelper.isKeyguardLocked(context)) {
+                    ScreenWakeHelper.wakeScreen(context, if (data.isCall) "QuickPanel:HeadsUpCall" else "QuickPanel:HeadsUpWake")
+                    currentLayoutParams?.let { lp ->
+                        @Suppress("DEPRECATION")
+                        val callFlags = WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                        if ((lp.flags and callFlags) != callFlags) {
+                            lp.flags = lp.flags or callFlags
+                            try {
+                                currentWindowManager?.updateViewLayout(currentComposeView, lp)
+                            } catch (_: Exception) {}
+                        }
+                    }
+                }
                 Log.d(TAG, "In-place smooth update for active key $targetKey: '${data.title}' - '${data.text}'")
                 return
             }
@@ -319,6 +335,21 @@ object HeadsUpOverlayManager {
                 if (data.isAlarm || data.isCall) {
                     activePinnedKey = targetKey
                     QuickPanelNotificationListenerService.activePinnedKey = activePinnedKey
+                }
+                if (data.isCall || data.isAlarm || ScreenWakeHelper.isScreenOff(context) || ScreenWakeHelper.isKeyguardLocked(context)) {
+                    ScreenWakeHelper.wakeScreen(context, if (data.isCall) "QuickPanel:HeadsUpCall" else "QuickPanel:HeadsUpWake")
+                    currentLayoutParams?.let { lp ->
+                        @Suppress("DEPRECATION")
+                        val callFlags = WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                        if ((lp.flags and callFlags) != callFlags) {
+                            lp.flags = lp.flags or callFlags
+                            try {
+                                currentWindowManager?.updateViewLayout(currentComposeView, lp)
+                            } catch (_: Exception) {}
+                        }
+                    }
                 }
                 Log.d(TAG, "Replacing active banner with incoming key $targetKey")
                 return
@@ -390,16 +421,30 @@ object HeadsUpOverlayManager {
             windowType = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
         }
 
+        val isLocked = ScreenWakeHelper.isKeyguardLocked(targetContext)
+        val isScreenOff = ScreenWakeHelper.isScreenOff(targetContext)
+
+        var windowFlags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+
+        if (data.isCall || data.isAlarm || isLocked || isScreenOff) {
+            @Suppress("DEPRECATION")
+            windowFlags = windowFlags or
+                    WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+            ScreenWakeHelper.wakeScreen(targetContext, if (data.isCall) "QuickPanel:HeadsUpCall" else "QuickPanel:HeadsUpWake")
+        }
+
         val layoutParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             windowType,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+            windowFlags,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
@@ -457,6 +502,7 @@ object HeadsUpOverlayManager {
             currentComposeView = composeView
             currentLifecycleOwner = lifecycleOwner
             currentWindowManager = targetWindowManager
+            currentLayoutParams = layoutParams
             Log.d(TAG, "Custom Heads-Up Overlay inflated successfully for ${data.packageName}")
         } catch (e: Exception) {
             Log.e(TAG, "WindowManager addView error: ${e.localizedMessage}", e)
@@ -468,6 +514,8 @@ object HeadsUpOverlayManager {
                 ).show()
             }
             lifecycleOwner.onDestroy()
+            currentComposeView = null
+            currentLayoutParams = null
             _currentDataFlow.value = null
         }
     }
@@ -694,10 +742,12 @@ object HeadsUpOverlayManager {
         currentLifecycleOwner?.onDestroy()
         currentLifecycleOwner = null
         currentWindowManager = null
+        currentLayoutParams = null
         currentNotificationId = null
         dismissAnimatedCallback = null
         currentOnTriggerQs = null
         currentOnActionClick = null
+        ScreenWakeHelper.releaseWakeLock()
     }
 
     @Composable

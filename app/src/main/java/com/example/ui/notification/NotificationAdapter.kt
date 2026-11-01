@@ -29,15 +29,16 @@ import com.example.model.NotificationItem
 import com.example.service.QuickPanelNotificationListenerService
 import java.util.Date
 
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.compose.ui.unit.dp
+import android.graphics.drawable.GradientDrawable
+import android.widget.ImageButton
+import androidx.compose.ui.graphics.toArgb
+import androidx.core.graphics.ColorUtils
+import androidx.palette.graphics.Palette
 import com.example.data.PanelPreferences
 import com.example.model.MediaState
 import com.example.service.MediaSessionManagerHelper
-import com.example.ui.overlay.AndroidQMediaNotificationCard
+import com.example.ui.overlay.extractAndroidQNotificationColors
+import com.example.ui.view.WavyProgressView
 
 class NotificationDiffCallback : DiffUtil.ItemCallback<NotificationItem>() {
     override fun areItemsTheSame(oldItem: NotificationItem, newItem: NotificationItem): Boolean {
@@ -118,18 +119,8 @@ class NotificationAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         return when (viewType) {
             TYPE_MEDIA_PLAYER -> {
-                val composeView = ComposeView(parent.context).apply {
-                    layoutParams = ViewGroup.MarginLayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        bottomMargin = (4f * resources.displayMetrics.density).toInt()
-                    }
-                    setViewCompositionStrategy(
-                        ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
-                    )
-                }
-                MediaPlayerViewHolder(composeView)
+                val view = LayoutInflater.from(parent.context).inflate(R.layout.item_media_player_android_q, parent, false)
+                MediaPlayerViewHolder(view)
             }
             TYPE_FOOTER -> {
                 val view = LayoutInflater.from(parent.context).inflate(R.layout.item_notification_footer, parent, false)
@@ -272,64 +263,300 @@ class NotificationAdapter(
     }
 
     inner class MediaPlayerViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val flRoot: FrameLayout = itemView.findViewById(R.id.media_card_root)
+        private val ivArtwork: ImageView = itemView.findViewById(R.id.iv_media_artwork)
+        private val vArtworkGradient: View = itemView.findViewById(R.id.v_media_artwork_gradient)
+        private val flArtworkFallback: View = itemView.findViewById(R.id.fl_media_artwork_fallback)
+        private val ivArtworkFallback: ImageView = itemView.findViewById(R.id.iv_media_artwork_fallback)
+        private val ivAppIcon: ImageView = itemView.findViewById(R.id.iv_media_app_icon)
+        private val tvAppName: TextView = itemView.findViewById(R.id.tv_media_app_name)
+        private val btnToggleSeekBar: ImageButton = itemView.findViewById(R.id.btn_media_toggle_seekbar)
+        private val tvTitle: TextView = itemView.findViewById(R.id.tv_media_title)
+        private val tvArtist: TextView = itemView.findViewById(R.id.tv_media_artist)
+        private val btnShuffle: ImageButton = itemView.findViewById(R.id.btn_media_shuffle)
+        private val btnPrevious: ImageButton = itemView.findViewById(R.id.btn_media_previous)
+        private val btnPlayPause: ImageButton = itemView.findViewById(R.id.btn_media_play_pause)
+        private val btnNext: ImageButton = itemView.findViewById(R.id.btn_media_next)
+        private val btnRepeat: ImageButton = itemView.findViewById(R.id.btn_media_repeat)
+        private val btnFavorite: ImageButton = itemView.findViewById(R.id.btn_media_favorite)
+        private val llSeekbarContainer: LinearLayout = itemView.findViewById(R.id.ll_media_seekbar_container)
+        private val wavySeekBar: WavyProgressView = itemView.findViewById(R.id.v_media_wavy_seekbar)
+        private val tvCurrTime: TextView = itemView.findViewById(R.id.tv_media_curr_time)
+        private val tvTotalTime: TextView = itemView.findViewById(R.id.tv_media_total_time)
+
+        private var isSeekBarVisible = true
+
         fun bind(mediaState: MediaState, position: Int, totalCount: Int) {
             val context = itemView.context
+            val density = context.resources.displayMetrics.density
 
+            val artwork = mediaState.artworkBitmap
+            val palette = artwork?.let {
+                Palette.from(it)
+                    .maximumColorCount(32)
+                    .clearFilters()
+                    .generate()
+            }
+            val cardBgColorInt: Int
+            val accentColorInt: Int
+            if (artwork != null) {
+                val extractedColors = extractAndroidQNotificationColors(artwork, palette)
+                cardBgColorInt = extractedColors.backgroundColor.toArgb()
+                accentColorInt = extractedColors.accentColor.toArgb()
+            } else {
+                cardBgColorInt = if (isDark) Color.parseColor("#25262B") else Color.parseColor("#EAEBEF")
+                accentColorInt = MonetThemeHelper.getPrimaryAccent(context, isDark)
+            }
+            val subTextColorInt = ColorUtils.setAlphaComponent(accentColorInt, (255 * 0.80f).toInt())
+            val dimAccentColorInt = ColorUtils.setAlphaComponent(accentColorInt, (255 * 0.45f).toInt())
+            val inactiveAccentColorInt = ColorUtils.setAlphaComponent(accentColorInt, (255 * 0.25f).toInt())
+
+            // 1. Dynamic Shape & Corner Radii following panel preferences
             val panelGlobalCornerEnabled = PanelPreferences.panelGlobalCornerEnabled.value
             val panelOuterCorner = PanelPreferences.panelOuterCorner.value
             val panelInnerCorner = PanelPreferences.panelInnerCorner.value
 
-            val outerCornerDp = panelOuterCorner.dp
-            val innerCornerDp = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner).dp
+            val outerCornerPx = panelOuterCorner * density
+            val innerCornerPx = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner) * density
 
-            val shape = when {
-                totalCount <= 1 -> RoundedCornerShape(outerCornerDp)
-                position == 0 -> RoundedCornerShape(
-                    topStart = outerCornerDp,
-                    topEnd = outerCornerDp,
-                    bottomStart = innerCornerDp,
-                    bottomEnd = innerCornerDp
+            val radii = when {
+                totalCount <= 1 -> FloatArray(8) { outerCornerPx }
+                position == 0 -> floatArrayOf(
+                    outerCornerPx, outerCornerPx,
+                    outerCornerPx, outerCornerPx,
+                    innerCornerPx, innerCornerPx,
+                    innerCornerPx, innerCornerPx
                 )
-                position == totalCount - 1 -> RoundedCornerShape(
-                    topStart = innerCornerDp,
-                    topEnd = innerCornerDp,
-                    bottomStart = outerCornerDp,
-                    bottomEnd = outerCornerDp
+                position == totalCount - 1 -> floatArrayOf(
+                    innerCornerPx, innerCornerPx,
+                    innerCornerPx, innerCornerPx,
+                    outerCornerPx, outerCornerPx,
+                    outerCornerPx, outerCornerPx
                 )
-                else -> RoundedCornerShape(innerCornerDp)
+                else -> FloatArray(8) { innerCornerPx }
             }
 
-            (itemView as ComposeView).setContent {
-                val ctx = LocalContext.current
-                AndroidQMediaNotificationCard(
-                    mediaState = mediaState,
-                    shape = shape,
-                    onPlayPauseClick = {
-                        MediaSessionManagerHelper.playPauseForSession(mediaState.sessionIndex)
-                    },
-                    onPreviousClick = {
-                        MediaSessionManagerHelper.previousForSession(mediaState.sessionIndex)
-                    },
-                    onNextClick = {
-                        MediaSessionManagerHelper.nextForSession(mediaState.sessionIndex)
-                    },
-                    onShuffleClick = {
-                        MediaSessionManagerHelper.toggleShuffleForSession(mediaState.sessionIndex)
-                    },
-                    onRepeatClick = {
-                        MediaSessionManagerHelper.toggleRepeatForSession(mediaState.sessionIndex)
-                    },
-                    onFavoriteClick = {
-                        MediaSessionManagerHelper.toggleFavoriteForSession(mediaState.sessionIndex)
-                    },
-                    onSeek = { progress ->
-                        MediaSessionManagerHelper.seekToForSession(mediaState.sessionIndex, progress)
-                    },
-                    onCardClick = {
-                        MediaSessionManagerHelper.openActivePlayerAppForSession(ctx, mediaState.sessionIndex)
+            val cardDrawable = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadii = radii
+                setColor(cardBgColorInt)
+            }
+            flRoot.background = cardDrawable
+
+            val enablePanelShadows = PanelPreferences.enablePanelShadows.value
+            val shadowElevation = PanelPreferences.panelShadowElevation.value
+            flRoot.elevation = if (enablePanelShadows) shadowElevation * density else 0f
+            flRoot.translationY = 0f
+            flRoot.clipToOutline = true
+            flRoot.outlineProvider = object : ViewOutlineProvider() {
+                private val path = Path()
+                override fun getOutline(view: View, outline: Outline) {
+                    if (view.width > 0 && view.height > 0) {
+                        path.reset()
+                        path.addRoundRect(
+                            0f, 0f, view.width.toFloat(), view.height.toFloat(),
+                            radii,
+                            Path.Direction.CW
+                        )
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            outline.setPath(path)
+                        } else {
+                            outline.setConvexPath(path)
+                        }
                     }
+                }
+            }
+
+            // 4dp margin between notification & media items
+            val lp = flRoot.layoutParams as? ViewGroup.MarginLayoutParams
+            if (lp != null) {
+                val margin4dp = (4f * density).toInt()
+                if (lp.bottomMargin != margin4dp) {
+                    lp.bottomMargin = margin4dp
+                    flRoot.layoutParams = lp
+                }
+            }
+
+            // 2. Right-side Artwork & Gradient
+            if (artwork != null) {
+                ivArtwork.visibility = View.VISIBLE
+                ivArtwork.setImageBitmap(artwork)
+                flArtworkFallback.visibility = View.GONE
+
+                val gradient = GradientDrawable(
+                    GradientDrawable.Orientation.LEFT_RIGHT,
+                    intArrayOf(
+                        cardBgColorInt,
+                        ColorUtils.setAlphaComponent(cardBgColorInt, (255 * 0.85f).toInt()),
+                        ColorUtils.setAlphaComponent(cardBgColorInt, (255 * 0.35f).toInt()),
+                        Color.TRANSPARENT
+                    )
+                )
+                vArtworkGradient.background = gradient
+                vArtworkGradient.visibility = View.VISIBLE
+            } else {
+                ivArtwork.visibility = View.GONE
+                vArtworkGradient.visibility = View.GONE
+                flArtworkFallback.visibility = View.VISIBLE
+
+                val neutralBadgeColor = if (isDark) Color.parseColor("#34363C") else Color.parseColor("#DCDFE6")
+                val badgeDrawable = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(neutralBadgeColor)
+                }
+                ivArtworkFallback.background = badgeDrawable
+                val pad = (10 * density).toInt()
+                ivArtworkFallback.setPadding(pad, pad, pad, pad)
+                ivArtworkFallback.setColorFilter(accentColorInt)
+            }
+
+            // 3. App Title & Icon
+            val displayAppName = if (mediaState.appName.isNotBlank() && mediaState.appName != "MUSER") {
+                mediaState.appName
+            } else if (mediaState.packageName.isNotBlank()) {
+                try {
+                    val pm = context.packageManager
+                    val info = pm.getApplicationInfo(mediaState.packageName, 0)
+                    pm.getApplicationLabel(info).toString()
+                } catch (e: Exception) {
+                    "Music Player"
+                }
+            } else {
+                "Music Player"
+            }
+            tvAppName.text = displayAppName
+            tvAppName.setTextColor(accentColorInt)
+
+            if (mediaState.packageName.isNotBlank()) {
+                try {
+                    val pm = context.packageManager
+                    val icon = pm.getApplicationIcon(mediaState.packageName)
+                    ivAppIcon.setImageDrawable(icon)
+                    ivAppIcon.colorFilter = null
+                    ivAppIcon.visibility = View.VISIBLE
+                } catch (e: Exception) {
+                    ivAppIcon.setImageResource(R.drawable.ic_media_play)
+                    ivAppIcon.setColorFilter(accentColorInt)
+                    ivAppIcon.visibility = View.VISIBLE
+                }
+            } else {
+                ivAppIcon.setImageResource(R.drawable.ic_media_play)
+                ivAppIcon.setColorFilter(accentColorInt)
+                ivAppIcon.visibility = View.VISIBLE
+            }
+
+            btnToggleSeekBar.setColorFilter(accentColorInt)
+            btnToggleSeekBar.setImageResource(
+                if (isSeekBarVisible) R.drawable.ic_notif_chevron_up else R.drawable.ic_notif_chevron_down
+            )
+            btnToggleSeekBar.setOnClickListener {
+                isSeekBarVisible = !isSeekBarVisible
+                llSeekbarContainer.visibility = if (isSeekBarVisible) View.VISIBLE else View.GONE
+                btnToggleSeekBar.setImageResource(
+                    if (isSeekBarVisible) R.drawable.ic_notif_chevron_up else R.drawable.ic_notif_chevron_down
                 )
             }
+
+            // 4. Track Info
+            tvTitle.text = mediaState.title.ifBlank { "Track Title" }
+            tvTitle.setTextColor(accentColorInt)
+
+            val artist = mediaState.artist.ifBlank { "" }
+            if (artist.isNotBlank()) {
+                tvArtist.text = artist
+                tvArtist.setTextColor(subTextColorInt)
+                tvArtist.visibility = View.VISIBLE
+            } else {
+                tvArtist.visibility = View.GONE
+            }
+
+            // 5. Playback Buttons
+            if (mediaState.supportsShuffle) {
+                btnShuffle.visibility = View.VISIBLE
+                val isShuffleActive = mediaState.shuffleMode != 0 && mediaState.shuffleMode != -1
+                btnShuffle.setColorFilter(if (isShuffleActive) accentColorInt else dimAccentColorInt)
+                btnShuffle.setOnClickListener {
+                    MediaSessionManagerHelper.toggleShuffleForSession(mediaState.sessionIndex)
+                }
+            } else {
+                btnShuffle.visibility = View.GONE
+            }
+
+            btnPrevious.setColorFilter(accentColorInt)
+            btnPrevious.setOnClickListener {
+                MediaSessionManagerHelper.previousForSession(mediaState.sessionIndex)
+            }
+
+            btnPlayPause.setColorFilter(accentColorInt)
+            btnPlayPause.setImageResource(
+                if (mediaState.isPlaying) R.drawable.ic_media_pause else R.drawable.ic_media_play
+            )
+            btnPlayPause.setOnClickListener {
+                MediaSessionManagerHelper.playPauseForSession(mediaState.sessionIndex)
+            }
+
+            btnNext.setColorFilter(accentColorInt)
+            btnNext.setOnClickListener {
+                MediaSessionManagerHelper.nextForSession(mediaState.sessionIndex)
+            }
+
+            if (mediaState.supportsRepeat) {
+                btnRepeat.visibility = View.VISIBLE
+                val isRepeatActive = mediaState.repeatMode != 0 && mediaState.repeatMode != -1
+                btnRepeat.setImageResource(
+                    if (mediaState.repeatMode == 1) R.drawable.ic_media_repeat_one else R.drawable.ic_media_repeat
+                )
+                btnRepeat.setColorFilter(if (isRepeatActive) accentColorInt else dimAccentColorInt)
+                btnRepeat.setOnClickListener {
+                    MediaSessionManagerHelper.toggleRepeatForSession(mediaState.sessionIndex)
+                }
+            } else {
+                btnRepeat.visibility = View.GONE
+            }
+
+            if (mediaState.supportsFavorite) {
+                btnFavorite.visibility = View.VISIBLE
+                btnFavorite.setImageResource(
+                    if (mediaState.isFavorite) R.drawable.ic_heart_filled else R.drawable.ic_heart_outline
+                )
+                btnFavorite.setColorFilter(if (mediaState.isFavorite) accentColorInt else dimAccentColorInt)
+                btnFavorite.setOnClickListener {
+                    MediaSessionManagerHelper.toggleFavoriteForSession(mediaState.sessionIndex)
+                }
+            } else {
+                btnFavorite.visibility = View.GONE
+            }
+
+            flRoot.setOnClickListener {
+                MediaSessionManagerHelper.openActivePlayerAppForSession(context, mediaState.sessionIndex)
+            }
+
+            // 6. Custom Wavy Progress Bar
+            val sliderSyncAll = PanelPreferences.sliderSyncAll.value
+            val resolvedStyle = if (sliderSyncAll) {
+                PanelPreferences.progressBarStyle.value
+            } else {
+                PanelPreferences.mediaSliderStyle.value
+            }
+            wavySeekBar.sliderStyle = resolvedStyle
+            wavySeekBar.isPlaying = mediaState.isPlaying
+            wavySeekBar.activeColor = accentColorInt
+            wavySeekBar.inactiveColor = inactiveAccentColorInt
+            wavySeekBar.thumbColor = accentColorInt
+            wavySeekBar.progress = mediaState.progress.coerceIn(0f, 1f)
+
+            wavySeekBar.onSeekListener = { progress ->
+                MediaSessionManagerHelper.seekToForSession(mediaState.sessionIndex, progress)
+                val currMs = (progress * mediaState.totalDurationMs).toLong()
+                tvCurrTime.text = MediaState.formatDuration(currMs)
+            }
+
+            tvCurrTime.setTextColor(accentColorInt)
+            tvTotalTime.setTextColor(accentColorInt)
+            tvCurrTime.text = MediaState.formatDuration(mediaState.currentPositionMs)
+            tvTotalTime.text = if (mediaState.totalDurationMs > 0) mediaState.formattedTotalTime else "--:--"
+
+            llSeekbarContainer.visibility = if (isSeekBarVisible) View.VISIBLE else View.GONE
         }
     }
 

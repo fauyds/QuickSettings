@@ -1,5 +1,6 @@
 package com.example.service
 
+import android.app.ActivityOptions
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -359,44 +360,22 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
         refreshActiveNotifications()
     }
 
-    override fun onNotificationPosted(sbn: StatusBarNotification?, rankingMap: RankingMap?) {
-        super.onNotificationPosted(sbn, rankingMap)
-        if (sbn == null) return
-        val n = sbn.notification ?: return
+    data class CallAlarmDetection(
+        val isCall: Boolean,
+        val isAlarm: Boolean,
+        val isMissedCall: Boolean,
+        val title: String,
+        val text: String,
+        val subText: String?,
+        val category: String,
+        val extras: Bundle
+    )
 
-        // Skip 1-second ticker/progress updates from active media notifications from flooding the shade or heads-up
-        if (isMediaNotification(sbn, n)) {
-            return
-        }
+    private var lastFiredFullScreenIntentKey: String? = null
+    private var lastFiredFullScreenIntentTime: Long = 0L
 
-        refreshActiveNotifications()
-        triggerHeadsUpIfNeeded(sbn, rankingMap)
-    }
-
-    override fun onNotificationPosted(sbn: StatusBarNotification?) {
-        super.onNotificationPosted(sbn)
-        if (sbn == null) return
-        val n = sbn.notification ?: return
-
-        // Skip 1-second ticker/progress updates from active media notifications from flooding the shade or heads-up
-        if (isMediaNotification(sbn, n)) {
-            return
-        }
-
-        refreshActiveNotifications()
-        triggerHeadsUpIfNeeded(sbn, currentRanking)
-    }
-
-    private fun triggerHeadsUpIfNeeded(sbn: StatusBarNotification, rankingMap: RankingMap? = null) {
-        if (!PanelPreferences.enableHeadsUpOverlay.value) return
-
-        val n = sbn.notification ?: return
-        if (isMediaNotification(sbn, n)) return
-        val extras = n.extras ?: return
-
-        // Ignore notifications from self to prevent loops
-        if (sbn.packageName == packageName) return
-
+    private fun detectCallOrAlarm(sbn: StatusBarNotification, n: Notification): CallAlarmDetection {
+        val extras = n.extras ?: Bundle()
         val category = n.category ?: ""
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
             ?: extras.getCharSequence(Notification.EXTRA_TITLE_BIG)?.toString()
@@ -416,7 +395,6 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                 title.contains("アラーム", ignoreCase = true) ||
                 subText?.contains("alarm", ignoreCase = true) == true
 
-        // Check if this is a missed call notification (which should dismiss any active call heads-up)
         val isMissedCall = category == Notification.CATEGORY_MISSED_CALL ||
                 category.equals("missed_call", ignoreCase = true) ||
                 title.contains("missed call", ignoreCase = true) ||
@@ -424,12 +402,6 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                 text.contains("missed call", ignoreCase = true) ||
                 text.contains("пропущенный", ignoreCase = true)
 
-        if (isMissedCall) {
-            HeadsUpOverlayManager.dismissIfMatching(sbn.key)
-            resetPinnedLock(sbn.key)
-        }
-
-        // Comprehensive incoming call detection:
         val template = extras.getString(Notification.EXTRA_TEMPLATE) ?: ""
         val isCallStyle = template.contains("CallStyle", ignoreCase = true) ||
                 extras.containsKey("android.callType")
@@ -518,6 +490,112 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                 hasAnswerDeclineActions ||
                 (isDialerOrPhonePkg && (n.fullScreenIntent != null || hasCallText))
         )
+
+        return CallAlarmDetection(
+            isCall = isCall,
+            isAlarm = isAlarm,
+            isMissedCall = isMissedCall,
+            title = title,
+            text = text,
+            subText = subText,
+            category = category,
+            extras = extras
+        )
+    }
+
+    private fun handleIncomingCallOrAlarmWake(sbn: StatusBarNotification, n: Notification, detection: CallAlarmDetection) {
+        if (!detection.isCall && !detection.isAlarm) return
+
+        val isScreenOff = ScreenWakeHelper.isScreenOff(this)
+        val isLocked = ScreenWakeHelper.isKeyguardLocked(this)
+
+        Log.d(TAG, "Incoming call/alarm detected: pkg=${sbn.packageName}, isCall=${detection.isCall}, isAlarm=${detection.isAlarm}, screenOff=$isScreenOff, locked=$isLocked")
+
+        // 1. Automatically turn on the screen right away so the display illuminates
+        ScreenWakeHelper.wakeScreen(this, if (detection.isCall) "QuickPanel:IncomingCall" else "QuickPanel:Alarm", 25000L)
+
+        // 2. When screen is off or locked, if dialer has fullScreenIntent, immediately dispatch it so the incoming call screen appears
+        if (detection.isCall && (isScreenOff || isLocked) && n.fullScreenIntent != null) {
+            val now = System.currentTimeMillis()
+            if (sbn.key != lastFiredFullScreenIntentKey || (now - lastFiredFullScreenIntentTime > 12000L)) {
+                lastFiredFullScreenIntentKey = sbn.key
+                lastFiredFullScreenIntentTime = now
+                try {
+                    val options = ActivityOptions.makeBasic()
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        options.setPendingIntentBackgroundActivityStartMode(
+                            ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
+                        )
+                    }
+                    n.fullScreenIntent.send(this, 0, null, null, null, null, options.toBundle())
+                    Log.d(TAG, "Triggered fullScreenIntent for incoming call: ${sbn.packageName}")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed launching fullScreenIntent: ${e.message}", e)
+                }
+            }
+        }
+    }
+
+    override fun onNotificationPosted(sbn: StatusBarNotification?, rankingMap: RankingMap?) {
+        super.onNotificationPosted(sbn, rankingMap)
+        if (sbn == null) return
+        val n = sbn.notification ?: return
+
+        // Skip 1-second ticker/progress updates from active media notifications from flooding the shade or heads-up
+        if (isMediaNotification(sbn, n)) {
+            return
+        }
+
+        refreshActiveNotifications()
+        val detection = detectCallOrAlarm(sbn, n)
+        handleIncomingCallOrAlarmWake(sbn, n, detection)
+        triggerHeadsUpIfNeeded(sbn, rankingMap, detection)
+    }
+
+    override fun onNotificationPosted(sbn: StatusBarNotification?) {
+        super.onNotificationPosted(sbn)
+        if (sbn == null) return
+        val n = sbn.notification ?: return
+
+        // Skip 1-second ticker/progress updates from active media notifications from flooding the shade or heads-up
+        if (isMediaNotification(sbn, n)) {
+            return
+        }
+
+        refreshActiveNotifications()
+        val detection = detectCallOrAlarm(sbn, n)
+        handleIncomingCallOrAlarmWake(sbn, n, detection)
+        triggerHeadsUpIfNeeded(sbn, currentRanking, detection)
+    }
+
+    private fun triggerHeadsUpIfNeeded(
+        sbn: StatusBarNotification,
+        rankingMap: RankingMap? = null,
+        preDetected: CallAlarmDetection? = null
+    ) {
+        val n = sbn.notification ?: return
+        if (isMediaNotification(sbn, n)) return
+
+        // Ignore notifications from self to prevent loops
+        if (sbn.packageName == packageName) return
+
+        val detection = preDetected ?: detectCallOrAlarm(sbn, n)
+        val isCall = detection.isCall
+        val isAlarm = detection.isAlarm
+        val isMissedCall = detection.isMissedCall
+        val category = detection.category
+        val title = detection.title
+        val text = detection.text
+        val subText = detection.subText
+        val extras = detection.extras
+
+        if (isMissedCall) {
+            HeadsUpOverlayManager.dismissIfMatching(sbn.key)
+            resetPinnedLock(sbn.key)
+        }
+
+        // Allow calls and alarms to display Heads-Up overlay even if general notifications overlay is toggled off
+        if (!PanelPreferences.enableHeadsUpOverlay.value && !isCall && !isAlarm) return
 
         val isCallOrAlarm = isAlarm || isCall
 
@@ -731,6 +809,11 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
         super.onNotificationRemoved(sbn)
         refreshActiveNotifications()
         if (sbn != null) {
+            if (sbn.key == lastFiredFullScreenIntentKey) {
+                lastFiredFullScreenIntentKey = null
+                lastFiredFullScreenIntentTime = 0L
+                ScreenWakeHelper.releaseWakeLock()
+            }
             resetPinnedLock(sbn.key)
             // Dismiss ONLY if the specific notification key matches (never loosely dismiss by packageName)
             HeadsUpOverlayManager.dismissIfMatching(sbn.key)

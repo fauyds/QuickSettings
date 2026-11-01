@@ -409,9 +409,18 @@ fun QuickSettingsPanel(
                 com.example.system.CpuPerformanceManager.getInstance(context).onInteractionStart()
             },
             onDragCancel = {
-                dragTranslationYState.floatValue = 0f
-                isDraggingMorph = false
-                manualDragMorphFraction = if (expansionStage == QsExpansionStage.FULL_QS) 1f else 0f
+                val draggedDownPx = dragAccumulatedY.coerceAtLeast(0f)
+                val dismissThresholdPx = with(density) { 36.dp.toPx() }
+                if (expansionStage == QsExpansionStage.QQS && (draggedDownPx >= dismissThresholdPx || manualDragMorphFraction > 0.25f)) {
+                    // Swiped down past threshold: smoothly expand to FULL_QS rather than getting stuck or snapping closed
+                    isDraggingMorph = false
+                    dragTranslationYState.floatValue = 0f
+                    onStageChange(QsExpansionStage.FULL_QS)
+                } else {
+                    dragTranslationYState.floatValue = 0f
+                    isDraggingMorph = false
+                    manualDragMorphFraction = if (expansionStage == QsExpansionStage.FULL_QS) 1f else 0f
+                }
                 com.example.system.NativeTileManager.instance?.isDraggingShade = false
                 com.example.system.CpuPerformanceManager.getInstance(context).onInteractionEnd()
             },
@@ -470,7 +479,7 @@ fun QuickSettingsPanel(
                             }
                             onStageChange(QsExpansionStage.COLLAPSED)
                         }
-                    } else if (dragAccumulatedY > with(density) { 50.dp.toPx() } || manualDragMorphFraction > 0.40f) {
+                    } else if (dragAccumulatedY > with(density) { 36.dp.toPx() } || manualDragMorphFraction > 0.25f) {
                         // Swiped DOWN in QQS -> Morph transition expands to FULL_QS without shifting panel!
                         isDraggingMorph = false
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -2007,12 +2016,16 @@ fun UnifiedQsPanel(
 
     val isExpandedQsState = expansionStage == QsExpansionStage.FULL_QS || morphProgress > 0.5f
     val isCarrierVisible = showCarrier && !(hideCarrierInExpanded && isExpandedQsState)
-    val isSplitCarrier = isCarrierVisible && showCarrierDivider && morphProgress < 0.5f && !isLandscape && !isEditingTiles
+    val isSplitCarrierConfigured = isCarrierVisible && showCarrierDivider && !isLandscape && !isEditingTiles
+    val isSplitCarrier = isSplitCarrierConfigured && morphProgress < 0.5f
+    val showSplitCarrierCard = isSplitCarrierConfigured && (expansionStage == QsExpansionStage.QQS || isDraggingMorph || morphProgress < 0.99f)
 
     val qsCardContent: @Composable () -> Unit = {
         // UNIFIED QS CARD (Morphs between QQS and Full QS, or displays Edit Mode Studio)
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(shadeDragModifier),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             val panelGlobalCornerEnabled by PanelPreferences.panelGlobalCornerEnabled.collectAsState()
@@ -2547,13 +2560,17 @@ fun UnifiedQsPanel(
             }
         }
 
-        if (isSplitCarrier) {
+        if (showSplitCarrierCard) {
             val panelGlobalCornerEnabled by PanelPreferences.panelGlobalCornerEnabled.collectAsState()
             val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
             val panelInnerCorner by PanelPreferences.panelInnerCorner.collectAsState()
 
             val effectiveOuterCorner = panelOuterCorner.dp
             val effectiveInnerCorner = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner).dp
+
+            val carrierCardAlpha = if (isSplitCarrierConfigured) {
+                (1f - morphProgress * 1.5f).coerceIn(0f, 1f)
+            } else 1f
 
             ContainerCard(
                 shape = RoundedCornerShape(
@@ -2566,6 +2583,7 @@ fun UnifiedQsPanel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .offset(y = qqsContainerYOffset)
+                    .graphicsLayer { alpha = carrierCardAlpha }
                     .then(shadeDragModifier)
             ) {
                 Box(

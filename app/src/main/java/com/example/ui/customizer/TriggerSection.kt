@@ -70,6 +70,7 @@ fun TriggerSection(modifier: Modifier = Modifier) {
     val invisibleStatusBarTrigger by PanelPreferences.invisibleStatusBarTrigger.collectAsState()
     val forceImmersiveTrigger by PanelPreferences.forceImmersiveTrigger.collectAsState()
     val overrideSystemQs by PanelPreferences.overrideSystemQs.collectAsState()
+    val strictShadeDetection by PanelPreferences.strictShadeDetection.collectAsState()
     val autoSystemPanelClosing by PanelPreferences.autoSystemPanelClosing.collectAsState()
     val detectorCooldownMs by PanelPreferences.detectorCooldownMs.collectAsState()
     val panelReplacementDelayMs by PanelPreferences.panelReplacementDelayMs.collectAsState()
@@ -587,6 +588,42 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                 }
 
                 if (overrideSystemQs) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                            Text(
+                                text = "Strict shade detection",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Prevents accidental triggers on custom ROMs. Only opens when actually swiping down from the top, ignoring screen-off, AOD, screenshots, and pop-up alerts.",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Switch(
+                            checked = strictShadeDetection,
+                            onCheckedChange = { PanelPreferences.setStrictShadeDetection(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("strict_shade_detection_toggle")
+                        )
+                    }
+
                     HorizontalDivider(
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
