@@ -599,13 +599,13 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                     ) {
                         Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
                             Text(
-                                text = "Strict shade detection",
+                                text = "Shade Swipe Only",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Prevents accidental triggers on custom ROMs. Only opens when actually swiping down from the top, ignoring screen-off, AOD, screenshots, and pop-up alerts.",
+                                text = "Blocks all shade trigger methods except opening via the system shade.",
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

@@ -207,6 +207,7 @@ fun TileCommandsScreen(
                                 statusState = shizukuStatus,
                                 onRequestAccess = {
                                     val msg = privilegeEngine.requestShizukuPermission()
+                                    privilegeEngine.refreshPermissions()
                                     Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                 },
                                 showBorder = false

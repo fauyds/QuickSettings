@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.MusicNote
@@ -184,6 +185,7 @@ fun AdaptiveMediaPlayerCard(
     onShuffleClick: () -> Unit = {},
     onSeek: (Float) -> Unit = {},
     onOutputDeviceClick: () -> Unit = {},
+    onCloseClick: () -> Unit = {},
     onCardClick: () -> Unit = {}
 ) {
     val cardShape = RoundedCornerShape(cornerRadius)
@@ -301,7 +303,7 @@ fun AdaptiveMediaPlayerCard(
                     bottom = if (isExpanded) 6.dp else 5.dp
                 )
         ) {
-            // 1. Top Header Row: Music Note + App Name & Output Switcher Pill
+            // 1. Top Header Row: Music Note + App Name & Output Switcher Pill & Close "X" Button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -327,32 +329,52 @@ fun AdaptiveMediaPlayerCard(
                     )
                 }
 
-                // Output Switcher Pill ("Phone speaker")
-                Surface(
-                    onClick = onOutputDeviceClick,
-                    shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.08f),
-                    modifier = Modifier.testTag("media_output_switcher")
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(
-                            horizontal = if (isExpanded) 8.dp else 7.dp,
-                            vertical = if (isExpanded) 2.5.dp else 2.dp
-                        ),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    // Output Switcher Pill ("Phone speaker")
+                    Surface(
+                        onClick = onOutputDeviceClick,
+                        shape = CircleShape,
+                        color = Color.White.copy(alpha = 0.08f),
+                        modifier = Modifier.testTag("media_output_switcher")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(
+                                horizontal = if (isExpanded) 8.dp else 7.dp,
+                                vertical = if (isExpanded) 2.5.dp else 2.dp
+                            ),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (currentHeaderState.isHeadphonesOrBluetooth) Icons.Outlined.Headphones else Icons.Outlined.PhoneAndroid,
+                                contentDescription = "Audio Output",
+                                tint = contentColor.copy(alpha = 0.9f),
+                                modifier = Modifier.size(if (isExpanded) 12.dp else 11.dp)
+                            )
+                            Text(
+                                text = currentHeaderState.outputDevice,
+                                fontSize = if (isExpanded) 11.sp else 10.5.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = contentColor.copy(alpha = 0.9f)
+                            )
+                        }
+                    }
+
+                    // Close Button ("X" icon)
+                    IconButton(
+                        onClick = onCloseClick,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .testTag("media_close_btn")
                     ) {
                         Icon(
-                            imageVector = if (currentHeaderState.isHeadphonesOrBluetooth) Icons.Outlined.Headphones else Icons.Outlined.PhoneAndroid,
-                            contentDescription = "Audio Output",
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close Media Card",
                             tint = contentColor.copy(alpha = 0.9f),
-                            modifier = Modifier.size(if (isExpanded) 12.dp else 11.dp)
-                        )
-                        Text(
-                            text = currentHeaderState.outputDevice,
-                            fontSize = if (isExpanded) 11.sp else 10.5.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = contentColor.copy(alpha = 0.9f)
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
@@ -770,6 +792,7 @@ fun AndroidQMediaNotificationCard(
     onRepeatClick: () -> Unit = {},
     onFavoriteClick: () -> Unit = {},
     onSeek: (Float) -> Unit = {},
+    onCloseClick: () -> Unit = {},
     onCardClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -911,7 +934,7 @@ fun AndroidQMediaNotificationCard(
                     .padding(start = 14.dp, end = 14.dp, top = 10.dp, bottom = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // 1. Top Bar: App Badge + Name + Hide/Show Seekbar Arrow
+                // 1. Top Bar: App Badge + Name + Hide/Show Seekbar Arrow + Close Button
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -957,19 +980,39 @@ fun AndroidQMediaNotificationCard(
                         )
                     }
 
-                    // Arrow toggles seekbar visibility
-                    IconButton(
-                        onClick = { isSeekBarVisible = !isSeekBarVisible },
-                        modifier = Modifier
-                            .size(28.dp)
-                            .testTag("android_q_media_toggle_seekbar_btn")
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Icon(
-                            imageVector = if (isSeekBarVisible) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                            contentDescription = if (isSeekBarVisible) "Hide Seekbar" else "Show Seekbar",
-                            tint = accentColor,
-                            modifier = Modifier.size(18.dp)
-                        )
+                        // Arrow toggles seekbar visibility
+                        IconButton(
+                            onClick = { isSeekBarVisible = !isSeekBarVisible },
+                            modifier = Modifier
+                                .size(28.dp)
+                                .testTag("android_q_media_toggle_seekbar_btn")
+                        ) {
+                            Icon(
+                                imageVector = if (isSeekBarVisible) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                contentDescription = if (isSeekBarVisible) "Hide Seekbar" else "Show Seekbar",
+                                tint = accentColor,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        // Close button ("X" icon) right next to expand/collapse icon
+                        IconButton(
+                            onClick = onCloseClick,
+                            modifier = Modifier
+                                .size(28.dp)
+                                .testTag("android_q_media_close_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close Media Card",
+                                tint = accentColor,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
 

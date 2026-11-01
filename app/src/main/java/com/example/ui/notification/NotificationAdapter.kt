@@ -71,6 +71,26 @@ class NotificationAdapter(
         return expandedStateMap[item.key] ?: false
     }
 
+    /**
+     * Safely retrieves the [NotificationItem] at the given adapter position,
+     * strictly accounting for any number of active media player cards positioned at the top.
+     */
+    fun getNotificationItem(position: Int): NotificationItem? {
+        if (position == RecyclerView.NO_POSITION) return null
+        val notifIndex = position - mediaSessions.size
+        if (notifIndex in 0 until currentList.size) {
+            return currentList[notifIndex]
+        }
+        return null
+    }
+
+    /**
+     * Safely retrieves the [NotificationItem] by its unique notification key ID.
+     */
+    fun getNotificationItemByKey(key: String): NotificationItem? {
+        return currentList.firstOrNull { it.key == key }
+    }
+
     companion object {
         private const val TYPE_MEDIA_PLAYER = 0
         private const val TYPE_NOTIFICATION = 1
@@ -140,7 +160,7 @@ class NotificationAdapter(
             holder.bind(mediaState, position, totalCount)
         } else if (holder is NotificationViewHolder) {
             val notifIndex = position - mediaSessions.size
-            val item = getItem(notifIndex) ?: return
+            val item = currentList.getOrNull(notifIndex) ?: return
             holder.bind(item, position, totalCount)
         } else if (holder is FooterViewHolder) {
             holder.bind()
@@ -271,6 +291,7 @@ class NotificationAdapter(
         private val ivAppIcon: ImageView = itemView.findViewById(R.id.iv_media_app_icon)
         private val tvAppName: TextView = itemView.findViewById(R.id.tv_media_app_name)
         private val btnToggleSeekBar: ImageButton = itemView.findViewById(R.id.btn_media_toggle_seekbar)
+        private val btnClose: ImageButton = itemView.findViewById(R.id.btn_media_close)
         private val tvTitle: TextView = itemView.findViewById(R.id.tv_media_title)
         private val tvArtist: TextView = itemView.findViewById(R.id.tv_media_artist)
         private val btnShuffle: ImageButton = itemView.findViewById(R.id.btn_media_shuffle)
@@ -457,6 +478,11 @@ class NotificationAdapter(
                 )
             }
 
+            btnClose.setColorFilter(accentColorInt)
+            btnClose.setOnClickListener {
+                MediaSessionManagerHelper.stopAndDismissSession(mediaState.sessionIndex)
+            }
+
             // 4. Track Info
             tvTitle.text = mediaState.title.ifBlank { "Track Title" }
             tvTitle.setTextColor(accentColorInt)
@@ -561,6 +587,10 @@ class NotificationAdapter(
     }
 
     inner class NotificationViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        var notificationItem: NotificationItem? = null
+            private set
+        val itemKey: String? get() = notificationItem?.key
+
         private val flRoot: FrameLayout = itemView.findViewById(R.id.fl_notif_root)
         private val ivAvatar: ImageView = itemView.findViewById(R.id.iv_notif_avatar)
         private val ivSubAppIcon: ImageView = itemView.findViewById(R.id.iv_notif_sub_app_icon)
@@ -577,6 +607,7 @@ class NotificationAdapter(
         private val llActions: LinearLayout = itemView.findViewById(R.id.ll_notif_actions)
 
         fun bind(item: NotificationItem, position: Int, totalNotifCount: Int) {
+            this.notificationItem = item
             val context = itemView.context
             val density = context.resources.displayMetrics.density
             val isExpanded = isItemExpanded(item)

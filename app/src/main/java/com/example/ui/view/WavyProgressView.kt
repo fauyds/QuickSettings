@@ -317,6 +317,7 @@ class WavyProgressView @JvmOverloads constructor(
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
+                parent?.requestDisallowInterceptTouchEvent(true)
                 if (isDragging) {
                     val trackW = (width - 2 * thumbRadiusPx).coerceAtLeast(1f)
                     val stretchDragSpan = (trackW * 0.45f).coerceAtLeast(120f * density)

@@ -444,21 +444,25 @@ class NotificationListView @JvmOverloads constructor(
                 recyclerView: RecyclerView,
                 viewHolder: RecyclerView.ViewHolder
             ): Int {
-                val position = viewHolder.bindingAdapterPosition
-                if (position in 0 until (adapter?.currentList?.size ?: 0)) {
-                    val item = adapter?.currentList?.get(position)
-                    if (item?.isClearable == true) {
-                        return super.getSwipeDirs(recyclerView, viewHolder)
-                    }
+                // Media players (regardless of count) and clear-all footer must NEVER be swiped to dismiss
+                if (viewHolder !is NotificationAdapter.NotificationViewHolder) {
+                    return 0
+                }
+                // Strictly track by unique notification key from the ViewHolder's bound NotificationItem
+                val item = viewHolder.notificationItem
+                    ?: adapter?.getNotificationItem(viewHolder.bindingAdapterPosition)
+                if (item != null && item.isClearable) {
+                    return super.getSwipeDirs(recyclerView, viewHolder)
                 }
                 return 0
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                val position = viewHolder.bindingAdapterPosition
-                if (position in 0 until (adapter?.currentList?.size ?: 0)) {
-                    val item = adapter?.currentList?.get(position)
-                    if (item != null) {
+                // Strictly dismiss the exact notification bound to this ViewHolder by unique key
+                if (viewHolder is NotificationAdapter.NotificationViewHolder) {
+                    val item = viewHolder.notificationItem
+                        ?: adapter?.getNotificationItem(viewHolder.bindingAdapterPosition)
+                    if (item != null && item.isClearable) {
                         onNotificationDismiss?.invoke(item)
                     }
                 }
@@ -644,7 +648,7 @@ class NotificationListView @JvmOverloads constructor(
                 adapter?.showFooter = hasClearable
             }
 
-            adapter?.submitList(notifications)
+            adapter?.submitList(notifications.toList())
             adapter?.notifyDataSetChanged()
         }
     }

@@ -123,8 +123,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         PanelPreferences.init(application)
         privilegeEngine.syncWithPreferences()
         com.example.data.NotificationBlacklistManager.init(application)
-        // Restore initial setup wizard action so it remains available until explicitly completed
-        PanelPreferences.setInitialSetupCompleted(application, false)
         _showInitialSetup.value = !PanelPreferences.initialSetupCompleted.value
         refreshServiceState()
     }

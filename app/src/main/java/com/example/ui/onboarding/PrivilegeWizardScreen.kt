@@ -702,24 +702,27 @@ fun ShizukuPermissionRow(
             }
         }
 
-        Surface(
-            onClick = onRequestAccess,
-            shape = CircleShape,
-            color = if (statusState == com.example.system.ShizukuStatusState.RUNNING_GRANTED)
-                colorScheme.primary
-            else
-                nonGrantedRed,
-            contentColor = if (statusState == com.example.system.ShizukuStatusState.RUNNING_GRANTED)
-                colorScheme.onPrimary
-            else
-                Color.White,
-            modifier = Modifier.testTag("btn_shizuku_permission_request")
-        ) {
-            Text(
-                text = if (statusState == com.example.system.ShizukuStatusState.RUNNING_GRANTED) "Granted" else "Request Access",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+        if (statusState != com.example.system.ShizukuStatusState.RUNNING_GRANTED) {
+            Surface(
+                onClick = onRequestAccess,
+                shape = CircleShape,
+                color = nonGrantedRed,
+                contentColor = Color.White,
+                modifier = Modifier.testTag("btn_shizuku_permission_request")
+            ) {
+                Text(
+                    text = "Request Access",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                )
+            }
+        } else {
+            Icon(
+                imageVector = Icons.Default.CheckCircle,
+                contentDescription = "Granted",
+                tint = colorScheme.primary,
+                modifier = Modifier.size(20.dp)
             )
         }
     }
@@ -784,24 +787,27 @@ fun RootPermissionRow(
             }
         }
 
-        Surface(
-            onClick = onRequestAccess,
-            shape = CircleShape,
-            color = if (isRootGranted)
-                colorScheme.primary
-            else
-                nonGrantedRed,
-            contentColor = if (isRootGranted)
-                colorScheme.onPrimary
-            else
-                Color.White,
-            modifier = Modifier.testTag("btn_root_permission_request")
-        ) {
-            Text(
-                text = if (isRootGranted) "Granted" else "Request Access",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+        if (!isRootGranted) {
+            Surface(
+                onClick = onRequestAccess,
+                shape = CircleShape,
+                color = nonGrantedRed,
+                contentColor = Color.White,
+                modifier = Modifier.testTag("btn_root_permission_request")
+            ) {
+                Text(
+                    text = "Request Access",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                )
+            }
+        } else {
+            Icon(
+                imageVector = Icons.Default.CheckCircle,
+                contentDescription = "Granted",
+                tint = colorScheme.primary,
+                modifier = Modifier.size(20.dp)
             )
         }
     }

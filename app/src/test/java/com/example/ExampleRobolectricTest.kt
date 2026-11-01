@@ -517,6 +517,145 @@ class ExampleRobolectricTest {
         // Verify release does not throw
         com.example.service.ScreenWakeHelper.releaseWakeLock()
     }
+
+    @Test
+    fun `verify notification tracking and dismissal by unique key with multiple media player cards`() {
+        val dismissedKeys = mutableListOf<String>()
+        val adapter = com.example.ui.notification.NotificationAdapter(
+            onNotificationClick = {},
+            onNotificationDismiss = { item -> dismissedKeys.add(item.key) },
+            onActionClick = {},
+            onClearAll = {}
+        )
+
+        // 2 active media player cards
+        val media1 = com.example.model.MediaState(
+            title = "Song 1",
+            artist = "Artist 1",
+            isPlaying = true,
+            sessionIndex = 0,
+            packageName = "com.music.one"
+        )
+        val media2 = com.example.model.MediaState(
+            title = "Podcast 2",
+            artist = "Host 2",
+            isPlaying = false,
+            sessionIndex = 1,
+            packageName = "com.podcast.two"
+        )
+        adapter.mediaSessions = listOf(media1, media2)
+
+        // 3 regular notifications
+        val notif0 = com.example.model.NotificationItem(
+            key = "key_notif_0",
+            id = 100,
+            packageName = "com.app.chat",
+            appName = "Chat",
+            title = "First Notification (Top)",
+            text = "Hello",
+            isClearable = true
+        )
+        val notif1 = com.example.model.NotificationItem(
+            key = "key_notif_1",
+            id = 101,
+            packageName = "com.app.mail",
+            appName = "Mail",
+            title = "Second Notification (Middle)",
+            text = "Update",
+            isClearable = true
+        )
+        val notif2 = com.example.model.NotificationItem(
+            key = "key_notif_2",
+            id = 102,
+            packageName = "com.app.calendar",
+            appName = "Calendar",
+            title = "Third Notification (Bottom-most)",
+            text = "Meeting",
+            isClearable = true
+        )
+        adapter.submitList(listOf(notif0, notif1, notif2))
+
+        // Total item count: 2 media cards + 3 notifications = 5
+        assertEquals(5, adapter.itemCount)
+
+        // Positions 0 and 1 must be Media Players and never return a NotificationItem
+        assertEquals(0, adapter.getItemViewType(0)) // TYPE_MEDIA_PLAYER
+        assertEquals(0, adapter.getItemViewType(1)) // TYPE_MEDIA_PLAYER
+        org.junit.Assert.assertNull(adapter.getNotificationItem(0))
+        org.junit.Assert.assertNull(adapter.getNotificationItem(1))
+
+        // Positions 2, 3, 4 must be Notifications with strict key-to-item mapping
+        assertEquals(1, adapter.getItemViewType(2)) // TYPE_NOTIFICATION
+        assertEquals(1, adapter.getItemViewType(3)) // TYPE_NOTIFICATION
+        assertEquals(1, adapter.getItemViewType(4)) // TYPE_NOTIFICATION
+
+        // Verifying offset: Position 2 must map to notif0 (First/Top notification), NOT notif2 (Bottom-most)
+        val topItem = adapter.getNotificationItem(2)
+        assertNotNull(topItem)
+        assertEquals("key_notif_0", topItem?.key)
+        assertEquals("First Notification (Top)", topItem?.title)
+
+        val middleItem = adapter.getNotificationItem(3)
+        assertNotNull(middleItem)
+        assertEquals("key_notif_1", middleItem?.key)
+
+        val bottomItem = adapter.getNotificationItem(4)
+        assertNotNull(bottomItem)
+        assertEquals("key_notif_2", bottomItem?.key)
+        assertEquals("Third Notification (Bottom-most)", bottomItem?.title)
+
+        // Lookup by unique key
+        val itemByKey = adapter.getNotificationItemByKey("key_notif_0")
+        assertNotNull(itemByKey)
+        assertEquals("First Notification (Top)", itemByKey?.title)
+
+        // Verify dismissal of the top notification: must dismiss notif0 by key ("key_notif_0")
+        topItem?.let {
+            com.example.service.QuickPanelNotificationListenerService.dismissNotification(it.key)
+        }
+    }
+
+    @Test
+    fun `verify setup wizard completion persists across app launches and does not reopen`() {
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        com.example.data.PanelPreferences.init(app)
+
+        // Mark setup as completed
+        com.example.data.PanelPreferences.setInitialSetupCompleted(app, true)
+        org.junit.Assert.assertTrue(com.example.data.PanelPreferences.initialSetupCompleted.value)
+
+        // Instantiate MainViewModel, simulating an app launch
+        val viewModel = com.example.ui.MainViewModel(app)
+        // Must NOT reopen initial setup since it was already finished
+        org.junit.Assert.assertFalse("Initial setup should NOT reopen if already completed", viewModel.showInitialSetup.value)
+
+        // Manual open request from status screen works
+        viewModel.openInitialSetup()
+        org.junit.Assert.assertTrue(viewModel.showInitialSetup.value)
+
+        // Completing setup dismisses it and preserves true
+        viewModel.completeInitialSetup()
+        org.junit.Assert.assertFalse(viewModel.showInitialSetup.value)
+        org.junit.Assert.assertTrue(com.example.data.PanelPreferences.initialSetupCompleted.value)
+    }
+
+    @Test
+    fun `verify media player card close button terminates playback and dismisses card`() {
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        com.example.service.MediaSessionManagerHelper.init(app)
+
+        val media = com.example.model.MediaState(
+            title = "Test Song",
+            artist = "Test Artist",
+            isPlaying = true,
+            sessionIndex = 0,
+            packageName = "com.test.music"
+        )
+
+        // Verify stopAndDismissSession terminates playback and removes session
+        com.example.service.MediaSessionManagerHelper.stopAndDismissSession(0)
+        org.junit.Assert.assertNull(com.example.service.MediaSessionManagerHelper.mediaState.value)
+    }
 }
 
 

@@ -461,6 +461,47 @@ object MediaSessionManagerHelper {
         openActivePlayerApp(context)
     }
 
+    fun stopAndDismissSession(sessionIndex: Int) {
+        val controller = activeControllers.getOrNull(sessionIndex)
+        if (controller != null) {
+            try {
+                controller.transportControls.stop()
+            } catch (e: Exception) {
+                Log.w(TAG, "Error stopping transport controls: ${e.message}")
+            }
+            try {
+                controller.transportControls.pause()
+            } catch (e: Exception) {
+                Log.w(TAG, "Error pausing transport controls: ${e.message}")
+            }
+            val key = controller.sessionToken.toString()
+            controllerCallbacks.remove(key)?.let { cb ->
+                try { controller.unregisterCallback(cb) } catch (e: Exception) {}
+            }
+            activeControllers.remove(controller)
+        }
+
+        val currentList = _sessionsList.value.toMutableList()
+        if (sessionIndex in currentList.indices) {
+            currentList.removeAt(sessionIndex)
+            _sessionsList.value = currentList
+            val newIdx = (currentList.size - 1).coerceAtLeast(0)
+            _selectedSessionIndex.value = newIdx
+            _mediaState.value = currentList.getOrNull(newIdx)
+        } else if (currentList.isNotEmpty()) {
+            currentList.removeAt(0)
+            _sessionsList.value = currentList
+            _selectedSessionIndex.value = 0
+            _mediaState.value = currentList.firstOrNull()
+        } else {
+            _mediaState.value = null
+        }
+    }
+
+    fun stopAndDismiss() {
+        stopAndDismissSession(_selectedSessionIndex.value)
+    }
+
     fun playPause() {
         val targetIdx = _selectedSessionIndex.value
         val controller = activeControllers.getOrNull(targetIdx) ?: activeControllers.firstOrNull()

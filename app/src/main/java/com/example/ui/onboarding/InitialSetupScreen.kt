@@ -559,9 +559,10 @@ private fun PrivilegeEngineStep(viewModel: MainViewModel) {
                 TileDropdownItem("System UI Restart", Icons.Default.Terminal),
                 TileDropdownItem("Custom ADB Shell Commands", Icons.Default.Terminal)
             ),
-            requestButtonText = if (shizukuStatus == ShizukuStatusState.RUNNING_GRANTED) "✓ Shizuku Authorized" else "Request Shizuku Permission",
+            requestButtonText = if (shizukuStatus == ShizukuStatusState.RUNNING_GRANTED) null else "Request Shizuku Permission",
             onRequestPermission = {
                 val msg = privilegeEngine.requestShizukuPermission()
+                privilegeEngine.refreshPermissions()
                 Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
             },
             isPermissionGranted = shizukuStatus == ShizukuStatusState.RUNNING_GRANTED,
@@ -569,6 +570,7 @@ private fun PrivilegeEngineStep(viewModel: MainViewModel) {
                 viewModel.setPrivilegeMode(PrivilegeMode.SHIZUKU)
                 if (shizukuStatus != ShizukuStatusState.RUNNING_GRANTED) {
                     val msg = privilegeEngine.requestShizukuPermission()
+                    privilegeEngine.refreshPermissions()
                     Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                 }
             }
@@ -604,9 +606,10 @@ private fun PrivilegeEngineStep(viewModel: MainViewModel) {
                 TileDropdownItem("Fast Reboot / Power Menu", Icons.Default.Terminal),
                 TileDropdownItem("Custom Root Shell Commands", Icons.Default.Terminal)
             ),
-            requestButtonText = if (isRootAvail) "✓ Root Access Granted" else "Request Root Access",
+            requestButtonText = if (isRootAvail) null else "Request Root Access",
             onRequestPermission = {
                 val ok = privilegeEngine.requestRootPermission()
+                privilegeEngine.refreshPermissions()
                 val msg = if (ok) "Root access granted!" else "Root access denied or SU not found"
                 Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
             },
@@ -615,6 +618,7 @@ private fun PrivilegeEngineStep(viewModel: MainViewModel) {
                 viewModel.setPrivilegeMode(PrivilegeMode.ROOT)
                 if (!isRootAvail) {
                     val ok = privilegeEngine.requestRootPermission()
+                    privilegeEngine.refreshPermissions()
                     val msg = if (ok) "Root access granted!" else "Root access denied or SU not found"
                     Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                 }
@@ -716,34 +720,22 @@ private fun PrivilegeModeDetailCard(
                 }
             }
 
-            // Button to request root / shizuku permission if applicable
-            if (requestButtonText != null && onRequestPermission != null) {
-                if (isPermissionGranted) {
-                    FilledTonalButton(
-                        onClick = onRequestPermission,
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(requestButtonText, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    }
-                } else {
-                    Button(
-                        onClick = onRequestPermission,
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colorScheme.primary,
-                            contentColor = colorScheme.onPrimary
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("btn_req_perm_${mode.name.lowercase()}")
-                    ) {
-                        Icon(Icons.Default.Security, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(requestButtonText, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    }
+            // Button to request root / shizuku permission: only shown when permission is NOT yet granted!
+            if (!isPermissionGranted && requestButtonText != null && onRequestPermission != null) {
+                Button(
+                    onClick = onRequestPermission,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colorScheme.primary,
+                        contentColor = colorScheme.onPrimary
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("btn_req_perm_${mode.name.lowercase()}")
+                ) {
+                    Icon(Icons.Default.Security, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(requestButtonText, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             }
 

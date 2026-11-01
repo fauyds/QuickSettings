@@ -2721,6 +2721,9 @@ fun UnifiedQsPanel(
                 onOutputDeviceClick = {
                     com.example.service.MediaSessionManagerHelper.openAudioOutputPicker(context)
                 },
+                onCloseClick = {
+                    com.example.service.MediaSessionManagerHelper.stopAndDismiss()
+                },
                 onCardClick = {
                     com.example.service.MediaSessionManagerHelper.openActivePlayerApp(context)
                     onClosePanel()
