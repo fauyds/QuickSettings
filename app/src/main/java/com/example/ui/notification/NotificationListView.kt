@@ -489,6 +489,10 @@ class NotificationListView @JvmOverloads constructor(
         panelCardBackgroundColor: Int? = null,
         mediaSessions: List<MediaState> = emptyList()
     ) {
+        if (com.example.service.MediaSessionManagerHelper.isSeekingMediaProgress.value) {
+            return
+        }
+
         val density = context.resources.displayMetrics.density
 
         val disableNotifMonet = PanelPreferences.disableMonetNotifText.value

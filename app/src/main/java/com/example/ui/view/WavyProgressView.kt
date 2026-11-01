@@ -129,46 +129,22 @@ class WavyProgressView @JvmOverloads constructor(
     private val wavePath = Path()
     private val pillRect = RectF()
 
+    private val animationStartTime = android.os.SystemClock.uptimeMillis()
+
     init {
         thumbPaint.color = thumbColor
     }
 
     private fun updateWaveAnimation() {
-        val shouldAnimate = isPlaying && (sliderStyle == ProgressBarStyle.WAVY || sliderStyle == ProgressBarStyle.DEFAULT)
-        if (shouldAnimate) {
-            if (waveAnimator == null) {
-                waveAnimator = ValueAnimator.ofFloat(0f, (2 * PI).toFloat()).apply {
-                    duration = 1300L
-                    repeatCount = ValueAnimator.INFINITE
-                    repeatMode = ValueAnimator.RESTART
-                    interpolator = LinearInterpolator()
-                    addUpdateListener { anim ->
-                        phase = anim.animatedValue as Float
-                        if (!isDragging) {
-                            postInvalidate()
-                        }
-                    }
-                }
-            }
-            if (waveAnimator?.isStarted != true && isAttachedToWindow) {
-                waveAnimator?.start()
-            }
-        } else {
-            waveAnimator?.cancel()
-            waveAnimator = null
-            phase = 0f
-            postInvalidate()
-        }
+        postInvalidate()
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        updateWaveAnimation()
+        postInvalidate()
     }
 
     override fun onDetachedFromWindow() {
-        waveAnimator?.cancel()
-        waveAnimator = null
         super.onDetachedFromWindow()
     }
 
@@ -191,6 +167,15 @@ class WavyProgressView @JvmOverloads constructor(
         val w = width.toFloat()
         val h = height.toFloat()
         if (w <= 0f || h <= 0f) return
+
+        val shouldAnimate = isPlaying && (sliderStyle == ProgressBarStyle.WAVY || sliderStyle == ProgressBarStyle.DEFAULT)
+        if (shouldAnimate) {
+            val elapsed = android.os.SystemClock.uptimeMillis() - animationStartTime
+            phase = ((elapsed % 1300L) / 1300f) * (2 * PI.toFloat())
+            postInvalidateOnAnimation()
+        } else {
+            phase = 0f
+        }
 
         val centerY = h / 2f
         val currentThumbRadius = thumbRadiusPx * animatedThumbRadiusScale
