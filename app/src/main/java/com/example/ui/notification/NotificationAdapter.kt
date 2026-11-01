@@ -567,9 +567,10 @@ class NotificationAdapter(
             wavySeekBar.sliderStyle = resolvedStyle
             wavySeekBar.isPlaying = mediaState.isPlaying
             wavySeekBar.activeColor = accentColorInt
-            wavySeekBar.inactiveColor = inactiveAccentColorInt
-            wavySeekBar.thumbColor = accentColorInt
-            wavySeekBar.progress = mediaState.progress.coerceIn(0f, 1f)
+            if (!wavySeekBar.isCurrentlyDragging) {
+                wavySeekBar.progress = mediaState.progress.coerceIn(0f, 1f)
+                tvCurrTime.text = MediaState.formatDuration(mediaState.currentPositionMs)
+            }
 
             wavySeekBar.onSeekListener = { progress ->
                 val currMs = (progress * mediaState.totalDurationMs).toLong()
@@ -582,7 +583,6 @@ class NotificationAdapter(
 
             tvCurrTime.setTextColor(accentColorInt)
             tvTotalTime.setTextColor(accentColorInt)
-            tvCurrTime.text = MediaState.formatDuration(mediaState.currentPositionMs)
             tvTotalTime.text = if (mediaState.totalDurationMs > 0) mediaState.formattedTotalTime else "--:--"
 
             llSeekbarContainer.visibility = if (isSeekBarVisible) View.VISIBLE else View.GONE

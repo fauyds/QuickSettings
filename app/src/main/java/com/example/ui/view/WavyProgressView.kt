@@ -27,15 +27,14 @@ class WavyProgressView @JvmOverloads constructor(
 
     private val density = context.resources.displayMetrics.density
 
-    // Configurable properties
+    val isCurrentlyDragging: Boolean get() = isDragging
+
     var progress: Float = 0f
         set(value) {
             val clamped = value.coerceIn(0f, 1f)
-            if (field != clamped) {
+            if (!isDragging) {
                 field = clamped
-                if (!isDragging) {
-                    invalidate()
-                }
+                postInvalidate()
             }
         }
 

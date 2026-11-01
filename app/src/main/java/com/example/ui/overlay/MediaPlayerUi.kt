@@ -797,8 +797,14 @@ fun AndroidQMediaNotificationCard(
 ) {
     val context = LocalContext.current
     var isSeekBarVisible by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
-    var localProgress by remember(mediaState.progress) { mutableFloatStateOf(mediaState.progress) }
     var isDraggingSlider by remember { mutableStateOf(false) }
+    var localProgress by remember { mutableFloatStateOf(mediaState.progress) }
+
+    LaunchedEffect(mediaState.progress) {
+        if (!isDraggingSlider) {
+            localProgress = mediaState.progress
+        }
+    }
 
     // Dynamic background and precise accents extracted from album art using Palette
     val artwork = mediaState.artworkBitmap
