@@ -734,6 +734,7 @@ fun QuickSettingsPanel(
                             },
                             onDateClick = {
                                 launchCalendarApp(context)
+                                com.example.service.QuickPanelAccessibilityService.hideCustomPanel()
                                 onStageChange(QsExpansionStage.COLLAPSED)
                             },
                             onSettingsClick = {
@@ -745,6 +746,8 @@ fun QuickSettingsPanel(
                                 } catch (e: Exception) {
                                     // Ignore
                                 }
+                                com.example.service.QuickPanelAccessibilityService.hideCustomPanel()
+                                onStageChange(QsExpansionStage.COLLAPSED)
                             },
                             onToggleEditMode = {
                                 if (isEditingTiles) {
@@ -1923,6 +1926,7 @@ fun UnifiedQsPanel(
                 }
                 context.startActivity(intent)
             } catch (_: Exception) {}
+            onClosePanel()
         }
     }
     val coroutineScope = rememberCoroutineScope()
@@ -2144,7 +2148,10 @@ fun UnifiedQsPanel(
                                         enabled = isQqsDate,
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null,
-                                        onClick = { launchCalendarApp(context) }
+                                        onClick = {
+                                            launchCalendarApp(context)
+                                            onClosePanel()
+                                        }
                                     )
                                 ) {
                                     val textColor = if (isDark) Color.LightGray.copy(alpha = 0.9f) else Color(0xFF333333)

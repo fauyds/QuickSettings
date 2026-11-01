@@ -196,7 +196,7 @@
             <com.example.ui.view.WavyProgressView
                 android:id="@+id/v_media_wavy_seekbar"
                 android:layout_width="match_parent"
-                android:layout_height="22dp" />
+                android:layout_height="36dp" />
 
             <LinearLayout
                 android:layout_width="match_parent"

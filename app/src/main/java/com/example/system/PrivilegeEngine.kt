@@ -141,8 +141,13 @@ class PrivilegeEngine(private val context: Context) {
         }
     }
 
+    private var isRootGrantedMemory = false
+
     fun detectCapabilities() {
-        _isRootAvailable.value = checkRootBinary()
+        if (checkRootBinary()) {
+            isRootGrantedMemory = true
+        }
+        _isRootAvailable.value = isRootGrantedMemory
         updateShizukuStatus()
     }
 
@@ -195,8 +200,11 @@ class PrivilegeEngine(private val context: Context) {
     }
 
     fun requestRootPermission(): Boolean {
-        val granted = runRootCommand("id")
-        _isRootAvailable.value = checkRootBinary() || granted
+        val granted = runRootCommand("id") || checkRootBinary()
+        if (granted) {
+            isRootGrantedMemory = true
+        }
+        _isRootAvailable.value = isRootGrantedMemory
         _lastExecutionLog.value = if (granted) "Root access granted!" else "Root access denied or su unavailable."
         return granted
     }

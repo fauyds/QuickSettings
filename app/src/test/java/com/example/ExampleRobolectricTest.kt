@@ -656,6 +656,19 @@ class ExampleRobolectricTest {
         com.example.service.MediaSessionManagerHelper.stopAndDismissSession(0)
         org.junit.Assert.assertNull(com.example.service.MediaSessionManagerHelper.mediaState.value)
     }
+
+    @Test
+    fun `verify root permission request persists and hides request button`() {
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val engine = com.example.system.PrivilegeEngine(app)
+
+        engine.requestRootPermission()
+        org.junit.Assert.assertTrue(engine.isRootAvailable.value)
+
+        // Calling refreshPermissions should preserve granted root state
+        engine.refreshPermissions()
+        org.junit.Assert.assertTrue("Root state should remain granted after refreshPermissions", engine.isRootAvailable.value)
+    }
 }
 
 

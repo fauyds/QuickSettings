@@ -40,6 +40,8 @@ object MediaSessionManagerHelper {
     private val _mediaState = MutableStateFlow<MediaState?>(null)
     val mediaState: StateFlow<MediaState?> = _mediaState.asStateFlow()
 
+    val isSeekingMediaProgress = MutableStateFlow(false)
+
     private val activeControllers = CopyOnWriteArrayList<MediaController>()
     private val controllerCallbacks = java.util.concurrent.ConcurrentHashMap<String, MediaController.Callback>()
 

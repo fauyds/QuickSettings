@@ -175,7 +175,7 @@ class WavyProgressView @JvmOverloads constructor(
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val desiredHeight = (22 * density).toInt()
+        val desiredHeight = (36 * density).toInt()
         val heightMode = MeasureSpec.getMode(heightMeasureSpec)
         val heightSize = MeasureSpec.getSize(heightMeasureSpec)
 
@@ -308,6 +308,7 @@ class WavyProgressView @JvmOverloads constructor(
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 parent?.requestDisallowInterceptTouchEvent(true)
+                com.example.service.MediaSessionManagerHelper.isSeekingMediaProgress.value = true
                 isDragging = true
                 dragStartX = event.x
                 dragStretchRatio = 0f
@@ -331,6 +332,7 @@ class WavyProgressView @JvmOverloads constructor(
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if (isDragging) {
                     isDragging = false
+                    com.example.service.MediaSessionManagerHelper.isSeekingMediaProgress.value = false
                     dragStretchRatio = 0f
                     animatedThumbRadiusScale = 1f
                     onSeekStateChanged?.invoke(false)

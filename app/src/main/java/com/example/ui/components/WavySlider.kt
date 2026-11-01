@@ -139,6 +139,7 @@ fun WavySlider(
                             val down = awaitFirstDown(requireUnconsumed = false)
                             down.consume()
                             isDragging = true
+                            com.example.service.MediaSessionManagerHelper.isSeekingMediaProgress.value = true
                             val dragStartX = down.position.x
 
                             val baseThumbRPx = thumbRadius.toPx()
@@ -182,6 +183,7 @@ fun WavySlider(
                             } finally {
                                 // 3. Finger lifted / gesture ended: trigger spring bounce back to baseline
                                 isDragging = false
+                                com.example.service.MediaSessionManagerHelper.isSeekingMediaProgress.value = false
                             }
                         }
                     }
@@ -374,6 +376,7 @@ fun Android12Slider(
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false)
                             down.consume()
+                            com.example.service.MediaSessionManagerHelper.isSeekingMediaProgress.value = true
                             val trackW = size.width.toFloat().coerceAtLeast(1f)
                             val heightPx = size.height.toFloat()
                             val travelRange = (trackW - heightPx).coerceAtLeast(1f)
@@ -382,21 +385,25 @@ fun Android12Slider(
                             onValueChange(downValue)
 
                             var activePointerId = down.id
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                val change = event.changes.firstOrNull { it.id == activePointerId }
-                                    ?: event.changes.firstOrNull()
-                                    ?: break
-                                if (!change.pressed) {
+                            try {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    val change = event.changes.firstOrNull { it.id == activePointerId }
+                                        ?: event.changes.firstOrNull()
+                                        ?: break
+                                    if (!change.pressed) {
+                                        change.consume()
+                                        break
+                                    }
                                     change.consume()
-                                    break
+                                    activePointerId = change.id
+                                    val currentTouchX = change.position.x
+                                    val currentFraction = ((currentTouchX - heightPx / 2) / travelRange).coerceIn(0f, 1f)
+                                    val newValue = valueRange.start + currentFraction * rangeSpan
+                                    onValueChange(newValue)
                                 }
-                                change.consume()
-                                activePointerId = change.id
-                                val currentTouchX = change.position.x
-                                val currentFraction = ((currentTouchX - heightPx / 2) / travelRange).coerceIn(0f, 1f)
-                                val newValue = valueRange.start + currentFraction * rangeSpan
-                                onValueChange(newValue)
+                            } finally {
+                                com.example.service.MediaSessionManagerHelper.isSeekingMediaProgress.value = false
                             }
                         }
                     }

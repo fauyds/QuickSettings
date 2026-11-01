@@ -161,6 +161,9 @@ class NotificationListView @JvmOverloads constructor(
     }
 
     private fun handleInterceptTouch(e: MotionEvent): Boolean {
+        if (com.example.service.MediaSessionManagerHelper.isSeekingMediaProgress.value) {
+            return false
+        }
         val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         if (isLandscape) {
             // In landscape split mode, notifications have full independent scrolling without panel drag interception
@@ -251,6 +254,9 @@ class NotificationListView @JvmOverloads constructor(
     }
 
     private fun handleTouchAction(e: MotionEvent): Boolean {
+        if (com.example.service.MediaSessionManagerHelper.isSeekingMediaProgress.value) {
+            return false
+        }
         val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         if (isLandscape) {
             return false
@@ -381,6 +387,9 @@ class NotificationListView @JvmOverloads constructor(
             private var touchStartY = 0f
 
             override fun onInterceptTouchEvent(rv: RecyclerView, e: MotionEvent): Boolean {
+                if (com.example.service.MediaSessionManagerHelper.isSeekingMediaProgress.value) {
+                    return false
+                }
                 val density = context.resources.displayMetrics.density
                 val threshold = 16f * density
 
