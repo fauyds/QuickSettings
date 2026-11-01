@@ -572,9 +572,12 @@ class NotificationAdapter(
             wavySeekBar.progress = mediaState.progress.coerceIn(0f, 1f)
 
             wavySeekBar.onSeekListener = { progress ->
-                MediaSessionManagerHelper.seekToForSession(mediaState.sessionIndex, progress)
                 val currMs = (progress * mediaState.totalDurationMs).toLong()
                 tvCurrTime.text = MediaState.formatDuration(currMs)
+            }
+
+            wavySeekBar.onSeekFinalizedListener = { progress ->
+                MediaSessionManagerHelper.seekToForSession(mediaState.sessionIndex, progress)
             }
 
             tvCurrTime.setTextColor(accentColorInt)

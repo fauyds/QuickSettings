@@ -41,10 +41,8 @@ class WavyProgressView @JvmOverloads constructor(
 
     var isPlaying: Boolean = false
         set(value) {
-            if (field != value) {
-                field = value
-                updateWaveAnimation()
-            }
+            field = value
+            updateWaveAnimation()
         }
 
     var activeColor: Int = Color.WHITE
@@ -53,7 +51,7 @@ class WavyProgressView @JvmOverloads constructor(
                 field = value
                 activePaint.color = value
                 thumbPaint.color = thumbColor.takeIf { it != 0 } ?: value
-                invalidate()
+                postInvalidate()
             }
         }
 
@@ -62,7 +60,7 @@ class WavyProgressView @JvmOverloads constructor(
             if (field != value) {
                 field = value
                 inactivePaint.color = value
-                invalidate()
+                postInvalidate()
             }
         }
 
@@ -71,20 +69,19 @@ class WavyProgressView @JvmOverloads constructor(
             if (field != value) {
                 field = value
                 thumbPaint.color = if (value != 0) value else activeColor
-                invalidate()
+                postInvalidate()
             }
         }
 
     var sliderStyle: ProgressBarStyle = ProgressBarStyle.WAVY
         set(value) {
-            if (field != value) {
-                field = value
-                updateWaveAnimation()
-                invalidate()
-            }
+            field = value
+            updateWaveAnimation()
+            postInvalidate()
         }
 
     var onSeekListener: ((Float) -> Unit)? = null
+    var onSeekFinalizedListener: ((Float) -> Unit)? = null
     var onSeekStateChanged: ((Boolean) -> Unit)? = null
 
     // Dimensions
@@ -140,7 +137,7 @@ class WavyProgressView @JvmOverloads constructor(
     private fun updateWaveAnimation() {
         val shouldAnimate = isPlaying && (sliderStyle == ProgressBarStyle.WAVY || sliderStyle == ProgressBarStyle.DEFAULT)
         if (shouldAnimate) {
-            if (waveAnimator == null && isAttachedToWindow) {
+            if (waveAnimator == null) {
                 waveAnimator = ValueAnimator.ofFloat(0f, (2 * PI).toFloat()).apply {
                     duration = 1300L
                     repeatCount = ValueAnimator.INFINITE
@@ -149,17 +146,19 @@ class WavyProgressView @JvmOverloads constructor(
                     addUpdateListener { anim ->
                         phase = anim.animatedValue as Float
                         if (!isDragging) {
-                            postInvalidateOnAnimation()
+                            postInvalidate()
                         }
                     }
-                    start()
                 }
+            }
+            if (waveAnimator?.isStarted != true && isAttachedToWindow) {
+                waveAnimator?.start()
             }
         } else {
             waveAnimator?.cancel()
             waveAnimator = null
             phase = 0f
-            invalidate()
+            postInvalidate()
         }
     }
 
@@ -337,7 +336,14 @@ class WavyProgressView @JvmOverloads constructor(
                     animatedThumbRadiusScale = 1f
                     onSeekStateChanged?.invoke(false)
                     parent?.requestDisallowInterceptTouchEvent(false)
-                    invalidate()
+
+                    val finalized = onSeekFinalizedListener
+                    if (finalized != null) {
+                        finalized.invoke(progress)
+                    } else {
+                        onSeekListener?.invoke(progress)
+                    }
+                    postInvalidate()
                 }
                 return true
             }
@@ -352,6 +358,6 @@ class WavyProgressView @JvmOverloads constructor(
         val newProgress = ((touchX - startX) / trackWidth).coerceIn(0f, 1f)
         progress = newProgress
         onSeekListener?.invoke(newProgress)
-        invalidate()
+        postInvalidate()
     }
 }
