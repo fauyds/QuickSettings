@@ -567,6 +567,7 @@ class NotificationAdapter(
             wavySeekBar.sliderStyle = resolvedStyle
             wavySeekBar.isPlaying = mediaState.isPlaying
             wavySeekBar.activeColor = accentColorInt
+            wavySeekBar.thumbColor = accentColorInt
             if (!wavySeekBar.isCurrentlyDragging) {
                 wavySeekBar.progress = mediaState.progress.coerceIn(0f, 1f)
                 tvCurrTime.text = MediaState.formatDuration(mediaState.currentPositionMs)

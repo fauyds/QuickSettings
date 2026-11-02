@@ -52,7 +52,7 @@ class WavyProgressView @JvmOverloads constructor(
             if (field != value) {
                 field = value
                 activePaint.color = value
-                thumbPaint.color = thumbColor.takeIf { it != 0 } ?: value
+                thumbPaint.color = if (thumbColor != 0) thumbColor else value
                 postInvalidate()
             }
         }
@@ -66,7 +66,7 @@ class WavyProgressView @JvmOverloads constructor(
             }
         }
 
-    var thumbColor: Int = Color.WHITE
+    var thumbColor: Int = 0
         set(value) {
             if (field != value) {
                 field = value
@@ -135,7 +135,7 @@ class WavyProgressView @JvmOverloads constructor(
     private val animationStartTime = android.os.SystemClock.uptimeMillis()
 
     init {
-        thumbPaint.color = thumbColor
+        thumbPaint.color = if (thumbColor != 0) thumbColor else activeColor
     }
 
     private fun updateWaveAnimation() {
