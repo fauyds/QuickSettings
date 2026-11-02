@@ -70,6 +70,7 @@ fun WavySlider(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
+    onValueChangeFinished: (() -> Unit)? = null,
     isWavy: Boolean = true,
     isPlaying: Boolean = false,
     activeColor: Color = MaterialTheme.colorScheme.primary,
@@ -184,6 +185,7 @@ fun WavySlider(
                                 // 3. Finger lifted / gesture ended: trigger spring bounce back to baseline
                                 isDragging = false
                                 com.example.service.MediaSessionManagerHelper.isSeekingMediaProgress.value = false
+                                onValueChangeFinished?.invoke()
                             }
                         }
                     }
@@ -353,6 +355,7 @@ fun Android12Slider(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
+    onValueChangeFinished: (() -> Unit)? = null,
     activeColor: Color = MaterialTheme.colorScheme.primary,
     activeBrush: Brush? = null,
     inactiveColor: Color = MaterialTheme.colorScheme.surfaceVariant,
@@ -404,6 +407,7 @@ fun Android12Slider(
                                 }
                             } finally {
                                 com.example.service.MediaSessionManagerHelper.isSeekingMediaProgress.value = false
+                                onValueChangeFinished?.invoke()
                             }
                         }
                     }
@@ -461,6 +465,7 @@ fun QsProgressSlider(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
+    onValueChangeFinished: (() -> Unit)? = null,
     style: ProgressBarStyle? = null,
     sliderTarget: QsSliderTarget = QsSliderTarget.BRIGHTNESS,
     isPlaying: Boolean = false,
@@ -515,6 +520,7 @@ fun QsProgressSlider(
             Slider(
                 value = value.coerceIn(valueRange.start, valueRange.endInclusive),
                 onValueChange = onValueChange,
+                onValueChangeFinished = onValueChangeFinished,
                 enabled = enabled,
                 valueRange = valueRange,
                 colors = SliderDefaults.colors(
@@ -533,6 +539,7 @@ fun QsProgressSlider(
             WavySlider(
                 value = value,
                 onValueChange = onValueChange,
+                onValueChangeFinished = onValueChangeFinished,
                 modifier = modifier,
                 enabled = enabled,
                 valueRange = valueRange,
@@ -562,6 +569,7 @@ fun QsProgressSlider(
             WavySlider(
                 value = value,
                 onValueChange = onValueChange,
+                onValueChangeFinished = onValueChangeFinished,
                 modifier = modifier,
                 enabled = enabled,
                 valueRange = valueRange,
@@ -586,6 +594,7 @@ fun QsProgressSlider(
             Android12Slider(
                 value = value,
                 onValueChange = onValueChange,
+                onValueChangeFinished = onValueChangeFinished,
                 modifier = modifier,
                 enabled = enabled,
                 valueRange = valueRange,

@@ -520,10 +520,28 @@ fun AdaptiveMediaPlayerCard(
 
                         Spacer(modifier = Modifier.height(6.dp))
 
+                        var isDraggingCardSlider by remember { mutableStateOf(false) }
+                        var cardLocalProgress by remember { mutableFloatStateOf(cardMedia.progress) }
+
+                        LaunchedEffect(cardMedia.progress) {
+                            if (!isDraggingCardSlider) {
+                                cardLocalProgress = cardMedia.progress
+                            }
+                        }
+
+                        val displayCardProgress = if (isDraggingCardSlider) cardLocalProgress else cardMedia.progress.coerceIn(0f, 1f)
+
                         val inactiveTrackColor = contentColor.copy(alpha = 0.22f)
                         QsProgressSlider(
-                            value = cardMedia.progress.coerceIn(0f, 1f),
-                            onValueChange = onSeek,
+                            value = displayCardProgress,
+                            onValueChange = {
+                                isDraggingCardSlider = true
+                                cardLocalProgress = it
+                            },
+                            onValueChangeFinished = {
+                                isDraggingCardSlider = false
+                                onSeek(cardLocalProgress)
+                            },
                             sliderTarget = QsSliderTarget.MEDIA,
                             isPlaying = cardMedia.isPlaying,
                             activeColor = accentColor,
@@ -1167,8 +1185,12 @@ fun AndroidQMediaNotificationCard(
                         QsProgressSlider(
                             value = displayProgress,
                             onValueChange = {
+                                isDraggingSlider = true
                                 localProgress = it
-                                onSeek(it)
+                            },
+                            onValueChangeFinished = {
+                                isDraggingSlider = false
+                                onSeek(localProgress)
                             },
                             sliderTarget = QsSliderTarget.MEDIA,
                             isPlaying = mediaState.isPlaying,

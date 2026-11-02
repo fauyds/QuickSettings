@@ -29,11 +29,14 @@ class WavyProgressView @JvmOverloads constructor(
 
     val isCurrentlyDragging: Boolean get() = isDragging
 
-    var progress: Float = 0f
+    private var internalProgress: Float = 0f
+
+    var progress: Float
+        get() = internalProgress
         set(value) {
             val clamped = value.coerceIn(0f, 1f)
             if (!isDragging) {
-                field = clamped
+                internalProgress = clamped
                 postInvalidate()
             }
         }
@@ -198,7 +201,7 @@ class WavyProgressView @JvmOverloads constructor(
         val startX = thumbRadiusPx
         val endX = w - thumbRadiusPx
         val trackWidth = (endX - startX).coerceAtLeast(1f)
-        val thumbX = (startX + progress * trackWidth).coerceIn(startX, endX)
+        val thumbX = (startX + internalProgress * trackWidth).coerceIn(startX, endX)
 
         // 1. Draw Inactive Track
         if (thumbX < endX - 1f) {
@@ -207,7 +210,7 @@ class WavyProgressView @JvmOverloads constructor(
         }
 
         // 2. Draw Active Track (Squiggly Wave)
-        if (progress > 0.005f) {
+        if (internalProgress > 0.005f) {
             val distActive = thumbX - startX
             if (distActive > 4f) {
                 wavePath.reset()
@@ -250,7 +253,7 @@ class WavyProgressView @JvmOverloads constructor(
         val startX = thumbRadiusPx
         val endX = w - thumbRadiusPx
         val trackWidth = (endX - startX).coerceAtLeast(1f)
-        val thumbX = (startX + progress * trackWidth).coerceIn(startX, endX)
+        val thumbX = (startX + internalProgress * trackWidth).coerceIn(startX, endX)
 
         inactivePaint.strokeWidth = strokeWidthPx
         activePaint.strokeWidth = strokeWidthPx
@@ -277,11 +280,19 @@ class WavyProgressView @JvmOverloads constructor(
         canvas.drawRoundRect(pillRect, radius, radius, pillInactivePaint)
 
         // Active pill
-        val activeWidth = (w * progress).coerceIn(0f, w)
+        val activeWidth = (w * internalProgress).coerceIn(0f, w)
         if (activeWidth > 0f) {
             pillActivePaint.color = activeColor
             pillRect.set(0f, top, activeWidth, bottom)
             canvas.drawRoundRect(pillRect, radius, radius, pillActivePaint)
+        }
+    }
+
+    private fun disallowParentIntercept(disallow: Boolean) {
+        var p = parent
+        while (p != null) {
+            p.requestDisallowInterceptTouchEvent(disallow)
+            p = p.parent
         }
     }
 
@@ -290,7 +301,7 @@ class WavyProgressView @JvmOverloads constructor(
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                parent?.requestDisallowInterceptTouchEvent(true)
+                disallowParentIntercept(true)
                 com.example.service.MediaSessionManagerHelper.isSeekingMediaProgress.value = true
                 isDragging = true
                 dragStartX = event.x
@@ -301,7 +312,7 @@ class WavyProgressView @JvmOverloads constructor(
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
-                parent?.requestDisallowInterceptTouchEvent(true)
+                disallowParentIntercept(true)
                 if (isDragging) {
                     val trackW = (width - 2 * thumbRadiusPx).coerceAtLeast(1f)
                     val stretchDragSpan = (trackW * 0.45f).coerceAtLeast(120f * density)
@@ -319,13 +330,13 @@ class WavyProgressView @JvmOverloads constructor(
                     dragStretchRatio = 0f
                     animatedThumbRadiusScale = 1f
                     onSeekStateChanged?.invoke(false)
-                    parent?.requestDisallowInterceptTouchEvent(false)
+                    disallowParentIntercept(false)
 
                     val finalized = onSeekFinalizedListener
                     if (finalized != null) {
-                        finalized.invoke(progress)
+                        finalized.invoke(internalProgress)
                     } else {
-                        onSeekListener?.invoke(progress)
+                        onSeekListener?.invoke(internalProgress)
                     }
                     postInvalidate()
                 }
@@ -340,7 +351,7 @@ class WavyProgressView @JvmOverloads constructor(
         val endX = width - thumbRadiusPx
         val trackWidth = (endX - startX).coerceAtLeast(1f)
         val newProgress = ((touchX - startX) / trackWidth).coerceIn(0f, 1f)
-        progress = newProgress
+        internalProgress = newProgress
         onSeekListener?.invoke(newProgress)
         postInvalidate()
     }
