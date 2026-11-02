@@ -1,5 +1,6 @@
 package com.example.ui.overlay
 
+import android.os.Build
 import androidx.core.graphics.ColorUtils
 import android.graphics.Color as AndroidColor
 import androidx.compose.ui.graphics.graphicsLayer
@@ -1234,6 +1235,68 @@ data class MediaNotificationColors(
 )
 
 /**
+ * Trims black or near-black letterbox lines from the top and bottom of an artwork bitmap
+ * so that black border lines are ignored during color extraction.
+ */
+fun trimTopBottomBlackLines(bitmap: Bitmap): Bitmap {
+    if (bitmap.width <= 0 || bitmap.height <= 0) return bitmap
+    try {
+        val swBitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && bitmap.config == Bitmap.Config.HARDWARE) {
+            bitmap.copy(Bitmap.Config.ARGB_8888, false)
+        } else {
+            bitmap
+        } ?: return bitmap
+
+        val width = swBitmap.width
+        val height = swBitmap.height
+
+        fun isRowBlack(y: Int): Boolean {
+            val stepX = maxOf(1, width / 20)
+            var darkPixelCount = 0
+            var sampledCount = 0
+            for (x in 0 until width step stepX) {
+                val pixel = swBitmap.getPixel(x, y)
+                val alpha = (pixel ushr 24) and 0xFF
+                if (alpha >= 50) {
+                    val lum = ColorUtils.calculateLuminance(pixel)
+                    val r = (pixel ushr 16) and 0xFF
+                    val g = (pixel ushr 8) and 0xFF
+                    val b = pixel and 0xFF
+                    // Near-black check: luminance < 0.05 or RGB <= 18
+                    if (lum < 0.05f || (r <= 18 && g <= 18 && b <= 18)) {
+                        darkPixelCount++
+                    }
+                }
+                sampledCount++
+            }
+            return sampledCount > 0 && (darkPixelCount.toFloat() / sampledCount) >= 0.85f
+        }
+
+        var top = 0
+        val maxTrimY = (height * 0.35f).toInt()
+        while (top < maxTrimY && isRowBlack(top)) {
+            top++
+        }
+
+        var bottom = height - 1
+        val minBottomY = height - 1 - maxTrimY
+        while (bottom > minBottomY && isRowBlack(bottom)) {
+            bottom--
+        }
+
+        if (top > 0 || bottom < height - 1) {
+            val croppedHeight = bottom - top + 1
+            if (croppedHeight >= 10 && croppedHeight <= height) {
+                return Bitmap.createBitmap(swBitmap, 0, top, width, croppedHeight)
+            }
+        }
+        return swBitmap
+    } catch (_: Exception) {
+        return bitmap
+    }
+}
+
+/**
  * Extracts precise background and accent colors for the Android Q media notification design.
  *
  * Rules:
@@ -1251,12 +1314,27 @@ fun extractAndroidQNotificationColors(
     bitmap: Bitmap?,
     palette: Palette?
 ): MediaNotificationColors {
-    val cardBgColor = extractNotificationBackgroundColor(bitmap, palette)
+    val trimmedBitmap = bitmap?.let { trimTopBottomBlackLines(it) }
+    val effectivePalette = if (trimmedBitmap != null && trimmedBitmap != bitmap) {
+        Palette.from(trimmedBitmap)
+            .maximumColorCount(32)
+            .clearFilters()
+            .generate()
+    } else {
+        palette ?: trimmedBitmap?.let {
+            Palette.from(it)
+                .maximumColorCount(32)
+                .clearFilters()
+                .generate()
+        }
+    }
+
+    val cardBgColor = extractNotificationBackgroundColor(trimmedBitmap, effectivePalette)
     val bgArgb = cardBgColor.toArgb()
     val bgLuminance = ColorUtils.calculateLuminance(bgArgb)
     val isDarkBg = bgLuminance < 0.5f
 
-    val accentColor = extractNotificationAccentColor(palette, isDarkBg, bgArgb)
+    val accentColor = extractNotificationAccentColor(effectivePalette, isDarkBg, bgArgb)
 
     return MediaNotificationColors(
         backgroundColor = cardBgColor,
