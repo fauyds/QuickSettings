@@ -54,6 +54,16 @@ class QuickSettingsFullView @JvmOverloads constructor(
 
     private val pageAdapter: QsPageAdapter
 
+    private var tvOreoHeaderDate: TextView? = null
+    private var tvOreoFooterDate: TextView? = null
+    private var tvOreoWeatherText: TextView? = null
+    private var ivOreoWeatherIcon: ImageView? = null
+
+    private var tvOreoTopCarrier: TextView? = null
+    private var tvOreoTopBatteryText: TextView? = null
+    private var ivOreoTopBatteryIcon: ImageView? = null
+    private var tvOreoTopTime: TextView? = null
+
     var onTileClick: ((QsTileModel) -> Unit)? = null
     var onTileLongClick: ((QsTileModel) -> Unit)? = null
     var onBrightnessChange: ((Int) -> Unit)? = null
@@ -65,7 +75,19 @@ class QuickSettingsFullView @JvmOverloads constructor(
     private var currentPageIndex: Int = 0
 
     init {
-        val root = LayoutInflater.from(context).inflate(R.layout.layout_full_qs_panel, this, true)
+        val isOreo = com.example.data.PanelPreferences.isAndroidOreoStyle(context)
+        val layoutRes = if (isOreo) R.layout.layout_full_qs_panel_oreo else R.layout.layout_full_qs_panel
+        val root = LayoutInflater.from(context).inflate(layoutRes, this, true)
+
+        tvOreoHeaderDate = root.findViewById(R.id.tv_qs_oreo_header_date)
+        tvOreoFooterDate = root.findViewById(R.id.tv_qs_oreo_footer_date)
+        tvOreoWeatherText = root.findViewById(R.id.tv_qs_oreo_weather_text)
+        ivOreoWeatherIcon = root.findViewById(R.id.iv_qs_oreo_weather_icon)
+
+        tvOreoTopCarrier = root.findViewById(R.id.tv_oreo_top_carrier)
+        tvOreoTopBatteryText = root.findViewById(R.id.tv_oreo_top_battery_text)
+        ivOreoTopBatteryIcon = root.findViewById(R.id.iv_oreo_top_battery_icon)
+        tvOreoTopTime = root.findViewById(R.id.tv_oreo_top_time)
 
         llTopBrightnessRow = root.findViewById(R.id.ll_qs_top_brightness_row)
         flTopBrightnessIconPill = root.findViewById(R.id.fl_qs_top_brightness_icon_pill)
@@ -250,6 +272,29 @@ class QuickSettingsFullView @JvmOverloads constructor(
         btnEditMode.setColorFilter(textSecondary)
         btnSettings.setColorFilter(textSecondary)
         btnPower.setColorFilter(textSecondary)
+
+        // 6. Oreo Style Specific Formatting
+        val isOreo = com.example.data.PanelPreferences.isAndroidOreoStyle(context)
+        if (isOreo) {
+            val now = java.util.Date()
+            val headerDateFormatter = java.text.SimpleDateFormat("EEEE, d MMM", java.util.Locale.getDefault())
+            val footerDateFormatter = java.text.SimpleDateFormat("EEE, d MMM", java.util.Locale.getDefault())
+            val timeFormatter = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+            findViewById<View>(R.id.ll_qs_oreo_header_bar)?.visibility = View.GONE
+            tvOreoFooterDate?.text = footerDateFormatter.format(now)
+            tvOreoFooterDate?.setTextColor(textSecondary)
+            tvOreoTopTime?.text = timeFormatter.format(now)
+            tvOreoTopTime?.setTextColor(textSecondary)
+            tvOreoTopCarrier?.setTextColor(textSecondary)
+            tvOreoTopBatteryText?.setTextColor(textSecondary)
+            ivOreoTopBatteryIcon?.setColorFilter(textSecondary)
+            tvOreoWeatherText?.visibility = View.GONE
+            ivOreoWeatherIcon?.visibility = View.GONE
+            findViewById<View>(R.id.tv_qs_oreo_header_divider)?.visibility = View.GONE
+
+            val solidBg = MonetThemeHelper.getSurfaceBackground(context, isDark)
+            findViewById<View>(R.id.ll_full_qs_container)?.setBackgroundColor(solidBg)
+        }
     }
 
     private fun updatePageIndicators(selectedIndex: Int, totalPages: Int) {

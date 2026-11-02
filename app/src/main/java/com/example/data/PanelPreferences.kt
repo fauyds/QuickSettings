@@ -283,6 +283,10 @@ object PanelPreferences {
     private const val KEY_SHOW_MONET_SURFACE_BACKGROUND = "show_monet_surface_background"
     private const val KEY_COLLAPSE_EXPAND_OPTIONS = "collapse_expand_options"
     private const val KEY_COLLAPSE_EXPAND_SUBHEADERS = "collapse_expand_subheaders"
+    private const val KEY_ANDROID_OREO_STYLE = "android_oreo_style"
+
+    private val _isAndroidOreoStyle = MutableStateFlow(false)
+    val isAndroidOreoStyle: StateFlow<Boolean> = _isAndroidOreoStyle.asStateFlow()
 
     private val _showCustomHeaderImage = MutableStateFlow(false)
     val showCustomHeaderImage: StateFlow<Boolean> = _showCustomHeaderImage.asStateFlow()
@@ -1163,6 +1167,7 @@ object PanelPreferences {
         _progressBarStyle.value = resolvedStyle
         _wavyProgressBars.value = (resolvedStyle == ProgressBarStyle.WAVY)
         _enableContainerBlur.value = prefs.getBoolean(KEY_ENABLE_CONTAINER_BLUR, false)
+        _isAndroidOreoStyle.value = prefs.getBoolean(KEY_ANDROID_OREO_STYLE, false)
         _invisibleStatusBarTrigger.value = prefs.getBoolean(KEY_INVISIBLE_STATUS_BAR_TRIGGER, false)
         _forceImmersiveTrigger.value = prefs.getBoolean(KEY_FORCE_IMMERSIVE_TRIGGER, false)
         _overrideSystemQs.value = prefs.getBoolean(KEY_OVERRIDE_SYSTEM_QS, false)
@@ -1480,6 +1485,16 @@ object PanelPreferences {
         _enableCustomVolumePanel.value = enabled
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_ENABLE_CUSTOM_VOLUME_PANEL, enabled).apply()
+    }
+
+    fun isAndroidOreoStyle(context: Context): Boolean {
+        return _isAndroidOreoStyle.value || context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_ANDROID_OREO_STYLE, false)
+    }
+
+    fun setAndroidOreoStyle(context: Context, enabled: Boolean) {
+        _isAndroidOreoStyle.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_ANDROID_OREO_STYLE, enabled).apply()
     }
 
     fun setTileHidden(context: Context, tileId: String, hidden: Boolean) {

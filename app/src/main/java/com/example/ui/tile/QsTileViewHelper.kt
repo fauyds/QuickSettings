@@ -85,13 +85,22 @@ object QsTileViewHelper {
         }
 
         val isOutlineEnabled = PanelPreferences.tileOutlineEnabled.value
+        val isOreoStyle = PanelPreferences.isAndroidOreoStyle(context)
 
-        val fgColor = when (tile.state) {
-            TileState.ACTIVE -> if (isOutlineEnabled) primaryAccent else onPrimary
-            TileState.INACTIVE -> textPrimary
-            TileState.UNAVAILABLE -> {
-                val alpha = 100
-                Color.argb(alpha, Color.red(textSecondary), Color.green(textSecondary), Color.blue(textSecondary))
+        val fgColor = if (isOreoStyle) {
+            when (tile.state) {
+                TileState.ACTIVE -> primaryAccent
+                TileState.INACTIVE -> if (isDark) Color.parseColor("#CCCCCC") else Color.parseColor("#555555")
+                TileState.UNAVAILABLE -> Color.argb(100, 150, 150, 150)
+            }
+        } else {
+            when (tile.state) {
+                TileState.ACTIVE -> if (isOutlineEnabled) primaryAccent else onPrimary
+                TileState.INACTIVE -> textPrimary
+                TileState.UNAVAILABLE -> {
+                    val alpha = 100
+                    Color.argb(alpha, Color.red(textSecondary), Color.green(textSecondary), Color.blue(textSecondary))
+                }
             }
         }
 
@@ -114,35 +123,39 @@ object QsTileViewHelper {
         val showQsTileGradient = PanelPreferences.showQsTileGradient.value
         val tertiaryAccent = MonetThemeHelper.getTertiaryAccent(context, isDark)
 
-        val shapeDrawable = if (showQsTileGradient && isActive && !isOutlineEnabled) {
-            com.example.ui.shape.QsShapeManager.createGradientDrawable(
-                chosenShapeId,
-                primaryAccent,
-                tertiaryAccent
-            )
-        } else {
-            com.example.ui.shape.QsShapeManager.createDrawable(
-                chosenShapeId,
-                if (isOutlineEnabled) Color.TRANSPARENT else bgColor
-            )
-        }
-        if (isOutlineEnabled) {
-            val outlineColor = when (tile.state) {
-                TileState.ACTIVE -> primaryAccent
-                TileState.INACTIVE -> if (isDark) Color.argb(255, 38, 43, 48) else Color.WHITE
-                TileState.UNAVAILABLE -> if (isDark) Color.argb((255 * 0.4f).toInt(), 38, 43, 48) else Color.argb((255 * 0.5f).toInt(), 255, 255, 255)
-            }
-            shapeDrawable.setColor(Color.TRANSPARENT)
-            shapeDrawable.strokeWidth = 1.2f * density
-            shapeDrawable.strokeColor = outlineColor
-            if (showQsTileGradient && isActive) {
-                shapeDrawable.gradientColors = intArrayOf(primaryAccent, tertiaryAccent)
-            }
-        }
-        val maskDrawable = com.example.ui.shape.QsShapeManager.createDrawable(chosenShapeId, Color.WHITE)
-
         val rippleColor = if (isDark) Color.parseColor("#44FFFFFF") else Color.parseColor("#33000000")
-        flIconBg.background = RippleDrawable(ColorStateList.valueOf(rippleColor), shapeDrawable, maskDrawable)
+
+        if (isOreoStyle) {
+            flIconBg.background = RippleDrawable(ColorStateList.valueOf(rippleColor), null, null)
+        } else {
+            val shapeDrawable = if (showQsTileGradient && isActive && !isOutlineEnabled) {
+                com.example.ui.shape.QsShapeManager.createGradientDrawable(
+                    chosenShapeId,
+                    primaryAccent,
+                    tertiaryAccent
+                )
+            } else {
+                com.example.ui.shape.QsShapeManager.createDrawable(
+                    chosenShapeId,
+                    if (isOutlineEnabled) Color.TRANSPARENT else bgColor
+                )
+            }
+            if (isOutlineEnabled) {
+                val outlineColor = when (tile.state) {
+                    TileState.ACTIVE -> primaryAccent
+                    TileState.INACTIVE -> if (isDark) Color.argb(255, 38, 43, 48) else Color.WHITE
+                    TileState.UNAVAILABLE -> if (isDark) Color.argb((255 * 0.4f).toInt(), 38, 43, 48) else Color.argb((255 * 0.5f).toInt(), 255, 255, 255)
+                }
+                shapeDrawable.setColor(Color.TRANSPARENT)
+                shapeDrawable.strokeWidth = 1.2f * density
+                shapeDrawable.strokeColor = outlineColor
+                if (showQsTileGradient && isActive) {
+                    shapeDrawable.gradientColors = intArrayOf(primaryAccent, tertiaryAccent)
+                }
+            }
+            val maskDrawable = com.example.ui.shape.QsShapeManager.createDrawable(chosenShapeId, Color.WHITE)
+            flIconBg.background = RippleDrawable(ColorStateList.valueOf(rippleColor), shapeDrawable, maskDrawable)
+        }
 
         // 3. Tile Icon
         val drawable = QsTileIconHelper.getTileDrawable(context, tile)

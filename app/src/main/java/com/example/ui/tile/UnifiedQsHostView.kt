@@ -104,15 +104,22 @@ class UnifiedQsHostView @JvmOverloads constructor(
         val density = context.resources.displayMetrics.density
 
         // 1. Monet Themed Card Background
-        val cardBg = MonetThemeHelper.getCardBackground(context, isDark)
+        val isOreo = com.example.data.PanelPreferences.isAndroidOreoStyle(context)
+        val cardBg = if (isOreo) {
+            MonetThemeHelper.getSurfaceBackground(context, isDark)
+        } else {
+            MonetThemeHelper.getCardBackground(context, isDark)
+        }
         val cardOutline = MonetThemeHelper.getCardOutline(context, isDark)
-        val cornerRadius = 24f * density
+        val cornerRadius = if (isOreo) 0f else (24f * density)
 
         background = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             this.cornerRadius = cornerRadius
             setColor(cardBg)
-            setStroke(1, cardOutline)
+            if (!isOreo) {
+                setStroke(1, cardOutline)
+            }
         }
 
         // 2. Stage Routing & Dynamic Layout Heights

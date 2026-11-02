@@ -38,11 +38,24 @@ class QuickQuickSettingsView @JvmOverloads constructor(
     var onBrightnessChange: ((Int) -> Unit)? = null
     var onExpandFull: (() -> Unit)? = null
 
+    private var tvOreoDate: TextView? = null
+    private var ivOreoAlarm: ImageView? = null
+    private var btnOreoSettings: ImageView? = null
+    private var btnOreoEdit: ImageView? = null
+    private var ivOreoExpand: ImageView? = null
+
+    private var tvOreoTopCarrier: TextView? = null
+    private var tvOreoTopBatteryText: TextView? = null
+    private var ivOreoTopBatteryIcon: ImageView? = null
+    private var tvOreoTopTime: TextView? = null
+
     private var currentTiles: List<QsTileModel> = emptyList()
     private var isDark: Boolean = true
 
     init {
-        val root = LayoutInflater.from(context).inflate(R.layout.layout_qqs_panel, this, true)
+        val isOreo = com.example.data.PanelPreferences.isAndroidOreoStyle(context)
+        val layoutRes = if (isOreo) R.layout.layout_qqs_panel_oreo else R.layout.layout_qqs_panel
+        val root = LayoutInflater.from(context).inflate(layoutRes, this, true)
 
         llContainer = root.findViewById(R.id.ll_qqs_container)
         llBrightnessRow = root.findViewById(R.id.ll_qqs_brightness_row)
@@ -53,6 +66,30 @@ class QuickQuickSettingsView @JvmOverloads constructor(
         llTilesRow = root.findViewById(R.id.ll_qqs_tiles_row)
         flDragHandleContainer = root.findViewById(R.id.fl_qqs_drag_handle_container)
         vDragHandle = root.findViewById(R.id.v_qqs_drag_handle)
+
+        tvOreoDate = root.findViewById(R.id.tv_qqs_oreo_date)
+        ivOreoAlarm = root.findViewById(R.id.iv_qqs_oreo_alarm)
+        btnOreoSettings = root.findViewById(R.id.btn_qqs_oreo_settings)
+        btnOreoEdit = root.findViewById(R.id.btn_qqs_oreo_edit)
+        ivOreoExpand = root.findViewById(R.id.iv_qqs_oreo_expand)
+
+        tvOreoTopCarrier = root.findViewById(R.id.tv_oreo_top_carrier)
+        tvOreoTopBatteryText = root.findViewById(R.id.tv_oreo_top_battery_text)
+        ivOreoTopBatteryIcon = root.findViewById(R.id.iv_oreo_top_battery_icon)
+        tvOreoTopTime = root.findViewById(R.id.tv_oreo_top_time)
+
+        btnOreoSettings?.setOnClickListener {
+            try {
+                val intent = android.content.Intent(android.provider.Settings.ACTION_SETTINGS).apply {
+                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent)
+            } catch (_: Throwable) {}
+        }
+
+        btnOreoEdit?.setOnClickListener {
+            onExpandFull?.invoke()
+        }
 
         sbBrightness.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -100,8 +137,8 @@ class QuickQuickSettingsView @JvmOverloads constructor(
             val clamped = brightness.coerceIn(5, 255)
             sbBrightness.progress = clamped
             val pct = ((clamped / 255f) * 100).toInt()
-            tvBrightnessPercentage.text = "$pct%"
-            tvBrightnessPercentage.setTextColor(textPrimary)
+            tvBrightnessPercentage.visibility = if (com.example.data.PanelPreferences.hideBrightnessPercentage.value) View.GONE else View.VISIBLE
+            flBrightnessIconPill.visibility = if (com.example.data.PanelPreferences.hideBrightnessIcon.value) View.GONE else View.VISIBLE
 
             flBrightnessIconPill.background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
@@ -168,6 +205,29 @@ class QuickQuickSettingsView @JvmOverloads constructor(
             shape = GradientDrawable.RECTANGLE
             cornerRadius = 4f * density
             setColor(handleColor)
+        }
+
+        // 5. Oreo Style Specific Formatting
+        val isOreo = com.example.data.PanelPreferences.isAndroidOreoStyle(context)
+        if (isOreo) {
+            val now = java.util.Date()
+            val dateFormatter = java.text.SimpleDateFormat("EEE, MMM d", java.util.Locale.getDefault())
+            val timeFormatter = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+            tvOreoDate?.visibility = View.VISIBLE
+            tvOreoDate?.text = dateFormatter.format(now)
+            tvOreoDate?.setTextColor(textSecondary)
+            tvOreoTopTime?.text = timeFormatter.format(now)
+            tvOreoTopTime?.setTextColor(textSecondary)
+            tvOreoTopCarrier?.setTextColor(textSecondary)
+            tvOreoTopBatteryText?.setTextColor(textSecondary)
+            ivOreoTopBatteryIcon?.setColorFilter(textSecondary)
+            ivOreoAlarm?.visibility = View.GONE
+            btnOreoSettings?.setColorFilter(textSecondary)
+            btnOreoEdit?.setColorFilter(textSecondary)
+            ivOreoExpand?.setColorFilter(textSecondary)
+
+            val solidBg = MonetThemeHelper.getSurfaceBackground(context, isDark)
+            llContainer.setBackgroundColor(solidBg)
         }
     }
 }

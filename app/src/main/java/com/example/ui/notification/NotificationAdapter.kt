@@ -337,38 +337,60 @@ class NotificationAdapter(
             val panelOuterCorner = PanelPreferences.panelOuterCorner.value
             val panelInnerCorner = PanelPreferences.panelInnerCorner.value
 
+            val isOreoStyle = PanelPreferences.isAndroidOreoStyle(context)
             val outerCornerPx = panelOuterCorner * density
             val innerCornerPx = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner) * density
 
-            val radii = when {
-                totalCount <= 1 -> FloatArray(8) { outerCornerPx }
-                position == 0 -> floatArrayOf(
-                    outerCornerPx, outerCornerPx,
-                    outerCornerPx, outerCornerPx,
-                    innerCornerPx, innerCornerPx,
-                    innerCornerPx, innerCornerPx
-                )
-                position == totalCount - 1 -> floatArrayOf(
-                    innerCornerPx, innerCornerPx,
-                    innerCornerPx, innerCornerPx,
-                    outerCornerPx, outerCornerPx,
-                    outerCornerPx, outerCornerPx
-                )
-                else -> FloatArray(8) { innerCornerPx }
+            val radii = if (isOreoStyle) {
+                FloatArray(8) { 0f }
+            } else {
+                when {
+                    totalCount <= 1 -> FloatArray(8) { outerCornerPx }
+                    position == 0 -> floatArrayOf(
+                        outerCornerPx, outerCornerPx,
+                        outerCornerPx, outerCornerPx,
+                        innerCornerPx, innerCornerPx,
+                        innerCornerPx, innerCornerPx
+                    )
+                    position == totalCount - 1 -> floatArrayOf(
+                        innerCornerPx, innerCornerPx,
+                        innerCornerPx, innerCornerPx,
+                        outerCornerPx, outerCornerPx,
+                        outerCornerPx, outerCornerPx
+                    )
+                    else -> FloatArray(8) { innerCornerPx }
+                }
             }
 
-            val cardDrawable = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadii = radii
-                setColor(cardBgColorInt)
+            if (isOreoStyle) {
+                val strokeColor = if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#33000000")
+                val strokePx = (1 * density).toInt().coerceAtLeast(1)
+                val baseDrawable = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    setColor(cardBgColorInt)
+                }
+                val strokeDrawable = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    setStroke(strokePx, strokeColor)
+                    setColor(Color.TRANSPARENT)
+                }
+                flRoot.background = android.graphics.drawable.LayerDrawable(arrayOf(baseDrawable, strokeDrawable)).apply {
+                    setLayerInset(1, -strokePx, 0, -strokePx, 0)
+                }
+            } else {
+                val cardDrawable = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadii = radii
+                    setColor(cardBgColorInt)
+                }
+                flRoot.background = cardDrawable
             }
-            flRoot.background = cardDrawable
 
             val enablePanelShadows = PanelPreferences.enablePanelShadows.value
             val shadowElevation = PanelPreferences.panelShadowElevation.value
-            flRoot.elevation = if (enablePanelShadows) shadowElevation * density else 0f
+            flRoot.elevation = if (enablePanelShadows && !isOreoStyle) shadowElevation * density else 0f
             flRoot.translationY = 0f
-            flRoot.clipToOutline = true
+            flRoot.clipToOutline = !isOreoStyle
             flRoot.outlineProvider = object : ViewOutlineProvider() {
                 private val path = Path()
                 override fun getOutline(view: View, outline: Outline) {
@@ -388,12 +410,12 @@ class NotificationAdapter(
                 }
             }
 
-            // 4dp margin between notification & media items
+            // Distance between notification & media items: 4dp (0dp in Oreo style)
             val lp = flRoot.layoutParams as? ViewGroup.MarginLayoutParams
             if (lp != null) {
-                val margin4dp = (4f * density).toInt()
-                if (lp.bottomMargin != margin4dp) {
-                    lp.bottomMargin = margin4dp
+                val targetMargin = if (isOreoStyle) 0 else (4f * density).toInt()
+                if (lp.bottomMargin != targetMargin) {
+                    lp.bottomMargin = targetMargin
                     flRoot.layoutParams = lp
                 }
             }
@@ -635,17 +657,27 @@ class NotificationAdapter(
             val tertiaryColor = MonetThemeHelper.getTertiaryAccent(context, isDark)
 
             val disableNotifMonet = disableMonetNotifText
-            val textPrimaryColor = if (disableNotifMonet) {
+            val isOreoStyle = PanelPreferences.isAndroidOreoStyle(context)
+
+            val textPrimaryColor = if (isOreoStyle) {
+                if (isDark) android.graphics.Color.WHITE else android.graphics.Color.parseColor("#222222")
+            } else if (disableNotifMonet) {
                 if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
             } else {
                 MonetThemeHelper.getTextPrimary(context, isDark)
             }
-            val textSecondaryColor = if (disableNotifMonet) {
+
+            val textSecondaryColor = if (isOreoStyle) {
+                if (isDark) android.graphics.Color.parseColor("#CCCCCC") else android.graphics.Color.parseColor("#555555")
+            } else if (disableNotifMonet) {
                 if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
             } else {
                 MonetThemeHelper.getTextSecondary(context, isDark)
             }
-            val headerColor = if (disableNotifMonet) {
+
+            val headerColor = if (isOreoStyle) {
+                if (isDark) android.graphics.Color.parseColor("#AAAAAA") else android.graphics.Color.parseColor("#666666")
+            } else if (disableNotifMonet) {
                 if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
             } else {
                 when {
@@ -655,11 +687,15 @@ class NotificationAdapter(
                     else -> tertiaryColor
                 }
             }
-            val subtextColor = if (disableNotifMonet) {
+
+            val subtextColor = if (isOreoStyle) {
+                if (isDark) android.graphics.Color.parseColor("#AAAAAA") else android.graphics.Color.parseColor("#666666")
+            } else if (disableNotifMonet) {
                 if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
             } else {
                 tertiaryColor
             }
+
             val actionTextColor = if (disableNotifMonet) {
                 if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
             } else {
@@ -673,36 +709,62 @@ class NotificationAdapter(
             val outerCornerPx = panelOuterCorner * density
             val innerCornerPx = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner) * density
 
-            val radii = when {
-                totalNotifCount <= 1 -> {
-                    FloatArray(8) { outerCornerPx }
-                }
-                position == 0 -> {
-                    floatArrayOf(
-                        outerCornerPx, outerCornerPx, // top-left
-                        outerCornerPx, outerCornerPx, // top-right
-                        innerCornerPx, innerCornerPx, // bottom-right
-                        innerCornerPx, innerCornerPx  // bottom-left
-                    )
-                }
-                position == totalNotifCount - 1 -> {
-                    floatArrayOf(
-                        innerCornerPx, innerCornerPx, // top-left
-                        innerCornerPx, innerCornerPx, // top-right
-                        outerCornerPx, outerCornerPx, // bottom-right
-                        outerCornerPx, outerCornerPx  // bottom-left
-                    )
-                }
-                else -> {
-                    FloatArray(8) { innerCornerPx }
+            val radii = if (isOreoStyle) {
+                FloatArray(8) { 0f }
+            } else {
+                when {
+                    totalNotifCount <= 1 -> {
+                        FloatArray(8) { outerCornerPx }
+                    }
+                    position == 0 -> {
+                        floatArrayOf(
+                            outerCornerPx, outerCornerPx, // top-left
+                            outerCornerPx, outerCornerPx, // top-right
+                            innerCornerPx, innerCornerPx, // bottom-right
+                            innerCornerPx, innerCornerPx  // bottom-left
+                        )
+                    }
+                    position == totalNotifCount - 1 -> {
+                        floatArrayOf(
+                            innerCornerPx, innerCornerPx, // top-left
+                            innerCornerPx, innerCornerPx, // top-right
+                            outerCornerPx, outerCornerPx, // bottom-right
+                            outerCornerPx, outerCornerPx  // bottom-left
+                        )
+                    }
+                    else -> {
+                        FloatArray(8) { innerCornerPx }
+                    }
                 }
             }
 
-            val cardBg = customCardBackgroundColor ?: MonetThemeHelper.getCardBackground(context, isDark)
-            flRoot.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, radii, customBgColor = cardBg)
+            val cardBg = if (isOreoStyle) {
+                if (isDark) Color.parseColor("#212121") else Color.WHITE
+            } else {
+                customCardBackgroundColor ?: MonetThemeHelper.getCardBackground(context, isDark)
+            }
+            if (isOreoStyle) {
+                val strokeColor = if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#33000000")
+                val strokePx = (1 * density).toInt().coerceAtLeast(1)
+                val baseDrawable = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    setColor(cardBg)
+                }
+                val strokeDrawable = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    setStroke(strokePx, strokeColor)
+                    setColor(Color.TRANSPARENT)
+                }
+                flRoot.background = android.graphics.drawable.LayerDrawable(arrayOf(baseDrawable, strokeDrawable)).apply {
+                    setLayerInset(1, -strokePx, 0, -strokePx, 0)
+                }
+            } else {
+                flRoot.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, radii, customBgColor = cardBg)
+            }
+
             val enablePanelShadows = com.example.data.PanelPreferences.enablePanelShadows.value
             val shadowElevation = com.example.data.PanelPreferences.panelShadowElevation.value
-            flRoot.elevation = if (enablePanelShadows) shadowElevation * density else 0f
+            flRoot.elevation = if (enablePanelShadows && !isOreoStyle) shadowElevation * density else 0f
             flRoot.translationY = 0f
             flRoot.clipChildren = false
             flRoot.clipToPadding = false
@@ -728,12 +790,12 @@ class NotificationAdapter(
             }
             flRoot.clipToOutline = false
 
-            // Distance between notifications & media cards: 4dp
+            // Distance between notifications & media cards: 4dp (0dp in Oreo style)
             val lp = flRoot.layoutParams as? ViewGroup.MarginLayoutParams
             if (lp != null) {
-                val margin4dp = (4f * density).toInt()
-                if (lp.bottomMargin != margin4dp) {
-                    lp.bottomMargin = margin4dp
+                val targetMargin = if (isOreoStyle) 0 else (4f * density).toInt()
+                if (lp.bottomMargin != targetMargin) {
+                    lp.bottomMargin = targetMargin
                     flRoot.layoutParams = lp
                 }
             }

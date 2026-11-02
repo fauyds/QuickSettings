@@ -664,5 +664,8 @@ class NotificationListView @JvmOverloads constructor(
             adapter?.submitList(notifications.toList())
             adapter?.notifyDataSetChanged()
         }
+        if (PanelPreferences.isAndroidOreoStyle(context)) {
+            llHeader.visibility = View.GONE
+        }
     }
 }

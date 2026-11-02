@@ -1,5 +1,7 @@
 package com.example.ui.overlay
 
+import com.example.R
+import com.example.ui.notification.MonetThemeHelper
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.util.Log
@@ -666,11 +668,16 @@ fun QuickSettingsPanel(
                 )
             }
 
+            val isAndroidOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight()
-                    .padding(horizontal = if (isLandscape) 24.dp else 12.dp, vertical = 6.dp)
+                    .padding(
+                        horizontal = if (isAndroidOreoStyle) 0.dp else (if (isLandscape) 24.dp else 12.dp),
+                        vertical = if (isAndroidOreoStyle) 0.dp else 6.dp
+                    )
                     .widthIn(max = if (isLandscape) 920.dp else 640.dp)
                     .align(Alignment.TopCenter)
             ) {
@@ -712,9 +719,10 @@ fun QuickSettingsPanel(
                         )
                     }
 
-                    // Header Bar (Clock, Date, System Settings, Tile Studio, Battery)
-                    Box(modifier = Modifier.fillMaxWidth().then(shadeDragModifier)) {
-                        QsHeaderBar(
+                    // Header Bar (Clock, Date, System Settings, Tile Studio, Battery) - hidden in Oreo style
+                    if (!isAndroidOreoStyle) {
+                        Box(modifier = Modifier.fillMaxWidth().then(shadeDragModifier)) {
+                            QsHeaderBar(
                             currentStage = expansionStage,
                             isEditingTiles = isEditingTiles,
                             onHeaderClick = {
@@ -760,6 +768,7 @@ fun QuickSettingsPanel(
                             unreadNotificationCount = notifications.size
                         )
                     }
+                }
                 }
 
                 Spacer(modifier = Modifier.height(6.dp))
@@ -974,6 +983,58 @@ fun rememberQqsBatteryState(): QqsBatteryInfo {
         }
     }
     return batteryInfo
+}
+
+@Composable
+fun OreoTopStatusBar(
+    carrierName: String,
+    batteryPercent: Int,
+    isBatteryCharging: Boolean,
+    isDark: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val textColor = if (isDark) Color.LightGray else Color(0xFF555555)
+    val currentTime = remember {
+        SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+    }
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(24.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = carrierName,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = textColor
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = "$batteryPercent %",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = textColor
+            )
+            Icon(
+                imageVector = if (isBatteryCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
+                contentDescription = "Battery",
+                tint = textColor,
+                modifier = Modifier.size(15.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = currentTime,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = textColor
+            )
+        }
+    }
 }
 
 /**
@@ -1987,6 +2048,7 @@ fun UnifiedQsPanel(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
+    val isAndroidOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
     val effectiveRows = if (isLandscape) 1 else gridLayout.rows.coerceAtLeast(1)
     val effectiveColumns = gridLayout.columns.coerceAtLeast(1)
     val tilesPerPage = remember(activeTiles, effectiveRows, effectiveColumns) { (effectiveColumns * effectiveRows).coerceAtLeast(1) }
@@ -2022,16 +2084,350 @@ fun UnifiedQsPanel(
     val isCarrierVisible = showCarrier && !(hideCarrierInExpanded && isExpandedQsState)
     val isSplitCarrierConfigured = isCarrierVisible && showCarrierDivider && !isLandscape && !isEditingTiles
     val isSplitCarrier = isSplitCarrierConfigured && morphProgress < 0.5f
-    val showSplitCarrierCard = isSplitCarrierConfigured && (expansionStage == QsExpansionStage.QQS || isDraggingMorph || morphProgress < 0.99f)
+    val showSplitCarrierCard = !isAndroidOreoStyle && isSplitCarrierConfigured && (expansionStage == QsExpansionStage.QQS || isDraggingMorph || morphProgress < 0.99f)
+
+    val placeholderTile = remember {
+        QsTileModel(
+            id = "placeholder_slot",
+            label = " ",
+            subtitle = " ",
+            state = TileState.INACTIVE,
+            category = TileCategory.SYSTEM,
+            isVisible = false
+        )
+    }
 
     val qsCardContent: @Composable () -> Unit = {
-        // UNIFIED QS CARD (Morphs between QQS and Full QS, or displays Edit Mode Studio)
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(shadeDragModifier),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
+        if (isAndroidOreoStyle) {
+            val solidOreoBg = Color(MonetThemeHelper.getSurfaceBackground(context, isDark))
+            ContainerCard(
+                shape = RoundedCornerShape(0.dp),
+                containerColor = solidOreoBg,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+                    .then(shadeDragModifier)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight()
+                        .padding(start = 14.dp, end = 14.dp, top = 2.dp, bottom = 8.dp)
+                ) {
+                    val oreoBatteryInfo = rememberQqsBatteryState()
+                    OreoTopStatusBar(
+                        carrierName = carrierName.ifBlank { "simyo" },
+                        batteryPercent = oreoBatteryInfo.percentage,
+                        isBatteryCharging = oreoBatteryInfo.isCharging,
+                        isDark = isDark
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    val brightnessAtBottom by PanelPreferences.brightnessAtBottom.collectAsState()
+                    val brightnessInQqs by PanelPreferences.brightnessInQqs.collectAsState()
+
+                    if (isEditingTiles) {
+                        EditModeTileStudio(
+                            activeTiles = activeTiles,
+                            inactiveTiles = inactiveTiles,
+                            gridLayout = gridLayout,
+                            editScrollState = editScrollState ?: rememberScrollState(),
+                            onDragStateChange = onTileDragStateChange,
+                            onTilesUpdated = onTilesReordered,
+                            onDone = onToggleEditMode
+                        )
+                    } else if (morphProgress < 0.5f && !isLandscape) {
+                        // Collapsed QQS View (Oreo Style)
+                        if (brightnessInQqs) {
+                            BrightnessSliderRow(
+                                brightness = brightness,
+                                onBrightnessChange = onBrightnessChange,
+                                sliderAlpha = 1f,
+                                sliderHeight = 36.dp,
+                                isAtBottom = false,
+                                isQqs = true
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            qqsTiles.forEach { tile ->
+                                key(tile.id) {
+                                    CircularQsTile(
+                                        tile = tile,
+                                        morphProgress = 0f,
+                                        tileWidth = qqsTileSizeValue.dp,
+                                        onClick = { onTileClick(tile) },
+                                        onLongClick = { onTileLongClick(tile) }
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        val subheaderTextColor = if (isDark) Color.LightGray else Color(0xFF555555)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(36.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                IconButton(
+                                    onClick = onSettingsClick,
+                                    modifier = Modifier.size(30.dp).testTag("oreo_qqs_settings_btn")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Settings,
+                                        contentDescription = "Settings",
+                                        tint = subheaderTextColor,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+
+                                IconButton(
+                                    onClick = onToggleEditMode,
+                                    modifier = Modifier.size(30.dp).testTag("oreo_qqs_edit_btn")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "Edit Tiles",
+                                        tint = subheaderTextColor,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+
+                                IconButton(
+                                    onClick = onExpandFull,
+                                    modifier = Modifier.size(30.dp).testTag("oreo_qqs_expand_btn")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.KeyboardArrowDown,
+                                        contentDescription = "Expand",
+                                        tint = subheaderTextColor,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        // Expanded FULL QS View (Oreo Style)
+                        if (!brightnessAtBottom) {
+                            BrightnessSliderRow(
+                                brightness = brightness,
+                                onBrightnessChange = onBrightnessChange,
+                                sliderAlpha = 1f,
+                                sliderHeight = 38.dp,
+                                isAtBottom = false,
+                                isQqs = false
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+
+                        val fullDateStr = remember {
+                            SimpleDateFormat("EEEE, d MMM", Locale.getDefault()).format(Date())
+                        }
+                        val headerColor = if (isDark) Color.LightGray else Color(0xFF444444)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = fullDateStr,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = headerColor,
+                                modifier = Modifier.clickable {
+                                    launchCalendarApp(context)
+                                    onClosePanel()
+                                }
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        val maxRows = effectiveRows
+                        val columns = effectiveColumns
+                        val compositionContext = rememberCompositionContext()
+                        val tileRowHeight = 96.dp
+                        val viewPagerHeightDp = (tileRowHeight * maxRows) + (10.dp * (maxRows - 1).coerceAtLeast(0))
+
+                        AndroidView(
+                            factory = { ctx ->
+                                ViewPager2(ctx).apply {
+                                    layoutParams = ViewGroup.LayoutParams(
+                                        ViewGroup.LayoutParams.MATCH_PARENT,
+                                        ViewGroup.LayoutParams.WRAP_CONTENT
+                                    )
+                                    isSaveEnabled = false
+                                    registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+                                        override fun onPageScrolled(pos: Int, offset: Float, px: Int) {
+                                            viewPagerScrollPosition = pos + offset
+                                        }
+                                        override fun onPageSelected(pos: Int) {
+                                            viewPagerCurrentPage = pos
+                                        }
+                                    })
+                                    adapter = TilePagerAdapter(
+                                        compositionContext = compositionContext,
+                                        tilePages = tilePages,
+                                        columns = columns,
+                                        maxRows = maxRows,
+                                        placeholderTile = placeholderTile,
+                                        onTileClick = onTileClick,
+                                        onTileLongClick = onTileLongClick
+                                    )
+                                    viewPagerRef = this
+                                }
+                            },
+                            update = { vp ->
+                                viewPagerRef = vp
+                                val adapter = vp.adapter as? TilePagerAdapter
+                                adapter?.update(
+                                    newTilePages = tilePages,
+                                    newColumns = columns,
+                                    newMaxRows = maxRows,
+                                    newPlaceholderTile = placeholderTile,
+                                    newOnTileClick = onTileClick,
+                                    newOnTileLongClick = onTileLongClick
+                                )
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(viewPagerHeightDp)
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        val footerTint = if (isDark) Color(0xFFCCCCCC) else Color(0xFF444444)
+                        val shortDateStr = remember {
+                            SimpleDateFormat("EEE, d MMM", Locale.getDefault()).format(Date())
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = shortDateStr,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = footerTint,
+                                modifier = Modifier
+                                    .align(Alignment.CenterStart)
+                                    .clickable {
+                                        launchCalendarApp(context)
+                                        onClosePanel()
+                                    }
+                            )
+
+                            if (tilePages.size > 1) {
+                                Row(
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.align(Alignment.Center)
+                                ) {
+                                    repeat(tilePages.size) { pageIdx ->
+                                        val positionDiff = kotlin.math.abs(pageIdx - viewPagerScrollPosition)
+                                        val progress = (1f - positionDiff).coerceIn(0f, 1f)
+                                        val dotSize = androidx.compose.ui.unit.lerp(4.5.dp, 7.dp, progress)
+                                        val dotColor = androidx.compose.ui.graphics.lerp(
+                                            footerTint.copy(alpha = 0.35f),
+                                            com.example.ui.theme.getMiscElementColor(isDark),
+                                            progress
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .padding(horizontal = 2.5.dp)
+                                                .size(dotSize)
+                                                .clip(CircleShape)
+                                                .background(dotColor)
+                                                .clickable {
+                                                    viewPagerRef?.setCurrentItem(pageIdx, true)
+                                                }
+                                        )
+                                    }
+                                }
+                            }
+
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.align(Alignment.CenterEnd)
+                            ) {
+                                IconButton(
+                                    onClick = onToggleEditMode,
+                                    modifier = Modifier.size(32.dp).testTag("oreo_footer_edit_btn")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "Edit Tiles",
+                                        tint = footerTint,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+
+                                IconButton(
+                                    onClick = onSettingsClick,
+                                    modifier = Modifier.size(32.dp).testTag("oreo_footer_settings_btn")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Settings,
+                                        contentDescription = "System Settings",
+                                        tint = footerTint,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+
+                                IconButton(
+                                    onClick = onCollapseToQqs,
+                                    modifier = Modifier.size(32.dp).testTag("oreo_footer_collapse_btn")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.KeyboardArrowUp,
+                                        contentDescription = "Collapse",
+                                        tint = footerTint,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                        if (brightnessAtBottom) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            BrightnessSliderRow(
+                                brightness = brightness,
+                                onBrightnessChange = onBrightnessChange,
+                                sliderAlpha = 1f,
+                                sliderHeight = 38.dp,
+                                isAtBottom = true,
+                                isQqs = false
+                            )
+                        }
+                    }
+                }
+            }
+        } else {
+            // UNIFIED QS CARD (Morphs between QQS and Full QS, or displays Edit Mode Studio)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(shadeDragModifier),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
             val panelGlobalCornerEnabled by PanelPreferences.panelGlobalCornerEnabled.collectAsState()
             val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
             val panelInnerCorner by PanelPreferences.panelInnerCorner.collectAsState()
@@ -2666,6 +3062,7 @@ fun UnifiedQsPanel(
         }
         }
     }
+    }
 
     val liveMediaState by com.example.service.MediaSessionManagerHelper.mediaState.collectAsState()
     val mediaSessionsList by com.example.service.MediaSessionManagerHelper.sessionsList.collectAsState()
@@ -3175,13 +3572,18 @@ fun NotificationItemRow(
         format.format(date)
     }
 
-    val notifContainerColor = com.example.ui.theme.getQsNotificationContainerColor(isDark)
+    val isAndroidOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
+    val notifContainerColor = if (isAndroidOreoStyle) {
+        if (isDark) Color(0xFF212121) else Color.White
+    } else {
+        com.example.ui.theme.getQsNotificationContainerColor(isDark)
+    }
 
     val panelGlobalCornerEnabled by PanelPreferences.panelGlobalCornerEnabled.collectAsState()
     val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
     val panelInnerCorner by PanelPreferences.panelInnerCorner.collectAsState()
     val effectiveInnerCorner = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner).dp
-    val effectiveShape = RoundedCornerShape(effectiveInnerCorner)
+    val effectiveShape = if (isAndroidOreoStyle) RoundedCornerShape(0.dp) else RoundedCornerShape(effectiveInnerCorner)
 
     if (!isDismissed) {
         val horizontalDraggableState = rememberDraggableState { delta ->
@@ -3223,6 +3625,16 @@ fun NotificationItemRow(
                         alpha = (1f - (kotlin.math.abs(offsetX) / 350f)).coerceIn(0f, 1f)
                         clip = false
                     }
+                    .then(
+                        if (isAndroidOreoStyle) {
+                            Modifier.drawBehind {
+                                val strokeWidth = 1.dp.toPx()
+                                val lineColor = if (isDark) Color.White.copy(alpha = 0.2f) else Color.Black.copy(alpha = 0.2f)
+                                drawLine(lineColor, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth)
+                                drawLine(lineColor, Offset(0f, size.height), Offset(size.width, size.height), strokeWidth)
+                            }
+                        } else Modifier
+                    )
                     .testTag("notification_item_${item.key}")
             ) {
                 Row(
@@ -3759,27 +4171,38 @@ fun CircularQsTile(
         baseQqsSize
     }
 
-    val (backgroundColor, iconColor) = remember(tile.state, isDark, primaryColor, onPrimaryColor, cardContainerColor, tileOutlineEnabled, inactiveTileColor) {
-        val inactiveBg = inactiveTileColor
-        val inactiveText = if (isDark) Color.White.copy(alpha = 0.90f) else Color(0xFF1E293B)
-        val unavailableBg = inactiveBg.copy(alpha = 0.5f)
-        val unavailableText = inactiveText.copy(alpha = 0.4f)
+    val isAndroidOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
 
-        val bg = if (tileOutlineEnabled) {
-            Color.Transparent
-        } else {
-            when (tile.state) {
+    val (backgroundColor, iconColor) = remember(tile.state, isDark, primaryColor, onPrimaryColor, cardContainerColor, tileOutlineEnabled, inactiveTileColor, isAndroidOreoStyle) {
+        if (isAndroidOreoStyle) {
+            val fg = when (tile.state) {
                 TileState.ACTIVE -> primaryColor
-                TileState.INACTIVE -> inactiveBg
-                TileState.UNAVAILABLE -> unavailableBg
+                TileState.INACTIVE -> if (isDark) Color(0xFFCCCCCC) else Color(0xFF555555)
+                TileState.UNAVAILABLE -> (if (isDark) Color(0xFFCCCCCC) else Color(0xFF555555)).copy(alpha = 0.4f)
             }
+            Pair(Color.Transparent, fg)
+        } else {
+            val inactiveBg = inactiveTileColor
+            val inactiveText = if (isDark) Color.White.copy(alpha = 0.90f) else Color(0xFF1E293B)
+            val unavailableBg = inactiveBg.copy(alpha = 0.5f)
+            val unavailableText = inactiveText.copy(alpha = 0.4f)
+
+            val bg = if (tileOutlineEnabled) {
+                Color.Transparent
+            } else {
+                when (tile.state) {
+                    TileState.ACTIVE -> primaryColor
+                    TileState.INACTIVE -> inactiveBg
+                    TileState.UNAVAILABLE -> unavailableBg
+                }
+            }
+            val fg = when (tile.state) {
+                TileState.ACTIVE -> if (tileOutlineEnabled) primaryColor else onPrimaryColor
+                TileState.INACTIVE -> inactiveText
+                TileState.UNAVAILABLE -> unavailableText
+            }
+            Pair(bg, fg)
         }
-        val fg = when (tile.state) {
-            TileState.ACTIVE -> if (tileOutlineEnabled) primaryColor else onPrimaryColor
-            TileState.INACTIVE -> inactiveText
-            TileState.UNAVAILABLE -> unavailableText
-        }
-        Pair(bg, fg)
     }
 
     val showQsTileGradient by PanelPreferences.showQsTileGradient.collectAsState()
@@ -3828,7 +4251,7 @@ fun CircularQsTile(
             modifier = Modifier
                 .size(circleSize)
                 .then(
-                    if (tileOutlineEnabled) {
+                    if (!isAndroidOreoStyle && tileOutlineEnabled) {
                         if (isActive && showQsTileGradient) {
                             Modifier.border(1.2.dp, tileGradientBrush, tileShape)
                         } else {
@@ -3838,12 +4261,16 @@ fun CircularQsTile(
                         Modifier
                     }
                 )
-                .clip(tileShape)
+                .then(if (!isAndroidOreoStyle) Modifier.clip(tileShape) else Modifier)
                 .then(
-                    if (isActive && showQsTileGradient && !tileOutlineEnabled) {
-                        Modifier.background(tileGradientBrush)
+                    if (!isAndroidOreoStyle) {
+                        if (isActive && showQsTileGradient && !tileOutlineEnabled) {
+                            Modifier.background(tileGradientBrush)
+                        } else {
+                            Modifier.background(backgroundColor)
+                        }
                     } else {
-                        Modifier.background(backgroundColor)
+                        Modifier
                     }
                 ),
             contentAlignment = Alignment.Center
@@ -3883,7 +4310,11 @@ fun CircularQsTile(
             val qsTileLabelFontSize by PanelPreferences.qsTileLabelFontSize.collectAsState()
             val qsTileSubtitleFontSize by PanelPreferences.qsTileSubtitleFontSize.collectAsState()
 
-            val tileLabelColor = if (isDark) Color(0xFFCCCCCC) else Color(0xFF333333)
+            val tileLabelColor = if (isAndroidOreoStyle) {
+                if (isActive) primaryColor else (if (isDark) Color(0xFFCCCCCC) else Color(0xFF555555))
+            } else {
+                if (isDark) Color(0xFFCCCCCC) else Color(0xFF333333)
+            }
             val tileSubtitleColor = if (isActive) androidx.compose.material3.MaterialTheme.colorScheme.primary.copy(alpha = 0.8f) else if (isDark) Color.Gray else Color(0xFF333333).copy(alpha = 0.8f)
 
             Text(

@@ -169,6 +169,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val clearAllFabShape by PanelPreferences.clearAllFabShape.collectAsState()
     val clearAllFabIcon by PanelPreferences.clearAllFabIcon.collectAsState()
     val showMediaInNotifContainer by PanelPreferences.showMediaInNotificationContainer.collectAsState()
+    val isAndroidOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
 
     var tileShapesExpanded by rememberSaveable { mutableStateOf(false) }
     var progressBarSliderExpanded by rememberSaveable { mutableStateOf(false) }
@@ -190,6 +191,76 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.QS_DESIGN, context).collectAsState()
 
     // --- 1. TILE SHAPES & LAYOUT CARDS ---
+
+    // 0. Android 8.0 Oreo Style Card
+    val androidOreoStyleCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("android_oreo_style_card", CustomizeCategory.QS_DESIGN, "Android 8.0 Oreo Style") {
+            SettingsCard(
+                shape = shape
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Apps,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    text = "Android 8.0 Oreo Style",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Enable the classic Android 8.0 Oreo Quick Settings layout with top brightness slider, status subheader, and footer actions.",
+                                    fontSize = 12.sp,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Switch(
+                            checked = isAndroidOreoStyle,
+                            onCheckedChange = { PanelPreferences.setAndroidOreoStyle(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("android_oreo_style_switch")
+                        )
+                    }
+                }
+            }
+        }
+    }
 
     // 1. QQS Icon Size Card
     val qqsIconSizeCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
@@ -3415,6 +3486,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     }
 
     val pinnedCardsMap = mapOf<String, @Composable (androidx.compose.ui.graphics.Shape) -> Unit>(
+        "android_oreo_style_card" to androidOreoStyleCard,
         "qqs_icon_size_card" to qqsIconSizeCard,
         "qqs_icon_quantity_card" to qqsIconQuantityCard,
         "tile_shape_selection_card" to tileShapeSelectionCard,
@@ -3453,6 +3525,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
         // 2. Tile Shapes & Layout
         val unpinnedTileShapes = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
+        if (!pinnedIds.contains("android_oreo_style_card")) unpinnedTileShapes.add(androidOreoStyleCard)
         if (!pinnedIds.contains("qqs_icon_size_card")) unpinnedTileShapes.add(qqsIconSizeCard)
         if (!pinnedIds.contains("qqs_icon_quantity_card")) unpinnedTileShapes.add(qqsIconQuantityCard)
         if (!pinnedIds.contains("tile_shape_selection_card")) unpinnedTileShapes.add(tileShapeSelectionCard)
