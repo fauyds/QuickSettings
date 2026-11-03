@@ -213,7 +213,8 @@ class UnifiedQsHostView @JvmOverloads constructor(
                 activeSquareShape = activeSquareShape,
                 qqsTileSizeDp = qqsTileSizeDp,
                 dragHandleLengthDp = dragHandleLengthDp,
-                isDark = isDark
+                isDark = isDark,
+                brightnessAtBottom = brightnessAtBottom
             )
         }
     }

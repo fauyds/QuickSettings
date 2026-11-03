@@ -2100,6 +2100,11 @@ fun UnifiedQsPanel(
     val qsCardContent: @Composable () -> Unit = {
         if (isAndroidOreoStyle) {
             val solidOreoBg = Color(MonetThemeHelper.getSurfaceBackground(context, isDark))
+            val showCustomHeaderImage by PanelPreferences.showCustomHeaderImage.collectAsState()
+            val customHeaderImageUri by PanelPreferences.customHeaderImageUri.collectAsState()
+            val customHeaderImageHeight by PanelPreferences.customHeaderImageHeight.collectAsState()
+            val customHeaderImageOpacity by PanelPreferences.customHeaderImageOpacity.collectAsState()
+
             ContainerCard(
                 shape = RoundedCornerShape(0.dp),
                 containerColor = solidOreoBg,
@@ -2112,19 +2117,62 @@ fun UnifiedQsPanel(
                     modifier = Modifier
                         .fillMaxWidth()
                         .wrapContentHeight()
-                        .padding(start = 14.dp, end = 14.dp, top = 10.dp, bottom = 0.dp)
                 ) {
-                    val oreoBatteryInfo = rememberQqsBatteryState()
-                    OreoTopStatusBar(
-                        carrierName = carrierName.ifBlank { "simyo" },
-                        batteryPercent = oreoBatteryInfo.percentage,
-                        isBatteryCharging = oreoBatteryInfo.isCharging,
-                        isDark = isDark
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    if (showCustomHeaderImage) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(customHeaderImageHeight.dp)
+                        ) {
+                            if (customHeaderImageUri.isNotBlank()) {
+                                coil.compose.AsyncImage(
+                                    model = customHeaderImageUri,
+                                    contentDescription = "Custom Header Image",
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .graphicsLayer(alpha = customHeaderImageOpacity),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            Brush.horizontalGradient(
+                                                listOf(
+                                                    com.example.ui.theme.getMiscElementColor(isDark).copy(alpha = 0.85f),
+                                                    androidx.compose.material3.MaterialTheme.colorScheme.tertiary.copy(alpha = 0.85f),
+                                                    androidx.compose.material3.MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f)
+                                                )
+                                            )
+                                        )
+                                )
+                            }
+                        }
+                    }
 
-                    val brightnessAtBottom by PanelPreferences.brightnessAtBottom.collectAsState()
-                    val brightnessInQqs by PanelPreferences.brightnessInQqs.collectAsState()
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .wrapContentHeight()
+                            .padding(
+                                start = 14.dp,
+                                end = 14.dp,
+                                top = if (showCustomHeaderImage) 8.dp else 10.dp,
+                                bottom = 0.dp
+                            )
+                    ) {
+                        val oreoBatteryInfo = rememberQqsBatteryState()
+                        OreoTopStatusBar(
+                            carrierName = carrierName.ifBlank { "simyo" },
+                            batteryPercent = oreoBatteryInfo.percentage,
+                            isBatteryCharging = oreoBatteryInfo.isCharging,
+                            isDark = isDark
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        val brightnessAtBottom by PanelPreferences.brightnessAtBottom.collectAsState()
+                        val brightnessInQqs by PanelPreferences.brightnessInQqs.collectAsState()
 
                     if (isEditingTiles) {
                         EditModeTileStudio(
@@ -2138,7 +2186,7 @@ fun UnifiedQsPanel(
                         )
                     } else if (morphProgress < 0.5f && !isLandscape) {
                         // Collapsed QQS View (Oreo Style)
-                        if (brightnessInQqs) {
+                        if (brightnessInQqs && !brightnessAtBottom) {
                             BrightnessSliderRow(
                                 brightness = brightness,
                                 onBrightnessChange = onBrightnessChange,
@@ -2169,6 +2217,19 @@ fun UnifiedQsPanel(
                                     )
                                 }
                             }
+                        }
+
+                        if (brightnessInQqs && brightnessAtBottom) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            BrightnessSliderRow(
+                                brightness = brightness,
+                                onBrightnessChange = onBrightnessChange,
+                                sliderAlpha = 1f,
+                                sliderHeight = 36.dp,
+                                isAtBottom = true,
+                                isQqs = true
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
                         }
 
                         HorizontalDivider(
@@ -2209,7 +2270,7 @@ fun UnifiedQsPanel(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 modifier = Modifier
-                                    .offset(y = (-2).dp)
+                                    .offset(y = (-3).dp)
                                     .clickable {
                                         launchCalendarApp(context)
                                         onClosePanel()
@@ -2226,7 +2287,7 @@ fun UnifiedQsPanel(
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                modifier = Modifier.offset(y = (-2).dp)
+                                modifier = Modifier.offset(y = (-3).dp)
                             ) {
                                 IconButton(
                                     onClick = onSettingsClick,
@@ -2361,7 +2422,6 @@ fun UnifiedQsPanel(
                                 color = footerTint,
                                 modifier = Modifier
                                     .align(Alignment.CenterStart)
-                                    .offset(y = (-2).dp)
                                     .clickable {
                                         launchCalendarApp(context)
                                         onClosePanel()
@@ -2372,9 +2432,7 @@ fun UnifiedQsPanel(
                                 Row(
                                     horizontalArrangement = Arrangement.Center,
                                     verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .align(Alignment.Center)
-                                        .offset(y = (-2).dp)
+                                    modifier = Modifier.align(Alignment.Center)
                                 ) {
                                     repeat(tilePages.size) { pageIdx ->
                                         val positionDiff = kotlin.math.abs(pageIdx - viewPagerScrollPosition)
@@ -2402,9 +2460,7 @@ fun UnifiedQsPanel(
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .align(Alignment.CenterEnd)
-                                    .offset(y = (-2).dp)
+                                modifier = Modifier.align(Alignment.CenterEnd)
                             ) {
                                 IconButton(
                                     onClick = onToggleEditMode,
@@ -2446,7 +2502,8 @@ fun UnifiedQsPanel(
                     }
                 }
             }
-        } else {
+        }
+    } else {
             // UNIFIED QS CARD (Morphs between QQS and Full QS, or displays Edit Mode Studio)
             Column(
                 modifier = Modifier
@@ -2816,8 +2873,10 @@ fun UnifiedQsPanel(
                         }
 
                         if (!isSplitCarrier) {
-                            val bottomSpacerHeight = 10.dp
-                            Spacer(modifier = Modifier.height(bottomSpacerHeight))
+                            val bottomSpacerHeight = if (isAndroidOreoStyle) 0.dp else 10.dp
+                            if (bottomSpacerHeight > 0.dp) {
+                                Spacer(modifier = Modifier.height(bottomSpacerHeight))
+                            }
                         }
 
                         // 3. Footer Bar / Drag Pill (Morphing footer)
@@ -3107,14 +3166,22 @@ fun UnifiedQsPanel(
         val media = liveMediaState ?: if (forceShowMediaPreview) MediaState.Preview else null
         if (!isEditingTiles && media != null && !shouldShowPlayerInNotification) {
             val isMediaExpanded = isFullQs || isLandscape
-            val mediaTopGap = 10.dp
-            Spacer(modifier = Modifier.height(mediaTopGap))
+            val mediaTopGap = if (isAndroidOreoStyle) 0.dp else 10.dp
+            if (mediaTopGap > 0.dp) {
+                Spacer(modifier = Modifier.height(mediaTopGap))
+            }
             val panelGlobalCornerEnabled by PanelPreferences.panelGlobalCornerEnabled.collectAsState()
             val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
             val panelInnerCorner by PanelPreferences.panelInnerCorner.collectAsState()
             val effectiveInnerCorner = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner).dp
 
             val mediaAccentColor = com.example.ui.theme.getMiscElementColor(isDark)
+            val effectiveCornerRadius = if (isAndroidOreoStyle) 0.dp else panelOuterCorner.dp
+            val effectiveBgColor = if (isAndroidOreoStyle) {
+                Color(MonetThemeHelper.getSurfaceBackground(context, isDark))
+            } else {
+                if (isDark) Color(0xFF353A3B) else Color(0xFFE2E7EA)
+            }
             AdaptiveMediaPlayerCard(
                 mediaState = media,
                 isExpanded = isMediaExpanded,
@@ -3123,8 +3190,9 @@ fun UnifiedQsPanel(
                 onSelectSession = { index ->
                     com.example.service.MediaSessionManagerHelper.selectSession(index)
                 },
-                cornerRadius = panelOuterCorner.dp,
-                backgroundColor = if (isDark) Color(0xFF353A3B) else Color(0xFFE2E7EA),
+                modifier = if (isAndroidOreoStyle) Modifier.fillMaxWidth().offset(y = (-6).dp) else Modifier.fillMaxWidth(),
+                cornerRadius = effectiveCornerRadius,
+                backgroundColor = effectiveBgColor,
                 accentColor = mediaAccentColor,
                 contentColor = if (isDark) Color.White else Color(0xFF222222),
                 onPlayPauseClick = {
@@ -3242,6 +3310,7 @@ fun UnifiedQsPanel(
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
+                    .then(if (isAndroidOreoStyle) Modifier.offset(y = (-6).dp) else Modifier)
                     .then(if (isNotificationsVisible) Modifier.weight(1f, fill = true) else Modifier)
             ) {
                 notificationsContent()

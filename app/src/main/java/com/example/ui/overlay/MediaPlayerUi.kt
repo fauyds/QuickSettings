@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.core.graphics.ColorUtils
 import android.graphics.Color as AndroidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -189,7 +190,9 @@ fun AdaptiveMediaPlayerCard(
     onCloseClick: () -> Unit = {},
     onCardClick: () -> Unit = {}
 ) {
-    val cardShape = RoundedCornerShape(cornerRadius)
+    val isOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
+    val effectiveCornerRadius = if (isOreoStyle) 0.dp else cornerRadius
+    val cardShape = if (isOreoStyle) RoundedCornerShape(0.dp) else RoundedCornerShape(effectiveCornerRadius)
     val activeSessions = if (sessions.isNotEmpty()) sessions else listOf(mediaState)
     val coroutineScope = rememberCoroutineScope()
     val pagerState = rememberPagerState(
@@ -241,7 +244,7 @@ fun AdaptiveMediaPlayerCard(
     val panelShadowOffsetY by PanelPreferences.panelShadowOffsetY.collectAsState()
     val panelShadowAlpha by PanelPreferences.panelShadowAlpha.collectAsState()
 
-    val shadowModifier = if (enablePanelShadows && panelShadowElevation > 0f) {
+    val shadowModifier = if (!isOreoStyle && enablePanelShadows && panelShadowElevation > 0f) {
         Modifier
             .drawBehind {
                 val shadowRadius = panelShadowElevation.dp.toPx()
@@ -282,11 +285,23 @@ fun AdaptiveMediaPlayerCard(
             .then(shadowModifier)
     ) {
         Surface(
-            shape = cardShape,
+            shape = if (isOreoStyle) RoundedCornerShape(0.dp) else cardShape,
             color = cardColor,
+            tonalElevation = 0.dp,
+            shadowElevation = 0.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(cardShape)
+                .clip(if (isOreoStyle) RoundedCornerShape(0.dp) else cardShape)
+                .then(
+                    if (isOreoStyle) {
+                        Modifier.drawBehind {
+                            val strokeWidth = 1.dp.toPx()
+                            val lineColor = if (isDark) Color.White.copy(alpha = 0.2f) else Color.Black.copy(alpha = 0.2f)
+                            drawLine(lineColor, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth)
+                            drawLine(lineColor, Offset(0f, size.height), Offset(size.width, size.height), strokeWidth)
+                        }
+                    } else Modifier
+                )
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -891,15 +906,19 @@ fun AndroidQMediaNotificationCard(
     val displayTitle = mediaState.title.ifBlank { "Track Title" }
     val displayArtist = mediaState.artist.ifBlank { "" }
 
+    val isOreoStyle = PanelPreferences.isAndroidOreoStyle(context)
+    val effectiveShape = if (isOreoStyle) RoundedCornerShape(0.dp) else shape
+    val effectiveElevation = if (isOreoStyle) 0.dp else 2.dp
+
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(shape)
+            .clip(effectiveShape)
             .clickable { onCardClick() }
             .testTag("android_q_media_notification_card"),
-        shape = shape,
+        shape = effectiveShape,
         color = cardBgColor,
-        shadowElevation = 2.dp
+        shadowElevation = effectiveElevation
     ) {
         Box(
             modifier = Modifier.fillMaxWidth()

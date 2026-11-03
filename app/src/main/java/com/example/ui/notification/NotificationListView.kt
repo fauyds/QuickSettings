@@ -135,6 +135,9 @@ class NotificationListView @JvmOverloads constructor(
         root.findViewById<ViewGroup>(R.id.ll_notif_list_container)?.apply {
             clipChildren = true
             clipToPadding = false
+            if (PanelPreferences.isAndroidOreoStyle(context)) {
+                setPadding(0, 0, 0, 0)
+            }
         }
         rvNotifications.setHasFixedSize(false)
         rvNotifications.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
@@ -555,12 +558,28 @@ class NotificationListView @JvmOverloads constructor(
         btnEnablePermission.background = MonetThemeHelper.createMonetPrimaryPillDrawable(context, isDark, 16f * density)
         btnEnablePermission.setTextColor(onPrimary)
 
-        // 4. Style Empty State Card ("No new notifications")
-        flEmptyCard.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, cardRadius, customBgColor = cardBg)
-        flEmptyCard.elevation = if (enablePanelShadows) shadowElevation * density else 0f
-        flEmptyCard.translationY = 0f
-        ivEmptyIcon.setColorFilter(textSecondary)
-        tvEmptyText.setTextColor(textSecondary)
+        // 4. Style Empty State Card ("No notifications")
+        val isOreoStyle = PanelPreferences.isAndroidOreoStyle(context)
+        if (isOreoStyle) {
+            flEmptyCard.background = null
+            flEmptyCard.elevation = 0f
+            flEmptyCard.translationY = 0f
+            tvEmptyText.text = "No notifications"
+            val emptyColor = if (!showMonetSurface) {
+                android.graphics.Color.WHITE
+            } else {
+                textSecondary
+            }
+            ivEmptyIcon.setColorFilter(emptyColor)
+            tvEmptyText.setTextColor(emptyColor)
+        } else {
+            flEmptyCard.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, cardRadius, customBgColor = cardBg)
+            flEmptyCard.elevation = if (enablePanelShadows) shadowElevation * density else 0f
+            flEmptyCard.translationY = 0f
+            tvEmptyText.text = "No new notifications"
+            ivEmptyIcon.setColorFilter(textSecondary)
+            tvEmptyText.setTextColor(textSecondary)
+        }
 
         // 5. Update Visibility and Data (Floating FAB vs Footer inside RecyclerView)
         val hideEmptyNotifLabels = PanelPreferences.hideQqsEmptyNotifLabels.value

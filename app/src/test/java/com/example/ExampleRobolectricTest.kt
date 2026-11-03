@@ -14,7 +14,7 @@ import org.robolectric.annotation.Config
 import androidx.compose.ui.graphics.toArgb
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
+@Config(sdk = [34])
 class ExampleRobolectricTest {
 
     @Test

@@ -365,9 +365,10 @@ class NotificationAdapter(
             if (isOreoStyle) {
                 val strokeColor = if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#33000000")
                 val strokePx = (1 * density).toInt().coerceAtLeast(1)
+                val solidOreoBg = if (isDark) Color.parseColor("#212121") else Color.parseColor("#FFFFFF")
                 val baseDrawable = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
-                    setColor(cardBgColorInt)
+                    setColor(solidOreoBg)
                 }
                 val strokeDrawable = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
@@ -390,21 +391,25 @@ class NotificationAdapter(
             val shadowElevation = PanelPreferences.panelShadowElevation.value
             flRoot.elevation = if (enablePanelShadows && !isOreoStyle) shadowElevation * density else 0f
             flRoot.translationY = 0f
-            flRoot.clipToOutline = !isOreoStyle
+            flRoot.clipToOutline = true
             flRoot.outlineProvider = object : ViewOutlineProvider() {
                 private val path = Path()
                 override fun getOutline(view: View, outline: Outline) {
                     if (view.width > 0 && view.height > 0) {
-                        path.reset()
-                        path.addRoundRect(
-                            0f, 0f, view.width.toFloat(), view.height.toFloat(),
-                            radii,
-                            Path.Direction.CW
-                        )
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                            outline.setPath(path)
+                        if (isOreoStyle) {
+                            outline.setRect(0, 0, view.width, view.height)
                         } else {
-                            outline.setConvexPath(path)
+                            path.reset()
+                            path.addRoundRect(
+                                0f, 0f, view.width.toFloat(), view.height.toFloat(),
+                                radii,
+                                Path.Direction.CW
+                            )
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                outline.setPath(path)
+                            } else {
+                                outline.setConvexPath(path)
+                            }
                         }
                     }
                 }
@@ -413,9 +418,11 @@ class NotificationAdapter(
             // Distance between notification & media items: 4dp (0dp in Oreo style)
             val lp = flRoot.layoutParams as? ViewGroup.MarginLayoutParams
             if (lp != null) {
-                val targetMargin = if (isOreoStyle) 0 else (4f * density).toInt()
-                if (lp.bottomMargin != targetMargin) {
-                    lp.bottomMargin = targetMargin
+                val targetBottomMargin = if (isOreoStyle) 0 else (4f * density).toInt()
+                val targetTopMargin = if (isOreoStyle) 0 else lp.topMargin
+                if (lp.bottomMargin != targetBottomMargin || lp.topMargin != targetTopMargin) {
+                    lp.bottomMargin = targetBottomMargin
+                    lp.topMargin = targetTopMargin
                     flRoot.layoutParams = lp
                 }
             }
@@ -774,16 +781,20 @@ class NotificationAdapter(
                 private val path = Path()
                 override fun getOutline(view: View, outline: Outline) {
                     if (view.width > 0 && view.height > 0) {
-                        path.reset()
-                        path.addRoundRect(
-                            0f, 0f, view.width.toFloat(), view.height.toFloat(),
-                            radii,
-                            Path.Direction.CW
-                        )
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                            outline.setPath(path)
+                        if (isOreoStyle) {
+                            outline.setRect(0, 0, view.width, view.height)
                         } else {
-                            outline.setConvexPath(path)
+                            path.reset()
+                            path.addRoundRect(
+                                0f, 0f, view.width.toFloat(), view.height.toFloat(),
+                                radii,
+                                Path.Direction.CW
+                            )
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                outline.setPath(path)
+                            } else {
+                                outline.setConvexPath(path)
+                            }
                         }
                     }
                 }
@@ -793,9 +804,11 @@ class NotificationAdapter(
             // Distance between notifications & media cards: 4dp (0dp in Oreo style)
             val lp = flRoot.layoutParams as? ViewGroup.MarginLayoutParams
             if (lp != null) {
-                val targetMargin = if (isOreoStyle) 0 else (4f * density).toInt()
-                if (lp.bottomMargin != targetMargin) {
-                    lp.bottomMargin = targetMargin
+                val targetBottomMargin = if (isOreoStyle) 0 else (4f * density).toInt()
+                val targetTopMargin = if (isOreoStyle) 0 else lp.topMargin
+                if (lp.bottomMargin != targetBottomMargin || lp.topMargin != targetTopMargin) {
+                    lp.bottomMargin = targetBottomMargin
+                    lp.topMargin = targetTopMargin
                     flRoot.layoutParams = lp
                 }
             }

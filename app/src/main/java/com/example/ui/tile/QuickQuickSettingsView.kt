@@ -120,7 +120,8 @@ class QuickQuickSettingsView @JvmOverloads constructor(
         activeSquareShape: Boolean,
         qqsTileSizeDp: Int,
         dragHandleLengthDp: Int,
-        isDark: Boolean
+        isDark: Boolean,
+        brightnessAtBottom: Boolean = false
     ) {
         this.isDark = isDark
         val density = context.resources.displayMetrics.density
@@ -134,6 +135,17 @@ class QuickQuickSettingsView @JvmOverloads constructor(
         // 2. Classic Brightness Slider Setup
         if (showBrightnessInQqs) {
             llBrightnessRow.visibility = View.VISIBLE
+            llContainer.removeView(llBrightnessRow)
+            if (brightnessAtBottom) {
+                val tilesIndex = llContainer.indexOfChild(llTilesRow)
+                if (tilesIndex >= 0) {
+                    llContainer.addView(llBrightnessRow, tilesIndex + 1)
+                } else {
+                    llContainer.addView(llBrightnessRow)
+                }
+            } else {
+                llContainer.addView(llBrightnessRow, 1)
+            }
             val clamped = brightness.coerceIn(5, 255)
             sbBrightness.progress = clamped
             val pct = ((clamped / 255f) * 100).toInt()
