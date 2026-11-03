@@ -1023,14 +1023,14 @@ fun OreoTopStatusBar(
                     fontWeight = FontWeight.Bold,
                     color = textColor
                 )
+                Icon(
+                    imageVector = if (isBatteryCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
+                    contentDescription = "Battery",
+                    tint = textColor,
+                    modifier = Modifier.size(15.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
             }
-            Icon(
-                imageVector = if (isBatteryCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
-                contentDescription = "Battery",
-                tint = textColor,
-                modifier = Modifier.size(15.dp)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = currentTime,
                 fontSize = 13.sp,
@@ -3222,7 +3222,7 @@ fun UnifiedQsPanel(
                 onSelectSession = { index ->
                     com.example.service.MediaSessionManagerHelper.selectSession(index)
                 },
-                modifier = if (isAndroidOreoStyle) Modifier.fillMaxWidth().offset(y = (-6).dp) else Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 cornerRadius = effectiveCornerRadius,
                 backgroundColor = effectiveBgColor,
                 accentColor = mediaAccentColor,
@@ -3342,7 +3342,6 @@ fun UnifiedQsPanel(
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .then(if (isAndroidOreoStyle) Modifier.offset(y = (-6).dp) else Modifier)
                     .then(if (isNotificationsVisible) Modifier.weight(1f, fill = true) else Modifier)
             ) {
                 notificationsContent()
