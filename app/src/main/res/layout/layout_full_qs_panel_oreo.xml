@@ -226,6 +226,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
+            android:translationY="-2dp"
             android:text="Wed, Oct 25"
             android:textColor="#FF666666"
             android:textSize="13sp"
@@ -237,6 +238,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
+            android:translationY="-2dp"
             android:gravity="center"
             android:orientation="horizontal" />
 
@@ -247,6 +249,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
+            android:translationY="-2dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 

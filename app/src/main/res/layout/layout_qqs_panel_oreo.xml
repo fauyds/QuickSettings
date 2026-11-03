@@ -145,6 +145,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
+            android:translationY="-2dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -175,6 +176,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
+            android:translationY="-2dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 

@@ -2208,10 +2208,12 @@ fun UnifiedQsPanel(
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                modifier = Modifier.clickable {
-                                    launchCalendarApp(context)
-                                    onClosePanel()
-                                }
+                                modifier = Modifier
+                                    .offset(y = (-2).dp)
+                                    .clickable {
+                                        launchCalendarApp(context)
+                                        onClosePanel()
+                                    }
                             ) {
                                 Text(
                                     text = currentDate,
@@ -2223,7 +2225,8 @@ fun UnifiedQsPanel(
 
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.offset(y = (-2).dp)
                             ) {
                                 IconButton(
                                     onClick = onSettingsClick,
@@ -2358,6 +2361,7 @@ fun UnifiedQsPanel(
                                 color = footerTint,
                                 modifier = Modifier
                                     .align(Alignment.CenterStart)
+                                    .offset(y = (-2).dp)
                                     .clickable {
                                         launchCalendarApp(context)
                                         onClosePanel()
@@ -2368,7 +2372,9 @@ fun UnifiedQsPanel(
                                 Row(
                                     horizontalArrangement = Arrangement.Center,
                                     verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.align(Alignment.Center)
+                                    modifier = Modifier
+                                        .align(Alignment.Center)
+                                        .offset(y = (-2).dp)
                                 ) {
                                     repeat(tilePages.size) { pageIdx ->
                                         val positionDiff = kotlin.math.abs(pageIdx - viewPagerScrollPosition)
@@ -2396,7 +2402,9 @@ fun UnifiedQsPanel(
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.align(Alignment.CenterEnd)
+                                modifier = Modifier
+                                    .align(Alignment.CenterEnd)
+                                    .offset(y = (-2).dp)
                             ) {
                                 IconButton(
                                     onClick = onToggleEditMode,
