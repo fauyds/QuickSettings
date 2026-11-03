@@ -7,6 +7,8 @@ import android.content.Context
 import android.util.Log
 import android.content.IntentFilter
 import android.os.BatteryManager
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.material.icons.filled.BatteryAlert
@@ -134,6 +136,7 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -669,6 +672,8 @@ fun QuickSettingsPanel(
             }
 
             val isAndroidOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
+            val isAndroidMarshmallowStyle by PanelPreferences.isAndroidMarshmallowStyle.collectAsState()
+            val isFlatLegacyStyle = isAndroidOreoStyle || isAndroidMarshmallowStyle
 
             Column(
                 modifier = Modifier
@@ -676,9 +681,12 @@ fun QuickSettingsPanel(
                     .fillMaxHeight()
                     .padding(
                         horizontal = if (isAndroidOreoStyle) 0.dp else (if (isLandscape) 24.dp else 12.dp),
-                        vertical = if (isAndroidOreoStyle) 0.dp else 6.dp
+                        vertical = if (isFlatLegacyStyle) 0.dp else 6.dp
                     )
-                    .widthIn(max = if (isLandscape) 920.dp else 640.dp)
+                    .then(
+                        if (isAndroidOreoStyle) Modifier.fillMaxWidth()
+                        else Modifier.widthIn(max = if (isLandscape) 920.dp else 640.dp)
+                    )
                     .align(Alignment.TopCenter)
             ) {
                 val showCustomHeaderImage by PanelPreferences.showCustomHeaderImage.collectAsState()
@@ -690,7 +698,7 @@ fun QuickSettingsPanel(
                 val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
                 val effectiveOuterCorner = panelOuterCorner.dp
 
-                if (!isAndroidOreoStyle) {
+                if (!isFlatLegacyStyle) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -2053,6 +2061,7 @@ fun UnifiedQsPanel(
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val isAndroidOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
+    val isAndroidMarshmallowStyle by PanelPreferences.isAndroidMarshmallowStyle.collectAsState()
     val effectiveRows = if (isLandscape) 1 else gridLayout.rows.coerceAtLeast(1)
     val effectiveColumns = gridLayout.columns.coerceAtLeast(1)
     val tilesPerPage = remember(activeTiles, effectiveRows, effectiveColumns) { (effectiveColumns * effectiveRows).coerceAtLeast(1) }
@@ -2102,7 +2111,284 @@ fun UnifiedQsPanel(
     }
 
     val qsCardContent: @Composable () -> Unit = {
-        if (isAndroidOreoStyle) {
+        if (isAndroidMarshmallowStyle) {
+            val darkHeaderBg = Color(MonetThemeHelper.getSurfaceBackground(context, isDark))
+            val bodyBg = Color(MonetThemeHelper.getCardBackground(context, isDark))
+            val textLightSecondary = Color(MonetThemeHelper.getTextSecondary(context, isDark))
+            val headerTextColor = Color(MonetThemeHelper.getTextPrimary(context, isDark))
+            val primaryColor = com.example.ui.theme.getQsTilesElementColor(isDark)
+            val now = remember { java.util.Date() }
+            val timeFormatter = remember { java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()) }
+            val dateFormatter = remember { java.text.SimpleDateFormat("EEEE, MMMM d", java.util.Locale.getDefault()) }
+            val batteryInfo = rememberQqsBatteryState()
+
+            val panelGlobalCornerEnabled by PanelPreferences.panelGlobalCornerEnabled.collectAsState()
+            val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
+            val panelInnerCorner by PanelPreferences.panelInnerCorner.collectAsState()
+            val effectiveOuterCorner = panelOuterCorner.dp
+            val effectiveInnerCorner = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner).dp
+
+            val brightnessAtBottom by PanelPreferences.brightnessAtBottom.collectAsState()
+            val brightnessInQqs by PanelPreferences.brightnessInQqs.collectAsState()
+
+            if (isEditingTiles) {
+                EditModeTileStudio(
+                    activeTiles = activeTiles,
+                    inactiveTiles = inactiveTiles,
+                    gridLayout = gridLayout,
+                    editScrollState = editScrollState ?: rememberScrollState(),
+                    onDragStateChange = onTileDragStateChange,
+                    onTilesUpdated = onTilesReordered,
+                    onDone = onToggleEditMode
+                )
+            } else {
+                ContainerCard(
+                    shape = RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomStart = effectiveOuterCorner, bottomEnd = effectiveOuterCorner),
+                    containerColor = if (morphProgress < 0.5f && !isLandscape) darkHeaderBg else bodyBg,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight()
+                        .then(shadeDragModifier)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .wrapContentHeight()
+                    ) {
+                        if (morphProgress < 0.5f && !isLandscape) {
+                            // --- COLLAPSED STATE (QQS / Closed Shade - as shown in USB screenshot) ---
+                            // Compact top status header sitting directly above the notification list.
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(darkHeaderBg)
+                            ) {
+                                if (brightnessInQqs && !brightnessAtBottom) {
+                                    Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
+                                        BrightnessSliderRow(
+                                            brightness = brightness,
+                                            onBrightnessChange = onBrightnessChange,
+                                            sliderAlpha = 1f,
+                                            sliderHeight = 36.dp,
+                                            isAtBottom = false,
+                                            isQqs = true
+                                        )
+                                    }
+                                }
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(
+                                        modifier = Modifier.clickable { launchClockApp(context); onClosePanel() }
+                                    ) {
+                                        Text(
+                                            text = timeFormatter.format(now),
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = headerTextColor
+                                        )
+                                        Text(
+                                            text = dateFormatter.format(now),
+                                            fontSize = 12.sp,
+                                            color = textLightSecondary,
+                                            modifier = Modifier.padding(top = 2.dp)
+                                        )
+                                    }
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Wifi,
+                                            contentDescription = "Wi-Fi",
+                                            tint = headerTextColor,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.CellTower,
+                                            contentDescription = "Signal",
+                                            tint = headerTextColor,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Icon(
+                                            imageVector = if (batteryInfo.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
+                                            contentDescription = "Battery",
+                                            tint = headerTextColor,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+
+                                if (brightnessInQqs && brightnessAtBottom) {
+                                    Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
+                                        BrightnessSliderRow(
+                                            brightness = brightness,
+                                            onBrightnessChange = onBrightnessChange,
+                                            sliderAlpha = 1f,
+                                            sliderHeight = 36.dp,
+                                            isAtBottom = true,
+                                            isQqs = true
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            // --- EXPANDED STATE (Full QS Panel) ---
+                            // 1. Darker top status header (Monet Surface palette)
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(darkHeaderBg)
+                                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = carrierName.ifBlank { "Emergency calls only" },
+                                        fontSize = 13.sp,
+                                        color = textLightSecondary
+                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Text(
+                                            text = "${batteryInfo.percentage}%",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = headerTextColor
+                                        )
+                                        Icon(
+                                            imageVector = if (batteryInfo.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
+                                            contentDescription = "Battery",
+                                            tint = headerTextColor,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        IconButton(
+                                            onClick = {
+                                                try {
+                                                    val intent = Intent(Settings.ACTION_SETTINGS).apply {
+                                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                    }
+                                                    context.startActivity(intent)
+                                                } catch (_: Throwable) {}
+                                                onClosePanel()
+                                            },
+                                            modifier = Modifier.size(26.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Settings,
+                                                contentDescription = "Settings",
+                                                tint = headerTextColor,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Text(
+                                    text = timeFormatter.format(now),
+                                    fontSize = 26.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = headerTextColor,
+                                    modifier = Modifier.clickable { launchClockApp(context); onClosePanel() }
+                                )
+                                Text(
+                                    text = dateFormatter.format(now),
+                                    fontSize = 13.sp,
+                                    color = textLightSecondary,
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+                            }
+
+                            // 2. Main QS Body (Monet Card palette)
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(bodyBg)
+                                    .padding(horizontal = 14.dp, vertical = 12.dp)
+                            ) {
+                                if (!brightnessAtBottom) {
+                                    BrightnessSliderRow(
+                                        brightness = brightness,
+                                        onBrightnessChange = onBrightnessChange,
+                                        sliderAlpha = 1f,
+                                        sliderHeight = 36.dp,
+                                        isAtBottom = false,
+                                        isQqs = false
+                                    )
+
+                                    Spacer(modifier = Modifier.height(14.dp))
+                                }
+
+                                MarshmallowTilesGrid(
+                                    activeTiles = activeTiles,
+                                    primaryAccent = primaryColor,
+                                    onTileClick = onTileClick,
+                                    onTileLongClick = onTileLongClick
+                                )
+
+                                if (brightnessAtBottom) {
+                                    Spacer(modifier = Modifier.height(14.dp))
+
+                                    BrightnessSliderRow(
+                                        brightness = brightness,
+                                        onBrightnessChange = onBrightnessChange,
+                                        sliderAlpha = 1f,
+                                        sliderHeight = 36.dp,
+                                        isAtBottom = true,
+                                        isQqs = false
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(40.dp),
+                                    horizontalArrangement = Arrangement.End,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    IconButton(
+                                        onClick = onToggleEditMode,
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Edit Tiles",
+                                            tint = headerTextColor
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    IconButton(
+                                        onClick = { onCollapseToQqs() },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.KeyboardArrowUp,
+                                            contentDescription = "Collapse",
+                                            tint = headerTextColor
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else if (isAndroidOreoStyle) {
             val solidOreoBg = Color(MonetThemeHelper.getSurfaceBackground(context, isDark))
             val showCustomHeaderImage by PanelPreferences.showCustomHeaderImage.collectAsState()
             val customHeaderImageUri by PanelPreferences.customHeaderImageUri.collectAsState()
@@ -3699,7 +3985,9 @@ fun NotificationItemRow(
     }
 
     val isAndroidOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
-    val notifContainerColor = if (isAndroidOreoStyle) {
+    val isAndroidMarshmallowStyle by PanelPreferences.isAndroidMarshmallowStyle.collectAsState()
+    val isFlatLegacyStyle = isAndroidOreoStyle || isAndroidMarshmallowStyle
+    val notifContainerColor = if (isFlatLegacyStyle) {
         if (isDark) Color(0xFF212121) else Color.White
     } else {
         com.example.ui.theme.getQsNotificationContainerColor(isDark)
@@ -4837,6 +5125,217 @@ fun InactiveTileItem(
                         tint = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(13.dp)
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MarshmallowTileIcon(
+    tile: QsTileModel,
+    tint: Color,
+    modifier: Modifier = Modifier.size(28.dp)
+) {
+    val context = LocalContext.current
+    val resId = remember(tile.id, tile.state) {
+        com.example.ui.tile.QsTileIconHelper.getTileIconResId(tile)
+    }
+
+    if (resId != null) {
+        Icon(
+            imageVector = ImageVector.vectorResource(resId),
+            contentDescription = tile.label,
+            tint = tint,
+            modifier = modifier
+        )
+    } else {
+        val drawable = remember(tile.id, tile.state, tile.externalDrawable) {
+            com.example.ui.tile.QsTileIconHelper.getTileDrawable(context, tile)
+        }
+        val bitmap = remember(drawable) {
+            drawable?.let { AppIconBitmapCache.getOrCreate(it) }
+        }
+        val safeImageBitmap = remember(bitmap) {
+            if (bitmap != null && !bitmap.isRecycled) {
+                try { bitmap.asImageBitmap() } catch (_: Throwable) { null }
+            } else null
+        }
+
+        if (safeImageBitmap != null) {
+            Image(
+                bitmap = safeImageBitmap,
+                contentDescription = tile.label,
+                colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(tint),
+                modifier = modifier
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.Wifi,
+                contentDescription = tile.label,
+                tint = tint,
+                modifier = modifier
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun MarshmallowTileItem(
+    tile: QsTileModel,
+    primaryAccent: Color,
+    isTopTile: Boolean,
+    onTileClick: (QsTileModel) -> Unit,
+    onTileLongClick: (QsTileModel) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val isDark = LocalIsDarkTheme.current
+    val isActive = tile.state == TileState.ACTIVE
+
+    val textPrimary = Color(MonetThemeHelper.getTextPrimary(context, isDark))
+    val textSecondary = Color(MonetThemeHelper.getTextSecondary(context, isDark))
+
+    val iconTint = if (isActive) primaryAccent else textSecondary
+    val textTint = if (isActive) textPrimary else textSecondary
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+            .combinedClickable(
+                onClick = { onTileClick(tile) },
+                onLongClick = { onTileLongClick(tile) }
+            )
+            .padding(vertical = if (isTopTile) 4.dp else 6.dp)
+    ) {
+        MarshmallowTileIcon(
+            tile = tile,
+            tint = iconTint,
+            modifier = Modifier.size(28.dp)
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = if (isTopTile) "${tile.subtitle.ifBlank { tile.label }} ▼" else tile.label,
+            fontSize = 12.sp,
+            fontWeight = if (isTopTile) FontWeight.Medium else FontWeight.Normal,
+            color = textTint,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun MarshmallowTilesGrid(
+    activeTiles: List<QsTileModel>,
+    primaryAccent: Color,
+    onTileClick: (QsTileModel) -> Unit,
+    onTileLongClick: (QsTileModel) -> Unit
+) {
+    if (activeTiles.isEmpty()) return
+
+    val context = LocalContext.current
+    val isDark = LocalIsDarkTheme.current
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        val topTiles = activeTiles.take(2)
+        val remainingTiles = if (activeTiles.size > 2) activeTiles.drop(2) else emptyList()
+
+        if (topTiles.isNotEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (topTiles.size == 1) {
+                    Spacer(modifier = Modifier.weight(0.5f))
+                    MarshmallowTileItem(
+                        tile = topTiles[0],
+                        primaryAccent = primaryAccent,
+                        isTopTile = true,
+                        onTileClick = onTileClick,
+                        onTileLongClick = onTileLongClick,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.weight(0.5f))
+                } else {
+                    topTiles.forEach { tile ->
+                        MarshmallowTileItem(
+                            tile = tile,
+                            primaryAccent = primaryAccent,
+                            isTopTile = true,
+                            onTileClick = onTileClick,
+                            onTileLongClick = onTileLongClick,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+
+            HorizontalDivider(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                thickness = 1.dp,
+                color = Color(MonetThemeHelper.getCardOutline(context, isDark)).copy(alpha = 0.35f)
+            )
+        }
+
+        val rows = remainingTiles.chunked(3)
+        rows.forEach { rowTiles ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                when (rowTiles.size) {
+                    1 -> {
+                        Spacer(modifier = Modifier.weight(1f))
+                        MarshmallowTileItem(
+                            tile = rowTiles[0],
+                            primaryAccent = primaryAccent,
+                            isTopTile = false,
+                            onTileClick = onTileClick,
+                            onTileLongClick = onTileLongClick,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                    2 -> {
+                        Spacer(modifier = Modifier.weight(0.5f))
+                        MarshmallowTileItem(
+                            tile = rowTiles[0],
+                            primaryAccent = primaryAccent,
+                            isTopTile = false,
+                            onTileClick = onTileClick,
+                            onTileLongClick = onTileLongClick,
+                            modifier = Modifier.weight(1f)
+                        )
+                        MarshmallowTileItem(
+                            tile = rowTiles[1],
+                            primaryAccent = primaryAccent,
+                            isTopTile = false,
+                            onTileClick = onTileClick,
+                            onTileLongClick = onTileLongClick,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(modifier = Modifier.weight(0.5f))
+                    }
+                    3 -> {
+                        rowTiles.forEach { tile ->
+                            MarshmallowTileItem(
+                                tile = tile,
+                                primaryAccent = primaryAccent,
+                                isTopTile = false,
+                                onTileClick = onTileClick,
+                                onTileLongClick = onTileLongClick,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
                 }
             }
         }

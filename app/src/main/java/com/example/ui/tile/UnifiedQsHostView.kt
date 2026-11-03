@@ -105,19 +105,20 @@ class UnifiedQsHostView @JvmOverloads constructor(
 
         // 1. Monet Themed Card Background
         val isOreo = com.example.data.PanelPreferences.isAndroidOreoStyle(context)
-        val cardBg = if (isOreo) {
-            MonetThemeHelper.getSurfaceBackground(context, isDark)
-        } else {
-            MonetThemeHelper.getCardBackground(context, isDark)
+        val isMarshmallow = com.example.data.PanelPreferences.isAndroidMarshmallowStyle(context)
+        val cardBg = when {
+            isMarshmallow -> android.graphics.Color.parseColor("#37474F")
+            isOreo -> MonetThemeHelper.getSurfaceBackground(context, isDark)
+            else -> MonetThemeHelper.getCardBackground(context, isDark)
         }
         val cardOutline = MonetThemeHelper.getCardOutline(context, isDark)
-        val cornerRadius = if (isOreo) 0f else (24f * density)
+        val cornerRadius = if (isOreo || isMarshmallow) 0f else (24f * density)
 
         background = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             this.cornerRadius = cornerRadius
             setColor(cardBg)
-            if (!isOreo) {
+            if (!isOreo && !isMarshmallow) {
                 setStroke(1, cardOutline)
             }
         }

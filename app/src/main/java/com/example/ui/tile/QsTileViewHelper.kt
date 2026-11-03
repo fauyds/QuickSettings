@@ -85,9 +85,10 @@ object QsTileViewHelper {
         }
 
         val isOutlineEnabled = PanelPreferences.tileOutlineEnabled.value
-        val isOreoStyle = PanelPreferences.isAndroidOreoStyle(context)
+        val isClassicStyle = PanelPreferences.isClassicStyle(context)
+        val isBareIconStyle = isClassicStyle
 
-        val fgColor = if (isOreoStyle) {
+        val fgColor = if (isBareIconStyle) {
             when (tile.state) {
                 TileState.ACTIVE -> primaryAccent
                 TileState.INACTIVE -> if (isDark) Color.parseColor("#CCCCCC") else Color.parseColor("#555555")
@@ -125,7 +126,7 @@ object QsTileViewHelper {
 
         val rippleColor = if (isDark) Color.parseColor("#44FFFFFF") else Color.parseColor("#33000000")
 
-        if (isOreoStyle) {
+        if (isBareIconStyle) {
             flIconBg.background = RippleDrawable(ColorStateList.valueOf(rippleColor), null, null)
         } else {
             val shapeDrawable = if (showQsTileGradient && isActive && !isOutlineEnabled) {

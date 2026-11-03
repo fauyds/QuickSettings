@@ -95,6 +95,8 @@ import androidx.compose.material3.HorizontalDivider
 fun QsTweaksSection(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val isAndroidOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
+    val isAndroidMarshmallowStyle by PanelPreferences.isAndroidMarshmallowStyle.collectAsState()
+    val isClassicStyle = isAndroidOreoStyle || isAndroidMarshmallowStyle
     val gridLayout by PanelPreferences.gridLayout.collectAsState()
     val dragHandleLength by PanelPreferences.dragHandleLength.collectAsState()
     val datePosition by PanelPreferences.datePosition.collectAsState()
@@ -347,7 +349,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                     }
                 }
 
-                if (isAndroidOreoStyle) {
+                if (isClassicStyle) {
                     val isHidden = datePosition == DatePosition.HIDDEN
                     val options = listOf("Shown", "Hidden")
                     val selectedOption = if (isHidden) "Hidden" else "Shown"
@@ -477,7 +479,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                     }
                 }
 
-                if (isAndroidOreoStyle) {
+                if (isClassicStyle) {
                     val isHidden = editButtonPosition == EditButtonPosition.NONE
                     val options = listOf("Shown", "Hidden")
                     val selectedOption = if (isHidden) "Hidden" else "Shown"
@@ -608,7 +610,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                     }
                 }
 
-                if (isAndroidOreoStyle) {
+                if (isClassicStyle) {
                     val isHidden = batteryPercentageLocation == BatteryPercentageLocation.HIDDEN
                     val options = listOf("Shown", "Hidden")
                     val selectedOption = if (isHidden) "Hidden" else "Shown"
@@ -739,7 +741,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                     }
                 }
 
-                if (isAndroidOreoStyle) {
+                if (isClassicStyle) {
                     val isHidden = settingsIconLocation == SettingsIconLocation.HIDDEN
                     val options = listOf("Shown", "Hidden")
                     val selectedOption = if (isHidden) "Hidden" else "Shown"
@@ -2112,7 +2114,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)
     ) {
         // 1. Pinned Cards at the very top of Quick Settings Tweaks
-        val hiddenInOreoTweakIds = if (isAndroidOreoStyle) {
+        val hiddenInOreoTweakIds = if (isClassicStyle) {
             setOf(
                 "qs_drag_handle_length_card",
                 "hide_date_in_expanded_card",
@@ -2161,7 +2163,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         }
 
         // 3. Unpinned Drag Handle Options
-        if (!isAndroidOreoStyle && !pinnedIds.contains("qs_drag_handle_length_card")) {
+        if (!isClassicStyle && !pinnedIds.contains("qs_drag_handle_length_card")) {
             CollapsibleSubheaderSection(
                 title = "Drag Handle Options",
                 icon = androidx.compose.material.icons.Icons.Default.DragHandle
@@ -2211,9 +2213,9 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         // 6. Unpinned Typography & Font Sizes
         val unpinnedTypography = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
         if (!pinnedIds.contains("qs_tile_font_size_card")) unpinnedTypography.add(tileFontSizeCard)
-        if (!isAndroidOreoStyle && !pinnedIds.contains("hide_date_in_expanded_card")) unpinnedTypography.add(hideDateInExpandedCard)
+        if (!isClassicStyle && !pinnedIds.contains("hide_date_in_expanded_card")) unpinnedTypography.add(hideDateInExpandedCard)
         if (!pinnedIds.contains("disable_labels_in_expanded_card")) unpinnedTypography.add(disableLabelsInExpandedCard)
-        if (!isAndroidOreoStyle && !pinnedIds.contains("hide_qqs_drag_handle_card")) unpinnedTypography.add(hideQqsDragHandleCard)
+        if (!isClassicStyle && !pinnedIds.contains("hide_qqs_drag_handle_card")) unpinnedTypography.add(hideQqsDragHandleCard)
         if (!pinnedIds.contains("hide_qqs_empty_notif_labels_card")) unpinnedTypography.add(hideQqsEmptyNotifLabelsCard)
 
         if (unpinnedTypography.isNotEmpty()) {

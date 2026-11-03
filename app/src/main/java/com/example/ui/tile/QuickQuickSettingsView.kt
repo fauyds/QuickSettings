@@ -54,7 +54,12 @@ class QuickQuickSettingsView @JvmOverloads constructor(
 
     init {
         val isOreo = com.example.data.PanelPreferences.isAndroidOreoStyle(context)
-        val layoutRes = if (isOreo) R.layout.layout_qqs_panel_oreo else R.layout.layout_qqs_panel
+        val isMarshmallow = com.example.data.PanelPreferences.isAndroidMarshmallowStyle(context)
+        val layoutRes = when {
+            isMarshmallow -> R.layout.layout_qqs_panel_marshmallow
+            isOreo -> R.layout.layout_qqs_panel_oreo
+            else -> R.layout.layout_qqs_panel
+        }
         val root = LayoutInflater.from(context).inflate(layoutRes, this, true)
 
         llContainer = root.findViewById(R.id.ll_qqs_container)
@@ -219,9 +224,19 @@ class QuickQuickSettingsView @JvmOverloads constructor(
             setColor(handleColor)
         }
 
-        // 5. Oreo Style Specific Formatting
+        // 5. Style Specific Formatting
         val isOreo = com.example.data.PanelPreferences.isAndroidOreoStyle(context)
-        if (isOreo) {
+        val isMarshmallow = com.example.data.PanelPreferences.isAndroidMarshmallowStyle(context)
+        if (isMarshmallow) {
+            val now = java.util.Date()
+            val timeFormatter = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+            val dateFormatter = java.text.SimpleDateFormat("EEEE, MMMM d", java.util.Locale.getDefault())
+            tvOreoTopTime?.text = timeFormatter.format(now)
+            tvOreoTopTime?.setTextColor(Color.WHITE)
+            tvOreoDate?.text = dateFormatter.format(now)
+            tvOreoDate?.setTextColor(Color.parseColor("#FFB0BEC5"))
+            llContainer.setBackgroundColor(Color.parseColor("#263238"))
+        } else if (isOreo) {
             val now = java.util.Date()
             val dateFormatter = java.text.SimpleDateFormat("EEE, MMM d", java.util.Locale.getDefault())
             val timeFormatter = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())

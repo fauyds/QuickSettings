@@ -22,6 +22,17 @@ enum class ThemeMode(val id: String, val displayName: String) {
     }
 }
 
+enum class QsPanelStyle(val id: String, val displayName: String, val description: String) {
+    DEFAULT("default", "Default (Modern)", "Modern Jetpack Compose dynamic theme layout"),
+    ANDROID_OREO("android_oreo", "Android 8.0 Oreo Style", "Classic Android 8.0 Oreo Quick Settings layout"),
+    ANDROID_MARSHMALLOW("android_marshmallow", "Android 6.0 Marshmallow Style", "Classic Android 6.0 Marshmallow two-tone flat Quick Settings layout");
+
+    companion object {
+        fun fromId(id: String?): QsPanelStyle =
+            entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: DEFAULT
+    }
+}
+
 enum class ScreenRecordResolution(val id: String, val title: String, val subtitle: String, val targetWidth: Int?) {
     NATIVE("native", "Native", "Device display resolution", null),
     RES_1080P("1080p", "1080p Full HD", "1080p (High clarity)", 1080),
@@ -284,9 +295,16 @@ object PanelPreferences {
     private const val KEY_COLLAPSE_EXPAND_OPTIONS = "collapse_expand_options"
     private const val KEY_COLLAPSE_EXPAND_SUBHEADERS = "collapse_expand_subheaders"
     private const val KEY_ANDROID_OREO_STYLE = "android_oreo_style"
+    private const val KEY_PANEL_STYLE = "qs_panel_style"
+
+    private val _panelStyle = MutableStateFlow(QsPanelStyle.DEFAULT)
+    val panelStyle: StateFlow<QsPanelStyle> = _panelStyle.asStateFlow()
 
     private val _isAndroidOreoStyle = MutableStateFlow(false)
     val isAndroidOreoStyle: StateFlow<Boolean> = _isAndroidOreoStyle.asStateFlow()
+
+    private val _isAndroidMarshmallowStyle = MutableStateFlow(false)
+    val isAndroidMarshmallowStyle: StateFlow<Boolean> = _isAndroidMarshmallowStyle.asStateFlow()
 
     private val _showCustomHeaderImage = MutableStateFlow(false)
     val showCustomHeaderImage: StateFlow<Boolean> = _showCustomHeaderImage.asStateFlow()
@@ -1166,8 +1184,17 @@ object PanelPreferences {
         }
         _progressBarStyle.value = resolvedStyle
         _wavyProgressBars.value = (resolvedStyle == ProgressBarStyle.WAVY)
-        _enableContainerBlur.value = prefs.getBoolean(KEY_ENABLE_CONTAINER_BLUR, false)
-        _isAndroidOreoStyle.value = prefs.getBoolean(KEY_ANDROID_OREO_STYLE, false)
+        val savedPanelStyleId = prefs.getString(KEY_PANEL_STYLE, null)
+        val resolvedPanelStyle = if (savedPanelStyleId != null) {
+            QsPanelStyle.fromId(savedPanelStyleId)
+        } else if (prefs.getBoolean(KEY_ANDROID_OREO_STYLE, false)) {
+            QsPanelStyle.ANDROID_OREO
+        } else {
+            QsPanelStyle.DEFAULT
+        }
+        _panelStyle.value = resolvedPanelStyle
+        _isAndroidOreoStyle.value = (resolvedPanelStyle == QsPanelStyle.ANDROID_OREO)
+        _isAndroidMarshmallowStyle.value = (resolvedPanelStyle == QsPanelStyle.ANDROID_MARSHMALLOW)
         _invisibleStatusBarTrigger.value = prefs.getBoolean(KEY_INVISIBLE_STATUS_BAR_TRIGGER, false)
         _forceImmersiveTrigger.value = prefs.getBoolean(KEY_FORCE_IMMERSIVE_TRIGGER, false)
         _overrideSystemQs.value = prefs.getBoolean(KEY_OVERRIDE_SYSTEM_QS, false)
@@ -1487,14 +1514,32 @@ object PanelPreferences {
         prefs.edit().putBoolean(KEY_ENABLE_CUSTOM_VOLUME_PANEL, enabled).apply()
     }
 
+    fun setPanelStyle(context: Context, style: QsPanelStyle) {
+        _panelStyle.value = style
+        _isAndroidOreoStyle.value = (style == QsPanelStyle.ANDROID_OREO)
+        _isAndroidMarshmallowStyle.value = (style == QsPanelStyle.ANDROID_MARSHMALLOW)
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString(KEY_PANEL_STYLE, style.id)
+            .putBoolean(KEY_ANDROID_OREO_STYLE, style == QsPanelStyle.ANDROID_OREO)
+            .apply()
+    }
+
     fun isAndroidOreoStyle(context: Context): Boolean {
-        return _isAndroidOreoStyle.value || context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_ANDROID_OREO_STYLE, false)
+        return _isAndroidOreoStyle.value || (_panelStyle.value == QsPanelStyle.ANDROID_OREO)
+    }
+
+    fun isAndroidMarshmallowStyle(context: Context): Boolean {
+        return _isAndroidMarshmallowStyle.value || (_panelStyle.value == QsPanelStyle.ANDROID_MARSHMALLOW)
+    }
+
+    fun isClassicStyle(context: Context): Boolean {
+        return isAndroidOreoStyle(context) || isAndroidMarshmallowStyle(context)
     }
 
     fun setAndroidOreoStyle(context: Context, enabled: Boolean) {
-        _isAndroidOreoStyle.value = enabled
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_ANDROID_OREO_STYLE, enabled).apply()
+        val style = if (enabled) QsPanelStyle.ANDROID_OREO else QsPanelStyle.DEFAULT
+        setPanelStyle(context, style)
     }
 
     fun setTileHidden(context: Context, tileId: String, hidden: Boolean) {

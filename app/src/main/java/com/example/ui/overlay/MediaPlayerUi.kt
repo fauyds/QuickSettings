@@ -190,9 +190,11 @@ fun AdaptiveMediaPlayerCard(
     onCloseClick: () -> Unit = {},
     onCardClick: () -> Unit = {}
 ) {
-    val isOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
-    val effectiveCornerRadius = if (isOreoStyle) 0.dp else cornerRadius
-    val cardShape = if (isOreoStyle) RoundedCornerShape(0.dp) else RoundedCornerShape(effectiveCornerRadius)
+    val isAndroidOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
+    val isAndroidMarshmallowStyle by PanelPreferences.isAndroidMarshmallowStyle.collectAsState()
+    val isClassicStyle = isAndroidOreoStyle || isAndroidMarshmallowStyle
+    val effectiveCornerRadius = if (isClassicStyle) 0.dp else cornerRadius
+    val cardShape = if (isClassicStyle) RoundedCornerShape(0.dp) else RoundedCornerShape(effectiveCornerRadius)
     val activeSessions = if (sessions.isNotEmpty()) sessions else listOf(mediaState)
     val coroutineScope = rememberCoroutineScope()
     val pagerState = rememberPagerState(
@@ -244,7 +246,7 @@ fun AdaptiveMediaPlayerCard(
     val panelShadowOffsetY by PanelPreferences.panelShadowOffsetY.collectAsState()
     val panelShadowAlpha by PanelPreferences.panelShadowAlpha.collectAsState()
 
-    val shadowModifier = if (!isOreoStyle && enablePanelShadows && panelShadowElevation > 0f) {
+    val shadowModifier = if (!isClassicStyle && enablePanelShadows && panelShadowElevation > 0f) {
         Modifier
             .drawBehind {
                 val shadowRadius = panelShadowElevation.dp.toPx()
@@ -285,15 +287,15 @@ fun AdaptiveMediaPlayerCard(
             .then(shadowModifier)
     ) {
         Surface(
-            shape = if (isOreoStyle) RoundedCornerShape(0.dp) else cardShape,
+            shape = if (isClassicStyle) RoundedCornerShape(0.dp) else cardShape,
             color = cardColor,
             tonalElevation = 0.dp,
             shadowElevation = 0.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(if (isOreoStyle) RoundedCornerShape(0.dp) else cardShape)
+                .clip(if (isClassicStyle) RoundedCornerShape(0.dp) else cardShape)
                 .then(
-                    if (isOreoStyle) {
+                    if (isClassicStyle) {
                         Modifier.drawBehind {
                             val strokeWidth = 1.dp.toPx()
                             val lineColor = if (isDark) Color.White.copy(alpha = 0.2f) else Color.Black.copy(alpha = 0.2f)
@@ -906,9 +908,9 @@ fun AndroidQMediaNotificationCard(
     val displayTitle = mediaState.title.ifBlank { "Track Title" }
     val displayArtist = mediaState.artist.ifBlank { "" }
 
-    val isOreoStyle = PanelPreferences.isAndroidOreoStyle(context)
-    val effectiveShape = if (isOreoStyle) RoundedCornerShape(0.dp) else shape
-    val effectiveElevation = if (isOreoStyle) 0.dp else 2.dp
+    val isClassicStyle = PanelPreferences.isClassicStyle(context)
+    val effectiveShape = if (isClassicStyle) RoundedCornerShape(0.dp) else shape
+    val effectiveElevation = if (isClassicStyle) 0.dp else 2.dp
 
     Surface(
         modifier = modifier

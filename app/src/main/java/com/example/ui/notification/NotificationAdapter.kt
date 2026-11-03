@@ -338,10 +338,11 @@ class NotificationAdapter(
             val panelInnerCorner = PanelPreferences.panelInnerCorner.value
 
             val isOreoStyle = PanelPreferences.isAndroidOreoStyle(context)
+            val isMarshmallowStyle = PanelPreferences.isAndroidMarshmallowStyle(context)
             val outerCornerPx = panelOuterCorner * density
             val innerCornerPx = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner) * density
 
-            val radii = if (isOreoStyle) {
+            val radii = if (isOreoStyle || isMarshmallowStyle) {
                 FloatArray(8) { 0f }
             } else {
                 when {
@@ -665,8 +666,10 @@ class NotificationAdapter(
 
             val disableNotifMonet = disableMonetNotifText
             val isOreoStyle = PanelPreferences.isAndroidOreoStyle(context)
+            val isMarshmallowStyle = PanelPreferences.isAndroidMarshmallowStyle(context)
+            val isFlatStyle = isOreoStyle || isMarshmallowStyle
 
-            val textPrimaryColor = if (isOreoStyle) {
+            val textPrimaryColor = if (isFlatStyle) {
                 if (isDark) android.graphics.Color.WHITE else android.graphics.Color.parseColor("#222222")
             } else if (disableNotifMonet) {
                 if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK
@@ -674,7 +677,7 @@ class NotificationAdapter(
                 MonetThemeHelper.getTextPrimary(context, isDark)
             }
 
-            val textSecondaryColor = if (isOreoStyle) {
+            val textSecondaryColor = if (isFlatStyle) {
                 if (isDark) android.graphics.Color.parseColor("#CCCCCC") else android.graphics.Color.parseColor("#555555")
             } else if (disableNotifMonet) {
                 if (isDark) android.graphics.Color.WHITE else android.graphics.Color.BLACK

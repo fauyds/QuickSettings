@@ -76,7 +76,12 @@ class QuickSettingsFullView @JvmOverloads constructor(
 
     init {
         val isOreo = com.example.data.PanelPreferences.isAndroidOreoStyle(context)
-        val layoutRes = if (isOreo) R.layout.layout_full_qs_panel_oreo else R.layout.layout_full_qs_panel
+        val isMarshmallow = com.example.data.PanelPreferences.isAndroidMarshmallowStyle(context)
+        val layoutRes = when {
+            isMarshmallow -> R.layout.layout_full_qs_panel_marshmallow
+            isOreo -> R.layout.layout_full_qs_panel_oreo
+            else -> R.layout.layout_full_qs_panel
+        }
         val root = LayoutInflater.from(context).inflate(layoutRes, this, true)
 
         tvOreoHeaderDate = root.findViewById(R.id.tv_qs_oreo_header_date)
@@ -273,9 +278,25 @@ class QuickSettingsFullView @JvmOverloads constructor(
         btnSettings.setColorFilter(textSecondary)
         btnPower.setColorFilter(textSecondary)
 
-        // 6. Oreo Style Specific Formatting
+        // 6. Style Specific Formatting
         val isOreo = com.example.data.PanelPreferences.isAndroidOreoStyle(context)
-        if (isOreo) {
+        val isMarshmallow = com.example.data.PanelPreferences.isAndroidMarshmallowStyle(context)
+        if (isMarshmallow) {
+            val now = java.util.Date()
+            val timeFormatter = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+            val dateFormatter = java.text.SimpleDateFormat("EEEE, MMMM d", java.util.Locale.getDefault())
+            tvOreoTopTime?.text = timeFormatter.format(now)
+            tvOreoTopTime?.setTextColor(Color.WHITE)
+            tvOreoHeaderDate?.text = dateFormatter.format(now)
+            tvOreoHeaderDate?.setTextColor(Color.parseColor("#FFB0BEC5"))
+            tvOreoTopCarrier?.text = "Emergency calls only"
+            tvOreoTopCarrier?.setTextColor(Color.parseColor("#FFB0BEC5"))
+            tvOreoTopBatteryText?.text = "100%"
+            tvOreoTopBatteryText?.setTextColor(Color.WHITE)
+            ivOreoTopBatteryIcon?.setColorFilter(Color.WHITE)
+            findViewById<View>(R.id.ll_marshmallow_top_header)?.setBackgroundColor(Color.parseColor("#263238"))
+            findViewById<View>(R.id.ll_marshmallow_qs_body)?.setBackgroundColor(Color.parseColor("#37474F"))
+        } else if (isOreo) {
             val now = java.util.Date()
             val headerDateFormatter = java.text.SimpleDateFormat("EEEE, d MMM", java.util.Locale.getDefault())
             val footerDateFormatter = java.text.SimpleDateFormat("EEE, d MMM", java.util.Locale.getDefault())

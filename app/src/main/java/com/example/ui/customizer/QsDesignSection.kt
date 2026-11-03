@@ -169,7 +169,9 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val clearAllFabShape by PanelPreferences.clearAllFabShape.collectAsState()
     val clearAllFabIcon by PanelPreferences.clearAllFabIcon.collectAsState()
     val showMediaInNotifContainer by PanelPreferences.showMediaInNotificationContainer.collectAsState()
+    val currentPanelStyle by PanelPreferences.panelStyle.collectAsState()
     val isAndroidOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
+    val isAndroidMarshmallowStyle by PanelPreferences.isAndroidMarshmallowStyle.collectAsState()
 
     var tileShapesExpanded by rememberSaveable { mutableStateOf(false) }
     var progressBarSliderExpanded by rememberSaveable { mutableStateOf(false) }
@@ -192,75 +194,100 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
     // --- 1. TILE SHAPES & LAYOUT CARDS ---
 
-    // 0. Android 8.0 Oreo Style Card
-    val androidOreoStyleCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
-        PinnableCardWrapper("android_oreo_style_card", CustomizeCategory.QS_DESIGN, "Android 8.0 Oreo Style") {
-            SettingsCard(
-                shape = shape
-            ) {
+    // 0. Quick Settings Style Selector Card
+    val panelStyleCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("panel_style_card", CustomizeCategory.QS_DESIGN, "Quick Settings Panel Style") {
+            SettingsCard(shape = shape) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 18.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.weight(1f)
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(
+                            Icon(
+                                imageVector = Icons.Default.Apps,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = "Quick Settings Style",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Select layout style: Modern, Android 8.0 Oreo, or Android 6.0 Marshmallow.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    com.example.data.QsPanelStyle.entries.forEach { style ->
+                        val isSelected = currentPanelStyle == style
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { PanelPreferences.setPanelStyle(context, style) },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(
+                                width = if (isSelected) 2.dp else 1.dp,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                            )
+                        ) {
+                            Row(
                                 modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primaryContainer),
-                                contentAlignment = Alignment.Center
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Apps,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(
-                                    text = "Android 8.0 Oreo Style",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Enable the classic Android 8.0 Oreo Quick Settings layout with top brightness slider, status subheader, and footer actions.",
-                                    fontSize = 12.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = style.displayName,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = style.description,
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                androidx.compose.material3.RadioButton(
+                                    selected = isSelected,
+                                    onClick = { PanelPreferences.setPanelStyle(context, style) },
+                                    colors = androidx.compose.material3.RadioButtonDefaults.colors(
+                                        selectedColor = MaterialTheme.colorScheme.primary
+                                    )
                                 )
                             }
                         }
-
-                        Switch(
-                            checked = isAndroidOreoStyle,
-                            onCheckedChange = { PanelPreferences.setAndroidOreoStyle(context, it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
-                            ),
-                            modifier = Modifier.testTag("android_oreo_style_switch")
-                        )
                     }
                 }
             }
         }
     }
+
+    val androidOreoStyleCard = panelStyleCard
 
     // 1. QQS Icon Size Card
     val qqsIconSizeCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->

@@ -135,7 +135,7 @@ class NotificationListView @JvmOverloads constructor(
         root.findViewById<ViewGroup>(R.id.ll_notif_list_container)?.apply {
             clipChildren = true
             clipToPadding = false
-            if (PanelPreferences.isAndroidOreoStyle(context)) {
+            if (PanelPreferences.isAndroidOreoStyle(context) || PanelPreferences.isAndroidMarshmallowStyle(context)) {
                 setPadding(0, 0, 0, 0)
             }
         }
@@ -560,7 +560,8 @@ class NotificationListView @JvmOverloads constructor(
 
         // 4. Style Empty State Card ("No notifications")
         val isOreoStyle = PanelPreferences.isAndroidOreoStyle(context)
-        if (isOreoStyle) {
+        val isMarshmallowStyle = PanelPreferences.isAndroidMarshmallowStyle(context)
+        if (isOreoStyle || isMarshmallowStyle) {
             flEmptyCard.background = null
             flEmptyCard.elevation = 0f
             flEmptyCard.translationY = 0f
@@ -683,7 +684,7 @@ class NotificationListView @JvmOverloads constructor(
             adapter?.submitList(notifications.toList())
             adapter?.notifyDataSetChanged()
         }
-        if (PanelPreferences.isAndroidOreoStyle(context)) {
+        if (PanelPreferences.isAndroidOreoStyle(context) || PanelPreferences.isAndroidMarshmallowStyle(context)) {
             llHeader.visibility = View.GONE
             findViewById<View>(R.id.ll_notif_list_container)?.setPadding(0, 0, 0, 0)
         }
