@@ -225,6 +225,7 @@ class QuickQuickSettingsView @JvmOverloads constructor(
             btnOreoSettings?.setColorFilter(textSecondary)
             btnOreoEdit?.setColorFilter(textSecondary)
             ivOreoExpand?.setColorFilter(textSecondary)
+            findViewById<View>(R.id.v_qqs_oreo_tiles_divider)?.setBackgroundColor(if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#33000000"))
 
             val solidBg = MonetThemeHelper.getSurfaceBackground(context, isDark)
             llContainer.setBackgroundColor(solidBg)

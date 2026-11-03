@@ -666,6 +666,7 @@ class NotificationListView @JvmOverloads constructor(
         }
         if (PanelPreferences.isAndroidOreoStyle(context)) {
             llHeader.visibility = View.GONE
+            findViewById<View>(R.id.ll_notif_list_container)?.setPadding(0, 0, 0, 0)
         }
     }
 }

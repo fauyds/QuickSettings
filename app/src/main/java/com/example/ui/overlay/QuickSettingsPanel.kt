@@ -690,88 +690,88 @@ fun QuickSettingsPanel(
                 val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
                 val effectiveOuterCorner = panelOuterCorner.dp
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .then(
-                            when {
-                                showCustomHeaderImage && customHeaderImageUri.isNotBlank() -> {
-                                    Modifier
-                                         .height(customHeaderImageHeight.dp)
-                                         .clip(RoundedCornerShape(effectiveOuterCorner))
-                                         .background(com.example.ui.theme.getQsPanelBackgroundColor(isDark))
+                if (!isAndroidOreoStyle) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(
+                                when {
+                                    showCustomHeaderImage && customHeaderImageUri.isNotBlank() -> {
+                                        Modifier
+                                             .height(customHeaderImageHeight.dp)
+                                             .clip(RoundedCornerShape(effectiveOuterCorner))
+                                             .background(com.example.ui.theme.getQsPanelBackgroundColor(isDark))
+                                    }
+                                    else -> {
+                                        Modifier.wrapContentHeight()
+                                    }
                                 }
-                                else -> {
-                                    Modifier.wrapContentHeight()
-                                }
-                            }
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (showCustomHeaderImage && customHeaderImageUri.isNotBlank()) {
-                        coil.compose.AsyncImage(
-                            model = customHeaderImageUri,
-                            contentDescription = "Custom Header Image",
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .graphicsLayer(alpha = customHeaderImageOpacity),
-                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                        )
-                    }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (showCustomHeaderImage && customHeaderImageUri.isNotBlank()) {
+                            coil.compose.AsyncImage(
+                                model = customHeaderImageUri,
+                                contentDescription = "Custom Header Image",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer(alpha = customHeaderImageOpacity),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                            )
+                        }
 
-                    // Header Bar (Clock, Date, System Settings, Tile Studio, Battery) - hidden in Oreo style
-                    if (!isAndroidOreoStyle) {
+                        // Header Bar (Clock, Date, System Settings, Tile Studio, Battery)
                         Box(modifier = Modifier.fillMaxWidth().then(shadeDragModifier)) {
                             QsHeaderBar(
-                            currentStage = expansionStage,
-                            isEditingTiles = isEditingTiles,
-                            onHeaderClick = {
-                                if (isEditingTiles) {
-                                    saveAndExitEditMode()
-                                } else {
-                                    when (expansionStage) {
-                                        QsExpansionStage.COLLAPSED -> onStageChange(QsExpansionStage.QQS)
-                                        QsExpansionStage.QQS -> onStageChange(QsExpansionStage.FULL_QS)
-                                        QsExpansionStage.FULL_QS -> onStageChange(QsExpansionStage.QQS)
+                                currentStage = expansionStage,
+                                isEditingTiles = isEditingTiles,
+                                onHeaderClick = {
+                                    if (isEditingTiles) {
+                                        saveAndExitEditMode()
+                                    } else {
+                                        when (expansionStage) {
+                                            QsExpansionStage.COLLAPSED -> onStageChange(QsExpansionStage.QQS)
+                                            QsExpansionStage.QQS -> onStageChange(QsExpansionStage.FULL_QS)
+                                            QsExpansionStage.FULL_QS -> onStageChange(QsExpansionStage.QQS)
+                                        }
                                     }
-                                }
-                            },
-                            onTimeClick = {
-                                launchClockApp(context)
-                                onStageChange(QsExpansionStage.COLLAPSED)
-                            },
-                            onDateClick = {
-                                launchCalendarApp(context)
-                                com.example.service.QuickPanelAccessibilityService.hideCustomPanel()
-                                onStageChange(QsExpansionStage.COLLAPSED)
-                            },
-                            onSettingsClick = {
-                                try {
-                                    val intent = Intent(Settings.ACTION_SETTINGS).apply {
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                },
+                                onTimeClick = {
+                                    launchClockApp(context)
+                                    onStageChange(QsExpansionStage.COLLAPSED)
+                                },
+                                onDateClick = {
+                                    launchCalendarApp(context)
+                                    com.example.service.QuickPanelAccessibilityService.hideCustomPanel()
+                                    onStageChange(QsExpansionStage.COLLAPSED)
+                                },
+                                onSettingsClick = {
+                                    try {
+                                        val intent = Intent(Settings.ACTION_SETTINGS).apply {
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        // Ignore
                                     }
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    // Ignore
-                                }
-                                com.example.service.QuickPanelAccessibilityService.hideCustomPanel()
-                                onStageChange(QsExpansionStage.COLLAPSED)
-                            },
-                            onToggleEditMode = {
-                                if (isEditingTiles) {
-                                    saveAndExitEditMode()
-                                } else {
-                                    enterEditMode()
-                                    onStageChange(QsExpansionStage.FULL_QS)
-                                }
-                            },
-                            unreadNotificationCount = notifications.size
-                        )
+                                    com.example.service.QuickPanelAccessibilityService.hideCustomPanel()
+                                    onStageChange(QsExpansionStage.COLLAPSED)
+                                },
+                                onToggleEditMode = {
+                                    if (isEditingTiles) {
+                                        saveAndExitEditMode()
+                                    } else {
+                                        enterEditMode()
+                                        onStageChange(QsExpansionStage.FULL_QS)
+                                    }
+                                },
+                                unreadNotificationCount = notifications.size
+                            )
+                        }
                     }
-                }
-                }
 
-                Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
+                }
 
                 // Expansion Views
                 when (expansionStage) {
@@ -1000,7 +1000,7 @@ fun OreoTopStatusBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(24.dp),
+            .height(28.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -2112,7 +2112,7 @@ fun UnifiedQsPanel(
                     modifier = Modifier
                         .fillMaxWidth()
                         .wrapContentHeight()
-                        .padding(start = 14.dp, end = 14.dp, top = 2.dp, bottom = 8.dp)
+                        .padding(start = 14.dp, end = 14.dp, top = 10.dp, bottom = 0.dp)
                 ) {
                     val oreoBatteryInfo = rememberQqsBatteryState()
                     OreoTopStatusBar(
@@ -2153,6 +2153,7 @@ fun UnifiedQsPanel(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .offset(y = (-4).dp)
                                 .padding(vertical = 4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
@@ -2170,16 +2171,56 @@ fun UnifiedQsPanel(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(6.dp))
+                        HorizontalDivider(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp, bottom = 2.dp)
+                                .layout { measurable, constraints ->
+                                    val horizontalBleed = 14.dp.roundToPx()
+                                    val targetWidth = constraints.maxWidth + horizontalBleed * 2
+                                    val placeable = measurable.measure(
+                                        constraints.copy(
+                                            minWidth = targetWidth,
+                                            maxWidth = targetWidth
+                                        )
+                                    )
+                                    layout(constraints.maxWidth, placeable.height) {
+                                        placeable.placeRelative(-horizontalBleed, 0)
+                                    }
+                                },
+                            thickness = 1.dp,
+                            color = if (isDark) Color(0x33FFFFFF) else Color(0x33000000)
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
 
                         val subheaderTextColor = if (isDark) Color.LightGray else Color(0xFF555555)
+                        val currentDate = remember {
+                            SimpleDateFormat("EEE, MMM d", Locale.getDefault()).format(Date())
+                        }
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(36.dp),
+                                .height(44.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.End
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.clickable {
+                                    launchCalendarApp(context)
+                                    onClosePanel()
+                                }
+                            ) {
+                                Text(
+                                    text = currentDate,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = subheaderTextColor
+                                )
+                            }
+
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -2235,30 +2276,6 @@ fun UnifiedQsPanel(
                             Spacer(modifier = Modifier.height(8.dp))
                         }
 
-                        val fullDateStr = remember {
-                            SimpleDateFormat("EEEE, d MMM", Locale.getDefault()).format(Date())
-                        }
-                        val headerColor = if (isDark) Color.LightGray else Color(0xFF444444)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 4.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = fullDateStr,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = headerColor,
-                                modifier = Modifier.clickable {
-                                    launchCalendarApp(context)
-                                    onClosePanel()
-                                }
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
                         val maxRows = effectiveRows
                         val columns = effectiveColumns
                         val compositionContext = rememberCompositionContext()
@@ -2310,7 +2327,18 @@ fun UnifiedQsPanel(
                                 .height(viewPagerHeightDp)
                         )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        if (brightnessAtBottom) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            BrightnessSliderRow(
+                                brightness = brightness,
+                                onBrightnessChange = onBrightnessChange,
+                                sliderAlpha = 1f,
+                                sliderHeight = 38.dp,
+                                isAtBottom = true,
+                                isQqs = false
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
 
                         val footerTint = if (isDark) Color(0xFFCCCCCC) else Color(0xFF444444)
                         val shortDateStr = remember {
@@ -2319,6 +2347,7 @@ fun UnifiedQsPanel(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .height(48.dp)
                                 .padding(vertical = 4.dp),
                             contentAlignment = Alignment.Center
                         ) {
@@ -2405,17 +2434,6 @@ fun UnifiedQsPanel(
                                     )
                                 }
                             }
-                        }
-                        if (brightnessAtBottom) {
-                            Spacer(modifier = Modifier.height(6.dp))
-                            BrightnessSliderRow(
-                                brightness = brightness,
-                                onBrightnessChange = onBrightnessChange,
-                                sliderAlpha = 1f,
-                                sliderHeight = 38.dp,
-                                isAtBottom = true,
-                                isQqs = false
-                            )
                         }
                     }
                 }
@@ -3199,7 +3217,7 @@ fun UnifiedQsPanel(
                         Modifier.fillMaxHeight()
                     }
                 ),
-            verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)
+            verticalArrangement = Arrangement.spacedBy(if (isAndroidOreoStyle) 0.dp else ExpressiveCardShapes.CardSpacing)
         ) {
             qsCardContent()
             mediaCardContent()

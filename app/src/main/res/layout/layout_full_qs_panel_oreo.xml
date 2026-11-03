@@ -5,14 +5,14 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:paddingHorizontal="14dp"
-    android:paddingTop="2dp"
+    android:paddingTop="10dp"
     android:paddingBottom="8dp">
 
     <!-- Oreo Top Status Bar Row (Carrier on Left, Battery % + Icon + Time on Right) -->
     <LinearLayout
         android:id="@+id/ll_oreo_top_status_bar"
         android:layout_width="match_parent"
-        android:layout_height="26dp"
+        android:layout_height="28dp"
         android:layout_marginBottom="2dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
@@ -165,16 +165,7 @@
         android:nestedScrollingEnabled="false"
         android:overScrollMode="never" />
 
-    <!-- Tile Bottom Divider Line -->
-    <View
-        android:id="@+id/v_qs_oreo_tiles_divider"
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="4dp"
-        android:background="#33888888" />
-
-    <!-- Bottom Brightness Slider Row (Hidden, for exact ID parity) -->
+    <!-- Bottom Brightness Slider Row (Positioned directly below tiles inside container, above footer) -->
     <LinearLayout
         android:id="@+id/ll_qs_bottom_brightness_row"
         android:layout_width="match_parent"
@@ -184,29 +175,38 @@
         android:orientation="horizontal"
         android:visibility="gone">
 
-        <FrameLayout
-            android:id="@+id/fl_qs_bottom_brightness_icon_pill"
-            android:layout_width="32dp"
-            android:layout_height="32dp">
-
-            <ImageView
-                android:id="@+id/iv_qs_bottom_brightness_icon"
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:layout_gravity="center"
-                android:src="@drawable/ic_qs_brightness_low" />
-        </FrameLayout>
-
         <SeekBar
             android:id="@+id/sb_qs_bottom_brightness"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1" />
+            android:layout_weight="1"
+            android:max="255"
+            android:min="5"
+            android:paddingHorizontal="4dp"
+            android:progress="128" />
 
+        <FrameLayout
+            android:id="@+id/fl_qs_bottom_brightness_icon_pill"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="6dp">
+
+            <ImageView
+                android:id="@+id/iv_qs_bottom_brightness_icon"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_gravity="center"
+                android:contentDescription="Brightness"
+                android:src="@drawable/ic_qs_brightness_high" />
+        </FrameLayout>
+
+        <!-- Hidden percentage text for ID parity -->
         <TextView
             android:id="@+id/tv_qs_bottom_brightness_percentage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:visibility="gone"
             android:text="50%" />
     </LinearLayout>
 
@@ -214,8 +214,9 @@
     <RelativeLayout
         android:id="@+id/rl_qs_footer_row"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="48dp"
         android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
         android:paddingVertical="4dp">
 
         <!-- Left: Date indicator -->

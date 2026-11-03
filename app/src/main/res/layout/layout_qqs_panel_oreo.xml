@@ -5,14 +5,14 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:paddingHorizontal="14dp"
-    android:paddingTop="2dp"
-    android:paddingBottom="8dp">
+    android:paddingTop="10dp"
+    android:paddingBottom="0dp">
 
     <!-- Oreo Top Status Bar Row (Carrier on Left, Battery % + Icon + Time on Right) -->
     <LinearLayout
         android:id="@+id/ll_oreo_top_status_bar"
         android:layout_width="match_parent"
-        android:layout_height="26dp"
+        android:layout_height="28dp"
         android:layout_marginBottom="2dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
@@ -114,16 +114,28 @@
         android:id="@+id/ll_qqs_tiles_row"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:translationY="-4dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingVertical="4dp" />
+
+    <!-- Tile Line Separator in QQS (Edge-to-edge) -->
+    <View
+        android:id="@+id/v_qqs_oreo_tiles_divider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginStart="-14dp"
+        android:layout_marginEnd="-14dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="2dp"
+        android:background="#33888888" />
 
     <!-- Oreo QQS Subheader Row (Date/Alarm on Left, Actions & Expand Chevron on Right) -->
     <RelativeLayout
         android:id="@+id/rl_qqs_oreo_subheader"
         android:layout_width="match_parent"
-        android:layout_height="36dp"
-        android:layout_marginTop="6dp"
+        android:layout_height="44dp"
+        android:layout_marginTop="4dp"
         android:gravity="center_vertical">
 
         <!-- Left: Date and Alarm -->
