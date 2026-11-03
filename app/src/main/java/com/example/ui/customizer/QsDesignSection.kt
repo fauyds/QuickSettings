@@ -3506,7 +3506,21 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         "progress_bar_slider_style_card" to progressBarSliderStyleCard,
         "panel_corner_styling_card" to panelCornerStylingCard
     )
-    val pinnedCards = pinnedIds.mapNotNull { pinnedCardsMap[it] }
+    val hiddenInOreoDesignIds = if (isAndroidOreoStyle) {
+        setOf(
+            "tile_shape_selection_card",
+            "tile_outline_card",
+            "qs_tile_gradient_card",
+            "show_carrier_card",
+            "carrier_divider_card",
+            "hide_carrier_in_expanded_card",
+            "custom_header_monet_gradient_card",
+            "panel_corner_styling_card"
+        )
+    } else {
+        emptySet()
+    }
+    val pinnedCards = pinnedIds.filter { !hiddenInOreoDesignIds.contains(it) }.mapNotNull { pinnedCardsMap[it] }
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -3528,9 +3542,9 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         if (!pinnedIds.contains("android_oreo_style_card")) unpinnedTileShapes.add(androidOreoStyleCard)
         if (!pinnedIds.contains("qqs_icon_size_card")) unpinnedTileShapes.add(qqsIconSizeCard)
         if (!pinnedIds.contains("qqs_icon_quantity_card")) unpinnedTileShapes.add(qqsIconQuantityCard)
-        if (!pinnedIds.contains("tile_shape_selection_card")) unpinnedTileShapes.add(tileShapeSelectionCard)
-        if (!pinnedIds.contains("tile_outline_card")) unpinnedTileShapes.add(tileOutlineCard)
-        if (!pinnedIds.contains("qs_tile_gradient_card")) unpinnedTileShapes.add(qsTileGradientCard)
+        if (!isAndroidOreoStyle && !pinnedIds.contains("tile_shape_selection_card")) unpinnedTileShapes.add(tileShapeSelectionCard)
+        if (!isAndroidOreoStyle && !pinnedIds.contains("tile_outline_card")) unpinnedTileShapes.add(tileOutlineCard)
+        if (!isAndroidOreoStyle && !pinnedIds.contains("qs_tile_gradient_card")) unpinnedTileShapes.add(qsTileGradientCard)
         if (!pinnedIds.contains("clear_all_fab_card")) unpinnedTileShapes.add(clearAllFabCard)
         if (!pinnedIds.contains("show_media_in_notif_container_card")) unpinnedTileShapes.add(showMediaInNotifContainerCard)
 
@@ -3547,10 +3561,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
         // 3. SIM Card Carrier
         val unpinnedCarrier = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (!pinnedIds.contains("show_carrier_card")) unpinnedCarrier.add(showCarrierCard)
-        if (showCarrier) {
-            if (!pinnedIds.contains("carrier_divider_card")) unpinnedCarrier.add(carrierDividerCard)
-            if (!pinnedIds.contains("hide_carrier_in_expanded_card")) unpinnedCarrier.add(hideCarrierInExpandedCard)
+        if (!isAndroidOreoStyle) {
+            if (!pinnedIds.contains("show_carrier_card")) unpinnedCarrier.add(showCarrierCard)
+            if (showCarrier) {
+                if (!pinnedIds.contains("carrier_divider_card")) unpinnedCarrier.add(carrierDividerCard)
+                if (!pinnedIds.contains("hide_carrier_in_expanded_card")) unpinnedCarrier.add(hideCarrierInExpandedCard)
+            }
         }
 
         if (unpinnedCarrier.isNotEmpty()) {
@@ -3567,7 +3583,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         // 4. Header & Backgrounds
         val unpinnedHeader = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
         if (!pinnedIds.contains("custom_header_image_card")) unpinnedHeader.add(customHeaderImageCard)
-        if (!pinnedIds.contains("custom_header_monet_gradient_card")) unpinnedHeader.add(customHeaderMonetGradientCard)
+        if (!isAndroidOreoStyle && !pinnedIds.contains("custom_header_monet_gradient_card")) unpinnedHeader.add(customHeaderMonetGradientCard)
         if (!pinnedIds.contains("element_colors_preference_card")) unpinnedHeader.add(elementColorsPreferenceCard)
 
         if (unpinnedHeader.isNotEmpty()) {
@@ -3601,7 +3617,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
         // 6. Panel Corner Styling
         val unpinnedCorners = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (!pinnedIds.contains("panel_corner_styling_card")) unpinnedCorners.add(panelCornerStylingCard)
+        if (!isAndroidOreoStyle && !pinnedIds.contains("panel_corner_styling_card")) unpinnedCorners.add(panelCornerStylingCard)
 
         if (unpinnedCorners.isNotEmpty()) {
             CollapsibleSubheaderSection(

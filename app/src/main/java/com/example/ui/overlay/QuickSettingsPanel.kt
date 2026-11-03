@@ -994,6 +994,8 @@ fun OreoTopStatusBar(
     modifier: Modifier = Modifier
 ) {
     val textColor = if (isDark) Color.LightGray else Color(0xFF555555)
+    val batteryPercentageLocation by PanelPreferences.batteryPercentageLocation.collectAsState()
+    val showBatteryPercent = batteryPercentageLocation != com.example.data.BatteryPercentageLocation.HIDDEN
     val currentTime = remember {
         SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
     }
@@ -1014,12 +1016,14 @@ fun OreoTopStatusBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(
-                text = "$batteryPercent %",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = textColor
-            )
+            if (showBatteryPercent) {
+                Text(
+                    text = "$batteryPercent %",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textColor
+                )
+            }
             Icon(
                 imageVector = if (isBatteryCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
                 contentDescription = "Battery",
@@ -2256,6 +2260,13 @@ fun UnifiedQsPanel(
                         Spacer(modifier = Modifier.height(4.dp))
 
                         val subheaderTextColor = if (isDark) Color.LightGray else Color(0xFF555555)
+                        val datePosition by PanelPreferences.datePosition.collectAsState()
+                        val showDate = datePosition != com.example.data.DatePosition.HIDDEN
+                        val settingsIconLocation by PanelPreferences.settingsIconLocation.collectAsState()
+                        val showSettingsIcon = settingsIconLocation != com.example.data.SettingsIconLocation.HIDDEN
+                        val editButtonPosition by PanelPreferences.editButtonPosition.collectAsState()
+                        val showEditPencil = editButtonPosition != com.example.data.EditButtonPosition.NONE
+
                         val currentDate = remember {
                             SimpleDateFormat("EEE, MMM d", Locale.getDefault()).format(Date())
                         }
@@ -2266,22 +2277,26 @@ fun UnifiedQsPanel(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                modifier = Modifier
-                                    .offset(y = (-3).dp)
-                                    .clickable {
-                                        launchCalendarApp(context)
-                                        onClosePanel()
-                                    }
-                            ) {
-                                Text(
-                                    text = currentDate,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = subheaderTextColor
-                                )
+                            if (showDate) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    modifier = Modifier
+                                        .offset(y = (-3).dp)
+                                        .clickable {
+                                            launchCalendarApp(context)
+                                            onClosePanel()
+                                        }
+                                ) {
+                                    Text(
+                                        text = currentDate,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = subheaderTextColor
+                                    )
+                                }
+                            } else {
+                                Spacer(modifier = Modifier.width(1.dp))
                             }
 
                             Row(
@@ -2289,28 +2304,32 @@ fun UnifiedQsPanel(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                                 modifier = Modifier.offset(y = (-3).dp)
                             ) {
-                                IconButton(
-                                    onClick = onSettingsClick,
-                                    modifier = Modifier.size(30.dp).testTag("oreo_qqs_settings_btn")
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Settings,
-                                        contentDescription = "Settings",
-                                        tint = subheaderTextColor,
-                                        modifier = Modifier.size(18.dp)
-                                    )
+                                if (showSettingsIcon) {
+                                    IconButton(
+                                        onClick = onSettingsClick,
+                                        modifier = Modifier.size(30.dp).testTag("oreo_qqs_settings_btn")
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Settings,
+                                            contentDescription = "Settings",
+                                            tint = subheaderTextColor,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
                                 }
 
-                                IconButton(
-                                    onClick = onToggleEditMode,
-                                    modifier = Modifier.size(30.dp).testTag("oreo_qqs_edit_btn")
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Edit,
-                                        contentDescription = "Edit Tiles",
-                                        tint = subheaderTextColor,
-                                        modifier = Modifier.size(18.dp)
-                                    )
+                                if (showEditPencil) {
+                                    IconButton(
+                                        onClick = onToggleEditMode,
+                                        modifier = Modifier.size(30.dp).testTag("oreo_qqs_edit_btn")
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Edit Tiles",
+                                            tint = subheaderTextColor,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
                                 }
 
                                 IconButton(
@@ -2408,6 +2427,13 @@ fun UnifiedQsPanel(
                         val shortDateStr = remember {
                             SimpleDateFormat("EEE, d MMM", Locale.getDefault()).format(Date())
                         }
+                        val datePositionFull by PanelPreferences.datePosition.collectAsState()
+                        val showDateFull = datePositionFull != com.example.data.DatePosition.HIDDEN
+                        val settingsIconLocationFull by PanelPreferences.settingsIconLocation.collectAsState()
+                        val showSettingsIconFull = settingsIconLocationFull != com.example.data.SettingsIconLocation.HIDDEN
+                        val editButtonPositionFull by PanelPreferences.editButtonPosition.collectAsState()
+                        val showEditPencilFull = editButtonPositionFull != com.example.data.EditButtonPosition.NONE
+
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -2415,18 +2441,20 @@ fun UnifiedQsPanel(
                                 .padding(vertical = 4.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = shortDateStr,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = footerTint,
-                                modifier = Modifier
-                                    .align(Alignment.CenterStart)
-                                    .clickable {
-                                        launchCalendarApp(context)
-                                        onClosePanel()
-                                    }
-                            )
+                            if (showDateFull) {
+                                Text(
+                                    text = shortDateStr,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = footerTint,
+                                    modifier = Modifier
+                                        .align(Alignment.CenterStart)
+                                        .clickable {
+                                            launchCalendarApp(context)
+                                            onClosePanel()
+                                        }
+                                )
+                            }
 
                             if (tilePages.size > 1) {
                                 Row(
@@ -2462,28 +2490,32 @@ fun UnifiedQsPanel(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.align(Alignment.CenterEnd)
                             ) {
-                                IconButton(
-                                    onClick = onToggleEditMode,
-                                    modifier = Modifier.size(32.dp).testTag("oreo_footer_edit_btn")
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Edit,
-                                        contentDescription = "Edit Tiles",
-                                        tint = footerTint,
-                                        modifier = Modifier.size(16.dp)
-                                    )
+                                if (showEditPencilFull) {
+                                    IconButton(
+                                        onClick = onToggleEditMode,
+                                        modifier = Modifier.size(32.dp).testTag("oreo_footer_edit_btn")
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Edit Tiles",
+                                            tint = footerTint,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
                                 }
 
-                                IconButton(
-                                    onClick = onSettingsClick,
-                                    modifier = Modifier.size(32.dp).testTag("oreo_footer_settings_btn")
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Settings,
-                                        contentDescription = "System Settings",
-                                        tint = footerTint,
-                                        modifier = Modifier.size(16.dp)
-                                    )
+                                if (showSettingsIconFull) {
+                                    IconButton(
+                                        onClick = onSettingsClick,
+                                        modifier = Modifier.size(32.dp).testTag("oreo_footer_settings_btn")
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Settings,
+                                            contentDescription = "System Settings",
+                                            tint = footerTint,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
                                 }
 
                                 IconButton(

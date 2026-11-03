@@ -94,6 +94,7 @@ import androidx.compose.material3.HorizontalDivider
 @Composable
 fun QsTweaksSection(modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    val isAndroidOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
     val gridLayout by PanelPreferences.gridLayout.collectAsState()
     val dragHandleLength by PanelPreferences.dragHandleLength.collectAsState()
     val datePosition by PanelPreferences.datePosition.collectAsState()
@@ -346,35 +347,77 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                     }
                 }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val allDatePositions = DatePosition.entries
-                    allDatePositions.forEach { pos ->
-                        val isSelected = datePosition == pos
-                        val chipShape = SegmentedButtonShapes.getShape(
-                            item = pos,
-                            items = allDatePositions,
-                            selectedItem = datePosition
-                        )
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { PanelPreferences.setDatePosition(context, pos) },
-                            label = { Text(pos.label, fontSize = 10.sp) },
-                            shape = chipShape,
-                            border = null,
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                containerColor = MaterialTheme.colorScheme.background,
-                                labelColor = MaterialTheme.colorScheme.onSurface
-                            ),
-                            modifier = Modifier.testTag("date_pos_${pos.id}")
-                        )
+                if (isAndroidOreoStyle) {
+                    val isHidden = datePosition == DatePosition.HIDDEN
+                    val options = listOf("Shown", "Hidden")
+                    val selectedOption = if (isHidden) "Hidden" else "Shown"
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        options.forEach { opt ->
+                            val isSelected = opt == selectedOption
+                            val chipShape = SegmentedButtonShapes.getShape(
+                                item = opt,
+                                items = options,
+                                selectedItem = selectedOption
+                            )
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = {
+                                    if (opt == "Shown") {
+                                        PanelPreferences.setDatePosition(context, DatePosition.BELOW_TIME)
+                                    } else {
+                                        PanelPreferences.setDatePosition(context, DatePosition.HIDDEN)
+                                    }
+                                },
+                                label = { Text(opt, fontSize = 10.sp) },
+                                shape = chipShape,
+                                border = null,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                    containerColor = MaterialTheme.colorScheme.background,
+                                    labelColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                modifier = Modifier.testTag("date_pos_oreo_${opt.lowercase()}")
+                            )
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val allDatePositions = DatePosition.entries
+                        allDatePositions.forEach { pos ->
+                            val isSelected = datePosition == pos
+                            val chipShape = SegmentedButtonShapes.getShape(
+                                item = pos,
+                                items = allDatePositions,
+                                selectedItem = datePosition
+                            )
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { PanelPreferences.setDatePosition(context, pos) },
+                                label = { Text(pos.label, fontSize = 10.sp) },
+                                shape = chipShape,
+                                border = null,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                    containerColor = MaterialTheme.colorScheme.background,
+                                    labelColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                modifier = Modifier.testTag("date_pos_${pos.id}")
+                            )
+                        }
                     }
                 }
             }
@@ -434,35 +477,77 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                     }
                 }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val allEditPositions = EditButtonPosition.entries
-                    allEditPositions.forEach { pos ->
-                        val isSelected = editButtonPosition == pos
-                        val chipShape = SegmentedButtonShapes.getShape(
-                            item = pos,
-                            items = allEditPositions,
-                            selectedItem = editButtonPosition
-                        )
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { PanelPreferences.setEditButtonPosition(context, pos) },
-                            label = { Text(pos.label, fontSize = 10.sp) },
-                            shape = chipShape,
-                            border = null,
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                containerColor = MaterialTheme.colorScheme.background,
-                                labelColor = MaterialTheme.colorScheme.onSurface
-                            ),
-                            modifier = Modifier.testTag("edit_pos_${pos.id}")
-                        )
+                if (isAndroidOreoStyle) {
+                    val isHidden = editButtonPosition == EditButtonPosition.NONE
+                    val options = listOf("Shown", "Hidden")
+                    val selectedOption = if (isHidden) "Hidden" else "Shown"
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        options.forEach { opt ->
+                            val isSelected = opt == selectedOption
+                            val chipShape = SegmentedButtonShapes.getShape(
+                                item = opt,
+                                items = options,
+                                selectedItem = selectedOption
+                            )
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = {
+                                    if (opt == "Shown") {
+                                        PanelPreferences.setEditButtonPosition(context, EditButtonPosition.FOOTER)
+                                    } else {
+                                        PanelPreferences.setEditButtonPosition(context, EditButtonPosition.NONE)
+                                    }
+                                },
+                                label = { Text(opt, fontSize = 10.sp) },
+                                shape = chipShape,
+                                border = null,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                    containerColor = MaterialTheme.colorScheme.background,
+                                    labelColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                modifier = Modifier.testTag("edit_pos_oreo_${opt.lowercase()}")
+                            )
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val allEditPositions = EditButtonPosition.entries
+                        allEditPositions.forEach { pos ->
+                            val isSelected = editButtonPosition == pos
+                            val chipShape = SegmentedButtonShapes.getShape(
+                                item = pos,
+                                items = allEditPositions,
+                                selectedItem = editButtonPosition
+                            )
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { PanelPreferences.setEditButtonPosition(context, pos) },
+                                label = { Text(pos.label, fontSize = 10.sp) },
+                                shape = chipShape,
+                                border = null,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                    containerColor = MaterialTheme.colorScheme.background,
+                                    labelColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                modifier = Modifier.testTag("edit_pos_${pos.id}")
+                            )
+                        }
                     }
                 }
             }
@@ -523,35 +608,77 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                     }
                 }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val allBatteryLocs = BatteryPercentageLocation.entries
-                    allBatteryLocs.forEach { loc ->
-                        val isSelected = batteryPercentageLocation == loc
-                        val chipShape = SegmentedButtonShapes.getShape(
-                            item = loc,
-                            items = allBatteryLocs,
-                            selectedItem = batteryPercentageLocation
-                        )
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { PanelPreferences.setBatteryPercentageLocation(context, loc) },
-                            label = { Text(loc.label, fontSize = 10.sp) },
-                            shape = chipShape,
-                            border = null,
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                containerColor = MaterialTheme.colorScheme.background,
-                                labelColor = MaterialTheme.colorScheme.onSurface
-                            ),
-                            modifier = Modifier.testTag("battery_pos_${loc.id}")
-                        )
+                if (isAndroidOreoStyle) {
+                    val isHidden = batteryPercentageLocation == BatteryPercentageLocation.HIDDEN
+                    val options = listOf("Shown", "Hidden")
+                    val selectedOption = if (isHidden) "Hidden" else "Shown"
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        options.forEach { opt ->
+                            val isSelected = opt == selectedOption
+                            val chipShape = SegmentedButtonShapes.getShape(
+                                item = opt,
+                                items = options,
+                                selectedItem = selectedOption
+                            )
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = {
+                                    if (opt == "Shown") {
+                                        PanelPreferences.setBatteryPercentageLocation(context, BatteryPercentageLocation.HEADER)
+                                    } else {
+                                        PanelPreferences.setBatteryPercentageLocation(context, BatteryPercentageLocation.HIDDEN)
+                                    }
+                                },
+                                label = { Text(opt, fontSize = 10.sp) },
+                                shape = chipShape,
+                                border = null,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                    containerColor = MaterialTheme.colorScheme.background,
+                                    labelColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                modifier = Modifier.testTag("battery_pos_oreo_${opt.lowercase()}")
+                            )
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val allBatteryLocs = BatteryPercentageLocation.entries
+                        allBatteryLocs.forEach { loc ->
+                            val isSelected = batteryPercentageLocation == loc
+                            val chipShape = SegmentedButtonShapes.getShape(
+                                item = loc,
+                                items = allBatteryLocs,
+                                selectedItem = batteryPercentageLocation
+                            )
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { PanelPreferences.setBatteryPercentageLocation(context, loc) },
+                                label = { Text(loc.label, fontSize = 10.sp) },
+                                shape = chipShape,
+                                border = null,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                    containerColor = MaterialTheme.colorScheme.background,
+                                    labelColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                modifier = Modifier.testTag("battery_pos_${loc.id}")
+                            )
+                        }
                     }
                 }
             }
@@ -612,35 +739,77 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                     }
                 }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val allSettingsLocs = SettingsIconLocation.entries
-                    allSettingsLocs.forEach { loc ->
-                        val isSelected = settingsIconLocation == loc
-                        val chipShape = SegmentedButtonShapes.getShape(
-                            item = loc,
-                            items = allSettingsLocs,
-                            selectedItem = settingsIconLocation
-                        )
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { PanelPreferences.setSettingsIconLocation(context, loc) },
-                            label = { Text(loc.label, fontSize = 10.sp) },
-                            shape = chipShape,
-                            border = null,
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                containerColor = MaterialTheme.colorScheme.background,
-                                labelColor = MaterialTheme.colorScheme.onSurface
-                            ),
-                            modifier = Modifier.testTag("settings_pos_${loc.id}")
-                        )
+                if (isAndroidOreoStyle) {
+                    val isHidden = settingsIconLocation == SettingsIconLocation.HIDDEN
+                    val options = listOf("Shown", "Hidden")
+                    val selectedOption = if (isHidden) "Hidden" else "Shown"
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        options.forEach { opt ->
+                            val isSelected = opt == selectedOption
+                            val chipShape = SegmentedButtonShapes.getShape(
+                                item = opt,
+                                items = options,
+                                selectedItem = selectedOption
+                            )
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = {
+                                    if (opt == "Shown") {
+                                        PanelPreferences.setSettingsIconLocation(context, SettingsIconLocation.EXPANDED_QS)
+                                    } else {
+                                        PanelPreferences.setSettingsIconLocation(context, SettingsIconLocation.HIDDEN)
+                                    }
+                                },
+                                label = { Text(opt, fontSize = 10.sp) },
+                                shape = chipShape,
+                                border = null,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                    containerColor = MaterialTheme.colorScheme.background,
+                                    labelColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                modifier = Modifier.testTag("settings_pos_oreo_${opt.lowercase()}")
+                            )
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val allSettingsLocs = SettingsIconLocation.entries
+                        allSettingsLocs.forEach { loc ->
+                            val isSelected = settingsIconLocation == loc
+                            val chipShape = SegmentedButtonShapes.getShape(
+                                item = loc,
+                                items = allSettingsLocs,
+                                selectedItem = settingsIconLocation
+                            )
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { PanelPreferences.setSettingsIconLocation(context, loc) },
+                                label = { Text(loc.label, fontSize = 10.sp) },
+                                shape = chipShape,
+                                border = null,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                    containerColor = MaterialTheme.colorScheme.background,
+                                    labelColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                modifier = Modifier.testTag("settings_pos_${loc.id}")
+                            )
+                        }
                     }
                 }
             }
@@ -1943,24 +2112,33 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)
     ) {
         // 1. Pinned Cards at the very top of Quick Settings Tweaks
+        val hiddenInOreoTweakIds = if (isAndroidOreoStyle) {
+            setOf(
+                "qs_drag_handle_length_card",
+                "hide_date_in_expanded_card",
+                "hide_qqs_drag_handle_card"
+            )
+        } else {
+            emptySet()
+        }
         val pinnedCards = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (pinnedIds.contains("qs_grid_density_card")) pinnedCards.add(gridDensityCard)
-        if (pinnedIds.contains("qs_drag_handle_length_card")) pinnedCards.add(dragHandleLengthCard)
-        if (pinnedIds.contains("date_position_card")) pinnedCards.add(datePositionCard)
-        if (pinnedIds.contains("battery_percentage_location_card")) pinnedCards.add(batteryPercentageLocationCard)
-        if (pinnedIds.contains("settings_icon_location_card")) pinnedCards.add(settingsIconLocationCard)
-        if (pinnedIds.contains("edit_pencil_location_card")) pinnedCards.add(editPencilLocationCard)
-        if (pinnedIds.contains("qs_tile_font_size_card")) pinnedCards.add(tileFontSizeCard)
-        if (pinnedIds.contains("hide_date_in_expanded_card")) pinnedCards.add(hideDateInExpandedCard)
-        if (pinnedIds.contains("disable_labels_in_expanded_card")) pinnedCards.add(disableLabelsInExpandedCard)
-        if (pinnedIds.contains("hide_qqs_drag_handle_card")) pinnedCards.add(hideQqsDragHandleCard)
-        if (pinnedIds.contains("hide_qqs_empty_notif_labels_card")) pinnedCards.add(hideQqsEmptyNotifLabelsCard)
-        if (pinnedIds.contains("hide_brightness_percentage_card")) pinnedCards.add(hideBrightnessPercentageCard)
-        if (pinnedIds.contains("hide_brightness_icon_card")) pinnedCards.add(hideBrightnessIconCard)
-        if (pinnedIds.contains("show_brightness_plus_minus_card")) pinnedCards.add(showBrightnessPlusMinusCard)
-        if (pinnedIds.contains("enable_panel_shadows_card")) pinnedCards.add(enablePanelShadowsCard)
-        if (pinnedIds.contains("disable_clear_all_bg_card")) pinnedCards.add(disableClearAllBgCard)
-        if (pinnedIds.contains("clear_all_fab_offset_card")) pinnedCards.add(clearAllFabOffsetsCard)
+        if (!hiddenInOreoTweakIds.contains("qs_grid_density_card") && pinnedIds.contains("qs_grid_density_card")) pinnedCards.add(gridDensityCard)
+        if (!hiddenInOreoTweakIds.contains("qs_drag_handle_length_card") && pinnedIds.contains("qs_drag_handle_length_card")) pinnedCards.add(dragHandleLengthCard)
+        if (!hiddenInOreoTweakIds.contains("date_position_card") && pinnedIds.contains("date_position_card")) pinnedCards.add(datePositionCard)
+        if (!hiddenInOreoTweakIds.contains("battery_percentage_location_card") && pinnedIds.contains("battery_percentage_location_card")) pinnedCards.add(batteryPercentageLocationCard)
+        if (!hiddenInOreoTweakIds.contains("settings_icon_location_card") && pinnedIds.contains("settings_icon_location_card")) pinnedCards.add(settingsIconLocationCard)
+        if (!hiddenInOreoTweakIds.contains("edit_pencil_location_card") && pinnedIds.contains("edit_pencil_location_card")) pinnedCards.add(editPencilLocationCard)
+        if (!hiddenInOreoTweakIds.contains("qs_tile_font_size_card") && pinnedIds.contains("qs_tile_font_size_card")) pinnedCards.add(tileFontSizeCard)
+        if (!hiddenInOreoTweakIds.contains("hide_date_in_expanded_card") && pinnedIds.contains("hide_date_in_expanded_card")) pinnedCards.add(hideDateInExpandedCard)
+        if (!hiddenInOreoTweakIds.contains("disable_labels_in_expanded_card") && pinnedIds.contains("disable_labels_in_expanded_card")) pinnedCards.add(disableLabelsInExpandedCard)
+        if (!hiddenInOreoTweakIds.contains("hide_qqs_drag_handle_card") && pinnedIds.contains("hide_qqs_drag_handle_card")) pinnedCards.add(hideQqsDragHandleCard)
+        if (!hiddenInOreoTweakIds.contains("hide_qqs_empty_notif_labels_card") && pinnedIds.contains("hide_qqs_empty_notif_labels_card")) pinnedCards.add(hideQqsEmptyNotifLabelsCard)
+        if (!hiddenInOreoTweakIds.contains("hide_brightness_percentage_card") && pinnedIds.contains("hide_brightness_percentage_card")) pinnedCards.add(hideBrightnessPercentageCard)
+        if (!hiddenInOreoTweakIds.contains("hide_brightness_icon_card") && pinnedIds.contains("hide_brightness_icon_card")) pinnedCards.add(hideBrightnessIconCard)
+        if (!hiddenInOreoTweakIds.contains("show_brightness_plus_minus_card") && pinnedIds.contains("show_brightness_plus_minus_card")) pinnedCards.add(showBrightnessPlusMinusCard)
+        if (!hiddenInOreoTweakIds.contains("enable_panel_shadows_card") && pinnedIds.contains("enable_panel_shadows_card")) pinnedCards.add(enablePanelShadowsCard)
+        if (!hiddenInOreoTweakIds.contains("disable_clear_all_bg_card") && pinnedIds.contains("disable_clear_all_bg_card")) pinnedCards.add(disableClearAllBgCard)
+        if (!hiddenInOreoTweakIds.contains("clear_all_fab_offset_card") && pinnedIds.contains("clear_all_fab_offset_card")) pinnedCards.add(clearAllFabOffsetsCard)
 
         if (pinnedCards.isNotEmpty()) {
             ListSubheader(
@@ -1983,7 +2161,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         }
 
         // 3. Unpinned Drag Handle Options
-        if (!pinnedIds.contains("qs_drag_handle_length_card")) {
+        if (!isAndroidOreoStyle && !pinnedIds.contains("qs_drag_handle_length_card")) {
             CollapsibleSubheaderSection(
                 title = "Drag Handle Options",
                 icon = androidx.compose.material.icons.Icons.Default.DragHandle
@@ -2013,7 +2191,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
             }
         }
 
-        // 5. Unpinned Brightness Controls
+        // 5. Brightness Controls
         val unpinnedBrightnessControls = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
         if (!pinnedIds.contains("hide_brightness_percentage_card")) unpinnedBrightnessControls.add(hideBrightnessPercentageCard)
         if (!pinnedIds.contains("hide_brightness_icon_card")) unpinnedBrightnessControls.add(hideBrightnessIconCard)
@@ -2033,9 +2211,9 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         // 6. Unpinned Typography & Font Sizes
         val unpinnedTypography = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
         if (!pinnedIds.contains("qs_tile_font_size_card")) unpinnedTypography.add(tileFontSizeCard)
-        if (!pinnedIds.contains("hide_date_in_expanded_card")) unpinnedTypography.add(hideDateInExpandedCard)
+        if (!isAndroidOreoStyle && !pinnedIds.contains("hide_date_in_expanded_card")) unpinnedTypography.add(hideDateInExpandedCard)
         if (!pinnedIds.contains("disable_labels_in_expanded_card")) unpinnedTypography.add(disableLabelsInExpandedCard)
-        if (!pinnedIds.contains("hide_qqs_drag_handle_card")) unpinnedTypography.add(hideQqsDragHandleCard)
+        if (!isAndroidOreoStyle && !pinnedIds.contains("hide_qqs_drag_handle_card")) unpinnedTypography.add(hideQqsDragHandleCard)
         if (!pinnedIds.contains("hide_qqs_empty_notif_labels_card")) unpinnedTypography.add(hideQqsEmptyNotifLabelsCard)
 
         if (unpinnedTypography.isNotEmpty()) {
