@@ -9,6 +9,7 @@ import android.content.IntentFilter
 import android.os.BatteryManager
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.material.icons.filled.BatteryAlert
@@ -2112,7 +2113,15 @@ fun UnifiedQsPanel(
 
     val qsCardContent: @Composable () -> Unit = {
         if (isAndroidMarshmallowStyle) {
-            val darkHeaderBg = Color(MonetThemeHelper.getSurfaceBackground(context, isDark))
+            val baseSurfaceBg = MonetThemeHelper.getSurfaceBackground(context, isDark)
+            val darkHeaderBg = if (isDark) {
+                Color(MonetThemeHelper.brightenColor(baseSurfaceBg, true))
+            } else {
+                val r = (android.graphics.Color.red(baseSurfaceBg) * 0.88f).toInt().coerceIn(0, 255)
+                val g = (android.graphics.Color.green(baseSurfaceBg) * 0.88f).toInt().coerceIn(0, 255)
+                val b = (android.graphics.Color.blue(baseSurfaceBg) * 0.88f).toInt().coerceIn(0, 255)
+                Color(android.graphics.Color.argb(255, r, g, b))
+            }
             val bodyBg = Color(MonetThemeHelper.getCardBackground(context, isDark))
             val textLightSecondary = Color(MonetThemeHelper.getTextSecondary(context, isDark))
             val headerTextColor = Color(MonetThemeHelper.getTextPrimary(context, isDark))
@@ -2121,6 +2130,13 @@ fun UnifiedQsPanel(
             val timeFormatter = remember { java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()) }
             val dateFormatter = remember { java.text.SimpleDateFormat("EEEE, MMMM d", java.util.Locale.getDefault()) }
             val batteryInfo = rememberQqsBatteryState()
+
+            val wifiTile = activeTiles.find { it.id == "wifi" }
+            val isWifiOn = wifiTile?.state == TileState.ACTIVE
+            val cellularTile = activeTiles.find { it.id == "cellular" }
+            val isCellularOn = cellularTile?.state == TileState.ACTIVE
+            val btTile = activeTiles.find { it.id == "bluetooth" }
+            val isBtOn = btTile?.state == TileState.ACTIVE
 
             val panelGlobalCornerEnabled by PanelPreferences.panelGlobalCornerEnabled.collectAsState()
             val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
@@ -2205,23 +2221,42 @@ fun UnifiedQsPanel(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.Wifi,
+                                            painter = painterResource(id = R.drawable.ic_qs_wifi),
                                             contentDescription = "Wi-Fi",
-                                            tint = headerTextColor,
+                                            tint = if (isWifiOn) headerTextColor else textLightSecondary.copy(alpha = 0.45f),
                                             modifier = Modifier.size(18.dp)
                                         )
                                         Icon(
-                                            imageVector = Icons.Default.CellTower,
+                                            painter = painterResource(id = R.drawable.ic_qs_cellular),
                                             contentDescription = "Signal",
-                                            tint = headerTextColor,
+                                            tint = if (isCellularOn) headerTextColor else textLightSecondary.copy(alpha = 0.45f),
                                             modifier = Modifier.size(18.dp)
                                         )
+                                        if (isBtOn) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_qs_bluetooth),
+                                                contentDescription = "Bluetooth",
+                                                tint = headerTextColor,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
                                         Icon(
-                                            imageVector = if (batteryInfo.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
+                                            painter = painterResource(id = R.drawable.ic_qs_battery),
                                             contentDescription = "Battery",
-                                            tint = headerTextColor,
+                                            tint = if (batteryInfo.isCharging) Color(0xFF4CAF50) else headerTextColor,
                                             modifier = Modifier.size(16.dp)
                                         )
+                                        IconButton(
+                                            onClick = onExpandFull,
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_qs_expand),
+                                                contentDescription = "Expand Quick Settings",
+                                                tint = headerTextColor,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
                                     }
                                 }
 
@@ -2259,8 +2294,28 @@ fun UnifiedQsPanel(
                                     )
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_qs_wifi),
+                                            contentDescription = "Wi-Fi",
+                                            tint = if (isWifiOn) headerTextColor else textLightSecondary.copy(alpha = 0.45f),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_qs_cellular),
+                                            contentDescription = "Signal",
+                                            tint = if (isCellularOn) headerTextColor else textLightSecondary.copy(alpha = 0.45f),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        if (isBtOn) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_qs_bluetooth),
+                                                contentDescription = "Bluetooth",
+                                                tint = headerTextColor,
+                                                modifier = Modifier.size(15.dp)
+                                            )
+                                        }
                                         Text(
                                             text = "${batteryInfo.percentage}%",
                                             fontSize = 13.sp,
@@ -2268,11 +2323,22 @@ fun UnifiedQsPanel(
                                             color = headerTextColor
                                         )
                                         Icon(
-                                            imageVector = if (batteryInfo.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
+                                            painter = painterResource(id = R.drawable.ic_qs_battery),
                                             contentDescription = "Battery",
-                                            tint = headerTextColor,
+                                            tint = if (batteryInfo.isCharging) Color(0xFF4CAF50) else headerTextColor,
                                             modifier = Modifier.size(16.dp)
                                         )
+                                        IconButton(
+                                            onClick = onToggleEditMode,
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_qs_edit),
+                                                contentDescription = "Edit Tiles",
+                                                tint = headerTextColor,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
                                         IconButton(
                                             onClick = {
                                                 try {
@@ -2283,13 +2349,24 @@ fun UnifiedQsPanel(
                                                 } catch (_: Throwable) {}
                                                 onClosePanel()
                                             },
-                                            modifier = Modifier.size(26.dp)
+                                            modifier = Modifier.size(28.dp)
                                         ) {
                                             Icon(
-                                                imageVector = Icons.Default.Settings,
+                                                painter = painterResource(id = R.drawable.ic_qs_settings),
                                                 contentDescription = "Settings",
                                                 tint = headerTextColor,
-                                                modifier = Modifier.size(20.dp)
+                                                modifier = Modifier.size(19.dp)
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = { onCollapseToQqs() },
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_qs_collapse),
+                                                contentDescription = "Collapse to QQS",
+                                                tint = headerTextColor,
+                                                modifier = Modifier.size(18.dp)
                                             )
                                         }
                                     }
@@ -2312,11 +2389,33 @@ fun UnifiedQsPanel(
                                 )
                             }
 
-                            // 2. Main QS Body (Monet Card palette)
+                            // 2. Main QS Body (Monet Card palette - Vertically Scrollable with swipe up to collapse when at bottom)
+                            val qsScrollState = rememberScrollState()
+                            var dragDistanceY by remember { mutableFloatStateOf(0f) }
+
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .background(bodyBg)
+                                    .verticalScroll(qsScrollState)
+                                    .pointerInput(Unit) {
+                                        detectVerticalDragGestures(
+                                            onDragStart = { dragDistanceY = 0f },
+                                            onVerticalDrag = { change, dragAmount ->
+                                                if (!qsScrollState.canScrollForward && dragAmount < 0) {
+                                                    dragDistanceY += dragAmount
+                                                    change.consume()
+                                                }
+                                            },
+                                            onDragEnd = {
+                                                if (dragDistanceY < -60f) {
+                                                    onCollapseToQqs()
+                                                }
+                                                dragDistanceY = 0f
+                                            },
+                                            onDragCancel = { dragDistanceY = 0f }
+                                        )
+                                    }
                                     .padding(horizontal = 14.dp, vertical = 12.dp)
                             ) {
                                 if (!brightnessAtBottom) {
@@ -2350,38 +2449,6 @@ fun UnifiedQsPanel(
                                         isAtBottom = true,
                                         isQqs = false
                                     )
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(40.dp),
-                                    horizontalArrangement = Arrangement.End,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    IconButton(
-                                        onClick = onToggleEditMode,
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Edit,
-                                            contentDescription = "Edit Tiles",
-                                            tint = headerTextColor
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    IconButton(
-                                        onClick = { onCollapseToQqs() },
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.KeyboardArrowUp,
-                                            contentDescription = "Collapse",
-                                            tint = headerTextColor
-                                        )
-                                    }
                                 }
                             }
                         }

@@ -342,7 +342,7 @@ class NotificationAdapter(
             val outerCornerPx = panelOuterCorner * density
             val innerCornerPx = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner) * density
 
-            val radii = if (isOreoStyle || isMarshmallowStyle) {
+            val radii = if (isOreoStyle) {
                 FloatArray(8) { 0f }
             } else {
                 when {
