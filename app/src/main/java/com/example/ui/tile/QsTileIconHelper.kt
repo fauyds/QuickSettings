@@ -4,6 +4,32 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BatterySaver
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.CellTower
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.DoNotDisturb
+import androidx.compose.material.icons.filled.FlashlightOff
+import androidx.compose.material.icons.filled.FlashlightOn
+import androidx.compose.material.icons.filled.Flight
+import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material.icons.filled.LocalCafe
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Nfc
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.ScreenRotation
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.Wallpaper
+import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.WifiTethering
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.core.content.ContextCompat
 import com.example.R
 import com.example.model.QsTileModel
@@ -11,6 +37,39 @@ import com.example.model.TileCategory
 import com.example.model.TileState
 
 object QsTileIconHelper {
+
+    fun getTileImageVector(tile: QsTileModel): ImageVector {
+        tile.iconVector?.let { return it }
+
+        val canonicalId = if (tile.id == "sound_profile") "sound_mode" else tile.id
+
+        return when (canonicalId) {
+            "wifi" -> Icons.Default.Wifi
+            "bluetooth" -> Icons.Default.Bluetooth
+            "torch" -> if (tile.state == TileState.ACTIVE) Icons.Default.FlashlightOn else Icons.Default.FlashlightOff
+            "autorotate" -> Icons.Default.ScreenRotation
+            "dnd" -> Icons.Default.DoNotDisturb
+            "airplane" -> Icons.Default.Flight
+            "location" -> Icons.Default.LocationOn
+            "cellular" -> Icons.Default.CellTower
+            "hotspot" -> Icons.Default.WifiTethering
+            "battery_saver" -> Icons.Default.BatterySaver
+            "nfc" -> Icons.Default.Nfc
+            "dark_mode" -> Icons.Default.DarkMode
+            "caffeine" -> Icons.Default.LocalCafe
+            "heads_up", "notifications" -> Icons.Default.NotificationsActive
+            "aod" -> Icons.Default.Wallpaper
+            "ambient_display" -> Icons.Default.Visibility
+            "sound_search" -> Icons.Default.Headphones
+            "cpu_info" -> Icons.Default.Memory
+            "fps_info" -> Icons.Default.Speed
+            "reading_mode" -> Icons.Default.Visibility
+            "sound_mode" -> Icons.Default.VolumeUp
+            "screenshot" -> Icons.Default.CameraAlt
+            "screenrecord" -> Icons.Default.Videocam
+            else -> Icons.Default.Settings
+        }
+    }
 
     fun getTileIconResId(tile: QsTileModel): Int? {
         val isThirdParty = tile.isExternal || 

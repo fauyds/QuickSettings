@@ -12,9 +12,38 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.BatteryFull
+import androidx.compose.material.icons.filled.BatterySaver
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.CellTower
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.DoNotDisturb
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FlashlightOff
+import androidx.compose.material.icons.filled.FlashlightOn
+import androidx.compose.material.icons.filled.Flight
+import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.LocalCafe
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Nfc
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.ScreenRotation
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.Wallpaper
+import androidx.compose.material.icons.filled.Widgets
+import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.WifiTethering
 import androidx.compose.runtime.DisposableEffect
 import com.example.data.EditButtonPosition
 import com.example.data.TileShape
@@ -2221,27 +2250,27 @@ fun UnifiedQsPanel(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Icon(
-                                            painter = painterResource(id = R.drawable.ic_qs_wifi),
+                                            imageVector = Icons.Default.Wifi,
                                             contentDescription = "Wi-Fi",
                                             tint = if (isWifiOn) headerTextColor else textLightSecondary.copy(alpha = 0.45f),
                                             modifier = Modifier.size(18.dp)
                                         )
                                         Icon(
-                                            painter = painterResource(id = R.drawable.ic_qs_cellular),
+                                            imageVector = Icons.Default.CellTower,
                                             contentDescription = "Signal",
                                             tint = if (isCellularOn) headerTextColor else textLightSecondary.copy(alpha = 0.45f),
                                             modifier = Modifier.size(18.dp)
                                         )
                                         if (isBtOn) {
                                             Icon(
-                                                painter = painterResource(id = R.drawable.ic_qs_bluetooth),
+                                                imageVector = Icons.Default.Bluetooth,
                                                 contentDescription = "Bluetooth",
                                                 tint = headerTextColor,
                                                 modifier = Modifier.size(16.dp)
                                             )
                                         }
                                         Icon(
-                                            painter = painterResource(id = R.drawable.ic_qs_battery),
+                                            imageVector = if (batteryInfo.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
                                             contentDescription = "Battery",
                                             tint = if (batteryInfo.isCharging) Color(0xFF4CAF50) else headerTextColor,
                                             modifier = Modifier.size(16.dp)
@@ -2251,7 +2280,7 @@ fun UnifiedQsPanel(
                                             modifier = Modifier.size(28.dp)
                                         ) {
                                             Icon(
-                                                painter = painterResource(id = R.drawable.ic_qs_expand),
+                                                imageVector = Icons.Default.KeyboardArrowDown,
                                                 contentDescription = "Expand Quick Settings",
                                                 tint = headerTextColor,
                                                 modifier = Modifier.size(18.dp)
@@ -2297,20 +2326,20 @@ fun UnifiedQsPanel(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Icon(
-                                            painter = painterResource(id = R.drawable.ic_qs_wifi),
+                                            imageVector = Icons.Default.Wifi,
                                             contentDescription = "Wi-Fi",
                                             tint = if (isWifiOn) headerTextColor else textLightSecondary.copy(alpha = 0.45f),
                                             modifier = Modifier.size(16.dp)
                                         )
                                         Icon(
-                                            painter = painterResource(id = R.drawable.ic_qs_cellular),
+                                            imageVector = Icons.Default.CellTower,
                                             contentDescription = "Signal",
                                             tint = if (isCellularOn) headerTextColor else textLightSecondary.copy(alpha = 0.45f),
                                             modifier = Modifier.size(16.dp)
                                         )
                                         if (isBtOn) {
                                             Icon(
-                                                painter = painterResource(id = R.drawable.ic_qs_bluetooth),
+                                                imageVector = Icons.Default.Bluetooth,
                                                 contentDescription = "Bluetooth",
                                                 tint = headerTextColor,
                                                 modifier = Modifier.size(15.dp)
@@ -2323,7 +2352,7 @@ fun UnifiedQsPanel(
                                             color = headerTextColor
                                         )
                                         Icon(
-                                            painter = painterResource(id = R.drawable.ic_qs_battery),
+                                            imageVector = if (batteryInfo.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
                                             contentDescription = "Battery",
                                             tint = if (batteryInfo.isCharging) Color(0xFF4CAF50) else headerTextColor,
                                             modifier = Modifier.size(16.dp)
@@ -2333,7 +2362,7 @@ fun UnifiedQsPanel(
                                             modifier = Modifier.size(28.dp)
                                         ) {
                                             Icon(
-                                                painter = painterResource(id = R.drawable.ic_qs_edit),
+                                                imageVector = Icons.Default.Edit,
                                                 contentDescription = "Edit Tiles",
                                                 tint = headerTextColor,
                                                 modifier = Modifier.size(18.dp)
@@ -2352,7 +2381,7 @@ fun UnifiedQsPanel(
                                             modifier = Modifier.size(28.dp)
                                         ) {
                                             Icon(
-                                                painter = painterResource(id = R.drawable.ic_qs_settings),
+                                                imageVector = Icons.Default.Settings,
                                                 contentDescription = "Settings",
                                                 tint = headerTextColor,
                                                 modifier = Modifier.size(19.dp)
@@ -2363,7 +2392,7 @@ fun UnifiedQsPanel(
                                             modifier = Modifier.size(28.dp)
                                         ) {
                                             Icon(
-                                                painter = painterResource(id = R.drawable.ic_qs_collapse),
+                                                imageVector = Icons.Default.KeyboardArrowUp,
                                                 contentDescription = "Collapse to QQS",
                                                 tint = headerTextColor,
                                                 modifier = Modifier.size(18.dp)
@@ -2391,31 +2420,12 @@ fun UnifiedQsPanel(
 
                             // 2. Main QS Body (Monet Card palette - Vertically Scrollable with swipe up to collapse when at bottom)
                             val qsScrollState = rememberScrollState()
-                            var dragDistanceY by remember { mutableFloatStateOf(0f) }
 
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .background(bodyBg)
                                     .verticalScroll(qsScrollState)
-                                    .pointerInput(Unit) {
-                                        detectVerticalDragGestures(
-                                            onDragStart = { dragDistanceY = 0f },
-                                            onVerticalDrag = { change, dragAmount ->
-                                                if (!qsScrollState.canScrollForward && dragAmount < 0) {
-                                                    dragDistanceY += dragAmount
-                                                    change.consume()
-                                                }
-                                            },
-                                            onDragEnd = {
-                                                if (dragDistanceY < -60f) {
-                                                    onCollapseToQqs()
-                                                }
-                                                dragDistanceY = 0f
-                                            },
-                                            onDragCancel = { dragDistanceY = 0f }
-                                        )
-                                    }
                                     .padding(horizontal = 14.dp, vertical = 12.dp)
                             ) {
                                 if (!brightnessAtBottom) {
@@ -5204,46 +5214,26 @@ private fun MarshmallowTileIcon(
     tint: Color,
     modifier: Modifier = Modifier.size(28.dp)
 ) {
-    val context = LocalContext.current
-    val resId = remember(tile.id, tile.state) {
-        com.example.ui.tile.QsTileIconHelper.getTileIconResId(tile)
-    }
-
-    if (resId != null) {
+    val isThirdParty = tile.isExternal || tile.category == TileCategory.THIRD_PARTY || tile.category == TileCategory.EXTERNAL || tile.id.contains("/")
+    if (isThirdParty) {
+        val pkg = tile.packageName ?: if (tile.id.contains("/")) tile.id.substringBefore('/') else null
+        val cls = tile.serviceClassName ?: if (tile.id.contains("/")) tile.id.substringAfter('/') else null
+        ExternalTileIcon(
+            packageName = pkg,
+            serviceClassName = cls,
+            tintColor = tint,
+            contentDescription = tile.label,
+            fallbackDrawable = tile.externalDrawable,
+            modifier = modifier
+        )
+    } else {
+        val vector = com.example.ui.tile.QsTileIconHelper.getTileImageVector(tile)
         Icon(
-            imageVector = ImageVector.vectorResource(resId),
+            imageVector = vector,
             contentDescription = tile.label,
             tint = tint,
             modifier = modifier
         )
-    } else {
-        val drawable = remember(tile.id, tile.state, tile.externalDrawable) {
-            com.example.ui.tile.QsTileIconHelper.getTileDrawable(context, tile)
-        }
-        val bitmap = remember(drawable) {
-            drawable?.let { AppIconBitmapCache.getOrCreate(it) }
-        }
-        val safeImageBitmap = remember(bitmap) {
-            if (bitmap != null && !bitmap.isRecycled) {
-                try { bitmap.asImageBitmap() } catch (_: Throwable) { null }
-            } else null
-        }
-
-        if (safeImageBitmap != null) {
-            Image(
-                bitmap = safeImageBitmap,
-                contentDescription = tile.label,
-                colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(tint),
-                modifier = modifier
-            )
-        } else {
-            Icon(
-                imageVector = Icons.Default.Wifi,
-                contentDescription = tile.label,
-                tint = tint,
-                modifier = modifier
-            )
-        }
     }
 }
 
@@ -5281,15 +5271,46 @@ private fun MarshmallowTileItem(
             tint = iconTint,
             modifier = Modifier.size(28.dp)
         )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = if (isTopTile) "${tile.subtitle.ifBlank { tile.label }} ▼" else tile.label,
-            fontSize = 12.sp,
-            fontWeight = if (isTopTile) FontWeight.Medium else FontWeight.Normal,
-            color = textTint,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+        if (isTopTile) {
+            Spacer(modifier = Modifier.height(4.dp))
+            HorizontalDivider(
+                modifier = Modifier
+                    .fillMaxWidth(0.55f)
+                    .padding(vertical = 2.dp),
+                thickness = 1.dp,
+                color = Color(MonetThemeHelper.getCardOutline(context, isDark)).copy(alpha = 0.35f)
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = tile.subtitle.ifBlank { tile.label },
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = textTint,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Icon(
+                    imageVector = Icons.Default.ArrowDropDown,
+                    contentDescription = null,
+                    tint = textTint,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        } else {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = tile.label,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Normal,
+                color = textTint,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
@@ -5342,14 +5363,6 @@ private fun MarshmallowTilesGrid(
                     }
                 }
             }
-
-            HorizontalDivider(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                thickness = 1.dp,
-                color = Color(MonetThemeHelper.getCardOutline(context, isDark)).copy(alpha = 0.35f)
-            )
         }
 
         val rows = remainingTiles.chunked(3)
