@@ -1,5 +1,6 @@
 package com.example.ui.overlay
 
+import com.example.data.MediaNotificationStyle
 import android.os.Build
 import androidx.core.graphics.ColorUtils
 import android.graphics.Color as AndroidColor
@@ -163,6 +164,161 @@ fun AlbumArtworkView(
 }
 
 /**
+ * Compact Media Notification style matching the compact notification row:
+ * 1. Clock icon replaced with Media artwork (circular thumbnail)
+ * 2. "BBQ Timer" replaced with Song name
+ * 3. "Paused 05:58.2" replaced with Artist name
+ * 4. "(Swipe to stop)" replaced with Album name
+ * 5. Reset icon replaced with Previous track button
+ * 6. Center: Play/Pause button
+ * 7. Stop icon replaced with Next track button
+ */
+@Composable
+fun CompactMediaNotificationCard(
+    mediaState: MediaState,
+    modifier: Modifier = Modifier,
+    cornerRadius: Dp = 16.dp,
+    backgroundColor: Color = Color(0xFF353A3B),
+    contentColor: Color = Color.White,
+    onPlayPauseClick: () -> Unit = {},
+    onPreviousClick: () -> Unit = {},
+    onNextClick: () -> Unit = {},
+    onCardClick: () -> Unit = {}
+) {
+    val isOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
+    val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
+    val cardShape = if (isOreoStyle) RoundedCornerShape(0.dp) else RoundedCornerShape(cornerRadius)
+    val artworkShape = RoundedCornerShape(panelOuterCorner.dp)
+
+    val isDark = com.example.ui.theme.LocalIsDarkTheme.current
+    val primaryTextColor = if (isDark) Color.White else Color(0xFF1C1B1F)
+    val secondaryTextColor = if (isDark) Color(0xFFB0B0B0) else Color(0xFF49454F)
+    val tertiaryTextColor = if (isDark) Color(0xFF8E8E93) else Color(0xFF79747E)
+
+    androidx.compose.material3.Surface(
+        shape = cardShape,
+        color = backgroundColor,
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(cardShape)
+            .clickable(onClick = onCardClick)
+            .testTag("compact_media_notification_card")
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 1. Artwork (44x44dp matching clock position in screenshot, outer corner size)
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(artworkShape)
+                    .background(if (isDark) Color(0xFF424242) else Color(0xFFE0E0E0)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (mediaState.artworkBitmap != null) {
+                    Image(
+                        bitmap = mediaState.artworkBitmap.asImageBitmap(),
+                        contentDescription = "Media Artwork",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = "Music",
+                        tint = primaryTextColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // 2. Metadata Column: Song name, Artist name, Album name
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = mediaState.title.ifBlank { "Track Title" },
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    color = primaryTextColor
+                )
+                Text(
+                    text = mediaState.artist.ifBlank { "Unknown Artist" },
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    color = secondaryTextColor,
+                    modifier = Modifier.padding(top = 1.dp)
+                )
+                val albumText = mediaState.album.ifBlank {
+                    if (mediaState.appName.isNotBlank()) mediaState.appName else "Media Player"
+                }
+                Text(
+                    text = albumText,
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    color = tertiaryTextColor,
+                    modifier = Modifier.padding(top = 1.dp)
+                )
+            }
+
+            // 3. Control Buttons: Previous track, Play/Pause, Next track
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                IconButton(
+                    onClick = onPreviousClick,
+                    modifier = Modifier.size(38.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SkipPrevious,
+                        contentDescription = "Previous Track",
+                        tint = primaryTextColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = onPlayPauseClick,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = if (mediaState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (mediaState.isPlaying) "Pause" else "Play",
+                        tint = primaryTextColor,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = onNextClick,
+                    modifier = Modifier.size(38.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SkipNext,
+                        contentDescription = "Next Track",
+                        tint = primaryTextColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
  * Android QS/QQS Adaptive Media Player Component:
  * - In QQS (Compact mode): Single horizontal row below header with small artwork, title/artist, and 3 controls [Prev, Play/Pause, Next].
  * - In QS (Expanded mode): Rich layout with larger artwork, track metadata, Material You progress slider, timestamps, and 4 controls [Prev, Play/Pause, Next, Favorite].
@@ -192,7 +348,9 @@ fun AdaptiveMediaPlayerCard(
 ) {
     val isAndroidOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
     val isAndroidMarshmallowStyle by PanelPreferences.isAndroidMarshmallowStyle.collectAsState()
-    val isClassicStyle = isAndroidOreoStyle || isAndroidMarshmallowStyle
+    val mediaNotificationStyle by PanelPreferences.mediaNotificationStyle.collectAsState()
+
+    val isClassicStyle = isAndroidOreoStyle
     val effectiveCornerRadius = if (isClassicStyle) 0.dp else cornerRadius
     val cardShape = if (isClassicStyle) RoundedCornerShape(0.dp) else RoundedCornerShape(effectiveCornerRadius)
     val activeSessions = if (sessions.isNotEmpty()) sessions else listOf(mediaState)
@@ -215,6 +373,22 @@ fun AdaptiveMediaPlayerCard(
     }
 
     val currentHeaderState = activeSessions.getOrElse(pagerState.currentPage.coerceIn(0 until activeSessions.size)) { mediaState }
+
+    if (mediaNotificationStyle == MediaNotificationStyle.COMPACT) {
+        CompactMediaNotificationCard(
+            mediaState = currentHeaderState,
+            modifier = modifier,
+            cornerRadius = effectiveCornerRadius,
+            backgroundColor = backgroundColor,
+            contentColor = contentColor,
+            onPlayPauseClick = onPlayPauseClick,
+            onPreviousClick = onPreviousClick,
+            onNextClick = onNextClick,
+            onCardClick = onCardClick
+        )
+        return
+    }
+
     val isDark = com.example.ui.theme.LocalIsDarkTheme.current
     val playPauseColor = if (isDark) Color.White else Color.Black.copy(alpha = 0.8f)
     val progressBarStyle by PanelPreferences.progressBarStyle.collectAsState()

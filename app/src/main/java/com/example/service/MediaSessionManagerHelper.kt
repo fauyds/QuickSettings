@@ -207,6 +207,7 @@ object MediaSessionManagerHelper {
             val preview1 = MediaState(
                 title = "Never Let You Go",
                 artist = "Kygo",
+                album = "Golden Hour",
                 appName = "Spotify",
                 packageName = "com.spotify.music",
                 isPlaying = true,
@@ -227,6 +228,7 @@ object MediaSessionManagerHelper {
             val preview2 = MediaState(
                 title = "Higher Love",
                 artist = "Kygo & Whitney Houston",
+                album = "Whitney",
                 appName = "YouTube Music",
                 packageName = "com.google.android.apps.youtube.music",
                 isPlaying = false,
@@ -247,6 +249,7 @@ object MediaSessionManagerHelper {
             val preview3 = MediaState(
                 title = "Synthwave Nights",
                 artist = "Lazerhawk",
+                album = "Redline",
                 appName = "AIMP",
                 packageName = "com.aimp.player",
                 isPlaying = false,
@@ -305,6 +308,8 @@ object MediaSessionManagerHelper {
             ?: metadata?.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
             ?: metadata?.getString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE)
             ?: "Unknown Artist"
+
+        val album = metadata?.getString(MediaMetadata.METADATA_KEY_ALBUM) ?: ""
 
         val totalDurationMs = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
         val rawPos = playbackState?.position ?: 0L
@@ -379,6 +384,7 @@ object MediaSessionManagerHelper {
         return MediaState(
             title = title,
             artist = artist,
+            album = album,
             appName = appName,
             packageName = packageName,
             isPlaying = isPlaying,

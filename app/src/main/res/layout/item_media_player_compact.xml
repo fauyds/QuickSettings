@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/compact_media_card_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="4dp"
+    android:clickable="true"
+    android:focusable="true">
+
+    <LinearLayout
+        android:id="@+id/ll_compact_media_content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="54dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp">
+
+        <!-- 1. Media Artwork (Circular 44x44dp matching clock icon position) -->
+        <FrameLayout
+            android:id="@+id/fl_compact_media_artwork_container"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_gravity="center_vertical">
+
+            <ImageView
+                android:id="@+id/iv_compact_media_artwork"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:scaleType="centerCrop"
+                android:contentDescription="Media Artwork" />
+        </FrameLayout>
+
+        <!-- 2. Metadata Column: Song name, Artist name, Album name -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_vertical"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp">
+
+            <!-- 2. Song Name (Replacing "BBQ Timer") -->
+            <TextView
+                android:id="@+id/tv_compact_media_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:textColor="#FFFFFF" />
+
+            <!-- 3. Artist Name (Replacing "Paused 05:58.2") -->
+            <TextView
+                android:id="@+id/tv_compact_media_artist"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="13sp"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:layout_marginTop="1dp"
+                android:textColor="#B0B0B0" />
+
+            <!-- 4. Album Name (Replacing "(Swipe to stop)") -->
+            <TextView
+                android:id="@+id/tv_compact_media_album"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:layout_marginTop="1dp"
+                android:textColor="#8E8E93" />
+        </LinearLayout>
+
+        <!-- 3. Controls Row: Previous track, Play/Pause, Next track -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- 5. Previous Track (Replacing Reset icon) -->
+            <ImageButton
+                android:id="@+id/btn_compact_media_previous"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_media_previous"
+                android:padding="6dp"
+                android:contentDescription="Previous Track" />
+
+            <!-- Center: Play/Pause -->
+            <ImageButton
+                android:id="@+id/btn_compact_media_play_pause"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="6dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_media_play"
+                android:padding="4dp"
+                android:contentDescription="Play or Pause" />
+
+            <!-- 6. Next Track (Replacing Stop icon) -->
+            <ImageButton
+                android:id="@+id/btn_compact_media_next"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:layout_marginStart="6dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_media_next"
+                android:padding="6dp"
+                android:contentDescription="Next Track" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

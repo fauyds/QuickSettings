@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.core.graphics.ColorUtils
 import androidx.palette.graphics.Palette
 import com.example.data.PanelPreferences
+import com.example.data.MediaNotificationStyle
 import com.example.model.MediaState
 import com.example.service.MediaSessionManagerHelper
 import com.example.ui.overlay.extractAndroidQNotificationColors
@@ -95,6 +96,7 @@ class NotificationAdapter(
         private const val TYPE_MEDIA_PLAYER = 0
         private const val TYPE_NOTIFICATION = 1
         private const val TYPE_FOOTER = 2
+        private const val TYPE_MEDIA_PLAYER_COMPACT = 3
     }
 
     private var attachedRecyclerView: RecyclerView? = null
@@ -130,7 +132,13 @@ class NotificationAdapter(
         val mediaCount = mediaSessions.size
         val notifCount = currentList.size
         return when {
-            position < mediaCount -> TYPE_MEDIA_PLAYER
+            position < mediaCount -> {
+                if (PanelPreferences.mediaNotificationStyle.value == MediaNotificationStyle.COMPACT) {
+                    TYPE_MEDIA_PLAYER_COMPACT
+                } else {
+                    TYPE_MEDIA_PLAYER
+                }
+            }
             position < mediaCount + notifCount -> TYPE_NOTIFICATION
             else -> TYPE_FOOTER
         }
@@ -138,6 +146,10 @@ class NotificationAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         return when (viewType) {
+            TYPE_MEDIA_PLAYER_COMPACT -> {
+                val view = LayoutInflater.from(parent.context).inflate(R.layout.item_media_player_compact, parent, false)
+                CompactMediaPlayerViewHolder(view)
+            }
             TYPE_MEDIA_PLAYER -> {
                 val view = LayoutInflater.from(parent.context).inflate(R.layout.item_media_player_android_q, parent, false)
                 MediaPlayerViewHolder(view)
@@ -156,6 +168,9 @@ class NotificationAdapter(
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val totalCount = mediaSessions.size + currentList.size
         if (holder is MediaPlayerViewHolder) {
+            val mediaState = mediaSessions.getOrNull(position) ?: return
+            holder.bind(mediaState, position, totalCount)
+        } else if (holder is CompactMediaPlayerViewHolder) {
             val mediaState = mediaSessions.getOrNull(position) ?: return
             holder.bind(mediaState, position, totalCount)
         } else if (holder is NotificationViewHolder) {
@@ -617,6 +632,186 @@ class NotificationAdapter(
             tvTotalTime.text = if (mediaState.totalDurationMs > 0) mediaState.formattedTotalTime else "--:--"
 
             llSeekbarContainer.visibility = if (isSeekBarVisible) View.VISIBLE else View.GONE
+        }
+    }
+
+    inner class CompactMediaPlayerViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val flRoot: FrameLayout = itemView.findViewById(R.id.compact_media_card_root)
+        private val ivArtwork: ImageView = itemView.findViewById(R.id.iv_compact_media_artwork)
+        private val tvTitle: TextView = itemView.findViewById(R.id.tv_compact_media_title)
+        private val tvArtist: TextView = itemView.findViewById(R.id.tv_compact_media_artist)
+        private val tvAlbum: TextView = itemView.findViewById(R.id.tv_compact_media_album)
+        private val btnPrevious: ImageButton = itemView.findViewById(R.id.btn_compact_media_previous)
+        private val btnPlayPause: ImageButton = itemView.findViewById(R.id.btn_compact_media_play_pause)
+        private val btnNext: ImageButton = itemView.findViewById(R.id.btn_compact_media_next)
+
+        fun bind(mediaState: MediaState, position: Int, totalCount: Int) {
+            val context = itemView.context
+            val density = context.resources.displayMetrics.density
+
+            val isOreoStyle = PanelPreferences.isAndroidOreoStyle(context)
+            val isDarkTheme = isDark
+
+            // 1. Metadata: Song name, Artist name, Album name
+            tvTitle.text = mediaState.title.ifBlank { "Track Title" }
+            tvArtist.text = mediaState.artist.ifBlank { "Unknown Artist" }
+            val albumText = mediaState.album.ifBlank {
+                if (mediaState.appName.isNotBlank()) mediaState.appName else "Media Player"
+            }
+            tvAlbum.text = albumText
+
+            // Colors
+            val primaryTextColor = if (isDarkTheme) Color.WHITE else Color.parseColor("#1C1B1F")
+            val secondaryTextColor = if (isDarkTheme) Color.parseColor("#B0B0B0") else Color.parseColor("#49454F")
+            val tertiaryTextColor = if (isDarkTheme) Color.parseColor("#8E8E93") else Color.parseColor("#79747E")
+
+            tvTitle.setTextColor(primaryTextColor)
+            tvArtist.setTextColor(secondaryTextColor)
+            tvAlbum.setTextColor(tertiaryTextColor)
+
+            // 2. Play/Pause state and control buttons
+            val playPauseRes = if (mediaState.isPlaying) R.drawable.ic_media_pause else R.drawable.ic_media_play
+            btnPlayPause.setImageResource(playPauseRes)
+            btnPlayPause.setColorFilter(primaryTextColor)
+            btnPrevious.setColorFilter(primaryTextColor)
+            btnNext.setColorFilter(primaryTextColor)
+
+            // 3. Media Artwork (44x44dp matching screenshot, using outer corner radius slider)
+            val panelGlobalCornerEnabled = PanelPreferences.panelGlobalCornerEnabled.value
+            val panelOuterCorner = PanelPreferences.panelOuterCorner.value
+            val panelInnerCorner = PanelPreferences.panelInnerCorner.value
+
+            val outerCornerPx = panelOuterCorner * density
+            val innerCornerPx = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner) * density
+
+            ivArtwork.outlineProvider = object : ViewOutlineProvider() {
+                override fun getOutline(view: View, outline: Outline) {
+                    outline.setRoundRect(0, 0, view.width, view.height, outerCornerPx)
+                }
+            }
+            ivArtwork.clipToOutline = true
+
+            val artwork = mediaState.artworkBitmap
+            if (artwork != null) {
+                ivArtwork.setImageBitmap(artwork)
+                ivArtwork.background = null
+                ivArtwork.clearColorFilter()
+                ivArtwork.setPadding(0, 0, 0, 0)
+            } else {
+                ivArtwork.setImageResource(R.drawable.ic_media_music_note)
+                val fallbackBg = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = outerCornerPx
+                    setColor(if (isDarkTheme) Color.parseColor("#424242") else Color.parseColor("#E0E0E0"))
+                }
+                ivArtwork.background = fallbackBg
+                ivArtwork.setColorFilter(primaryTextColor)
+                val pad = (8 * density).toInt()
+                ivArtwork.setPadding(pad, pad, pad, pad)
+            }
+
+            // 4. Click Actions
+            btnPrevious.setOnClickListener {
+                MediaSessionManagerHelper.previousForSession(mediaState.sessionIndex)
+            }
+            btnPlayPause.setOnClickListener {
+                MediaSessionManagerHelper.playPauseForSession(mediaState.sessionIndex)
+            }
+            btnNext.setOnClickListener {
+                MediaSessionManagerHelper.nextForSession(mediaState.sessionIndex)
+            }
+            flRoot.setOnClickListener {
+                MediaSessionManagerHelper.openActivePlayerApp(context)
+            }
+
+            // 5. Card Background & Dynamic Corner Radii (Corner Radius Slider)
+
+            val radii = if (isOreoStyle) {
+                FloatArray(8) { 0f }
+            } else {
+                when {
+                    totalCount <= 1 -> FloatArray(8) { outerCornerPx }
+                    position == 0 -> floatArrayOf(
+                        outerCornerPx, outerCornerPx,
+                        outerCornerPx, outerCornerPx,
+                        innerCornerPx, innerCornerPx,
+                        innerCornerPx, innerCornerPx
+                    )
+                    position == totalCount - 1 -> floatArrayOf(
+                        innerCornerPx, innerCornerPx,
+                        innerCornerPx, innerCornerPx,
+                        outerCornerPx, outerCornerPx,
+                        outerCornerPx, outerCornerPx
+                    )
+                    else -> FloatArray(8) { innerCornerPx }
+                }
+            }
+
+            val cardBg = if (isOreoStyle) {
+                if (isDarkTheme) Color.parseColor("#212121") else Color.WHITE
+            } else {
+                customCardBackgroundColor ?: MonetThemeHelper.getCardBackground(context, isDarkTheme)
+            }
+
+            if (isOreoStyle) {
+                val strokeColor = if (isDarkTheme) Color.parseColor("#33FFFFFF") else Color.parseColor("#33000000")
+                val strokePx = (1 * density).toInt().coerceAtLeast(1)
+                val solidOreoBg = if (isDarkTheme) Color.parseColor("#212121") else Color.parseColor("#FFFFFF")
+                val baseDrawable = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    setColor(solidOreoBg)
+                }
+                val strokeDrawable = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    setStroke(strokePx, strokeColor)
+                    setColor(Color.TRANSPARENT)
+                }
+                flRoot.background = android.graphics.drawable.LayerDrawable(arrayOf(baseDrawable, strokeDrawable)).apply {
+                    setLayerInset(1, -strokePx, 0, -strokePx, 0)
+                }
+            } else {
+                val cardDrawable = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadii = radii
+                    setColor(cardBg)
+                }
+                flRoot.background = cardDrawable
+            }
+
+            val enablePanelShadows = PanelPreferences.enablePanelShadows.value
+            val shadowElevation = PanelPreferences.panelShadowElevation.value
+            flRoot.elevation = if (enablePanelShadows && !isOreoStyle) shadowElevation * density else 0f
+            flRoot.translationY = 0f
+            flRoot.clipToOutline = true
+            flRoot.outlineProvider = object : ViewOutlineProvider() {
+                private val path = Path()
+                override fun getOutline(view: View, outline: Outline) {
+                    if (view.width > 0 && view.height > 0) {
+                        if (isOreoStyle) {
+                            outline.setRect(0, 0, view.width, view.height)
+                        } else {
+                            path.reset()
+                            path.addRoundRect(0f, 0f, view.width.toFloat(), view.height.toFloat(), radii, Path.Direction.CW)
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                outline.setPath(path)
+                            } else {
+                                outline.setConvexPath(path)
+                            }
+                        }
+                    }
+                }
+            }
+
+            val lp = flRoot.layoutParams as? ViewGroup.MarginLayoutParams
+            if (lp != null) {
+                val targetBottomMargin = if (isOreoStyle) 0 else (4f * density).toInt()
+                val targetTopMargin = if (isOreoStyle) 0 else lp.topMargin
+                if (lp.bottomMargin != targetBottomMargin || lp.topMargin != targetTopMargin) {
+                    lp.bottomMargin = targetBottomMargin
+                    lp.topMargin = targetTopMargin
+                    flRoot.layoutParams = lp
+                }
+            }
         }
     }
 

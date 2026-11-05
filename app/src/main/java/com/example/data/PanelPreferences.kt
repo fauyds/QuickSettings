@@ -175,6 +175,17 @@ enum class QsSliderTarget(val id: String, val label: String) {
     }
 }
 
+enum class MediaNotificationStyle(val id: String, val title: String, val description: String) {
+    ANDROID_10("android_10", "Android 10", "Classic Android 10 wavy seekbar card"),
+    COMPACT("compact", "Compact Style", "Compact layout with artwork, song, artist, album, and playback controls");
+
+    companion object {
+        fun fromId(id: String?): MediaNotificationStyle {
+            return entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: ANDROID_10
+        }
+    }
+}
+
 enum class ClearAllFabPosition(val id: String, val label: String) {
     CENTER("center", "Anchor to center"),
     LEFT("left", "Anchor to left side"),
@@ -280,6 +291,7 @@ object PanelPreferences {
     private const val KEY_DRAG_HANDLE_LENGTH = "drag_handle_length"
     private const val KEY_FORCE_SHOW_MEDIA_PREVIEW = "force_show_media_preview"
     private const val KEY_SHOW_MEDIA_IN_NOTIFICATION_CONTAINER = "show_media_in_notification_container"
+    private const val KEY_MEDIA_NOTIFICATION_STYLE = "media_notification_style"
     private const val KEY_ENABLE_CUSTOM_VOLUME_PANEL = "enable_custom_volume_panel"
     private const val KEY_ANIMATION_SPEED_SCALE = "animation_speed_scale"
     private const val KEY_DISABLE_PANEL_ANIMATIONS = "disable_panel_animations"
@@ -1091,6 +1103,9 @@ object PanelPreferences {
     private val _showMediaInNotificationContainer = MutableStateFlow(false)
     val showMediaInNotificationContainer: StateFlow<Boolean> = _showMediaInNotificationContainer.asStateFlow()
 
+    private val _mediaNotificationStyle = MutableStateFlow(MediaNotificationStyle.ANDROID_10)
+    val mediaNotificationStyle: StateFlow<MediaNotificationStyle> = _mediaNotificationStyle.asStateFlow()
+
     fun init(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val themeSaved = prefs.getString(KEY_THEME_MODE, ThemeMode.SYSTEM.id)
@@ -1223,6 +1238,8 @@ object PanelPreferences {
         }
         _forceShowMediaPreview.value = prefs.getBoolean(KEY_FORCE_SHOW_MEDIA_PREVIEW, false)
         _showMediaInNotificationContainer.value = prefs.getBoolean(KEY_SHOW_MEDIA_IN_NOTIFICATION_CONTAINER, false)
+        val savedMediaNotifStyle = prefs.getString(KEY_MEDIA_NOTIFICATION_STYLE, null)
+        _mediaNotificationStyle.value = MediaNotificationStyle.fromId(savedMediaNotifStyle)
         _enableCustomVolumePanel.value = prefs.getBoolean(KEY_ENABLE_CUSTOM_VOLUME_PANEL, true)
         _enableSystemHeadsUp.value = prefs.getBoolean(KEY_ENABLE_SYSTEM_HEADS_UP, true)
         _enableHeadsUpOverlay.value = prefs.getBoolean(KEY_ENABLE_HEADS_UP_OVERLAY, true)
@@ -1570,6 +1587,12 @@ object PanelPreferences {
         _showMediaInNotificationContainer.value = show
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_SHOW_MEDIA_IN_NOTIFICATION_CONTAINER, show).apply()
+    }
+
+    fun setMediaNotificationStyle(context: Context, style: MediaNotificationStyle) {
+        _mediaNotificationStyle.value = style
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_MEDIA_NOTIFICATION_STYLE, style.id).apply()
     }
 
     fun setAnimationSpeedScale(context: Context, value: Float) {

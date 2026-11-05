@@ -116,7 +116,9 @@ import androidx.compose.material.icons.filled.HorizontalRule
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.VerticalAlignBottom
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.RoundedCorner
+import com.example.data.MediaNotificationStyle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -169,6 +171,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val clearAllFabShape by PanelPreferences.clearAllFabShape.collectAsState()
     val clearAllFabIcon by PanelPreferences.clearAllFabIcon.collectAsState()
     val showMediaInNotifContainer by PanelPreferences.showMediaInNotificationContainer.collectAsState()
+    val mediaNotificationStyle by PanelPreferences.mediaNotificationStyle.collectAsState()
     val currentPanelStyle by PanelPreferences.panelStyle.collectAsState()
     val isAndroidOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
     val isAndroidMarshmallowStyle by PanelPreferences.isAndroidMarshmallowStyle.collectAsState()
@@ -3449,6 +3452,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         .padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    // 1. Android 10 Style Media Player Toggle
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -3478,7 +3482,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 verticalArrangement = Arrangement.spacedBy(1.dp)
                             ) {
                                 Text(
-                                    text = "Music Player Notification",
+                                    text = "Android 10 Media Player",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     lineHeight = 17.sp,
@@ -3486,7 +3490,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "Display an Android Q style media player notification inside the notification container.",
+                                    text = "Display an Android 10 (Q) style media player notification inside the notification container.",
                                     fontSize = 12.sp,
                                     lineHeight = 15.sp,
                                     style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
@@ -3496,8 +3500,15 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         }
 
                         Switch(
-                            checked = showMediaInNotifContainer,
-                            onCheckedChange = { PanelPreferences.setShowMediaInNotificationContainer(context, it) },
+                            checked = showMediaInNotifContainer && mediaNotificationStyle == MediaNotificationStyle.ANDROID_10,
+                            onCheckedChange = { isChecked ->
+                                if (isChecked) {
+                                    PanelPreferences.setShowMediaInNotificationContainer(context, true)
+                                    PanelPreferences.setMediaNotificationStyle(context, MediaNotificationStyle.ANDROID_10)
+                                } else {
+                                    PanelPreferences.setShowMediaInNotificationContainer(context, false)
+                                }
+                            },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
                                 checkedTrackColor = MaterialTheme.colorScheme.primary,
@@ -3507,6 +3518,152 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             modifier = Modifier.testTag("show_media_in_notif_container_toggle")
                         )
                     }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    // 2. Compact Style Media Player Toggle (New style matching screenshot)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.secondaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MusicNote,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(1.dp)
+                            ) {
+                                Text(
+                                    text = "Compact Media Player",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    lineHeight = 17.sp,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Display a compact media notification with artwork, song, artist, album, and controls.",
+                                    fontSize = 12.sp,
+                                    lineHeight = 15.sp,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Switch(
+                            checked = showMediaInNotifContainer && mediaNotificationStyle == MediaNotificationStyle.COMPACT,
+                            onCheckedChange = { isChecked ->
+                                if (isChecked) {
+                                    PanelPreferences.setShowMediaInNotificationContainer(context, true)
+                                    PanelPreferences.setMediaNotificationStyle(context, MediaNotificationStyle.COMPACT)
+                                } else {
+                                    PanelPreferences.setShowMediaInNotificationContainer(context, false)
+                                }
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("compact_media_notification_toggle")
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    val compactMediaNotificationCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("compact_media_notification_card", CustomizeCategory.QS_DESIGN, "Compact Media Notification") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("compact_media_notification_card")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.secondaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MusicNote,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                        ) {
+                            Text(
+                                text = "Compact Media Player",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 17.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Display a compact media notification with artwork, song, artist, album, and controls.",
+                                fontSize = 12.sp,
+                                lineHeight = 15.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Switch(
+                        checked = showMediaInNotifContainer && mediaNotificationStyle == MediaNotificationStyle.COMPACT,
+                        onCheckedChange = { isChecked ->
+                            if (isChecked) {
+                                PanelPreferences.setShowMediaInNotificationContainer(context, true)
+                                PanelPreferences.setMediaNotificationStyle(context, MediaNotificationStyle.COMPACT)
+                            } else {
+                                PanelPreferences.setShowMediaInNotificationContainer(context, false)
+                            }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                        ),
+                        modifier = Modifier.testTag("compact_media_notification_card_toggle")
+                    )
                 }
             }
         }
@@ -3521,6 +3678,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         "qs_tile_gradient_card" to qsTileGradientCard,
         "clear_all_fab_card" to clearAllFabCard,
         "show_media_in_notif_container_card" to showMediaInNotifContainerCard,
+        "compact_media_notification_card" to compactMediaNotificationCard,
         "show_carrier_card" to showCarrierCard,
         "carrier_divider_card" to carrierDividerCard,
         "hide_carrier_in_expanded_card" to hideCarrierInExpandedCard,

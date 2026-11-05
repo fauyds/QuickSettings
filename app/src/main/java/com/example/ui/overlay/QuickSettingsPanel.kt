@@ -48,6 +48,8 @@ import androidx.compose.runtime.DisposableEffect
 import com.example.data.EditButtonPosition
 import com.example.data.TileShape
 import com.example.data.ProgressBarStyle
+import com.example.data.BatteryPercentageLocation
+import com.example.data.SettingsIconLocation
 import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.os.Build
@@ -2127,7 +2129,7 @@ fun UnifiedQsPanel(
     val isCarrierVisible = showCarrier && !(hideCarrierInExpanded && isExpandedQsState)
     val isSplitCarrierConfigured = isCarrierVisible && showCarrierDivider && !isLandscape && !isEditingTiles
     val isSplitCarrier = isSplitCarrierConfigured && morphProgress < 0.5f
-    val showSplitCarrierCard = !isAndroidOreoStyle && isSplitCarrierConfigured && (expansionStage == QsExpansionStage.QQS || isDraggingMorph || morphProgress < 0.99f)
+    val showSplitCarrierCard = !isAndroidOreoStyle && !isAndroidMarshmallowStyle && isSplitCarrierConfigured && (expansionStage == QsExpansionStage.QQS || isDraggingMorph || morphProgress < 0.99f)
 
     val placeholderTile = remember {
         QsTileModel(
@@ -2138,6 +2140,87 @@ fun UnifiedQsPanel(
             category = TileCategory.SYSTEM,
             isVisible = false
         )
+    }
+
+    val liveMediaState by com.example.service.MediaSessionManagerHelper.mediaState.collectAsState()
+    val mediaSessionsList by com.example.service.MediaSessionManagerHelper.sessionsList.collectAsState()
+    val selectedSessionIndex by com.example.service.MediaSessionManagerHelper.selectedSessionIndex.collectAsState()
+
+    LaunchedEffect(Unit) {
+        com.example.service.MediaSessionManagerHelper.refreshState()
+    }
+
+    val showMediaInNotifContainer by PanelPreferences.showMediaInNotificationContainer.collectAsState()
+    val forceShowMediaPreview by PanelPreferences.forceShowMediaPreview.collectAsState()
+    val shouldShowPlayerInNotification = showMediaInNotifContainer &&
+            (liveMediaState != null || forceShowMediaPreview)
+
+    val mediaCardContent: @Composable () -> Unit = {
+        val media = liveMediaState ?: if (forceShowMediaPreview) MediaState.Preview else null
+        if (!isEditingTiles && media != null && !shouldShowPlayerInNotification) {
+            val isMediaExpanded = isFullQs || isLandscape
+            val mediaTopGap = if (isAndroidOreoStyle) 0.dp else 10.dp
+            if (mediaTopGap > 0.dp) {
+                Spacer(modifier = Modifier.height(mediaTopGap))
+            }
+            val panelGlobalCornerEnabled by PanelPreferences.panelGlobalCornerEnabled.collectAsState()
+            val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
+            val panelInnerCorner by PanelPreferences.panelInnerCorner.collectAsState()
+            val effectiveInnerCorner = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner).dp
+
+            val mediaAccentColor = com.example.ui.theme.getMiscElementColor(isDark)
+            val effectiveCornerRadius = if (isAndroidOreoStyle) 0.dp else effectiveInnerCorner
+            val effectiveBgColor = if (isAndroidOreoStyle) {
+                Color(MonetThemeHelper.getSurfaceBackground(context, isDark))
+            } else {
+                if (isDark) Color(0xFF353A3B) else Color(0xFFE2E7EA)
+            }
+            AdaptiveMediaPlayerCard(
+                mediaState = media,
+                isExpanded = isMediaExpanded,
+                sessions = mediaSessionsList,
+                selectedIndex = selectedSessionIndex,
+                onSelectSession = { index ->
+                    com.example.service.MediaSessionManagerHelper.selectSession(index)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                cornerRadius = effectiveCornerRadius,
+                backgroundColor = effectiveBgColor,
+                accentColor = mediaAccentColor,
+                contentColor = if (isDark) Color.White else Color(0xFF222222),
+                onPlayPauseClick = {
+                    com.example.service.MediaSessionManagerHelper.playPause()
+                },
+                onPreviousClick = {
+                    com.example.service.MediaSessionManagerHelper.previous()
+                },
+                onNextClick = {
+                    com.example.service.MediaSessionManagerHelper.next()
+                },
+                onFavoriteClick = {
+                    com.example.service.MediaSessionManagerHelper.toggleFavorite()
+                },
+                onRepeatClick = {
+                    com.example.service.MediaSessionManagerHelper.toggleRepeat()
+                },
+                onShuffleClick = {
+                    com.example.service.MediaSessionManagerHelper.toggleShuffle()
+                },
+                onSeek = { newProgress ->
+                    com.example.service.MediaSessionManagerHelper.seekTo(newProgress)
+                },
+                onOutputDeviceClick = {
+                    com.example.service.MediaSessionManagerHelper.openAudioOutputPicker(context)
+                },
+                onCloseClick = {
+                    com.example.service.MediaSessionManagerHelper.stopAndDismiss()
+                },
+                onCardClick = {
+                    com.example.service.MediaSessionManagerHelper.openActivePlayerApp(context)
+                    onClosePanel()
+                }
+            )
+        }
     }
 
     val qsCardContent: @Composable () -> Unit = {
@@ -2161,10 +2244,13 @@ fun UnifiedQsPanel(
             val batteryInfo = rememberQqsBatteryState()
 
             val wifiTile = activeTiles.find { it.id == "wifi" }
+            val isWifiTileEnabled = wifiTile != null
             val isWifiOn = wifiTile?.state == TileState.ACTIVE
             val cellularTile = activeTiles.find { it.id == "cellular" }
+            val isCellularTileEnabled = cellularTile != null
             val isCellularOn = cellularTile?.state == TileState.ACTIVE
             val btTile = activeTiles.find { it.id == "bluetooth" }
+            val isBtTileEnabled = btTile != null
             val isBtOn = btTile?.state == TileState.ACTIVE
 
             val panelGlobalCornerEnabled by PanelPreferences.panelGlobalCornerEnabled.collectAsState()
@@ -2175,6 +2261,29 @@ fun UnifiedQsPanel(
 
             val brightnessAtBottom by PanelPreferences.brightnessAtBottom.collectAsState()
             val brightnessInQqs by PanelPreferences.brightnessInQqs.collectAsState()
+
+            val showCarrier by PanelPreferences.showCarrier.collectAsState()
+            val showCarrierDivider by PanelPreferences.showCarrierDivider.collectAsState()
+            val hideCarrierInExpanded by PanelPreferences.hideCarrierInExpanded.collectAsState()
+            val batteryPercentageLocation by PanelPreferences.batteryPercentageLocation.collectAsState()
+            val settingsIconLocation by PanelPreferences.settingsIconLocation.collectAsState()
+            val editButtonPosition by PanelPreferences.editButtonPosition.collectAsState()
+
+            val showCustomHeaderImage by PanelPreferences.showCustomHeaderImage.collectAsState()
+            val customHeaderImageUri by PanelPreferences.customHeaderImageUri.collectAsState()
+            val customHeaderImageHeight by PanelPreferences.customHeaderImageHeight.collectAsState()
+            val customHeaderImageOpacity by PanelPreferences.customHeaderImageOpacity.collectAsState()
+
+            val sliderSyncAll by PanelPreferences.sliderSyncAll.collectAsState()
+            val globalProgressStyle by PanelPreferences.progressBarStyle.collectAsState()
+            val brightnessSliderStylePref by PanelPreferences.brightnessSliderStyle.collectAsState()
+            val resolvedBrightnessStyle = if (sliderSyncAll) globalProgressStyle else brightnessSliderStylePref
+
+            val qqsBottomSliderOffset = when {
+                brightnessInQqs && (resolvedBrightnessStyle == ProgressBarStyle.ANDROID_12 || resolvedBrightnessStyle == ProgressBarStyle.DEFAULT) -> (-6).dp
+                !brightnessInQqs -> 12.dp
+                else -> 0.dp
+            }
 
             if (isEditingTiles) {
                 EditModeTileStudio(
@@ -2200,8 +2309,41 @@ fun UnifiedQsPanel(
                             .fillMaxWidth()
                             .wrapContentHeight()
                     ) {
+                        if (showCustomHeaderImage) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(customHeaderImageHeight.dp)
+                            ) {
+                                if (customHeaderImageUri.isNotBlank()) {
+                                    coil.compose.AsyncImage(
+                                        model = customHeaderImageUri,
+                                        contentDescription = "Custom Header Image",
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .graphicsLayer(alpha = customHeaderImageOpacity),
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(
+                                                Brush.horizontalGradient(
+                                                    listOf(
+                                                        com.example.ui.theme.getMiscElementColor(isDark).copy(alpha = 0.85f),
+                                                        androidx.compose.material3.MaterialTheme.colorScheme.tertiary.copy(alpha = 0.85f),
+                                                        androidx.compose.material3.MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f)
+                                                    )
+                                                )
+                                            )
+                                    )
+                                }
+                            }
+                        }
+
                         if (morphProgress < 0.5f && !isLandscape) {
-                            // --- COLLAPSED STATE (QQS / Closed Shade - as shown in USB screenshot) ---
+                            // --- COLLAPSED STATE (QQS / Closed Shade) ---
                             // Compact top status header sitting directly above the notification list.
                             Column(
                                 modifier = Modifier
@@ -2216,6 +2358,7 @@ fun UnifiedQsPanel(
                                             sliderAlpha = 1f,
                                             sliderHeight = 36.dp,
                                             isAtBottom = false,
+                                            verticalOffset = 12.dp,
                                             isQqs = true
                                         )
                                     }
@@ -2249,24 +2392,36 @@ fun UnifiedQsPanel(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Wifi,
-                                            contentDescription = "Wi-Fi",
-                                            tint = if (isWifiOn) headerTextColor else textLightSecondary.copy(alpha = 0.45f),
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Icon(
-                                            imageVector = Icons.Default.CellTower,
-                                            contentDescription = "Signal",
-                                            tint = if (isCellularOn) headerTextColor else textLightSecondary.copy(alpha = 0.45f),
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        if (isBtOn) {
+                                        if (isWifiTileEnabled && isWifiOn) {
+                                            Icon(
+                                                imageVector = Icons.Default.Wifi,
+                                                contentDescription = "Wi-Fi",
+                                                tint = headerTextColor,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                        if (isCellularTileEnabled && isCellularOn) {
+                                            Icon(
+                                                imageVector = Icons.Default.CellTower,
+                                                contentDescription = "Signal",
+                                                tint = headerTextColor,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                        if (isBtTileEnabled && isBtOn) {
                                             Icon(
                                                 imageVector = Icons.Default.Bluetooth,
                                                 contentDescription = "Bluetooth",
                                                 tint = headerTextColor,
                                                 modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                        if (batteryPercentageLocation == BatteryPercentageLocation.HEADER || batteryPercentageLocation == BatteryPercentageLocation.QQS_RIGHT) {
+                                            Text(
+                                                text = "${batteryInfo.percentage}%",
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = headerTextColor
                                             )
                                         }
                                         Icon(
@@ -2275,6 +2430,19 @@ fun UnifiedQsPanel(
                                             tint = if (batteryInfo.isCharging) Color(0xFF4CAF50) else headerTextColor,
                                             modifier = Modifier.size(16.dp)
                                         )
+                                        if (settingsIconLocation == SettingsIconLocation.HEADER || settingsIconLocation == SettingsIconLocation.CARRIER_RIGHT) {
+                                            IconButton(
+                                                onClick = onSettingsClick,
+                                                modifier = Modifier.size(28.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Settings,
+                                                    contentDescription = "Settings",
+                                                    tint = headerTextColor,
+                                                    modifier = Modifier.size(17.dp)
+                                                )
+                                            }
+                                        }
                                         IconButton(
                                             onClick = onExpandFull,
                                             modifier = Modifier.size(28.dp)
@@ -2289,7 +2457,7 @@ fun UnifiedQsPanel(
                                     }
                                 }
 
-                                if (brightnessInQqs && brightnessAtBottom) {
+                                if (brightnessAtBottom) {
                                     Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
                                         BrightnessSliderRow(
                                             brightness = brightness,
@@ -2297,6 +2465,7 @@ fun UnifiedQsPanel(
                                             sliderAlpha = 1f,
                                             sliderHeight = 36.dp,
                                             isAtBottom = true,
+                                            verticalOffset = qqsBottomSliderOffset,
                                             isQqs = true
                                         )
                                     }
@@ -2316,28 +2485,47 @@ fun UnifiedQsPanel(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = carrierName.ifBlank { "Emergency calls only" },
-                                        fontSize = 13.sp,
-                                        color = textLightSecondary
-                                    )
+                                    if (showCarrier && !hideCarrierInExpanded) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.CellTower,
+                                                contentDescription = null,
+                                                tint = textLightSecondary,
+                                                modifier = Modifier.size(13.dp)
+                                            )
+                                            Text(
+                                                text = carrierName.ifBlank { "Emergency calls only" },
+                                                fontSize = 13.sp,
+                                                color = textLightSecondary
+                                            )
+                                        }
+                                    } else {
+                                        Spacer(modifier = Modifier.width(1.dp))
+                                    }
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Wifi,
-                                            contentDescription = "Wi-Fi",
-                                            tint = if (isWifiOn) headerTextColor else textLightSecondary.copy(alpha = 0.45f),
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Icon(
-                                            imageVector = Icons.Default.CellTower,
-                                            contentDescription = "Signal",
-                                            tint = if (isCellularOn) headerTextColor else textLightSecondary.copy(alpha = 0.45f),
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        if (isBtOn) {
+                                        if (isWifiTileEnabled && isWifiOn) {
+                                            Icon(
+                                                imageVector = Icons.Default.Wifi,
+                                                contentDescription = "Wi-Fi",
+                                                tint = headerTextColor,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                        if (isCellularTileEnabled && isCellularOn) {
+                                            Icon(
+                                                imageVector = Icons.Default.CellTower,
+                                                contentDescription = "Signal",
+                                                tint = headerTextColor,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                        if (isBtTileEnabled && isBtOn) {
                                             Icon(
                                                 imageVector = Icons.Default.Bluetooth,
                                                 contentDescription = "Bluetooth",
@@ -2345,12 +2533,14 @@ fun UnifiedQsPanel(
                                                 modifier = Modifier.size(15.dp)
                                             )
                                         }
-                                        Text(
-                                            text = "${batteryInfo.percentage}%",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = headerTextColor
-                                        )
+                                        if (batteryPercentageLocation == BatteryPercentageLocation.HEADER) {
+                                            Text(
+                                                text = "${batteryInfo.percentage}%",
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = headerTextColor
+                                            )
+                                        }
                                         Icon(
                                             imageVector = if (batteryInfo.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
                                             contentDescription = "Battery",
@@ -2368,24 +2558,18 @@ fun UnifiedQsPanel(
                                                 modifier = Modifier.size(18.dp)
                                             )
                                         }
-                                        IconButton(
-                                            onClick = {
-                                                try {
-                                                    val intent = Intent(Settings.ACTION_SETTINGS).apply {
-                                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                                    }
-                                                    context.startActivity(intent)
-                                                } catch (_: Throwable) {}
-                                                onClosePanel()
-                                            },
-                                            modifier = Modifier.size(28.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Settings,
-                                                contentDescription = "Settings",
-                                                tint = headerTextColor,
-                                                modifier = Modifier.size(19.dp)
-                                            )
+                                        if (settingsIconLocation == SettingsIconLocation.HEADER || settingsIconLocation == SettingsIconLocation.EXPANDED_QS) {
+                                            IconButton(
+                                                onClick = onSettingsClick,
+                                                modifier = Modifier.size(28.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Settings,
+                                                    contentDescription = "Settings",
+                                                    tint = headerTextColor,
+                                                    modifier = Modifier.size(19.dp)
+                                                )
+                                            }
                                         }
                                         IconButton(
                                             onClick = { onCollapseToQqs() },
@@ -2420,11 +2604,34 @@ fun UnifiedQsPanel(
 
                             // 2. Main QS Body (Monet Card palette - Vertically Scrollable with swipe up to collapse when at bottom)
                             val qsScrollState = rememberScrollState()
+                            val nestedScrollConnection = remember {
+                                object : NestedScrollConnection {
+                                    var accumulatedUpDrag = 0f
+
+                                    override fun onPostScroll(
+                                        consumed: Offset,
+                                        available: Offset,
+                                        source: NestedScrollSource
+                                    ): Offset {
+                                        if (available.y < -1f) {
+                                            accumulatedUpDrag += available.y
+                                            if (accumulatedUpDrag < -60f) {
+                                                accumulatedUpDrag = 0f
+                                                onCollapseToQqs()
+                                            }
+                                        } else if (available.y > 1f) {
+                                            accumulatedUpDrag = 0f
+                                        }
+                                        return Offset.Zero
+                                    }
+                                }
+                            }
 
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .background(bodyBg)
+                                    .nestedScroll(nestedScrollConnection)
                                     .verticalScroll(qsScrollState)
                                     .padding(horizontal = 14.dp, vertical = 12.dp)
                             ) {
@@ -2460,6 +2667,8 @@ fun UnifiedQsPanel(
                                         isQqs = false
                                     )
                                 }
+
+                                mediaCardContent()
                             }
                         }
                     }
@@ -3544,87 +3753,6 @@ fun UnifiedQsPanel(
     }
     }
 
-    val liveMediaState by com.example.service.MediaSessionManagerHelper.mediaState.collectAsState()
-    val mediaSessionsList by com.example.service.MediaSessionManagerHelper.sessionsList.collectAsState()
-    val selectedSessionIndex by com.example.service.MediaSessionManagerHelper.selectedSessionIndex.collectAsState()
-
-    LaunchedEffect(Unit) {
-        com.example.service.MediaSessionManagerHelper.refreshState()
-    }
-
-    val showMediaInNotifContainer by PanelPreferences.showMediaInNotificationContainer.collectAsState()
-    val forceShowMediaPreview by PanelPreferences.forceShowMediaPreview.collectAsState()
-    val shouldShowPlayerInNotification = showMediaInNotifContainer &&
-            (liveMediaState != null || forceShowMediaPreview)
-
-    val mediaCardContent: @Composable () -> Unit = {
-        val media = liveMediaState ?: if (forceShowMediaPreview) MediaState.Preview else null
-        if (!isEditingTiles && media != null && !shouldShowPlayerInNotification) {
-            val isMediaExpanded = isFullQs || isLandscape
-            val mediaTopGap = if (isAndroidOreoStyle) 0.dp else 10.dp
-            if (mediaTopGap > 0.dp) {
-                Spacer(modifier = Modifier.height(mediaTopGap))
-            }
-            val panelGlobalCornerEnabled by PanelPreferences.panelGlobalCornerEnabled.collectAsState()
-            val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
-            val panelInnerCorner by PanelPreferences.panelInnerCorner.collectAsState()
-            val effectiveInnerCorner = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner).dp
-
-            val mediaAccentColor = com.example.ui.theme.getMiscElementColor(isDark)
-            val effectiveCornerRadius = if (isAndroidOreoStyle) 0.dp else panelOuterCorner.dp
-            val effectiveBgColor = if (isAndroidOreoStyle) {
-                Color(MonetThemeHelper.getSurfaceBackground(context, isDark))
-            } else {
-                if (isDark) Color(0xFF353A3B) else Color(0xFFE2E7EA)
-            }
-            AdaptiveMediaPlayerCard(
-                mediaState = media,
-                isExpanded = isMediaExpanded,
-                sessions = mediaSessionsList,
-                selectedIndex = selectedSessionIndex,
-                onSelectSession = { index ->
-                    com.example.service.MediaSessionManagerHelper.selectSession(index)
-                },
-                modifier = Modifier.fillMaxWidth(),
-                cornerRadius = effectiveCornerRadius,
-                backgroundColor = effectiveBgColor,
-                accentColor = mediaAccentColor,
-                contentColor = if (isDark) Color.White else Color(0xFF222222),
-                onPlayPauseClick = {
-                    com.example.service.MediaSessionManagerHelper.playPause()
-                },
-                onPreviousClick = {
-                    com.example.service.MediaSessionManagerHelper.previous()
-                },
-                onNextClick = {
-                    com.example.service.MediaSessionManagerHelper.next()
-                },
-                onFavoriteClick = {
-                    com.example.service.MediaSessionManagerHelper.toggleFavorite()
-                },
-                onRepeatClick = {
-                    com.example.service.MediaSessionManagerHelper.toggleRepeat()
-                },
-                onShuffleClick = {
-                    com.example.service.MediaSessionManagerHelper.toggleShuffle()
-                },
-                onSeek = { newProgress ->
-                    com.example.service.MediaSessionManagerHelper.seekTo(newProgress)
-                },
-                onOutputDeviceClick = {
-                    com.example.service.MediaSessionManagerHelper.openAudioOutputPicker(context)
-                },
-                onCloseClick = {
-                    com.example.service.MediaSessionManagerHelper.stopAndDismiss()
-                },
-                onCardClick = {
-                    com.example.service.MediaSessionManagerHelper.openActivePlayerApp(context)
-                    onClosePanel()
-                }
-            )
-        }
-    }
-
     val notificationsContent: @Composable () -> Unit = {
         NotificationsCard(
             notifications = notifications,
@@ -3664,7 +3792,9 @@ fun UnifiedQsPanel(
                 verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)
             ) {
                 qsCardContent()
-                mediaCardContent()
+                if (!isAndroidMarshmallowStyle || morphProgress < 0.5f) {
+                    mediaCardContent()
+                }
             }
 
             // RIGHT COLUMN (Scrollable Notifications)
@@ -3691,7 +3821,9 @@ fun UnifiedQsPanel(
             verticalArrangement = Arrangement.spacedBy(if (isAndroidOreoStyle) 0.dp else ExpressiveCardShapes.CardSpacing)
         ) {
             qsCardContent()
-            mediaCardContent()
+            if (!isAndroidMarshmallowStyle || morphProgress < 0.5f) {
+                mediaCardContent()
+            }
 
             // 4. SCROLLABLE NOTIFICATIONS LIST (Shown in QQS, smoothly morphs & glides away when expanding to Full QS)
             val isNotificationsVisible = !isFullQs && !isEditingTiles

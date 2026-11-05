@@ -10,6 +10,7 @@ import androidx.compose.runtime.Immutable
 data class MediaState(
     val title: String = "",
     val artist: String = "",
+    val album: String = "",
     val appName: String = "",
     val packageName: String = "",
     val isPlaying: Boolean = false,
@@ -44,6 +45,7 @@ data class MediaState(
         val Preview = MediaState(
             title = "Track Title",
             artist = "Artist Name",
+            album = "Album Title",
             appName = "Music Player",
             isPlaying = false,
             isFavorite = false,
