@@ -3,7 +3,7 @@
     android:id="@+id/shade_layout_kitkat_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FF000000">
+    android:background="@android:color/transparent">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -15,7 +15,7 @@
             android:id="@+id/ll_kitkat_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#FF000000"
+            android:background="@android:color/transparent"
             android:clickable="true"
             android:focusable="true"
             android:orientation="vertical"
@@ -133,51 +133,44 @@
                 android:id="@+id/fl_kitkat_qs_container"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:background="#FF000000"
+                android:background="@android:color/transparent"
                 android:orientation="vertical"
                 android:visibility="gone">
 
-                <!-- Brightness Slider Row Directly Above 3x3 QS Tile Grid -->
+                <!-- Jetpack Compose Brightness Slider Row (Moved inside rv_qs_tiles RecyclerView header) -->
+                <androidx.compose.ui.platform.ComposeView
+                    android:id="@+id/compose_kitkat_brightness"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:visibility="gone" />
+
+                <!-- Hidden stubs for complete View ID parity with existing QS logic -->
                 <LinearLayout
                     android:id="@+id/ll_qs_top_brightness_row"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="16dp"
-                    android:paddingVertical="4dp">
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:visibility="gone">
 
                     <ImageView
                         android:id="@+id/iv_qs_top_brightness_icon"
-                        android:layout_width="22dp"
-                        android:layout_height="22dp"
-                        android:layout_marginEnd="10dp"
-                        android:contentDescription="Brightness"
-                        android:src="@drawable/ic_qs_brightness_high" />
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:contentDescription="@null" />
 
                     <SeekBar
                         android:id="@+id/sb_qs_top_brightness"
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:max="255"
-                        android:min="5"
-                        android:progress="128" />
+                        android:layout_height="0dp" />
 
                     <TextView
                         android:id="@+id/tv_qs_top_brightness_percentage"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:textColor="#FFFFFFFF"
-                        android:textSize="12sp"
-                        android:visibility="gone" />
+                        android:layout_width="0dp"
+                        android:layout_height="0dp" />
 
                     <FrameLayout
                         android:id="@+id/fl_qs_top_brightness_icon_pill"
                         android:layout_width="0dp"
-                        android:layout_height="0dp"
-                        android:visibility="gone" />
+                        android:layout_height="0dp" />
                 </LinearLayout>
 
                 <!-- 3-Column Quick Settings Grid (Flat Holo Tile Cards) -->
@@ -186,7 +179,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
                     android:layout_weight="1"
-                    android:background="#FF000000"
+                    android:background="@android:color/transparent"
                     android:clipChildren="true"
                     android:clipToPadding="false"
                     android:nestedScrollingEnabled="true"

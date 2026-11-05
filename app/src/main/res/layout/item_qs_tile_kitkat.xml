@@ -23,29 +23,12 @@
             android:paddingHorizontal="6dp"
             android:paddingVertical="8dp">
 
-            <!-- Tile Icon Container -->
-            <FrameLayout
-                android:id="@+id/fl_tile_icon_bg"
+            <!-- Tile Icon Container (Jetpack Compose) -->
+            <androidx.compose.ui.platform.ComposeView
+                android:id="@+id/compose_tile_icon"
                 android:layout_width="44dp"
-                android:layout_height="44dp">
-
-                <ImageView
-                    android:id="@+id/iv_tile_icon"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:layout_gravity="center"
-                    android:contentDescription="@null"
-                    android:scaleType="fitCenter" />
-
-                <!-- Action Badge (for edit mode) -->
-                <ImageView
-                    android:id="@+id/iv_tile_badge"
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:layout_gravity="top|end"
-                    android:contentDescription="Action badge"
-                    android:visibility="gone" />
-            </FrameLayout>
+                android:layout_height="44dp"
+                android:layout_gravity="center" />
 
             <!-- Label -->
             <TextView

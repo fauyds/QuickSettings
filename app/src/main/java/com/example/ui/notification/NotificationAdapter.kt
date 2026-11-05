@@ -354,10 +354,11 @@ class NotificationAdapter(
 
             val isOreoStyle = PanelPreferences.isAndroidOreoStyle(context)
             val isMarshmallowStyle = PanelPreferences.isAndroidMarshmallowStyle(context)
+            val isKitKatStyle = PanelPreferences.isAndroidKitKatStyle(context)
             val outerCornerPx = panelOuterCorner * density
             val innerCornerPx = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner) * density
 
-            val radii = if (isOreoStyle) {
+            val radii = if (isOreoStyle || isKitKatStyle) {
                 FloatArray(8) { 0f }
             } else {
                 when {
@@ -862,7 +863,8 @@ class NotificationAdapter(
             val disableNotifMonet = disableMonetNotifText
             val isOreoStyle = PanelPreferences.isAndroidOreoStyle(context)
             val isMarshmallowStyle = PanelPreferences.isAndroidMarshmallowStyle(context)
-            val isFlatStyle = isOreoStyle || isMarshmallowStyle
+            val isKitKatStyle = PanelPreferences.isAndroidKitKatStyle(context)
+            val isFlatStyle = isOreoStyle || isMarshmallowStyle || isKitKatStyle
 
             val textPrimaryColor = if (isFlatStyle) {
                 if (isDark) android.graphics.Color.WHITE else android.graphics.Color.parseColor("#222222")
@@ -969,7 +971,7 @@ class NotificationAdapter(
 
             val enablePanelShadows = com.example.data.PanelPreferences.enablePanelShadows.value
             val shadowElevation = com.example.data.PanelPreferences.panelShadowElevation.value
-            flRoot.elevation = if (enablePanelShadows && !isOreoStyle) shadowElevation * density else 0f
+            flRoot.elevation = if (enablePanelShadows && !isOreoStyle && !isKitKatStyle) shadowElevation * density else 0f
             flRoot.translationY = 0f
             flRoot.clipChildren = false
             flRoot.clipToPadding = false

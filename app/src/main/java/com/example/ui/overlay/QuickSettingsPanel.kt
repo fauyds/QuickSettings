@@ -710,6 +710,16 @@ fun QuickSettingsPanel(
 
             val isAndroidKitKatStyle by PanelPreferences.isAndroidKitKatStyle.collectAsState()
             if (isAndroidKitKatStyle) {
+                val showMonetSurfaceBackground by PanelPreferences.showMonetSurfaceBackground.collectAsState()
+                val showCustomHeaderMonetGradient by PanelPreferences.showCustomHeaderMonetGradient.collectAsState()
+                val customHeaderMonetGradientHeight by PanelPreferences.customHeaderMonetGradientHeight.collectAsState()
+                val qsTilesTertiary by PanelPreferences.getQsTilesColorTertiary(isDark).collectAsState()
+                val slidersTertiary by PanelPreferences.getSlidersColorTertiary(isDark).collectAsState()
+                val clearAllTertiary by PanelPreferences.getClearAllColorTertiary(isDark).collectAsState()
+                val qsPanelBgColor by PanelPreferences.qsPanelBackgroundColor.collectAsState()
+                val qsBgColor by PanelPreferences.qsBackgroundColor.collectAsState()
+                val disableNotifMonet by PanelPreferences.disableMonetNotifText.collectAsState()
+
                 val carrierName = remember(context) {
                     try {
                         val tm = context.getSystemService(android.content.Context.TELEPHONY_SERVICE) as? android.telephony.TelephonyManager
@@ -752,7 +762,9 @@ fun QuickSettingsPanel(
                             notifications = notifications,
                             isNotificationPermissionGranted = isNotificationPermissionGranted,
                             carrierName = carrierName,
-                            isDark = isDark
+                            isDark = isDark,
+                            showMonetSurface = showMonetSurfaceBackground,
+                            showHeaderGradient = showCustomHeaderMonetGradient
                         )
                     },
                     modifier = Modifier.fillMaxSize()
