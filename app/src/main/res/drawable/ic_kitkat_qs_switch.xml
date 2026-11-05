@@ -1,0 +1,20 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- User portrait frame + head & shoulder silhouette + 2x2 grid in corner -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M3,3h11c1.1,0 2,0.9 2,2v5h-2V5H3v14h10v2H3c-1.1,0 -2,-0.9 -2,-2V5c0,-1.1 0.9,-2 2,-2z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M8.5,7c1.38,0 2.5,1.12 2.5,2.5S9.88,12 8.5,12 6,10.88 6,9.5 7.12,7 8.5,7z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M4,17c0,-2 3,-3.1 4.5,-3.1S13,15 13,17v1H4v-1z" />
+    <!-- 2x2 Quick Settings Grid on bottom right -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M16,13h3v3h-3zM20,13h3v3h-3zM16,17h3v3h-3zM20,17h3v3h-3z" />
+</vector>

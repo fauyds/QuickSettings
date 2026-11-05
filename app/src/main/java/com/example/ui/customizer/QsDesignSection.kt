@@ -233,7 +233,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Select layout style: Modern, Android 8.0 Oreo, or Android 6.0 Marshmallow.",
+                                text = "Select layout style: Modern, Android 8.0 Oreo, Android 6.0 Marshmallow, or Android 4.4 KitKat.",
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

@@ -1328,7 +1328,12 @@ class QuickPanelAccessibilityService : AccessibilityService() {
             collapseStockNotificationShade()
         }
 
-        expansionStage.value = initialStage
+        val resolvedInitialStage = if (PanelPreferences.isAndroidKitKatStyle(this)) {
+            QsExpansionStage.FULL_QS
+        } else {
+            initialStage
+        }
+        expansionStage.value = resolvedInitialStage
         nativeTileManager.refreshAllStates()
 
         val panelParams = WindowManager.LayoutParams(

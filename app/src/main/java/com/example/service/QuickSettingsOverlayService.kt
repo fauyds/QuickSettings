@@ -360,7 +360,12 @@ class QuickSettingsOverlayService : Service() {
             delay(100)
             QuickPanelAccessibilityService.collapseStockNotificationShade()
         }
-        expansionStage.value = initialStage
+        val resolvedInitialStage = if (com.example.data.PanelPreferences.isAndroidKitKatStyle(this)) {
+            QsExpansionStage.FULL_QS
+        } else {
+            initialStage
+        }
+        expansionStage.value = resolvedInitialStage
         nativeTileManager.refreshAllStates()
 
         val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

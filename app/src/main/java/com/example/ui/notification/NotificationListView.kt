@@ -222,7 +222,7 @@ class NotificationListView @JvmOverloads constructor(
 
                 // Swiping DOWN at top / empty state -> expand QQS to QS / FULL_QS
                 if (deltaY > threshold) {
-                    if (!canScrollUp()) {
+                    if (!canScrollUp() && !PanelPreferences.isAndroidKitKatStyle(context)) {
                         isDraggingPanel = true
                         dragActionType = DRAG_EXPAND_DOWN
                         dragAnchorY = currentY
@@ -235,6 +235,10 @@ class NotificationListView @JvmOverloads constructor(
                 // Swiping UP at bottom / empty state -> collapse stage or close panel
                 else if (deltaY < -threshold) {
                     if (!canScrollDown()) {
+                        if (PanelPreferences.isAndroidKitKatStyle(context)) {
+                            onStageChange?.invoke(QsExpansionStage.COLLAPSED)
+                            return true
+                        }
                         isDraggingPanel = true
                         dragActionType = DRAG_CLOSE_UP
                         dragAnchorY = currentY
@@ -305,7 +309,7 @@ class NotificationListView @JvmOverloads constructor(
                             (-dragDelta).coerceAtLeast(0f),
                             (-currentTrans).coerceAtLeast(0f)
                         )
-                        val isDraggedFifteenPercent = draggedUpDistance >= dismissThresholdPx
+                        val isDraggedFifteenPercent = (PanelPreferences.isAndroidKitKatStyle(context) && (draggedUpDistance >= 24f * density || effectiveVelocityY < -300f)) || (draggedUpDistance >= dismissThresholdPx)
 
                         if (isDraggedFifteenPercent) {
                             if (panel != null) {
@@ -416,7 +420,9 @@ class NotificationListView @JvmOverloads constructor(
                                 // Swiping UP: Check if scrolled all the way DOWN (at bottom boundary)
                                 if (!canScrollDown()) {
                                     hasTriggeredBoundaryAction = true
-                                    if (currentExpansionStage == QsExpansionStage.FULL_QS) {
+                                    if (PanelPreferences.isAndroidKitKatStyle(context)) {
+                                        onStageChange?.invoke(QsExpansionStage.COLLAPSED)
+                                    } else if (currentExpansionStage == QsExpansionStage.FULL_QS) {
                                         onStageChange?.invoke(QsExpansionStage.QQS)
                                     } else {
                                         onStageChange?.invoke(QsExpansionStage.COLLAPSED)

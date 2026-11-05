@@ -25,7 +25,8 @@ enum class ThemeMode(val id: String, val displayName: String) {
 enum class QsPanelStyle(val id: String, val displayName: String, val description: String) {
     DEFAULT("default", "Default (Modern)", "Modern Jetpack Compose dynamic theme layout"),
     ANDROID_OREO("android_oreo", "Android 8.0 Oreo Style", "Classic Android 8.0 Oreo Quick Settings layout"),
-    ANDROID_MARSHMALLOW("android_marshmallow", "Android 6.0 Marshmallow Style", "Classic Android 6.0 Marshmallow two-tone flat Quick Settings layout");
+    ANDROID_MARSHMALLOW("android_marshmallow", "Android 6.0 Marshmallow Style", "Classic Android 6.0 Marshmallow two-tone flat Quick Settings layout"),
+    ANDROID_KITKAT("android_kitkat", "Android 4.4 KitKat Style", "Classic Android 4.4 KitKat Flat Holo Quick Settings layout");
 
     companion object {
         fun fromId(id: String?): QsPanelStyle =
@@ -317,6 +318,9 @@ object PanelPreferences {
 
     private val _isAndroidMarshmallowStyle = MutableStateFlow(false)
     val isAndroidMarshmallowStyle: StateFlow<Boolean> = _isAndroidMarshmallowStyle.asStateFlow()
+
+    private val _isAndroidKitKatStyle = MutableStateFlow(false)
+    val isAndroidKitKatStyle: StateFlow<Boolean> = _isAndroidKitKatStyle.asStateFlow()
 
     private val _showCustomHeaderImage = MutableStateFlow(false)
     val showCustomHeaderImage: StateFlow<Boolean> = _showCustomHeaderImage.asStateFlow()
@@ -1210,6 +1214,7 @@ object PanelPreferences {
         _panelStyle.value = resolvedPanelStyle
         _isAndroidOreoStyle.value = (resolvedPanelStyle == QsPanelStyle.ANDROID_OREO)
         _isAndroidMarshmallowStyle.value = (resolvedPanelStyle == QsPanelStyle.ANDROID_MARSHMALLOW)
+        _isAndroidKitKatStyle.value = (resolvedPanelStyle == QsPanelStyle.ANDROID_KITKAT)
         _invisibleStatusBarTrigger.value = prefs.getBoolean(KEY_INVISIBLE_STATUS_BAR_TRIGGER, false)
         _forceImmersiveTrigger.value = prefs.getBoolean(KEY_FORCE_IMMERSIVE_TRIGGER, false)
         _overrideSystemQs.value = prefs.getBoolean(KEY_OVERRIDE_SYSTEM_QS, false)
@@ -1535,6 +1540,7 @@ object PanelPreferences {
         _panelStyle.value = style
         _isAndroidOreoStyle.value = (style == QsPanelStyle.ANDROID_OREO)
         _isAndroidMarshmallowStyle.value = (style == QsPanelStyle.ANDROID_MARSHMALLOW)
+        _isAndroidKitKatStyle.value = (style == QsPanelStyle.ANDROID_KITKAT)
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
             .putString(KEY_PANEL_STYLE, style.id)
@@ -1550,8 +1556,12 @@ object PanelPreferences {
         return _isAndroidMarshmallowStyle.value || (_panelStyle.value == QsPanelStyle.ANDROID_MARSHMALLOW)
     }
 
+    fun isAndroidKitKatStyle(context: Context): Boolean {
+        return _isAndroidKitKatStyle.value || (_panelStyle.value == QsPanelStyle.ANDROID_KITKAT)
+    }
+
     fun isClassicStyle(context: Context): Boolean {
-        return isAndroidOreoStyle(context) || isAndroidMarshmallowStyle(context)
+        return isAndroidOreoStyle(context) || isAndroidMarshmallowStyle(context) || isAndroidKitKatStyle(context)
     }
 
     fun setAndroidOreoStyle(context: Context, enabled: Boolean) {

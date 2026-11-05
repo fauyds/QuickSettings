@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/shade_layout_kitkat_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FF000000">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Top Header Bar (Holo Black, Bold Clock + Date, Carrier, Clear All + Switcher) -->
+        <LinearLayout
+            android:id="@+id/ll_kitkat_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#FF000000"
+            android:clickable="true"
+            android:focusable="true"
+            android:orientation="vertical"
+            android:paddingHorizontal="12dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="6dp">
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <!-- Left: Bold Digital Clock + Uppercase Date -->
+                <LinearLayout
+                    android:id="@+id/ll_kitkat_clock_date_row"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:gravity="bottom"
+                    android:orientation="horizontal">
+
+                    <!-- Clock -->
+                    <TextView
+                        android:id="@+id/tv_oreo_top_time"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-light"
+                        android:includeFontPadding="false"
+                        android:text="00:02"
+                        android:textColor="#FFFFFFFF"
+                        android:textSize="38sp" />
+
+                    <!-- Date -->
+                    <TextView
+                        android:id="@+id/tv_qs_oreo_header_date"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginBottom="4dp"
+                        android:includeFontPadding="false"
+                        android:text="FRI, MARCH 28"
+                        android:textColor="#FFB0BEC5"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- Right: Action Buttons (Clear All + Switcher) -->
+                <LinearLayout
+                    android:id="@+id/ll_kitkat_header_actions"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <!-- Clear All Notifications Button (Visible in Notification View) -->
+                    <ImageView
+                        android:id="@+id/btn_kitkat_clear_all"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Clear All Notifications"
+                        android:padding="12dp"
+                        android:src="@drawable/ic_kitkat_clear_all" />
+
+                    <!-- View Switcher Button (Flips between Notifications and Quick Settings) -->
+                    <ImageView
+                        android:id="@+id/btn_kitkat_switch_screen"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginStart="4dp"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Switch View"
+                        android:padding="10dp"
+                        android:src="@drawable/ic_kitkat_qs_switch" />
+                </LinearLayout>
+            </RelativeLayout>
+
+            <!-- Carrier / Emergency Status (Visible in Quick Settings view beneath clock) -->
+            <TextView
+                android:id="@+id/tv_oreo_top_carrier"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="EMERGENCY CALLS ONLY"
+                android:textColor="#FF888888"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Main Content Area: View 1 (Notifications) & View 2 (Quick Settings Grid) -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <!-- 1. NOTIFICATION VIEW CONTAINER -->
+            <FrameLayout
+                android:id="@+id/fl_kitkat_notif_container"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="visible">
+
+                <!-- Notifications List -->
+                <com.example.ui.notification.NotificationListView
+                    android:id="@+id/view_kitkat_notification_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+            </FrameLayout>
+
+            <!-- 2. QUICK SETTINGS VIEW CONTAINER -->
+            <LinearLayout
+                android:id="@+id/fl_kitkat_qs_container"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#FF000000"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- Brightness Slider Row Directly Above 3x3 QS Tile Grid -->
+                <LinearLayout
+                    android:id="@+id/ll_qs_top_brightness_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="4dp">
+
+                    <ImageView
+                        android:id="@+id/iv_qs_top_brightness_icon"
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:layout_marginEnd="10dp"
+                        android:contentDescription="Brightness"
+                        android:src="@drawable/ic_qs_brightness_high" />
+
+                    <SeekBar
+                        android:id="@+id/sb_qs_top_brightness"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:max="255"
+                        android:min="5"
+                        android:progress="128" />
+
+                    <TextView
+                        android:id="@+id/tv_qs_top_brightness_percentage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:textColor="#FFFFFFFF"
+                        android:textSize="12sp"
+                        android:visibility="gone" />
+
+                    <FrameLayout
+                        android:id="@+id/fl_qs_top_brightness_icon_pill"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:visibility="gone" />
+                </LinearLayout>
+
+                <!-- 3-Column Quick Settings Grid (Flat Holo Tile Cards) -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_qs_tiles"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:background="#FF000000"
+                    android:clipChildren="true"
+                    android:clipToPadding="false"
+                    android:nestedScrollingEnabled="true"
+                    android:overScrollMode="ifContentScrolls"
+                    android:scrollbars="vertical"
+                    android:padding="1.5dp" />
+
+                <!-- Hidden stubs for complete View ID parity with existing QS logic -->
+                <LinearLayout
+                    android:id="@+id/ll_qs_bottom_brightness_row"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:visibility="gone">
+
+                    <SeekBar
+                        android:id="@+id/sb_qs_bottom_brightness"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp" />
+
+                    <FrameLayout
+                        android:id="@+id/fl_qs_bottom_brightness_icon_pill"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp" />
+
+                    <ImageView
+                        android:id="@+id/iv_qs_bottom_brightness_icon"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:contentDescription="Brightness" />
+
+                    <TextView
+                        android:id="@+id/tv_qs_bottom_brightness_percentage"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp" />
+                </LinearLayout>
+
+                <ImageView
+                    android:id="@+id/btn_qs_settings"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:visibility="gone"
+                    android:contentDescription="Settings" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- Bottom Carrier & Dismiss Bar (Persistent across both screens, exactly matching screenshots) -->
+        <LinearLayout
+            android:id="@+id/ll_kitkat_bottom_carrier_bar"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tv_kitkat_bottom_carrier"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="T-MOBILE"
+                android:textColor="#FF888888"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <View
+                android:id="@+id/v_kitkat_bottom_divider"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="6dp"
+                android:background="#FF333333" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

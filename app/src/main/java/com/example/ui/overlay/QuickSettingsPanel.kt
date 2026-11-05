@@ -597,9 +597,14 @@ fun QuickSettingsPanel(
                     if (isDraggedUp) {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         if (expansionStage == QsExpansionStage.FULL_QS) {
-                            // Swiped UP in FULL_QS -> Collapse to QQS
-                            dragTranslationYState.floatValue = 0f
-                            onStageChange(QsExpansionStage.QQS)
+                            if (com.example.data.PanelPreferences.isAndroidKitKatStyle(context)) {
+                                dragTranslationYState.floatValue = 0f
+                                onStageChange(QsExpansionStage.COLLAPSED)
+                            } else {
+                                // Swiped UP in FULL_QS -> Collapse to QQS
+                                dragTranslationYState.floatValue = 0f
+                                onStageChange(QsExpansionStage.QQS)
+                            }
                         } else {
                             // Swiped UP in QQS -> Trigger dismissal
                             val panelHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
@@ -703,6 +708,56 @@ fun QuickSettingsPanel(
                 )
             }
 
+            val isAndroidKitKatStyle by PanelPreferences.isAndroidKitKatStyle.collectAsState()
+            if (isAndroidKitKatStyle) {
+                val carrierName = remember(context) {
+                    try {
+                        val tm = context.getSystemService(android.content.Context.TELEPHONY_SERVICE) as? android.telephony.TelephonyManager
+                        val name = tm?.networkOperatorName?.trim()
+                        val simName = tm?.simOperatorName?.trim()
+                        if (!name.isNullOrBlank() && name != "Android") name else if (!simName.isNullOrBlank()) simName else ""
+                    } catch (_: Exception) { "" }
+                }
+
+                androidx.compose.ui.viewinterop.AndroidView(
+                    factory = { ctx ->
+                        KitKatShadeHostView(ctx).apply {
+                            this.onTileClick = onTileClick
+                            this.onTileLongClick = onTileLongClick
+                            this.onBrightnessChange = onBrightnessChange
+                            this.onNotificationClick = onNotificationClick
+                            this.onNotificationDismiss = onNotificationDismiss
+                            this.onNotificationActionClick = onNotificationActionClick
+                            this.onDismissAllNotifications = onDismissAllNotifications
+                            this.onRequestNotificationAccess = onRequestNotificationAccess
+                            this.onOpenNotificationManager = { isNotificationManagerOpen = true }
+                            this.onClosePanel = { onStageChange(QsExpansionStage.COLLAPSED) }
+                        }
+                    },
+                    update = { view ->
+                        view.onTileClick = onTileClick
+                        view.onTileLongClick = onTileLongClick
+                        view.onBrightnessChange = onBrightnessChange
+                        view.onNotificationClick = onNotificationClick
+                        view.onNotificationDismiss = onNotificationDismiss
+                        view.onNotificationActionClick = onNotificationActionClick
+                        view.onDismissAllNotifications = onDismissAllNotifications
+                        view.onRequestNotificationAccess = onRequestNotificationAccess
+                        view.onOpenNotificationManager = { isNotificationManagerOpen = true }
+                        view.onClosePanel = { onStageChange(QsExpansionStage.COLLAPSED) }
+
+                        view.updateData(
+                            tiles = tiles,
+                            brightness = brightness,
+                            notifications = notifications,
+                            isNotificationPermissionGranted = isNotificationPermissionGranted,
+                            carrierName = carrierName,
+                            isDark = isDark
+                        )
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
             val isAndroidOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
             val isAndroidMarshmallowStyle by PanelPreferences.isAndroidMarshmallowStyle.collectAsState()
             val isFlatLegacyStyle = isAndroidOreoStyle || isAndroidMarshmallowStyle
@@ -907,6 +962,7 @@ fun QuickSettingsPanel(
                         }
                     }
                 }
+            }
             }
 
             if (isScreenRecordConfigOpen) {
