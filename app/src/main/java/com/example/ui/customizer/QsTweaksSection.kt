@@ -96,7 +96,8 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val isAndroidOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
     val isAndroidMarshmallowStyle by PanelPreferences.isAndroidMarshmallowStyle.collectAsState()
-    val isClassicStyle = isAndroidOreoStyle || isAndroidMarshmallowStyle
+    val isAndroidKitKatStyle by PanelPreferences.isAndroidKitKatStyle.collectAsState()
+    val isClassicStyle = isAndroidOreoStyle || isAndroidMarshmallowStyle || isAndroidKitKatStyle
     val gridLayout by PanelPreferences.gridLayout.collectAsState()
     val dragHandleLength by PanelPreferences.dragHandleLength.collectAsState()
     val datePosition by PanelPreferences.datePosition.collectAsState()
@@ -2114,14 +2115,23 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)
     ) {
         // 1. Pinned Cards at the very top of Quick Settings Tweaks
-        val hiddenInOreoTweakIds = if (isClassicStyle) {
-            setOf(
-                "qs_drag_handle_length_card",
-                "hide_date_in_expanded_card",
-                "hide_qqs_drag_handle_card"
-            )
-        } else {
-            emptySet()
+        val hiddenInOreoTweakIds = buildSet {
+            if (isClassicStyle) {
+                add("qs_drag_handle_length_card")
+                add("hide_date_in_expanded_card")
+                add("hide_qqs_drag_handle_card")
+            }
+            if (isAndroidKitKatStyle || isAndroidMarshmallowStyle) {
+                add("qs_grid_density_card")
+            }
+            if (isAndroidKitKatStyle) {
+                add("battery_percentage_location_card")
+                add("settings_icon_location_card")
+                add("edit_pencil_location_card")
+                add("enable_panel_shadows_card")
+                add("disable_clear_all_bg_card")
+                add("clear_all_fab_offset_card")
+            }
         }
         val pinnedCards = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
         if (!hiddenInOreoTweakIds.contains("qs_grid_density_card") && pinnedIds.contains("qs_grid_density_card")) pinnedCards.add(gridDensityCard)
@@ -2153,7 +2163,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         }
 
         // 2. Unpinned Grid & Tile Density
-        if (!pinnedIds.contains("qs_grid_density_card")) {
+        if (!hiddenInOreoTweakIds.contains("qs_grid_density_card") && !pinnedIds.contains("qs_grid_density_card")) {
             CollapsibleSubheaderSection(
                 title = "Grid & Tile Density",
                 icon = androidx.compose.material.icons.Icons.Default.GridView

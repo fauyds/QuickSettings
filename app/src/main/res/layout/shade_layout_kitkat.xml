@@ -23,6 +23,16 @@
             android:paddingTop="10dp"
             android:paddingBottom="6dp">
 
+            <!-- Custom Header Image Banner -->
+            <ImageView
+                android:id="@+id/iv_kitkat_custom_header_image"
+                android:layout_width="match_parent"
+                android:layout_height="85dp"
+                android:layout_marginBottom="8dp"
+                android:scaleType="centerCrop"
+                android:visibility="gone"
+                android:contentDescription="Header Image" />
+
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
@@ -72,6 +82,17 @@
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
+                    <!-- Edit Quick Settings Tiles Button (Visible in Quick Settings View) -->
+                    <ImageView
+                        android:id="@+id/btn_kitkat_edit_tiles"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Edit Quick Settings Tiles"
+                        android:padding="12dp"
+                        android:src="@drawable/ic_kitkat_edit_tiles"
+                        android:visibility="gone" />
+
                     <!-- Clear All Notifications Button (Visible in Notification View) -->
                     <ImageView
                         android:id="@+id/btn_kitkat_clear_all"
@@ -95,12 +116,14 @@
                 </LinearLayout>
             </RelativeLayout>
 
-            <!-- Carrier / Emergency Status (Visible in Quick Settings view beneath clock) -->
+            <!-- Carrier / Emergency Status (Visible in Quick Settings view beneath clock, horizontally centered) -->
             <TextView
                 android:id="@+id/tv_oreo_top_carrier"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
                 android:layout_marginTop="2dp"
+                android:gravity="center"
                 android:text="EMERGENCY CALLS ONLY"
                 android:textColor="#FF888888"
                 android:textSize="11sp"
@@ -108,27 +131,15 @@
                 android:visibility="gone" />
         </LinearLayout>
 
-        <!-- Main Content Area: View 1 (Notifications) & View 2 (Quick Settings Grid) -->
-        <FrameLayout
+        <!-- Main Content Area: View 1 (Quick Settings Grid) & View 2 (Notifications) -->
+        <LinearLayout
+            android:id="@+id/ll_kitkat_main_content"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1">
+            android:layout_weight="1"
+            android:orientation="horizontal">
 
-            <!-- 1. NOTIFICATION VIEW CONTAINER -->
-            <FrameLayout
-                android:id="@+id/fl_kitkat_notif_container"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:visibility="visible">
-
-                <!-- Notifications List -->
-                <com.example.ui.notification.NotificationListView
-                    android:id="@+id/view_kitkat_notification_list"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
-            </FrameLayout>
-
-            <!-- 2. QUICK SETTINGS VIEW CONTAINER -->
+            <!-- 1. QUICK SETTINGS VIEW CONTAINER (Left side in landscape) -->
             <LinearLayout
                 android:id="@+id/fl_kitkat_qs_container"
                 android:layout_width="match_parent"
@@ -223,7 +234,52 @@
                     android:visibility="gone"
                     android:contentDescription="Settings" />
             </LinearLayout>
-        </FrameLayout>
+
+            <!-- Vertical Divider / Spacer between Quick Settings and Notifications in Landscape -->
+            <View
+                android:id="@+id/v_kitkat_landscape_divider"
+                android:layout_width="1dp"
+                android:layout_height="match_parent"
+                android:layout_marginHorizontal="6dp"
+                android:background="#33FFFFFF"
+                android:visibility="gone" />
+
+            <!-- 2. NOTIFICATION VIEW CONTAINER (Right side in landscape) -->
+            <LinearLayout
+                android:id="@+id/fl_kitkat_notif_container"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:visibility="visible">
+
+                <!-- QQS Brightness Slider Row (Top) -->
+                <androidx.compose.ui.platform.ComposeView
+                    android:id="@+id/compose_kitkat_qqs_brightness_top"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="1.5dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="1.5dp"
+                    android:visibility="gone" />
+
+                <!-- Notifications List -->
+                <com.example.ui.notification.NotificationListView
+                    android:id="@+id/view_kitkat_notification_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <!-- QQS Brightness Slider Row (Bottom) -->
+                <androidx.compose.ui.platform.ComposeView
+                    android:id="@+id/compose_kitkat_qqs_brightness_bottom"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="1.5dp"
+                    android:paddingTop="1.5dp"
+                    android:paddingBottom="3dp"
+                    android:visibility="gone" />
+            </LinearLayout>
+        </LinearLayout>
 
         <!-- Bottom Carrier & Dismiss Bar (Persistent across both screens, exactly matching screenshots) -->
         <LinearLayout

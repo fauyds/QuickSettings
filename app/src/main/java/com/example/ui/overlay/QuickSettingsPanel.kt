@@ -433,8 +433,8 @@ fun QuickSettingsPanel(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    val shadeDragModifier = Modifier.pointerInput(maxDragDistancePx, expansionStage, isEditingTiles) {
-        if (isEditingTiles) return@pointerInput // Disable vertical swipe collapse while editing tiles
+    val shadeDragModifier = Modifier.pointerInput(maxDragDistancePx, expansionStage, isEditingTiles, isLandscape) {
+        if (isEditingTiles || isLandscape) return@pointerInput // Disable vertical swipe collapse while editing tiles or in landscape mode
         var dragAccumulatedY = 0f
         detectVerticalDragGestures(
             onDragStart = {
@@ -709,7 +709,7 @@ fun QuickSettingsPanel(
             }
 
             val isAndroidKitKatStyle by PanelPreferences.isAndroidKitKatStyle.collectAsState()
-            if (isAndroidKitKatStyle) {
+            if (isAndroidKitKatStyle && !isEditingTiles) {
                 val showMonetSurfaceBackground by PanelPreferences.showMonetSurfaceBackground.collectAsState()
                 val showCustomHeaderMonetGradient by PanelPreferences.showCustomHeaderMonetGradient.collectAsState()
                 val customHeaderMonetGradientHeight by PanelPreferences.customHeaderMonetGradientHeight.collectAsState()
@@ -719,6 +719,15 @@ fun QuickSettingsPanel(
                 val qsPanelBgColor by PanelPreferences.qsPanelBackgroundColor.collectAsState()
                 val qsBgColor by PanelPreferences.qsBackgroundColor.collectAsState()
                 val disableNotifMonet by PanelPreferences.disableMonetNotifText.collectAsState()
+                val hiddenTileIds by PanelPreferences.hiddenTileIds.collectAsState()
+
+                val kitKatActiveTiles = remember(tiles, hiddenTileIds) {
+                    tiles.filter {
+                        it.isVisible &&
+                        it.id !in hiddenTileIds &&
+                        (if (it.id == "sound_profile") "sound_mode" !in hiddenTileIds && "volume" !in hiddenTileIds else true)
+                    }
+                }
 
                 val carrierName = remember(context) {
                     try {
@@ -727,6 +736,18 @@ fun QuickSettingsPanel(
                         val simName = tm?.simOperatorName?.trim()
                         if (!name.isNullOrBlank() && name != "Android") name else if (!simName.isNullOrBlank()) simName else ""
                     } catch (_: Exception) { "" }
+                }
+
+                val mediaSessionsList by com.example.service.MediaSessionManagerHelper.sessionsList.collectAsState()
+                val forceShowMediaPreview by PanelPreferences.forceShowMediaPreview.collectAsState()
+                val activeMediaSessions = remember(mediaSessionsList, forceShowMediaPreview) {
+                    if (mediaSessionsList.isNotEmpty()) {
+                        mediaSessionsList
+                    } else if (forceShowMediaPreview) {
+                        listOf(com.example.model.MediaState.Preview)
+                    } else {
+                        emptyList()
+                    }
                 }
 
                 androidx.compose.ui.viewinterop.AndroidView(
@@ -742,6 +763,7 @@ fun QuickSettingsPanel(
                             this.onRequestNotificationAccess = onRequestNotificationAccess
                             this.onOpenNotificationManager = { isNotificationManagerOpen = true }
                             this.onClosePanel = { onStageChange(QsExpansionStage.COLLAPSED) }
+                            this.onToggleEditMode = { isEditingTiles = true }
                         }
                     },
                     update = { view ->
@@ -755,16 +777,18 @@ fun QuickSettingsPanel(
                         view.onRequestNotificationAccess = onRequestNotificationAccess
                         view.onOpenNotificationManager = { isNotificationManagerOpen = true }
                         view.onClosePanel = { onStageChange(QsExpansionStage.COLLAPSED) }
+                        view.onToggleEditMode = { isEditingTiles = true }
 
                         view.updateData(
-                            tiles = tiles,
+                            tiles = kitKatActiveTiles,
                             brightness = brightness,
                             notifications = notifications,
                             isNotificationPermissionGranted = isNotificationPermissionGranted,
                             carrierName = carrierName,
                             isDark = isDark,
                             showMonetSurface = showMonetSurfaceBackground,
-                            showHeaderGradient = showCustomHeaderMonetGradient
+                            showHeaderGradient = showCustomHeaderMonetGradient,
+                            mediaSessions = activeMediaSessions
                         )
                     },
                     modifier = Modifier.fillMaxSize()
@@ -2699,8 +2723,13 @@ fun UnifiedQsPanel(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .background(bodyBg)
-                                    .nestedScroll(nestedScrollConnection)
-                                    .verticalScroll(qsScrollState)
+                                    .then(
+                                        if (!isLandscape) {
+                                            Modifier
+                                                .nestedScroll(nestedScrollConnection)
+                                                .verticalScroll(qsScrollState)
+                                        } else Modifier
+                                    )
                                     .padding(horizontal = 14.dp, vertical = 12.dp)
                             ) {
                                 if (!brightnessAtBottom) {
@@ -3860,7 +3889,7 @@ fun UnifiedQsPanel(
                 verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)
             ) {
                 qsCardContent()
-                if (!isAndroidMarshmallowStyle || morphProgress < 0.5f) {
+                if (!isAndroidMarshmallowStyle) {
                     mediaCardContent()
                 }
             }
@@ -3889,7 +3918,7 @@ fun UnifiedQsPanel(
             verticalArrangement = Arrangement.spacedBy(if (isAndroidOreoStyle) 0.dp else ExpressiveCardShapes.CardSpacing)
         ) {
             qsCardContent()
-            if (!isAndroidMarshmallowStyle || morphProgress < 0.5f) {
+            if (!isAndroidMarshmallowStyle) {
                 mediaCardContent()
             }
 

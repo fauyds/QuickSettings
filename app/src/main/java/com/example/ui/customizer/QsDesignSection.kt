@@ -175,6 +175,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val currentPanelStyle by PanelPreferences.panelStyle.collectAsState()
     val isAndroidOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
     val isAndroidMarshmallowStyle by PanelPreferences.isAndroidMarshmallowStyle.collectAsState()
+    val isAndroidKitKatStyle by PanelPreferences.isAndroidKitKatStyle.collectAsState()
 
     var tileShapesExpanded by rememberSaveable { mutableStateOf(false) }
     var progressBarSliderExpanded by rememberSaveable { mutableStateOf(false) }
@@ -3691,21 +3692,50 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         "progress_bar_slider_style_card" to progressBarSliderStyleCard,
         "panel_corner_styling_card" to panelCornerStylingCard
     )
-    val hiddenInOreoDesignIds = if (isAndroidOreoStyle) {
-        setOf(
-            "tile_shape_selection_card",
-            "tile_outline_card",
-            "qs_tile_gradient_card",
-            "show_carrier_card",
-            "carrier_divider_card",
-            "hide_carrier_in_expanded_card",
-            "custom_header_monet_gradient_card",
-            "panel_corner_styling_card"
-        )
-    } else {
-        emptySet()
+    val hiddenDesignIds = buildSet {
+        if (isAndroidOreoStyle) {
+            addAll(
+                listOf(
+                    "tile_shape_selection_card",
+                    "tile_outline_card",
+                    "qs_tile_gradient_card",
+                    "show_carrier_card",
+                    "carrier_divider_card",
+                    "hide_carrier_in_expanded_card",
+                    "custom_header_monet_gradient_card",
+                    "panel_corner_styling_card"
+                )
+            )
+        }
+        if (isAndroidMarshmallowStyle) {
+            addAll(
+                listOf(
+                    "tile_shape_selection_card",
+                    "tile_outline_card",
+                    "qs_tile_gradient_card",
+                    "qqs_icon_size_card",
+                    "qqs_icon_quantity_card"
+                )
+            )
+        }
+        if (isAndroidKitKatStyle) {
+            addAll(
+                listOf(
+                    "tile_shape_selection_card",
+                    "tile_outline_card",
+                    "qs_tile_gradient_card",
+                    "qqs_icon_size_card",
+                    "qqs_icon_quantity_card",
+                    "clear_all_fab_card",
+                    "custom_header_monet_gradient_card",
+                    "element_colors_preference_card",
+                    "carrier_divider_card",
+                    "hide_carrier_in_expanded_card"
+                )
+            )
+        }
     }
-    val pinnedCards = pinnedIds.filter { !hiddenInOreoDesignIds.contains(it) }.mapNotNull { pinnedCardsMap[it] }
+    val pinnedCards = pinnedIds.filter { !hiddenDesignIds.contains(it) }.mapNotNull { pinnedCardsMap[it] }
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -3724,14 +3754,14 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
         // 2. Tile Shapes & Layout
         val unpinnedTileShapes = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (!pinnedIds.contains("android_oreo_style_card")) unpinnedTileShapes.add(androidOreoStyleCard)
-        if (!pinnedIds.contains("qqs_icon_size_card")) unpinnedTileShapes.add(qqsIconSizeCard)
-        if (!pinnedIds.contains("qqs_icon_quantity_card")) unpinnedTileShapes.add(qqsIconQuantityCard)
-        if (!isAndroidOreoStyle && !pinnedIds.contains("tile_shape_selection_card")) unpinnedTileShapes.add(tileShapeSelectionCard)
-        if (!isAndroidOreoStyle && !pinnedIds.contains("tile_outline_card")) unpinnedTileShapes.add(tileOutlineCard)
-        if (!isAndroidOreoStyle && !pinnedIds.contains("qs_tile_gradient_card")) unpinnedTileShapes.add(qsTileGradientCard)
-        if (!pinnedIds.contains("clear_all_fab_card")) unpinnedTileShapes.add(clearAllFabCard)
-        if (!pinnedIds.contains("show_media_in_notif_container_card")) unpinnedTileShapes.add(showMediaInNotifContainerCard)
+        if (!hiddenDesignIds.contains("android_oreo_style_card") && !pinnedIds.contains("android_oreo_style_card")) unpinnedTileShapes.add(androidOreoStyleCard)
+        if (!hiddenDesignIds.contains("qqs_icon_size_card") && !pinnedIds.contains("qqs_icon_size_card")) unpinnedTileShapes.add(qqsIconSizeCard)
+        if (!hiddenDesignIds.contains("qqs_icon_quantity_card") && !pinnedIds.contains("qqs_icon_quantity_card")) unpinnedTileShapes.add(qqsIconQuantityCard)
+        if (!hiddenDesignIds.contains("tile_shape_selection_card") && !pinnedIds.contains("tile_shape_selection_card")) unpinnedTileShapes.add(tileShapeSelectionCard)
+        if (!hiddenDesignIds.contains("tile_outline_card") && !pinnedIds.contains("tile_outline_card")) unpinnedTileShapes.add(tileOutlineCard)
+        if (!hiddenDesignIds.contains("qs_tile_gradient_card") && !pinnedIds.contains("qs_tile_gradient_card")) unpinnedTileShapes.add(qsTileGradientCard)
+        if (!hiddenDesignIds.contains("clear_all_fab_card") && !pinnedIds.contains("clear_all_fab_card")) unpinnedTileShapes.add(clearAllFabCard)
+        if (!hiddenDesignIds.contains("show_media_in_notif_container_card") && !pinnedIds.contains("show_media_in_notif_container_card")) unpinnedTileShapes.add(showMediaInNotifContainerCard)
 
         if (unpinnedTileShapes.isNotEmpty()) {
             CollapsibleSubheaderSection(
@@ -3746,7 +3776,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
         // 3. SIM Card Carrier
         val unpinnedCarrier = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (!isAndroidOreoStyle) {
+        if (!hiddenDesignIds.contains("show_carrier_card")) {
             if (!pinnedIds.contains("show_carrier_card")) unpinnedCarrier.add(showCarrierCard)
             if (showCarrier) {
                 if (!pinnedIds.contains("carrier_divider_card")) unpinnedCarrier.add(carrierDividerCard)
@@ -3767,9 +3797,9 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
         // 4. Header & Backgrounds
         val unpinnedHeader = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (!pinnedIds.contains("custom_header_image_card")) unpinnedHeader.add(customHeaderImageCard)
-        if (!isAndroidOreoStyle && !pinnedIds.contains("custom_header_monet_gradient_card")) unpinnedHeader.add(customHeaderMonetGradientCard)
-        if (!pinnedIds.contains("element_colors_preference_card")) unpinnedHeader.add(elementColorsPreferenceCard)
+        if (!hiddenDesignIds.contains("custom_header_image_card") && !pinnedIds.contains("custom_header_image_card")) unpinnedHeader.add(customHeaderImageCard)
+        if (!hiddenDesignIds.contains("custom_header_monet_gradient_card") && !pinnedIds.contains("custom_header_monet_gradient_card")) unpinnedHeader.add(customHeaderMonetGradientCard)
+        if (!hiddenDesignIds.contains("element_colors_preference_card") && !pinnedIds.contains("element_colors_preference_card")) unpinnedHeader.add(elementColorsPreferenceCard)
 
         if (unpinnedHeader.isNotEmpty()) {
             CollapsibleSubheaderSection(

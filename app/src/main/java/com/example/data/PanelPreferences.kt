@@ -1215,6 +1215,9 @@ object PanelPreferences {
         _isAndroidOreoStyle.value = (resolvedPanelStyle == QsPanelStyle.ANDROID_OREO)
         _isAndroidMarshmallowStyle.value = (resolvedPanelStyle == QsPanelStyle.ANDROID_MARSHMALLOW)
         _isAndroidKitKatStyle.value = (resolvedPanelStyle == QsPanelStyle.ANDROID_KITKAT)
+        if ((resolvedPanelStyle == QsPanelStyle.ANDROID_KITKAT || resolvedPanelStyle == QsPanelStyle.ANDROID_MARSHMALLOW) && !prefs.contains(KEY_GRID_LAYOUT)) {
+            _gridLayout.value = QsGridLayout.GRID_3X3
+        }
         _invisibleStatusBarTrigger.value = prefs.getBoolean(KEY_INVISIBLE_STATUS_BAR_TRIGGER, false)
         _forceImmersiveTrigger.value = prefs.getBoolean(KEY_FORCE_IMMERSIVE_TRIGGER, false)
         _overrideSystemQs.value = prefs.getBoolean(KEY_OVERRIDE_SYSTEM_QS, false)
@@ -1541,6 +1544,9 @@ object PanelPreferences {
         _isAndroidOreoStyle.value = (style == QsPanelStyle.ANDROID_OREO)
         _isAndroidMarshmallowStyle.value = (style == QsPanelStyle.ANDROID_MARSHMALLOW)
         _isAndroidKitKatStyle.value = (style == QsPanelStyle.ANDROID_KITKAT)
+        if (style == QsPanelStyle.ANDROID_KITKAT || style == QsPanelStyle.ANDROID_MARSHMALLOW) {
+            setGridLayout(context, QsGridLayout.GRID_3X3)
+        }
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
             .putString(KEY_PANEL_STYLE, style.id)

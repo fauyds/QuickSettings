@@ -573,7 +573,9 @@ class NotificationListView @JvmOverloads constructor(
             flEmptyCard.elevation = 0f
             flEmptyCard.translationY = 0f
             tvEmptyText.text = "No notifications"
-            val emptyColor = if (!showMonetSurface) {
+            val emptyColor = if (isKitKatStyle && !isDark) {
+                android.graphics.Color.BLACK
+            } else if (!showMonetSurface) {
                 android.graphics.Color.WHITE
             } else {
                 textSecondary

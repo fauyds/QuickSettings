@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.R
 import com.example.data.PanelPreferences
+import com.example.model.MediaState
 import com.example.model.NotificationActionModel
 import com.example.model.NotificationItem
 import com.example.model.QsTileModel
@@ -28,6 +29,12 @@ import com.example.model.TileState
 import com.example.ui.notification.MonetThemeHelper
 import com.example.ui.notification.NotificationListView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -37,6 +44,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BrightnessLow
@@ -51,6 +59,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -94,16 +103,21 @@ class KitKatShadeHostView @JvmOverloads constructor(
     // Root & Header views
     private val rootLayout: FrameLayout
     private val llHeader: LinearLayout
+    private val ivCustomHeaderImage: ImageView
     private val tvTime: TextView
     private val tvDate: TextView
     private val tvCarrier: TextView
     private val btnClearAll: ImageView
+    private val btnEditTiles: ImageView
     private val btnSwitchScreen: ImageView
 
     // Container views
-    private val flNotifContainer: FrameLayout
+    private val flNotifContainer: LinearLayout
     private val notifListView: NotificationListView
     private val flQsContainer: LinearLayout
+    private val vLandscapeDivider: View
+    private val composeQqsBrightnessTop: ComposeView
+    private val composeQqsBrightnessBottom: ComposeView
 
     // Persistent bottom closing bar
     private val llBottomBar: LinearLayout
@@ -128,6 +142,16 @@ class KitKatShadeHostView @JvmOverloads constructor(
     private var isShowingQuickSettings: Boolean = false
     private var currentNotifications: List<NotificationItem> = emptyList()
     private var isDark: Boolean = true
+    private var isTouchOnBrightnessBar: Boolean = false
+    private var lastTiles: List<QsTileModel> = emptyList()
+    private var lastNotifications: List<NotificationItem> = emptyList()
+    private var lastMediaSessions: List<MediaState> = emptyList()
+    private var lastCarrierName: String = ""
+    private var lastIsDark: Boolean? = null
+    private var lastShowMonetSurface: Boolean? = null
+    private var lastShowHeaderGradient: Boolean? = null
+    private var lastPermissionGranted: Boolean? = null
+    private var lastOuterCorner: Float? = null
 
     // Touch tracking for universal dismiss
     private var touchDownY: Float = 0f
@@ -144,6 +168,8 @@ class KitKatShadeHostView @JvmOverloads constructor(
     var onDismissAllNotifications: (() -> Unit)? = null
     var onRequestNotificationAccess: (() -> Unit)? = null
     var onOpenNotificationManager: (() -> Unit)? = null
+    var onOpenTileCustomizer: (() -> Unit)? = null
+    var onToggleEditMode: (() -> Unit)? = null
     var onClosePanel: (() -> Unit)? = null
 
     init {
@@ -151,15 +177,106 @@ class KitKatShadeHostView @JvmOverloads constructor(
 
         rootLayout = root.findViewById(R.id.shade_layout_kitkat_root)
         llHeader = root.findViewById(R.id.ll_kitkat_header)
+        ivCustomHeaderImage = root.findViewById(R.id.iv_kitkat_custom_header_image)
         tvTime = root.findViewById(R.id.tv_oreo_top_time)
         tvDate = root.findViewById(R.id.tv_qs_oreo_header_date)
         tvCarrier = root.findViewById(R.id.tv_oreo_top_carrier)
         btnClearAll = root.findViewById(R.id.btn_kitkat_clear_all)
+        btnEditTiles = root.findViewById(R.id.btn_kitkat_edit_tiles)
         btnSwitchScreen = root.findViewById(R.id.btn_kitkat_switch_screen)
 
         flNotifContainer = root.findViewById(R.id.fl_kitkat_notif_container)
         notifListView = root.findViewById(R.id.view_kitkat_notification_list)
         flQsContainer = root.findViewById(R.id.fl_kitkat_qs_container)
+        vLandscapeDivider = root.findViewById(R.id.v_kitkat_landscape_divider)
+        composeQqsBrightnessTop = root.findViewById(R.id.compose_kitkat_qqs_brightness_top)
+        composeQqsBrightnessBottom = root.findViewById(R.id.compose_kitkat_qqs_brightness_bottom)
+
+        composeQqsBrightnessTop.apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+            setOnTouchListener { v, event ->
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        isTouchOnBrightnessBar = true
+                        v.parent?.requestDisallowInterceptTouchEvent(true)
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        isTouchOnBrightnessBar = true
+                        v.parent?.requestDisallowInterceptTouchEvent(true)
+                    }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        isTouchOnBrightnessBar = false
+                    }
+                }
+                false
+            }
+            setContent {
+                val currentBrightness = brightnessState.intValue
+                val isDarkTheme = isDarkState.value
+                val showMonet = showMonetSurfaceState.value
+                val cardColor = if (showMonet) {
+                    androidx.compose.ui.graphics.Color(MonetThemeHelper.getCardBackground(context, isDarkTheme))
+                } else {
+                    if (isDarkTheme) androidx.compose.ui.graphics.Color(0xFF1E1E1E)
+                    else androidx.compose.ui.graphics.Color(MonetThemeHelper.getCardBackground(context, isDarkTheme))
+                }
+
+                QuickPanelTheme(darkTheme = isDarkTheme) {
+                    KitKatBrightnessSliderBox(
+                        brightness = currentBrightness,
+                        onBrightnessChange = { newB ->
+                            brightnessState.intValue = newB
+                            onBrightnessChange?.invoke(newB)
+                        },
+                        isDarkTheme = isDarkTheme,
+                        cardColor = cardColor
+                    )
+                }
+            }
+        }
+
+        composeQqsBrightnessBottom.apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+            setOnTouchListener { v, event ->
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        isTouchOnBrightnessBar = true
+                        v.parent?.requestDisallowInterceptTouchEvent(true)
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        isTouchOnBrightnessBar = true
+                        v.parent?.requestDisallowInterceptTouchEvent(true)
+                    }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        isTouchOnBrightnessBar = false
+                    }
+                }
+                false
+            }
+            setContent {
+                val currentBrightness = brightnessState.intValue
+                val isDarkTheme = isDarkState.value
+                val showMonet = showMonetSurfaceState.value
+                val cardColor = if (showMonet) {
+                    androidx.compose.ui.graphics.Color(MonetThemeHelper.getCardBackground(context, isDarkTheme))
+                } else {
+                    if (isDarkTheme) androidx.compose.ui.graphics.Color(0xFF1E1E1E)
+                    else androidx.compose.ui.graphics.Color(MonetThemeHelper.getCardBackground(context, isDarkTheme))
+                }
+
+                QuickPanelTheme(darkTheme = isDarkTheme) {
+                    KitKatBrightnessSliderBox(
+                        brightness = currentBrightness,
+                        onBrightnessChange = { newB ->
+                            brightnessState.intValue = newB
+                            onBrightnessChange?.invoke(newB)
+                        },
+                        isDarkTheme = isDarkTheme,
+                        cardColor = cardColor
+                    )
+                }
+            }
+        }
 
         llBottomBar = root.findViewById(R.id.ll_kitkat_bottom_carrier_bar)
         tvBottomCarrier = root.findViewById(R.id.tv_kitkat_bottom_carrier)
@@ -198,6 +315,22 @@ class KitKatShadeHostView @JvmOverloads constructor(
         btnSwitchScreen.setOnClickListener {
             isShowingQuickSettings = !isShowingQuickSettings
             updateViewVisibility()
+        }
+
+        btnEditTiles.setOnClickListener {
+            if (onToggleEditMode != null) {
+                onToggleEditMode?.invoke()
+            } else {
+                try {
+                    val intent = Intent(context, com.example.MainActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                        putExtra("screen", "tile_customizer")
+                    }
+                    context.startActivity(intent)
+                } catch (_: Exception) {}
+                onOpenTileCustomizer?.invoke()
+                onClosePanel?.invoke()
+            }
         }
 
         btnClearAll.setOnClickListener {
@@ -249,6 +382,7 @@ class KitKatShadeHostView @JvmOverloads constructor(
         var rvTilesDownY = 0f
         rvTiles.addOnItemTouchListener(object : RecyclerView.SimpleOnItemTouchListener() {
             override fun onInterceptTouchEvent(rv: RecyclerView, e: MotionEvent): Boolean {
+                if (isTouchOnBrightnessBar) return false
                 when (e.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
                         rvTilesDownY = e.rawY
@@ -271,6 +405,10 @@ class KitKatShadeHostView @JvmOverloads constructor(
     private var initialTouchStartedAtBottom = false
 
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
+        if (isTouchOnBrightnessBar) {
+            return false
+        }
+
         val density = context.resources.displayMetrics.density
         val threshold = 24f * density
 
@@ -321,6 +459,15 @@ class KitKatShadeHostView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(ev: MotionEvent): Boolean {
+        if (isTouchOnBrightnessBar) {
+            when (ev.actionMasked) {
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    isTouchOnBrightnessBar = false
+                }
+            }
+            return true
+        }
+
         val density = context.resources.displayMetrics.density
         velocityTracker?.addMovement(ev)
 
@@ -351,21 +498,97 @@ class KitKatShadeHostView @JvmOverloads constructor(
         return super.onTouchEvent(ev)
     }
 
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration?) {
+        super.onConfigurationChanged(newConfig)
+        updateViewVisibility()
+    }
+
     private fun updateViewVisibility() {
-        if (isShowingQuickSettings) {
-            flNotifContainer.visibility = View.GONE
+        val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val showQqsBrightness = PanelPreferences.brightnessInQqs.value
+        val isBrightnessAtBottom = PanelPreferences.brightnessAtBottom.value
+        val showCarrier = PanelPreferences.showCarrier.value
+
+        if (isLandscape) {
+            // LANDSCAPE SPLIT MODE: Left side = tiles, Right side = notifications
             flQsContainer.visibility = View.VISIBLE
-            btnSwitchScreen.setImageResource(R.drawable.ic_kitkat_notif_switch)
-            btnSwitchScreen.contentDescription = "Switch to Notifications"
-            tvCarrier.visibility = View.VISIBLE
-            btnClearAll.visibility = View.GONE
-        } else {
+            val qsLp = flQsContainer.layoutParams as LinearLayout.LayoutParams
+            qsLp.width = 0
+            qsLp.weight = 1.05f
+            qsLp.height = LinearLayout.LayoutParams.MATCH_PARENT
+            flQsContainer.layoutParams = qsLp
+
+            vLandscapeDivider.visibility = View.VISIBLE
+            val cardOutline = MonetThemeHelper.getCardOutline(context, isDark)
+            val dividerColor = if (showMonetSurfaceState.value) cardOutline else (if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#33000000"))
+            vLandscapeDivider.setBackgroundColor(dividerColor)
+
             flNotifContainer.visibility = View.VISIBLE
-            flQsContainer.visibility = View.GONE
-            btnSwitchScreen.setImageResource(R.drawable.ic_kitkat_qs_switch)
-            btnSwitchScreen.contentDescription = "Switch to Quick Settings"
-            tvCarrier.visibility = View.GONE
+            val notifLp = flNotifContainer.layoutParams as LinearLayout.LayoutParams
+            notifLp.width = 0
+            notifLp.weight = 0.95f
+            notifLp.height = LinearLayout.LayoutParams.MATCH_PARENT
+            flNotifContainer.layoutParams = notifLp
+
+            btnSwitchScreen.visibility = View.GONE
+            tvCarrier.visibility = if (showCarrier) View.VISIBLE else View.GONE
+            tvBottomCarrier.visibility = View.GONE
             btnClearAll.visibility = if (currentNotifications.isNotEmpty()) View.VISIBLE else View.INVISIBLE
+            btnEditTiles.visibility = View.VISIBLE
+            composeQqsBrightnessTop.visibility = View.GONE
+            composeQqsBrightnessBottom.visibility = View.GONE
+        } else {
+            // PORTRAIT MODE: Single screen view switcher
+            vLandscapeDivider.visibility = View.GONE
+
+            val qsLp = flQsContainer.layoutParams as LinearLayout.LayoutParams
+            qsLp.width = LinearLayout.LayoutParams.MATCH_PARENT
+            qsLp.weight = 0f
+            qsLp.height = LinearLayout.LayoutParams.MATCH_PARENT
+            flQsContainer.layoutParams = qsLp
+
+            val notifLp = flNotifContainer.layoutParams as LinearLayout.LayoutParams
+            notifLp.width = LinearLayout.LayoutParams.MATCH_PARENT
+            notifLp.weight = 0f
+            notifLp.height = LinearLayout.LayoutParams.MATCH_PARENT
+            flNotifContainer.layoutParams = notifLp
+
+            btnSwitchScreen.visibility = View.VISIBLE
+
+            if (isShowingQuickSettings) {
+                flNotifContainer.visibility = View.GONE
+                flQsContainer.visibility = View.VISIBLE
+                btnSwitchScreen.setImageResource(R.drawable.ic_kitkat_notif_switch)
+                btnSwitchScreen.contentDescription = "Switch to Notifications"
+                tvCarrier.visibility = if (showCarrier) View.VISIBLE else View.GONE
+                tvBottomCarrier.visibility = View.GONE
+                btnClearAll.visibility = View.GONE
+                btnEditTiles.visibility = View.VISIBLE
+                composeQqsBrightnessTop.visibility = View.GONE
+                composeQqsBrightnessBottom.visibility = View.GONE
+            } else {
+                flNotifContainer.visibility = View.VISIBLE
+                flQsContainer.visibility = View.GONE
+                btnSwitchScreen.setImageResource(R.drawable.ic_kitkat_qs_switch)
+                btnSwitchScreen.contentDescription = "Switch to Quick Settings"
+                tvCarrier.visibility = View.GONE
+                tvBottomCarrier.visibility = if (showCarrier) View.VISIBLE else View.GONE
+                btnClearAll.visibility = if (currentNotifications.isNotEmpty()) View.VISIBLE else View.INVISIBLE
+                btnEditTiles.visibility = View.GONE
+
+                if (showQqsBrightness) {
+                    if (isBrightnessAtBottom) {
+                        composeQqsBrightnessTop.visibility = View.GONE
+                        composeQqsBrightnessBottom.visibility = View.VISIBLE
+                    } else {
+                        composeQqsBrightnessTop.visibility = View.VISIBLE
+                        composeQqsBrightnessBottom.visibility = View.GONE
+                    }
+                } else {
+                    composeQqsBrightnessTop.visibility = View.GONE
+                    composeQqsBrightnessBottom.visibility = View.GONE
+                }
+            }
         }
     }
 
@@ -377,15 +600,73 @@ class KitKatShadeHostView @JvmOverloads constructor(
         carrierName: String,
         isDark: Boolean,
         showMonetSurface: Boolean = PanelPreferences.showMonetSurfaceBackground.value,
-        showHeaderGradient: Boolean = PanelPreferences.showCustomHeaderMonetGradient.value
+        showHeaderGradient: Boolean = PanelPreferences.showCustomHeaderMonetGradient.value,
+        mediaSessions: List<MediaState> = emptyList()
     ) {
+        if (this.brightnessState.intValue != brightness) {
+            this.brightnessState.intValue = brightness
+        }
+        if (sbBrightness.progress != brightness) {
+            sbBrightness.progress = brightness.coerceIn(sbBrightness.min, sbBrightness.max)
+        }
+
+        val outerCorner = PanelPreferences.panelOuterCorner.value
+        val themeChanged = this.lastIsDark != isDark ||
+                this.lastShowMonetSurface != showMonetSurface ||
+                this.lastShowHeaderGradient != showHeaderGradient ||
+                this.lastOuterCorner != outerCorner
+        val tilesChanged = this.lastTiles != tiles
+        val notifsChanged = this.lastNotifications != notifications ||
+                this.lastPermissionGranted != isNotificationPermissionGranted ||
+                this.lastMediaSessions != mediaSessions
+        val carrierChanged = this.lastCarrierName != carrierName
+
+        if (!themeChanged && !tilesChanged && !notifsChanged && !carrierChanged) {
+            return
+        }
+
+        this.lastTiles = tiles
+        this.lastNotifications = notifications
+        this.lastMediaSessions = mediaSessions
+        this.lastCarrierName = carrierName
+        this.lastIsDark = isDark
+        this.lastShowMonetSurface = showMonetSurface
+        this.lastShowHeaderGradient = showHeaderGradient
+        this.lastPermissionGranted = isNotificationPermissionGranted
+        this.lastOuterCorner = outerCorner
+
         this.isDark = isDark
         this.isDarkState.value = isDark
         this.showMonetSurfaceState.value = showMonetSurface
-        this.brightnessState.intValue = brightness
         this.currentNotifications = notifications
 
         updateDateTime()
+
+        // Custom Header Image
+        val showCustomHeader = PanelPreferences.showCustomHeaderImage.value
+        if (showCustomHeader) {
+            ivCustomHeaderImage.visibility = View.VISIBLE
+            val heightPx = (PanelPreferences.customHeaderImageHeight.value * context.resources.displayMetrics.density).toInt().coerceAtLeast(1)
+            val lp = ivCustomHeaderImage.layoutParams
+            if (lp.height != heightPx) {
+                lp.height = heightPx
+                ivCustomHeaderImage.layoutParams = lp
+            }
+            ivCustomHeaderImage.alpha = PanelPreferences.customHeaderImageOpacity.value
+            val imageUri = PanelPreferences.customHeaderImageUri.value
+            if (imageUri.isNotBlank()) {
+                try {
+                    coil.ImageLoader(context).enqueue(
+                        coil.request.ImageRequest.Builder(context)
+                            .data(imageUri)
+                            .target(ivCustomHeaderImage)
+                            .build()
+                    )
+                } catch (_: Exception) {}
+            }
+        } else {
+            ivCustomHeaderImage.visibility = View.GONE
+        }
 
         // 1. Resolve Monet Theme Dynamic Colors
         val primaryAccent = MonetThemeHelper.getPrimaryAccent(context, isDark)
@@ -428,6 +709,7 @@ class KitKatShadeHostView @JvmOverloads constructor(
         tvTime.setTextColor(textPrimary)
         tvDate.setTextColor(textSecondary)
         btnSwitchScreen.setColorFilter(primaryAccent)
+        btnEditTiles.setColorFilter(primaryAccent)
         btnClearAll.setColorFilter(clearAllAccent)
         tvCarrier.setTextColor(textSecondary)
 
@@ -441,10 +723,7 @@ class KitKatShadeHostView @JvmOverloads constructor(
         val dividerColor = if (showMonetSurface) cardOutline else (if (isDark) Color.parseColor("#333333") else cardOutline)
         vBottomDivider.setBackgroundColor(dividerColor)
 
-        // 3. Clear All visibility
-        if (!isShowingQuickSettings) {
-            btnClearAll.visibility = if (notifications.isNotEmpty()) View.VISIBLE else View.INVISIBLE
-        }
+        updateViewVisibility()
 
         // 4. Brightness Slider Sync
         if (sbBrightness.progress != brightness) {
@@ -470,11 +749,17 @@ class KitKatShadeHostView @JvmOverloads constructor(
             isDark = isDark,
             primaryColor = primaryAccent,
             panelCardBackgroundColor = notifCardBg,
-            mediaSessions = emptyList()
+            mediaSessions = mediaSessions
         )
     }
 
     private fun updateDateTime() {
+        val datePos = PanelPreferences.datePosition.value
+        if (datePos == com.example.data.DatePosition.HIDDEN) {
+            tvDate.visibility = View.GONE
+        } else {
+            tvDate.visibility = View.VISIBLE
+        }
         val now = Date()
         val timeFormat = SimpleDateFormat("H:mm", Locale.getDefault())
         val dateFormat = SimpleDateFormat("EEE, MMMM d", Locale.getDefault())
@@ -532,6 +817,16 @@ class KitKatShadeHostView @JvmOverloads constructor(
             isDark: Boolean,
             isBrightnessAtBottom: Boolean = PanelPreferences.brightnessAtBottom.value
         ) {
+            val itemsChanged = this.items != newItems
+            val styleChanged = this.tileAccent != tileAccent ||
+                    this.tileCardBg != tileCardBg ||
+                    this.isDark != isDark ||
+                    this.isBrightnessAtBottom != isBrightnessAtBottom
+
+            if (!itemsChanged && !styleChanged) {
+                return
+            }
+
             this.items = newItems
             this.tileAccent = tileAccent
             this.tileCardBg = tileCardBg
@@ -558,6 +853,18 @@ class KitKatShadeHostView @JvmOverloads constructor(
                         ViewGroup.LayoutParams.WRAP_CONTENT
                     )
                     setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool)
+                    setOnTouchListener { v, event ->
+                        when (event.actionMasked) {
+                            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                                isTouchOnBrightnessBar = true
+                                v.parent?.requestDisallowInterceptTouchEvent(true)
+                            }
+                            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                                isTouchOnBrightnessBar = false
+                            }
+                        }
+                        false
+                    }
                 }
                 KitKatHeaderViewHolder(composeView)
             } else {
@@ -568,27 +875,30 @@ class KitKatShadeHostView @JvmOverloads constructor(
 
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
             if (holder is KitKatHeaderViewHolder) {
-                holder.composeView.setContent {
-                    val currentBrightness = brightnessState.intValue
-                    val isDarkTheme = isDarkState.value
-                    val showMonet = showMonetSurfaceState.value
-                    val cardColor = if (showMonet) {
-                        androidx.compose.ui.graphics.Color(MonetThemeHelper.getCardBackground(context, isDarkTheme))
-                    } else {
-                        if (isDarkTheme) androidx.compose.ui.graphics.Color(0xFF1E1E1E)
-                        else androidx.compose.ui.graphics.Color(MonetThemeHelper.getCardBackground(context, isDarkTheme))
-                    }
+                if (!holder.isContentSet) {
+                    holder.isContentSet = true
+                    holder.composeView.setContent {
+                        val currentBrightness = brightnessState.intValue
+                        val isDarkTheme = isDarkState.value
+                        val showMonet = showMonetSurfaceState.value
+                        val cardColor = if (showMonet) {
+                            androidx.compose.ui.graphics.Color(MonetThemeHelper.getCardBackground(context, isDarkTheme))
+                        } else {
+                            if (isDarkTheme) androidx.compose.ui.graphics.Color(0xFF1E1E1E)
+                            else androidx.compose.ui.graphics.Color(MonetThemeHelper.getCardBackground(context, isDarkTheme))
+                        }
 
-                    QuickPanelTheme(darkTheme = isDarkTheme) {
-                        KitKatBrightnessSliderBox(
-                            brightness = currentBrightness,
-                            onBrightnessChange = { newB ->
-                                brightnessState.intValue = newB
-                                onBrightnessChange?.invoke(newB)
-                            },
-                            isDarkTheme = isDarkTheme,
-                            cardColor = cardColor
-                        )
+                        QuickPanelTheme(darkTheme = isDarkTheme) {
+                            KitKatBrightnessSliderBox(
+                                brightness = currentBrightness,
+                                onBrightnessChange = { newB ->
+                                    brightnessState.intValue = newB
+                                    onBrightnessChange?.invoke(newB)
+                                },
+                                isDarkTheme = isDarkTheme,
+                                cardColor = cardColor
+                            )
+                        }
                     }
                 }
             } else if (holder is KitKatTileViewHolder) {
@@ -619,18 +929,32 @@ class KitKatShadeHostView @JvmOverloads constructor(
                 }
 
                 // 2. Tile Label & Subtitle
-                holder.tvLabel.text = tile.label.uppercase()
-                holder.tvLabel.setTextColor(if (isActive) (if (isDark) Color.WHITE else textPrimary) else inactiveTextColor)
-
-                if (tile.subtitle.isNotBlank() && tile.subtitle != tile.label) {
-                    holder.tvSubtitle.text = tile.subtitle.uppercase()
-                    holder.tvSubtitle.setTextColor(if (isActive) tileAccent else textSecondary)
-                    holder.tvSubtitle.visibility = View.VISIBLE
-                } else {
+                val disableLabels = PanelPreferences.disableLabelsInExpanded.value
+                if (disableLabels) {
+                    holder.tvLabel.visibility = View.GONE
                     holder.tvSubtitle.visibility = View.GONE
+                } else {
+                    holder.tvLabel.visibility = View.VISIBLE
+                    holder.tvLabel.text = tile.label.uppercase()
+                    holder.tvLabel.setTextColor(if (isActive) (if (isDark) Color.WHITE else textPrimary) else inactiveTextColor)
+
+                    if (tile.subtitle.isNotBlank() && tile.subtitle != tile.label) {
+                        holder.tvSubtitle.text = tile.subtitle.uppercase()
+                        holder.tvSubtitle.setTextColor(if (isActive) tileAccent else textSecondary)
+                        holder.tvSubtitle.visibility = View.VISIBLE
+                    } else {
+                        holder.tvSubtitle.visibility = View.GONE
+                    }
                 }
 
-                holder.cardRoot.setBackgroundColor(tileCardBg)
+                val outerCornerPx = PanelPreferences.panelOuterCorner.value * context.resources.displayMetrics.density
+                val cardDrawable = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = outerCornerPx
+                    setColor(tileCardBg)
+                }
+                holder.cardRoot.background = cardDrawable
+                holder.cardRoot.clipToOutline = true
                 holder.cardRoot.setOnClickListener { onTileClick(tile) }
                 holder.cardRoot.setOnLongClickListener {
                     onTileLongClick(tile)
@@ -640,7 +964,9 @@ class KitKatShadeHostView @JvmOverloads constructor(
         }
     }
 
-    private class KitKatHeaderViewHolder(val composeView: ComposeView) : RecyclerView.ViewHolder(composeView)
+    private class KitKatHeaderViewHolder(val composeView: ComposeView) : RecyclerView.ViewHolder(composeView) {
+        var isContentSet = false
+    }
 
     private class KitKatTileViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val cardRoot: View = itemView.findViewById(R.id.fl_kitkat_tile_card)
@@ -709,6 +1035,8 @@ fun KitKatBrightnessSliderBox(
     val minBrightness by PanelPreferences.minBrightness.collectAsState()
     val maxBrightness by PanelPreferences.maxBrightness.collectAsState()
 
+    val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
+
     val sliderAccentColor = getSlidersElementColor(isDarkTheme)
     val tertiaryThemeColor = androidx.compose.material3.MaterialTheme.colorScheme.tertiary
     val brightnessGradientBrush = remember(sliderAccentColor, tertiaryThemeColor) {
@@ -716,12 +1044,15 @@ fun KitKatBrightnessSliderBox(
     }
     val inactiveTrackColor = getInactiveTilesElementColor(isDarkTheme)
 
+    val view = androidx.compose.ui.platform.LocalView.current
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 1.5.dp, vertical = 1.5.dp)
             .height(boxHeight)
-            .background(cardColor)
+            .background(cardColor, shape = RoundedCornerShape(panelOuterCorner.dp))
+            .clip(RoundedCornerShape(panelOuterCorner.dp))
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center
     ) {
