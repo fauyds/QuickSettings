@@ -112,6 +112,7 @@ class KitKatShadeHostView @JvmOverloads constructor(
     private val btnSwitchScreen: ImageView
 
     // Container views
+    private val llMainContent: LinearLayout
     private val flNotifContainer: LinearLayout
     private val notifListView: NotificationListView
     private val flQsContainer: LinearLayout
@@ -140,6 +141,7 @@ class KitKatShadeHostView @JvmOverloads constructor(
 
     // State
     private var isShowingQuickSettings: Boolean = false
+    private var isFlipping: Boolean = false
     private var currentNotifications: List<NotificationItem> = emptyList()
     private var isDark: Boolean = true
     private var isTouchOnBrightnessBar: Boolean = false
@@ -173,9 +175,13 @@ class KitKatShadeHostView @JvmOverloads constructor(
     var onClosePanel: (() -> Unit)? = null
 
     init {
+        clipChildren = false
+        clipToPadding = false
         val root = LayoutInflater.from(context).inflate(R.layout.shade_layout_kitkat, this, true)
 
         rootLayout = root.findViewById(R.id.shade_layout_kitkat_root)
+        rootLayout.clipChildren = false
+        rootLayout.clipToPadding = false
         llHeader = root.findViewById(R.id.ll_kitkat_header)
         ivCustomHeaderImage = root.findViewById(R.id.iv_kitkat_custom_header_image)
         tvTime = root.findViewById(R.id.tv_oreo_top_time)
@@ -185,6 +191,7 @@ class KitKatShadeHostView @JvmOverloads constructor(
         btnEditTiles = root.findViewById(R.id.btn_kitkat_edit_tiles)
         btnSwitchScreen = root.findViewById(R.id.btn_kitkat_switch_screen)
 
+        llMainContent = root.findViewById(R.id.ll_kitkat_main_content)
         flNotifContainer = root.findViewById(R.id.fl_kitkat_notif_container)
         notifListView = root.findViewById(R.id.view_kitkat_notification_list)
         flQsContainer = root.findViewById(R.id.fl_kitkat_qs_container)
@@ -304,6 +311,9 @@ class KitKatShadeHostView @JvmOverloads constructor(
         rvTiles.overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
         rvTiles.adapter = tileAdapter
 
+        clipChildren = false
+        clipToPadding = false
+
         setupListeners()
         updateDateTime()
         updateViewVisibility()
@@ -313,8 +323,7 @@ class KitKatShadeHostView @JvmOverloads constructor(
         val density = context.resources.displayMetrics.density
 
         btnSwitchScreen.setOnClickListener {
-            isShowingQuickSettings = !isShowingQuickSettings
-            updateViewVisibility()
+            flipToScreen(!isShowingQuickSettings)
         }
 
         btnEditTiles.setOnClickListener {
@@ -402,9 +411,74 @@ class KitKatShadeHostView @JvmOverloads constructor(
         })
     }
 
+    private fun flipToScreen(toQuickSettings: Boolean) {
+        val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        if (isLandscape || PanelPreferences.disablePanelAnimations.value) {
+            isShowingQuickSettings = toQuickSettings
+            updateViewVisibility()
+            return
+        }
+
+        if (isFlipping) return
+        isFlipping = true
+
+        val density = context.resources.displayMetrics.density
+        val distance = 12000f * density
+        rootLayout.cameraDistance = distance
+
+        // Flip direction:
+        // Notifications -> Tiles: flip left-to-right (0 to 90, then -90 to 0)
+        // Tiles -> Notifications: flip right-to-left (0 to -90, then 90 to 0)
+        val flipOutTarget = if (toQuickSettings) 90f else -90f
+        val flipInStart = if (toQuickSettings) -90f else 90f
+
+        val speedScale = PanelPreferences.animationSpeedScale.value.coerceAtLeast(0.2f)
+        val halfDuration = (150L / speedScale).toLong().coerceIn(75L, 500L)
+
+        val pivotX = if (rootLayout.width > 0) rootLayout.width / 2f else context.resources.displayMetrics.widthPixels / 2f
+        val pivotY = if (rootLayout.height > 0) rootLayout.height / 2f else context.resources.displayMetrics.heightPixels / 2f
+        rootLayout.pivotX = pivotX
+        rootLayout.pivotY = pivotY
+
+        // Phase 1: Flip out entire container
+        rootLayout.animate()
+            .rotationY(flipOutTarget)
+            .scaleX(0.96f)
+            .scaleY(0.96f)
+            .setDuration(halfDuration)
+            .setInterpolator(android.view.animation.AccelerateInterpolator(1.5f))
+            .withEndAction {
+                // Midpoint at 90 degrees edge-on: update view visibility & switch icons/cards
+                isShowingQuickSettings = toQuickSettings
+                updateViewVisibility()
+
+                // Set starting rotation for incoming side
+                rootLayout.rotationY = flipInStart
+
+                // Phase 2: Flip in entire container with new view
+                rootLayout.animate()
+                    .rotationY(0f)
+                    .scaleX(1.0f)
+                    .scaleY(1.0f)
+                    .setDuration(halfDuration)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator(1.5f))
+                    .withEndAction {
+                        rootLayout.rotationY = 0f
+                        rootLayout.scaleX = 1.0f
+                        rootLayout.scaleY = 1.0f
+                        isFlipping = false
+                    }
+                    .start()
+            }
+            .start()
+    }
+
     private var initialTouchStartedAtBottom = false
 
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
+        if (isFlipping) {
+            return true
+        }
         if (isTouchOnBrightnessBar) {
             return false
         }
@@ -459,6 +533,9 @@ class KitKatShadeHostView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(ev: MotionEvent): Boolean {
+        if (isFlipping) {
+            return true
+        }
         if (isTouchOnBrightnessBar) {
             when (ev.actionMasked) {
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
@@ -500,7 +577,25 @@ class KitKatShadeHostView @JvmOverloads constructor(
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration?) {
         super.onConfigurationChanged(newConfig)
+        if (isFlipping) {
+            rootLayout.animate().cancel()
+            rootLayout.rotationY = 0f
+            rootLayout.scaleX = 1f
+            rootLayout.scaleY = 1f
+            isFlipping = false
+        }
         updateViewVisibility()
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        if (isFlipping) {
+            rootLayout.animate().cancel()
+            rootLayout.rotationY = 0f
+            rootLayout.scaleX = 1f
+            rootLayout.scaleY = 1f
+            isFlipping = false
+        }
     }
 
     private fun updateViewVisibility() {

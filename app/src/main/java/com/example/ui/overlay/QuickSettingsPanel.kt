@@ -1455,6 +1455,12 @@ fun EditModeTileStudio(
         inactiveDropZoneBounds != null &&
         currentDragCenter.y >= (inactiveDropZoneBounds?.top ?: Float.MAX_VALUE)
 
+    val context = LocalContext.current
+    val isKitKat = PanelPreferences.isAndroidKitKatStyle(context)
+    val isMarshmallow = PanelPreferences.isAndroidMarshmallowStyle(context)
+    val isLegacyFlat = isKitKat || isMarshmallow
+    val legacyAccent = if (isKitKat) Color(0xFF33B5E5) else if (isMarshmallow) Color(0xFF00BFA5) else androidx.compose.material3.MaterialTheme.colorScheme.primary
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -1476,14 +1482,14 @@ fun EditModeTileStudio(
             ) {
                 Column {
                     Text(
-                        text = "EDIT QUICK SETTINGS",
+                        text = if (isKitKat) "ANDROID 4.4.4 KITKAT TILES" else if (isMarshmallow) "ANDROID 6.0 MARSHMALLOW TILES" else "EDIT QUICK SETTINGS",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp,
-                        color = androidx.compose.material3.MaterialTheme.colorScheme.primary
+                        color = legacyAccent
                     )
                     Text(
-                        text = "Hold & drag to reorder. Tap '-' to remove.",
+                        text = "Hold & drag to reorder tiles. Tap '-' to remove.",
                         fontSize = 11.sp,
                         color = if (isDark) Color.LightGray else Color(0xFF666666)
                     )
@@ -1494,8 +1500,8 @@ fun EditModeTileStudio(
                         onTilesUpdated(localActive, localInactive)
                         onDone()
                     },
-                    shape = RoundedCornerShape(16.dp),
-                    color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                    shape = RoundedCornerShape(if (isLegacyFlat) 8.dp else 16.dp),
+                    color = legacyAccent,
                     modifier = Modifier.testTag("inline_done_button")
                 ) {
                     Row(
@@ -1506,14 +1512,14 @@ fun EditModeTileStudio(
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = "Done",
-                            tint = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary,
+                            tint = Color.White,
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
                             text = "Done",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary
+                            color = Color.White
                         )
                     }
                 }
@@ -1743,9 +1749,9 @@ fun EditModeTileStudio(
             Spacer(modifier = Modifier.height(4.dp))
 
             val cardContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
-            val primaryColor = androidx.compose.material3.MaterialTheme.colorScheme.primary
+            val activeAccent = legacyAccent
             val availableTilesBg = if (isOverInactiveDropZone) {
-                primaryColor.copy(alpha = 0.12f)
+                activeAccent.copy(alpha = 0.12f)
             } else if (isDark) {
                 Color(
                     red = (cardContainerColor.red * 0.55f).coerceIn(0f, 1f),
@@ -1769,11 +1775,11 @@ fun EditModeTileStudio(
                     .onGloballyPositioned { coords ->
                         inactiveDropZoneBounds = coords.boundsInRoot()
                     }
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(if (isLegacyFlat) 12.dp else 16.dp))
                     .background(availableTilesBg)
                     .then(
                         if (isOverInactiveDropZone) {
-                            Modifier.border(2.dp, primaryColor, RoundedCornerShape(16.dp))
+                            Modifier.border(2.dp, activeAccent, RoundedCornerShape(if (isLegacyFlat) 12.dp else 16.dp))
                         } else {
                             Modifier
                         }
@@ -1789,7 +1795,7 @@ fun EditModeTileStudio(
                     Icon(
                         imageVector = Icons.Default.Tune,
                         contentDescription = null,
-                        tint = primaryColor,
+                        tint = activeAccent,
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
@@ -1801,7 +1807,7 @@ fun EditModeTileStudio(
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp,
-                        color = primaryColor
+                        color = activeAccent
                     )
                     Spacer(modifier = Modifier.weight(1f))
                     Text(
