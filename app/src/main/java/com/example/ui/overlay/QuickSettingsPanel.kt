@@ -107,6 +107,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -472,10 +473,14 @@ fun QuickSettingsPanel(
 
                 if (expansionStage == QsExpansionStage.FULL_QS) {
                     if (isDraggedUp) {
-                        // Swiped UP in FULL_QS -> Collapse to QQS
+                        // Swiped UP in FULL_QS -> Collapse to QQS (or directly close panel for KitKat/Marshmallow styles)
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         dragTranslationYState.floatValue = 0f
-                        onStageChange(QsExpansionStage.QQS)
+                        if (com.example.data.PanelPreferences.isAndroidKitKatStyle(context) || com.example.data.PanelPreferences.isAndroidMarshmallowStyle(context)) {
+                            onStageChange(QsExpansionStage.COLLAPSED)
+                        } else {
+                            onStageChange(QsExpansionStage.QQS)
+                        }
                     } else {
                         // Dragged UP less than 36dp -> Snap back open!
                         if (disablePanelAnimations) {
@@ -598,7 +603,7 @@ fun QuickSettingsPanel(
                     if (isDraggedUp) {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         if (expansionStage == QsExpansionStage.FULL_QS) {
-                            if (com.example.data.PanelPreferences.isAndroidKitKatStyle(context)) {
+                            if (com.example.data.PanelPreferences.isAndroidKitKatStyle(context) || com.example.data.PanelPreferences.isAndroidMarshmallowStyle(context)) {
                                 dragTranslationYState.floatValue = 0f
                                 onStageChange(QsExpansionStage.COLLAPSED)
                             } else {
@@ -2448,7 +2453,7 @@ fun MarshmallowTileEditorScreen(
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                             Text(
-                                text = "SYSTEM UI TUNER • QUICK SETTINGS",
+                                text = "EDIT QUICK TILES",
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.sp,
@@ -3188,7 +3193,7 @@ fun EditModeTileStudio(
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                             Text(
-                                text = "SYSTEM UI TUNER • QUICK SETTINGS",
+                                text = "EDIT QUICK TILES",
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.sp,
@@ -4173,9 +4178,25 @@ fun UnifiedQsPanel(
                         .wrapContentHeight()
                 ) {
                     val qsScrollState = rememberScrollState()
-                    val nestedScrollConnection = remember {
+                    val nestedScrollConnection = remember(onClosePanel) {
                         object : NestedScrollConnection {
                             var accumulatedUpDrag = 0f
+
+                            override fun onPreScroll(
+                                available: Offset,
+                                source: NestedScrollSource
+                            ): Offset {
+                                if (available.y < -1f && qsScrollState.value >= qsScrollState.maxValue && qsScrollState.maxValue > 0) {
+                                    accumulatedUpDrag += available.y
+                                    if (accumulatedUpDrag < -30f) {
+                                        accumulatedUpDrag = 0f
+                                        onClosePanel()
+                                    }
+                                } else if (available.y > 1f) {
+                                    accumulatedUpDrag = 0f
+                                }
+                                return Offset.Zero
+                            }
 
                             override fun onPostScroll(
                                 consumed: Offset,
@@ -4184,14 +4205,25 @@ fun UnifiedQsPanel(
                             ): Offset {
                                 if (available.y < -1f) {
                                     accumulatedUpDrag += available.y
-                                    if (accumulatedUpDrag < -60f) {
+                                    if (accumulatedUpDrag < -30f) {
                                         accumulatedUpDrag = 0f
-                                        onCollapseToQqs()
+                                        onClosePanel()
                                     }
                                 } else if (available.y > 1f) {
                                     accumulatedUpDrag = 0f
                                 }
                                 return Offset.Zero
+                            }
+
+                            override suspend fun onPostFling(
+                                consumed: Velocity,
+                                available: Velocity
+                            ): Velocity {
+                                if (available.y < -120f) {
+                                    accumulatedUpDrag = 0f
+                                    onClosePanel()
+                                }
+                                return super.onPostFling(consumed, available)
                             }
                         }
                     }

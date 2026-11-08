@@ -105,7 +105,7 @@ class TileEditAdapter(
                 val textSecondary = MonetThemeHelper.getTextSecondary(context, isDark)
                 val onPrimary = if (isKitKat || isMarshmallow) Color.WHITE else MonetThemeHelper.getOnPrimaryText(context, isDark)
 
-                holder.tvTitle.text = if (isKitKat) "QUICK SETTINGS TILES" else if (isMarshmallow) "SYSTEM UI TUNER • QUICK SETTINGS" else "QUICK SETTINGS"
+                holder.tvTitle.text = if (isKitKat) "QUICK SETTINGS TILES" else if (isMarshmallow) "EDIT QUICK TILES" else "QUICK SETTINGS"
                 holder.tvTitle.setTextColor(primaryAccent)
                 holder.tvSubtitle.setTextColor(textSecondary)
                 holder.btnDone.visibility = android.view.View.VISIBLE

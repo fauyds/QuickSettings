@@ -187,7 +187,7 @@ fun TileCustomizerScreen(
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
-                            text = "SYSTEM UI TUNER • QUICK SETTINGS",
+                            text = "EDIT QUICK TILES",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp,
