@@ -4181,62 +4181,6 @@ fun UnifiedQsPanel(
                         .wrapContentHeight()
                 ) {
                     val qsScrollState = rememberScrollState()
-                    var isAtBottomOnTouchDown by remember { mutableStateOf(false) }
-
-                    val nestedScrollConnection = remember(onCollapseToQqs) {
-                        object : NestedScrollConnection {
-                            var accumulatedUpDrag = 0f
-
-                            override fun onPreScroll(
-                                available: Offset,
-                                source: NestedScrollSource
-                            ): Offset {
-                                if (isAtBottomOnTouchDown && available.y < -1f) {
-                                    accumulatedUpDrag += available.y
-                                    if (accumulatedUpDrag < -24f) {
-                                        accumulatedUpDrag = 0f
-                                        isAtBottomOnTouchDown = false
-                                        onCollapseToQqs()
-                                    }
-                                } else if (available.y > 1f) {
-                                    accumulatedUpDrag = 0f
-                                    isAtBottomOnTouchDown = false
-                                }
-                                return Offset.Zero
-                            }
-
-                            override fun onPostScroll(
-                                consumed: Offset,
-                                available: Offset,
-                                source: NestedScrollSource
-                            ): Offset {
-                                if (isAtBottomOnTouchDown && available.y < -1f) {
-                                    accumulatedUpDrag += available.y
-                                    if (accumulatedUpDrag < -24f) {
-                                        accumulatedUpDrag = 0f
-                                        isAtBottomOnTouchDown = false
-                                        onCollapseToQqs()
-                                    }
-                                } else if (available.y > 1f) {
-                                    accumulatedUpDrag = 0f
-                                    isAtBottomOnTouchDown = false
-                                }
-                                return Offset.Zero
-                            }
-
-                            override suspend fun onPostFling(
-                                consumed: Velocity,
-                                available: Velocity
-                            ): Velocity {
-                                if (isAtBottomOnTouchDown && available.y < -80f) {
-                                    accumulatedUpDrag = 0f
-                                    isAtBottomOnTouchDown = false
-                                    onCollapseToQqs()
-                                }
-                                return super.onPostFling(consumed, available)
-                            }
-                        }
-                    }
 
                     Column(
                         modifier = Modifier
@@ -4571,13 +4515,51 @@ fun UnifiedQsPanel(
                                 .then(
                                     if (!isLandscape && morphProgress >= 0.99f) {
                                         Modifier
-                                            .pointerInput(Unit) {
+                                            .pointerInput(onCollapseToQqs) {
+                                                val thresholdPx = 24.dp.toPx()
+                                                val flingThresholdPx = 16.dp.toPx()
+
                                                 awaitEachGesture {
-                                                    awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                                                    isAtBottomOnTouchDown = (qsScrollState.maxValue == 0 || qsScrollState.value >= qsScrollState.maxValue - 12)
+                                                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                                                    val downY = down.position.y
+                                                    val downX = down.position.x
+                                                    val startedAtBottom = (qsScrollState.maxValue == 0 || qsScrollState.value >= qsScrollState.maxValue - 8)
+
+                                                    var hasTriggered = false
+
+                                                    while (true) {
+                                                        val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+                                                        val pointer = event.changes.firstOrNull { it.id == down.id } ?: break
+
+                                                        if (!pointer.pressed) {
+                                                            // Pointer released (KitKat ACTION_UP style)
+                                                            val deltaY = pointer.position.y - downY
+                                                            val deltaX = pointer.position.x - downX
+                                                            if (!hasTriggered && startedAtBottom && (qsScrollState.maxValue == 0 || qsScrollState.value >= qsScrollState.maxValue - 8)) {
+                                                                if (deltaY < -flingThresholdPx && kotlin.math.abs(deltaY) > kotlin.math.abs(deltaX)) {
+                                                                    hasTriggered = true
+                                                                    pointer.consume()
+                                                                    onCollapseToQqs()
+                                                                }
+                                                            }
+                                                            break
+                                                        }
+
+                                                        // Pointer moving (KitKat ACTION_MOVE style)
+                                                        val deltaY = pointer.position.y - downY
+                                                        val deltaX = pointer.position.x - downX
+
+                                                        if (!hasTriggered && startedAtBottom && (qsScrollState.maxValue == 0 || qsScrollState.value >= qsScrollState.maxValue - 8)) {
+                                                            if (deltaY < -thresholdPx && kotlin.math.abs(deltaY) > kotlin.math.abs(deltaX)) {
+                                                                hasTriggered = true
+                                                                pointer.consume()
+                                                                onCollapseToQqs()
+                                                                break
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                             }
-                                            .nestedScroll(nestedScrollConnection)
                                             .verticalScroll(qsScrollState)
                                     } else Modifier
                                 )
