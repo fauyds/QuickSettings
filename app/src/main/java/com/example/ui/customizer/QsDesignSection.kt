@@ -186,9 +186,28 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
-            PanelPreferences.setCustomHeaderImageUri(context, uri.toString())
-            PanelPreferences.setShowCustomHeaderImage(context, true)
-            Toast.makeText(context, "Header image selected!", Toast.LENGTH_SHORT).show()
+            try {
+                try {
+                    val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    context.contentResolver.takePersistableUriPermission(uri, takeFlags)
+                } catch (_: Exception) {}
+
+                val headerDir = java.io.File(context.filesDir, "header_images").apply { mkdirs() }
+                val destFile = java.io.File(headerDir, "custom_header_image.jpg")
+                context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                    java.io.FileOutputStream(destFile).use { outputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
+                val localUriStr = Uri.fromFile(destFile).toString()
+                PanelPreferences.setCustomHeaderImageUri(context, localUriStr)
+                PanelPreferences.setShowCustomHeaderImage(context, true)
+                Toast.makeText(context, "Header image selected!", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                PanelPreferences.setCustomHeaderImageUri(context, uri.toString())
+                PanelPreferences.setShowCustomHeaderImage(context, true)
+                Toast.makeText(context, "Header image selected!", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -1409,7 +1428,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
                             if (customHeaderImageUri.isNotBlank()) {
                                 OutlinedButton(
-                                    onClick = { PanelPreferences.setCustomHeaderImageUri(context, "") },
+                                    onClick = {
+                                        PanelPreferences.setCustomHeaderImageUri(context, "")
+                                        try {
+                                            val destFile = java.io.File(context.filesDir, "header_images/custom_header_image.jpg")
+                                            if (destFile.exists()) destFile.delete()
+                                        } catch (_: Exception) {}
+                                    },
                                     colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
                                         contentColor = MaterialTheme.colorScheme.error
                                     )
@@ -3647,7 +3672,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 "show_carrier_card",
                 "carrier_divider_card",
                 "hide_carrier_in_expanded_card",
-                "custom_header_monet_gradient_card",
                 "panel_corner_styling_card"
             )
             if (!enableLegacyTileShapes) {

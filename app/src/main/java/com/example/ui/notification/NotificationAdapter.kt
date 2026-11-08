@@ -382,10 +382,9 @@ class NotificationAdapter(
             if (isOreoStyle) {
                 val strokeColor = if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#33000000")
                 val strokePx = (1 * density).toInt().coerceAtLeast(1)
-                val solidOreoBg = if (isDark) Color.parseColor("#212121") else Color.parseColor("#FFFFFF")
                 val baseDrawable = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
-                    setColor(solidOreoBg)
+                    setColor(cardBgColorInt)
                 }
                 val strokeDrawable = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
