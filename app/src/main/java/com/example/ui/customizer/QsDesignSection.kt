@@ -232,61 +232,66 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 text = "Quick Settings Style",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
+                                lineHeight = 17.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "Select layout style: Modern, Android 8.0 Oreo, Android 6.0 Marshmallow, or Android 4.4 KitKat.",
                                 fontSize = 12.sp,
+                                lineHeight = 15.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
 
-                    com.example.data.QsPanelStyle.entries.forEach { style ->
-                        val isSelected = currentPanelStyle == style
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { PanelPreferences.setPanelStyle(context, style) },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                            ),
-                            border = androidx.compose.foundation.BorderStroke(
-                                width = if (isSelected) 2.dp else 1.dp,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                    val allStyles = com.example.data.QsPanelStyle.entries
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        allStyles.forEach { style ->
+                            val isSelected = (currentPanelStyle == style)
+                            val chipShape = SegmentedButtonShapes.getShape(
+                                item = style,
+                                items = allStyles,
+                                selectedItem = currentPanelStyle
                             )
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { PanelPreferences.setPanelStyle(context, style) },
+                                shape = chipShape,
+                                border = null,
+                                label = {
                                     Text(
                                         text = style.displayName,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = style.description,
                                         fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        style = TextStyle(
+                                            platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                            lineHeightStyle = LineHeightStyle(
+                                                alignment = LineHeightStyle.Alignment.Center,
+                                                trim = LineHeightStyle.Trim.Both
+                                            )
+                                        )
                                     )
-                                }
-                                androidx.compose.material3.RadioButton(
-                                    selected = isSelected,
-                                    onClick = { PanelPreferences.setPanelStyle(context, style) },
-                                    colors = androidx.compose.material3.RadioButtonDefaults.colors(
-                                        selectedColor = MaterialTheme.colorScheme.primary
-                                    )
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    containerColor = com.example.ui.theme.getSettingsScreenBackgroundColor(isSystemInDarkTheme()),
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    labelColor = MaterialTheme.colorScheme.onSurface
                                 )
-                            }
+                            )
                         }
                     }
+
+                    // Chips row ends here
                 }
             }
         }
@@ -3495,187 +3500,33 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // 1. Android 10 Style Media Player Toggle
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primaryContainer),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.GraphicEq,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(1.dp)
-                            ) {
-                                Text(
-                                    text = "Android 10 Media Player",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    lineHeight = 17.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Display an Android 10 (Q) style media player notification inside the notification container.",
-                                    fontSize = 12.sp,
-                                    lineHeight = 15.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        Switch(
-                            checked = showMediaInNotifContainer && mediaNotificationStyle == MediaNotificationStyle.ANDROID_10,
-                            onCheckedChange = { isChecked ->
-                                if (isChecked) {
-                                    PanelPreferences.setShowMediaInNotificationContainer(context, true)
-                                    PanelPreferences.setMediaNotificationStyle(context, MediaNotificationStyle.ANDROID_10)
-                                } else {
-                                    PanelPreferences.setShowMediaInNotificationContainer(context, false)
-                                }
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
-                            ),
-                            modifier = Modifier.testTag("show_media_in_notif_container_toggle")
-                        )
-                    }
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                    // 2. Compact Style Media Player Toggle (New style matching screenshot)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.secondaryContainer),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.MusicNote,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(1.dp)
-                            ) {
-                                Text(
-                                    text = "Compact Media Player",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    lineHeight = 17.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Display a compact media notification with artwork, song, artist, album, and controls.",
-                                    fontSize = 12.sp,
-                                    lineHeight = 15.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        Switch(
-                            checked = showMediaInNotifContainer && mediaNotificationStyle == MediaNotificationStyle.COMPACT,
-                            onCheckedChange = { isChecked ->
-                                if (isChecked) {
-                                    PanelPreferences.setShowMediaInNotificationContainer(context, true)
-                                    PanelPreferences.setMediaNotificationStyle(context, MediaNotificationStyle.COMPACT)
-                                } else {
-                                    PanelPreferences.setShowMediaInNotificationContainer(context, false)
-                                }
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
-                            ),
-                            modifier = Modifier.testTag("compact_media_notification_toggle")
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    val compactMediaNotificationCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
-        PinnableCardWrapper("compact_media_notification_card", CustomizeCategory.QS_DESIGN, "Compact Media Notification") {
-            SettingsCard(
-                shape = shape,
-                modifier = Modifier.testTag("compact_media_notification_card")
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 20.dp, vertical = 18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.weight(1f)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Box(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.secondaryContainer),
+                                .background(MaterialTheme.colorScheme.primaryContainer),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.MusicNote,
+                                imageVector = Icons.Default.GraphicEq,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
 
                         Column(
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             Text(
-                                text = "Compact Media Player",
+                                text = "Media Player Style",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 lineHeight = 17.sp,
@@ -3683,7 +3534,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Display a compact media notification with artwork, song, artist, album, and controls.",
+                                text = "Select media player notification style",
                                 fontSize = 12.sp,
                                 lineHeight = 15.sp,
                                 style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
@@ -3692,28 +3543,78 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         }
                     }
 
-                    Switch(
-                        checked = showMediaInNotifContainer && mediaNotificationStyle == MediaNotificationStyle.COMPACT,
-                        onCheckedChange = { isChecked ->
-                            if (isChecked) {
-                                PanelPreferences.setShowMediaInNotificationContainer(context, true)
-                                PanelPreferences.setMediaNotificationStyle(context, MediaNotificationStyle.COMPACT)
-                            } else {
-                                PanelPreferences.setShowMediaInNotificationContainer(context, false)
-                            }
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                            uncheckedTrackColor = MaterialTheme.colorScheme.surface
-                        ),
-                        modifier = Modifier.testTag("compact_media_notification_card_toggle")
-                    )
+                    val currentOption = when {
+                        !showMediaInNotifContainer -> "Android 11"
+                        mediaNotificationStyle == MediaNotificationStyle.COMPACT -> "Android 6"
+                        else -> "Android 10"
+                    }
+
+                    val allOptions = listOf("Android 11", "Android 10", "Android 6")
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        allOptions.forEach { option ->
+                            val isSelected = (currentOption == option)
+                            val chipShape = SegmentedButtonShapes.getShape(
+                                item = option,
+                                items = allOptions,
+                                selectedItem = currentOption
+                            )
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = {
+                                    when (option) {
+                                        "Android 11" -> {
+                                            PanelPreferences.setShowMediaInNotificationContainer(context, false)
+                                            PanelPreferences.setMediaNotificationStyle(context, MediaNotificationStyle.ANDROID_10)
+                                        }
+                                        "Android 10" -> {
+                                            PanelPreferences.setShowMediaInNotificationContainer(context, true)
+                                            PanelPreferences.setMediaNotificationStyle(context, MediaNotificationStyle.ANDROID_10)
+                                        }
+                                        "Android 6" -> {
+                                            PanelPreferences.setShowMediaInNotificationContainer(context, true)
+                                            PanelPreferences.setMediaNotificationStyle(context, MediaNotificationStyle.COMPACT)
+                                        }
+                                    }
+                                },
+                                shape = chipShape,
+                                border = null,
+                                label = {
+                                    Text(
+                                        text = option,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        style = TextStyle(
+                                            platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                            lineHeightStyle = LineHeightStyle(
+                                                alignment = LineHeightStyle.Alignment.Center,
+                                                trim = LineHeightStyle.Trim.Both
+                                            )
+                                        )
+                                    )
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    containerColor = com.example.ui.theme.getSettingsScreenBackgroundColor(isSystemInDarkTheme()),
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    labelColor = MaterialTheme.colorScheme.onSurface
+                                )
+                            )
+                        }
+                    }
                 }
             }
         }
     }
+
+    val compactMediaNotificationCard = showMediaInNotifContainerCard
 
     val pinnedCardsMap = mapOf<String, @Composable (androidx.compose.ui.graphics.Shape) -> Unit>(
         "android_oreo_style_card" to androidOreoStyleCard,

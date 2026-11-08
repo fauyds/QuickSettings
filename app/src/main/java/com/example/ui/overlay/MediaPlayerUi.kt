@@ -352,8 +352,9 @@ fun AdaptiveMediaPlayerCard(
     val isAndroidKitKatStyle by PanelPreferences.isAndroidKitKatStyle.collectAsState()
     val mediaNotificationStyle by PanelPreferences.mediaNotificationStyle.collectAsState()
 
+    val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
     val isClassicStyle = isAndroidOreoStyle
-    val effectiveCornerRadius = if (isClassicStyle) 0.dp else cornerRadius
+    val effectiveCornerRadius = if (isClassicStyle) 0.dp else panelOuterCorner.dp
     val cardShape = if (isClassicStyle) RoundedCornerShape(0.dp) else RoundedCornerShape(effectiveCornerRadius)
     val activeSessions = if (sessions.isNotEmpty()) sessions else listOf(mediaState)
     val coroutineScope = rememberCoroutineScope()
@@ -376,7 +377,8 @@ fun AdaptiveMediaPlayerCard(
 
     val currentHeaderState = activeSessions.getOrElse(pagerState.currentPage.coerceIn(0 until activeSessions.size)) { mediaState }
 
-    if (mediaNotificationStyle == MediaNotificationStyle.COMPACT) {
+    val showMediaInNotifContainer by PanelPreferences.showMediaInNotificationContainer.collectAsState()
+    if (showMediaInNotifContainer && mediaNotificationStyle == MediaNotificationStyle.COMPACT) {
         CompactMediaNotificationCard(
             mediaState = currentHeaderState,
             modifier = modifier,

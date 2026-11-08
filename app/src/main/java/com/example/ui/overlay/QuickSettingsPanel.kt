@@ -4035,13 +4035,10 @@ fun UnifiedQsPanel(
             if (mediaTopGap > 0.dp) {
                 Spacer(modifier = Modifier.height(mediaTopGap))
             }
-            val panelGlobalCornerEnabled by PanelPreferences.panelGlobalCornerEnabled.collectAsState()
             val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
-            val panelInnerCorner by PanelPreferences.panelInnerCorner.collectAsState()
-            val effectiveInnerCorner = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner).dp
 
             val mediaAccentColor = com.example.ui.theme.getMiscElementColor(isDark)
-            val effectiveCornerRadius = if (isAndroidOreoStyle) 0.dp else effectiveInnerCorner
+            val effectiveCornerRadius = if (isAndroidOreoStyle) 0.dp else panelOuterCorner.dp
             val effectiveBgColor = if (isAndroidOreoStyle) {
                 Color(MonetThemeHelper.getSurfaceBackground(context, isDark))
             } else {

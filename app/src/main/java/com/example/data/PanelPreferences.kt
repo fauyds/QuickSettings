@@ -178,7 +178,7 @@ enum class QsSliderTarget(val id: String, val label: String) {
 
 enum class MediaNotificationStyle(val id: String, val title: String, val description: String) {
     ANDROID_10("android_10", "Android 10", "Classic Android 10 wavy seekbar card"),
-    COMPACT("compact", "Compact Style", "Compact layout with artwork, song, artist, album, and playback controls");
+    COMPACT("compact", "Android 6 Style", "Android 6 style compact layout with artwork, song, artist, album, and playback controls");
 
     companion object {
         fun fromId(id: String?): MediaNotificationStyle {
