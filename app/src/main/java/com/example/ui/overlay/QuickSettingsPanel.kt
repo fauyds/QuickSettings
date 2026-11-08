@@ -473,10 +473,10 @@ fun QuickSettingsPanel(
 
                 if (expansionStage == QsExpansionStage.FULL_QS) {
                     if (isDraggedUp) {
-                        // Swiped UP in FULL_QS -> Collapse to QQS (or directly close panel for KitKat/Marshmallow styles)
+                        // Swiped UP in FULL_QS -> Collapse to QQS (or directly close panel for KitKat style)
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         dragTranslationYState.floatValue = 0f
-                        if (com.example.data.PanelPreferences.isAndroidKitKatStyle(context) || com.example.data.PanelPreferences.isAndroidMarshmallowStyle(context)) {
+                        if (com.example.data.PanelPreferences.isAndroidKitKatStyle(context)) {
                             onStageChange(QsExpansionStage.COLLAPSED)
                         } else {
                             onStageChange(QsExpansionStage.QQS)
@@ -603,7 +603,7 @@ fun QuickSettingsPanel(
                     if (isDraggedUp) {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         if (expansionStage == QsExpansionStage.FULL_QS) {
-                            if (com.example.data.PanelPreferences.isAndroidKitKatStyle(context) || com.example.data.PanelPreferences.isAndroidMarshmallowStyle(context)) {
+                            if (com.example.data.PanelPreferences.isAndroidKitKatStyle(context)) {
                                 dragTranslationYState.floatValue = 0f
                                 onStageChange(QsExpansionStage.COLLAPSED)
                             } else {
@@ -4178,7 +4178,23 @@ fun UnifiedQsPanel(
                         .wrapContentHeight()
                 ) {
                     val qsScrollState = rememberScrollState()
-                    val nestedScrollConnection = remember(onClosePanel) {
+                    var canCollapseOnNextSwipe by remember { mutableStateOf(false) }
+
+                    LaunchedEffect(qsScrollState.isScrollInProgress, qsScrollState.value, qsScrollState.maxValue) {
+                        if (!qsScrollState.isScrollInProgress) {
+                            if (qsScrollState.maxValue == 0 || qsScrollState.value >= qsScrollState.maxValue - 4) {
+                                canCollapseOnNextSwipe = true
+                            } else {
+                                canCollapseOnNextSwipe = false
+                            }
+                        } else {
+                            if (qsScrollState.value < qsScrollState.maxValue - 10) {
+                                canCollapseOnNextSwipe = false
+                            }
+                        }
+                    }
+
+                    val nestedScrollConnection = remember(onCollapseToQqs) {
                         object : NestedScrollConnection {
                             var accumulatedUpDrag = 0f
 
@@ -4186,13 +4202,14 @@ fun UnifiedQsPanel(
                                 available: Offset,
                                 source: NestedScrollSource
                             ): Offset {
-                                if (available.y < -1f && qsScrollState.value >= qsScrollState.maxValue && qsScrollState.maxValue > 0) {
+                                if (canCollapseOnNextSwipe && available.y < -2f && (qsScrollState.maxValue == 0 || qsScrollState.value >= qsScrollState.maxValue - 4)) {
                                     accumulatedUpDrag += available.y
                                     if (accumulatedUpDrag < -30f) {
                                         accumulatedUpDrag = 0f
-                                        onClosePanel()
+                                        canCollapseOnNextSwipe = false
+                                        onCollapseToQqs()
                                     }
-                                } else if (available.y > 1f) {
+                                } else if (available.y > 2f) {
                                     accumulatedUpDrag = 0f
                                 }
                                 return Offset.Zero
@@ -4203,13 +4220,14 @@ fun UnifiedQsPanel(
                                 available: Offset,
                                 source: NestedScrollSource
                             ): Offset {
-                                if (available.y < -1f) {
+                                if (canCollapseOnNextSwipe && available.y < -2f) {
                                     accumulatedUpDrag += available.y
                                     if (accumulatedUpDrag < -30f) {
                                         accumulatedUpDrag = 0f
-                                        onClosePanel()
+                                        canCollapseOnNextSwipe = false
+                                        onCollapseToQqs()
                                     }
-                                } else if (available.y > 1f) {
+                                } else if (available.y > 2f) {
                                     accumulatedUpDrag = 0f
                                 }
                                 return Offset.Zero
@@ -4219,9 +4237,10 @@ fun UnifiedQsPanel(
                                 consumed: Velocity,
                                 available: Velocity
                             ): Velocity {
-                                if (available.y < -120f) {
+                                if (canCollapseOnNextSwipe && available.y < -120f) {
                                     accumulatedUpDrag = 0f
-                                    onClosePanel()
+                                    canCollapseOnNextSwipe = false
+                                    onCollapseToQqs()
                                 }
                                 return super.onPostFling(consumed, available)
                             }
@@ -5776,6 +5795,7 @@ fun UnifiedQsPanel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(if (isNotificationsVisible) Modifier.weight(1f, fill = true) else Modifier)
+                    .then(if (isAndroidMarshmallowStyle && !isFullQs) Modifier.padding(top = 8.dp) else Modifier)
             ) {
                 notificationsContent()
             }
