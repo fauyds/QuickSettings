@@ -231,16 +231,19 @@ class QuickQuickSettingsView @JvmOverloads constructor(
             val now = java.util.Date()
             val timeFormatter = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
             val dateFormatter = java.text.SimpleDateFormat("EEEE, MMMM d", java.util.Locale.getDefault())
+            val headerBg = if (isDark) Color.parseColor("#263238") else Color.parseColor("#E0E5E8")
+            val textPrimary = if (isDark) Color.WHITE else Color.parseColor("#263238")
+            val textSecondary = if (isDark) Color.parseColor("#FFB0BEC5") else Color.parseColor("#FF546E7A")
             tvOreoTopTime?.text = timeFormatter.format(now)
-            tvOreoTopTime?.setTextColor(Color.WHITE)
+            tvOreoTopTime?.setTextColor(textPrimary)
             tvOreoDate?.text = dateFormatter.format(now)
-            tvOreoDate?.setTextColor(Color.parseColor("#FFB0BEC5"))
+            tvOreoDate?.setTextColor(textSecondary)
             val panelOuterCorner = com.example.data.PanelPreferences.panelOuterCorner.value
             val outerPx = panelOuterCorner * density
             llContainer.background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, outerPx, outerPx, outerPx, outerPx)
-                setColor(Color.parseColor("#263238"))
+                setColor(headerBg)
             }
         } else if (isOreo) {
             val now = java.util.Date()

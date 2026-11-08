@@ -2232,15 +2232,22 @@ fun MarshmallowTileEditorScreen(
         else -> if (isDark) {
             Color(MonetThemeHelper.brightenColor(baseSurfaceBg, true))
         } else {
-            val r = (android.graphics.Color.red(baseSurfaceBg) * 0.88f).toInt().coerceIn(0, 255)
-            val g = (android.graphics.Color.green(baseSurfaceBg) * 0.88f).toInt().coerceIn(0, 255)
-            val b = (android.graphics.Color.blue(baseSurfaceBg) * 0.88f).toInt().coerceIn(0, 255)
+            val r = (android.graphics.Color.red(baseSurfaceBg) * 0.90f).toInt().coerceIn(0, 255)
+            val g = (android.graphics.Color.green(baseSurfaceBg) * 0.90f).toInt().coerceIn(0, 255)
+            val b = (android.graphics.Color.blue(baseSurfaceBg) * 0.90f).toInt().coerceIn(0, 255)
             Color(android.graphics.Color.argb(255, r, g, b))
         }
     }
     val bodyBg = when {
         customPanelBg != null -> Color(customPanelBg)
-        else -> Color(MonetThemeHelper.getCardBackground(context, isDark))
+        else -> if (isDark) {
+            Color(MonetThemeHelper.getCardBackground(context, isDark))
+        } else {
+            val r = (android.graphics.Color.red(baseSurfaceBg) * 0.98f).toInt().coerceIn(0, 255)
+            val g = (android.graphics.Color.green(baseSurfaceBg) * 0.98f).toInt().coerceIn(0, 255)
+            val b = (android.graphics.Color.blue(baseSurfaceBg) * 0.98f).toInt().coerceIn(0, 255)
+            Color(android.graphics.Color.argb(255, r, g, b))
+        }
     }
     val headerTextColor = Color(MonetThemeHelper.getTextPrimary(context, isDark))
     val textLightSecondary = Color(MonetThemeHelper.getTextSecondary(context, isDark))
@@ -4095,15 +4102,28 @@ fun UnifiedQsPanel(
     val qsCardContent: @Composable () -> Unit = {
         if (isAndroidMarshmallowStyle) {
             val baseSurfaceBg = MonetThemeHelper.getSurfaceBackground(context, isDark)
-            val darkHeaderBg = if (isDark) {
-                Color(MonetThemeHelper.brightenColor(baseSurfaceBg, true))
-            } else {
-                val r = (android.graphics.Color.red(baseSurfaceBg) * 0.88f).toInt().coerceIn(0, 255)
-                val g = (android.graphics.Color.green(baseSurfaceBg) * 0.88f).toInt().coerceIn(0, 255)
-                val b = (android.graphics.Color.blue(baseSurfaceBg) * 0.88f).toInt().coerceIn(0, 255)
-                Color(android.graphics.Color.argb(255, r, g, b))
+            val customPanelBg = PanelPreferences.qsPanelBackgroundColor.collectAsState().value
+                ?: PanelPreferences.qsBackgroundColor.collectAsState().value
+            val darkHeaderBg = when {
+                customPanelBg != null -> Color(customPanelBg)
+                isDark -> Color(MonetThemeHelper.brightenColor(baseSurfaceBg, true))
+                else -> {
+                    val r = (android.graphics.Color.red(baseSurfaceBg) * 0.90f).toInt().coerceIn(0, 255)
+                    val g = (android.graphics.Color.green(baseSurfaceBg) * 0.90f).toInt().coerceIn(0, 255)
+                    val b = (android.graphics.Color.blue(baseSurfaceBg) * 0.90f).toInt().coerceIn(0, 255)
+                    Color(android.graphics.Color.argb(255, r, g, b))
+                }
             }
-            val bodyBg = Color(MonetThemeHelper.getCardBackground(context, isDark))
+            val bodyBg = when {
+                customPanelBg != null -> Color(customPanelBg)
+                isDark -> Color(MonetThemeHelper.getCardBackground(context, isDark))
+                else -> {
+                    val r = (android.graphics.Color.red(baseSurfaceBg) * 0.98f).toInt().coerceIn(0, 255)
+                    val g = (android.graphics.Color.green(baseSurfaceBg) * 0.98f).toInt().coerceIn(0, 255)
+                    val b = (android.graphics.Color.blue(baseSurfaceBg) * 0.98f).toInt().coerceIn(0, 255)
+                    Color(android.graphics.Color.argb(255, r, g, b))
+                }
+            }
             val textLightSecondary = Color(MonetThemeHelper.getTextSecondary(context, isDark))
             val headerTextColor = Color(MonetThemeHelper.getTextPrimary(context, isDark))
             val primaryColor = com.example.ui.theme.getQsTilesElementColor(isDark)
