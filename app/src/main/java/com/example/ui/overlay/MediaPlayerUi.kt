@@ -335,6 +335,7 @@ fun AdaptiveMediaPlayerCard(
     backgroundColor: Color = Color(0xFF353A3B),
     accentColor: Color = MaterialTheme.colorScheme.primary,
     contentColor: Color = Color.White,
+    useArtworkColor: Boolean = true,
     onPlayPauseClick: () -> Unit = {},
     onPreviousClick: () -> Unit = {},
     onNextClick: () -> Unit = {},
@@ -348,6 +349,7 @@ fun AdaptiveMediaPlayerCard(
 ) {
     val isAndroidOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
     val isAndroidMarshmallowStyle by PanelPreferences.isAndroidMarshmallowStyle.collectAsState()
+    val isAndroidKitKatStyle by PanelPreferences.isAndroidKitKatStyle.collectAsState()
     val mediaNotificationStyle by PanelPreferences.mediaNotificationStyle.collectAsState()
 
     val isClassicStyle = isAndroidOreoStyle
@@ -393,9 +395,11 @@ fun AdaptiveMediaPlayerCard(
     val playPauseColor = if (isDark) Color.White else Color.Black.copy(alpha = 0.8f)
     val progressBarStyle by PanelPreferences.progressBarStyle.collectAsState()
 
+    val allowArtworkColor = useArtworkColor && !isAndroidKitKatStyle
     val artworkBitmap = currentHeaderState.artworkBitmap
-    val artworkColor = remember(artworkBitmap, isDark) {
-        artworkBitmap?.let {
+    val artworkColor = remember(artworkBitmap, isDark, allowArtworkColor) {
+        if (!allowArtworkColor) null
+        else artworkBitmap?.let {
             Palette.from(it).generate().dominantSwatch?.rgb?.let { colorInt ->
                 if (!isDark) {
                     // Light mode: Lighten all by 85%

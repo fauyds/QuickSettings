@@ -235,7 +235,13 @@ class QuickQuickSettingsView @JvmOverloads constructor(
             tvOreoTopTime?.setTextColor(Color.WHITE)
             tvOreoDate?.text = dateFormatter.format(now)
             tvOreoDate?.setTextColor(Color.parseColor("#FFB0BEC5"))
-            llContainer.setBackgroundColor(Color.parseColor("#263238"))
+            val panelOuterCorner = com.example.data.PanelPreferences.panelOuterCorner.value
+            val outerPx = panelOuterCorner * density
+            llContainer.background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, outerPx, outerPx, outerPx, outerPx)
+                setColor(Color.parseColor("#263238"))
+            }
         } else if (isOreo) {
             val now = java.util.Date()
             val dateFormatter = java.text.SimpleDateFormat("EEE, MMM d", java.util.Locale.getDefault())

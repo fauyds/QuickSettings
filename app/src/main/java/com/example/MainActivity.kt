@@ -99,6 +99,8 @@ class MainActivity : ComponentActivity() {
         val targetTab = intent?.getIntExtra("TARGET_TAB", -1) ?: -1
         if (targetTab >= 0) {
             viewModel.setSelectedTab(targetTab)
+        } else if (intent?.getStringExtra("screen") == "tile_customizer") {
+            viewModel.setSelectedTab(1)
         }
     }
 }

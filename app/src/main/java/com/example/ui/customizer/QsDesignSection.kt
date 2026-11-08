@@ -176,6 +176,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val isAndroidOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
     val isAndroidMarshmallowStyle by PanelPreferences.isAndroidMarshmallowStyle.collectAsState()
     val isAndroidKitKatStyle by PanelPreferences.isAndroidKitKatStyle.collectAsState()
+    val enableLegacyTileShapes by PanelPreferences.enableLegacyTileShapes.collectAsState()
 
     var tileShapesExpanded by rememberSaveable { mutableStateOf(false) }
     var progressBarSliderExpanded by rememberSaveable { mutableStateOf(false) }
@@ -460,6 +461,50 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             }
         }
     }
+    }
+
+    // 2.5. Legacy Tile Background / Shape Support Card
+    val legacyTileShapesSupportCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("legacy_tile_shapes_support_card", CustomizeCategory.QS_DESIGN, "QS Tile Background Support") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("legacy_tile_shapes_support_card")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 18.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = "QS Tile Background Support",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Enable tile shapes & backgrounds for Android 8, Android 6, and Android 4.4.4 styles.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = enableLegacyTileShapes,
+                        onCheckedChange = { PanelPreferences.setEnableLegacyTileShapes(context, it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.primary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
+                        ),
+                        modifier = Modifier.testTag("legacy_tile_shapes_support_toggle")
+                    )
+                }
+            }
+        }
     }
 
     // 3. Tile Shape Customization (XML Paths)
@@ -3674,6 +3719,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         "android_oreo_style_card" to androidOreoStyleCard,
         "qqs_icon_size_card" to qqsIconSizeCard,
         "qqs_icon_quantity_card" to qqsIconQuantityCard,
+        "legacy_tile_shapes_support_card" to legacyTileShapesSupportCard,
         "tile_shape_selection_card" to tileShapeSelectionCard,
         "tile_outline_card" to tileOutlineCard,
         "qs_tile_gradient_card" to qsTileGradientCard,
@@ -3694,45 +3740,48 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     )
     val hiddenDesignIds = buildSet {
         if (isAndroidOreoStyle) {
-            addAll(
-                listOf(
-                    "tile_shape_selection_card",
-                    "tile_outline_card",
-                    "qs_tile_gradient_card",
-                    "show_carrier_card",
-                    "carrier_divider_card",
-                    "hide_carrier_in_expanded_card",
-                    "custom_header_monet_gradient_card",
-                    "panel_corner_styling_card"
-                )
+            val list = mutableListOf(
+                "tile_outline_card",
+                "qs_tile_gradient_card",
+                "show_carrier_card",
+                "carrier_divider_card",
+                "hide_carrier_in_expanded_card",
+                "custom_header_monet_gradient_card",
+                "panel_corner_styling_card"
             )
+            if (!enableLegacyTileShapes) {
+                list.add("tile_shape_selection_card")
+            }
+            addAll(list)
         }
         if (isAndroidMarshmallowStyle) {
-            addAll(
-                listOf(
-                    "tile_shape_selection_card",
-                    "tile_outline_card",
-                    "qs_tile_gradient_card",
-                    "qqs_icon_size_card",
-                    "qqs_icon_quantity_card"
-                )
+            val list = mutableListOf(
+                "tile_outline_card",
+                "qs_tile_gradient_card",
+                "qqs_icon_size_card",
+                "qqs_icon_quantity_card"
             )
+            if (!enableLegacyTileShapes) {
+                list.add("tile_shape_selection_card")
+            }
+            addAll(list)
         }
         if (isAndroidKitKatStyle) {
-            addAll(
-                listOf(
-                    "tile_shape_selection_card",
-                    "tile_outline_card",
-                    "qs_tile_gradient_card",
-                    "qqs_icon_size_card",
-                    "qqs_icon_quantity_card",
-                    "clear_all_fab_card",
-                    "custom_header_monet_gradient_card",
-                    "element_colors_preference_card",
-                    "carrier_divider_card",
-                    "hide_carrier_in_expanded_card"
-                )
+            val list = mutableListOf(
+                "tile_outline_card",
+                "qs_tile_gradient_card",
+                "qqs_icon_size_card",
+                "qqs_icon_quantity_card",
+                "clear_all_fab_card",
+                "custom_header_monet_gradient_card",
+                "element_colors_preference_card",
+                "carrier_divider_card",
+                "hide_carrier_in_expanded_card"
             )
+            if (!enableLegacyTileShapes) {
+                list.add("tile_shape_selection_card")
+            }
+            addAll(list)
         }
     }
     val pinnedCards = pinnedIds.filter { !hiddenDesignIds.contains(it) }.mapNotNull { pinnedCardsMap[it] }
@@ -3757,6 +3806,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         if (!hiddenDesignIds.contains("android_oreo_style_card") && !pinnedIds.contains("android_oreo_style_card")) unpinnedTileShapes.add(androidOreoStyleCard)
         if (!hiddenDesignIds.contains("qqs_icon_size_card") && !pinnedIds.contains("qqs_icon_size_card")) unpinnedTileShapes.add(qqsIconSizeCard)
         if (!hiddenDesignIds.contains("qqs_icon_quantity_card") && !pinnedIds.contains("qqs_icon_quantity_card")) unpinnedTileShapes.add(qqsIconQuantityCard)
+        if (!hiddenDesignIds.contains("legacy_tile_shapes_support_card") && !pinnedIds.contains("legacy_tile_shapes_support_card")) unpinnedTileShapes.add(legacyTileShapesSupportCard)
         if (!hiddenDesignIds.contains("tile_shape_selection_card") && !pinnedIds.contains("tile_shape_selection_card")) unpinnedTileShapes.add(tileShapeSelectionCard)
         if (!hiddenDesignIds.contains("tile_outline_card") && !pinnedIds.contains("tile_outline_card")) unpinnedTileShapes.add(tileOutlineCard)
         if (!hiddenDesignIds.contains("qs_tile_gradient_card") && !pinnedIds.contains("qs_tile_gradient_card")) unpinnedTileShapes.add(qsTileGradientCard)

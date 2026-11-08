@@ -12,6 +12,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.R
+import com.example.data.PanelPreferences
 import com.example.model.QsTileModel
 import com.example.model.TileCategory
 import com.example.ui.notification.MonetThemeHelper
@@ -96,19 +97,35 @@ class TileEditAdapter(
 
         when (holder) {
             is ActiveHeaderViewHolder -> {
-                val primaryAccent = MonetThemeHelper.getPrimaryAccent(context, isDark)
+                val isKitKat = PanelPreferences.isAndroidKitKatStyle(context)
+                val isMarshmallow = PanelPreferences.isAndroidMarshmallowStyle(context)
+                val primaryAccent = if (isKitKat) Color.parseColor("#33B5E5")
+                    else if (isMarshmallow) Color.parseColor("#00BFA5")
+                    else MonetThemeHelper.getPrimaryAccent(context, isDark)
                 val textSecondary = MonetThemeHelper.getTextSecondary(context, isDark)
-                val onPrimary = MonetThemeHelper.getOnPrimaryText(context, isDark)
+                val onPrimary = if (isKitKat || isMarshmallow) Color.WHITE else MonetThemeHelper.getOnPrimaryText(context, isDark)
 
+                holder.tvTitle.text = if (isKitKat) "QUICK SETTINGS TILES" else if (isMarshmallow) "SYSTEM UI TUNER • QUICK SETTINGS" else "QUICK SETTINGS"
                 holder.tvTitle.setTextColor(primaryAccent)
                 holder.tvSubtitle.setTextColor(textSecondary)
                 holder.btnDone.visibility = android.view.View.VISIBLE
-                holder.btnDone.background = MonetThemeHelper.createMonetPrimaryPillDrawable(context, isDark, 16f * density)
+                val btnCorner = if (isKitKat) 4f * density else if (isMarshmallow) 8f * density else 16f * density
+                val doneDrawable = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    cornerRadius = btnCorner
+                    setColor(primaryAccent)
+                }
+                holder.btnDone.background = doneDrawable
                 holder.tvDoneText.setTextColor(onPrimary)
+                holder.tvDoneText.text = if (isKitKat || isMarshmallow) "DONE" else "Done"
                 holder.ivDoneIcon.setColorFilter(onPrimary)
             }
             is InactiveHeaderViewHolder -> {
-                val primaryAccent = MonetThemeHelper.getPrimaryAccent(context, isDark)
+                val isKitKat = PanelPreferences.isAndroidKitKatStyle(context)
+                val isMarshmallow = PanelPreferences.isAndroidMarshmallowStyle(context)
+                val primaryAccent = if (isKitKat) Color.parseColor("#33B5E5")
+                    else if (isMarshmallow) Color.parseColor("#00BFA5")
+                    else MonetThemeHelper.getPrimaryAccent(context, isDark)
                 val textSecondary = MonetThemeHelper.getTextSecondary(context, isDark)
 
                 holder.tvTitle.text = "AVAILABLE TILES (${inactiveTiles.size})"

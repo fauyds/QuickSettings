@@ -208,6 +208,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.layout.ContentScale
@@ -709,6 +710,26 @@ fun QuickSettingsPanel(
             }
 
             val isAndroidKitKatStyle by PanelPreferences.isAndroidKitKatStyle.collectAsState()
+            val isAndroidMarshmallowStyle by PanelPreferences.isAndroidMarshmallowStyle.collectAsState()
+            val hiddenTileIds by PanelPreferences.hiddenTileIds.collectAsState()
+
+            val kitKatActiveTiles = remember(tiles, hiddenTileIds) {
+                tiles.filter {
+                    it.isVisible &&
+                    it.id !in hiddenTileIds &&
+                    (if (it.id == "sound_profile") "sound_mode" !in hiddenTileIds && "volume" !in hiddenTileIds else true)
+                }
+            }
+
+            val carrierName = remember(context) {
+                try {
+                    val tm = context.getSystemService(android.content.Context.TELEPHONY_SERVICE) as? android.telephony.TelephonyManager
+                    val name = tm?.networkOperatorName?.trim()
+                    val simName = tm?.simOperatorName?.trim()
+                    if (!name.isNullOrBlank() && name != "Android") name else if (!simName.isNullOrBlank()) simName else ""
+                } catch (_: Exception) { "" }
+            }
+
             if (isAndroidKitKatStyle && !isEditingTiles) {
                 val showMonetSurfaceBackground by PanelPreferences.showMonetSurfaceBackground.collectAsState()
                 val showCustomHeaderMonetGradient by PanelPreferences.showCustomHeaderMonetGradient.collectAsState()
@@ -719,24 +740,6 @@ fun QuickSettingsPanel(
                 val qsPanelBgColor by PanelPreferences.qsPanelBackgroundColor.collectAsState()
                 val qsBgColor by PanelPreferences.qsBackgroundColor.collectAsState()
                 val disableNotifMonet by PanelPreferences.disableMonetNotifText.collectAsState()
-                val hiddenTileIds by PanelPreferences.hiddenTileIds.collectAsState()
-
-                val kitKatActiveTiles = remember(tiles, hiddenTileIds) {
-                    tiles.filter {
-                        it.isVisible &&
-                        it.id !in hiddenTileIds &&
-                        (if (it.id == "sound_profile") "sound_mode" !in hiddenTileIds && "volume" !in hiddenTileIds else true)
-                    }
-                }
-
-                val carrierName = remember(context) {
-                    try {
-                        val tm = context.getSystemService(android.content.Context.TELEPHONY_SERVICE) as? android.telephony.TelephonyManager
-                        val name = tm?.networkOperatorName?.trim()
-                        val simName = tm?.simOperatorName?.trim()
-                        if (!name.isNullOrBlank() && name != "Android") name else if (!simName.isNullOrBlank()) simName else ""
-                    } catch (_: Exception) { "" }
-                }
 
                 val mediaSessionsList by com.example.service.MediaSessionManagerHelper.sessionsList.collectAsState()
                 val forceShowMediaPreview by PanelPreferences.forceShowMediaPreview.collectAsState()
@@ -763,7 +766,7 @@ fun QuickSettingsPanel(
                             this.onRequestNotificationAccess = onRequestNotificationAccess
                             this.onOpenNotificationManager = { isNotificationManagerOpen = true }
                             this.onClosePanel = { onStageChange(QsExpansionStage.COLLAPSED) }
-                            this.onToggleEditMode = { isEditingTiles = true }
+                            this.onToggleEditMode = { enterEditMode() }
                         }
                     },
                     update = { view ->
@@ -777,7 +780,7 @@ fun QuickSettingsPanel(
                         view.onRequestNotificationAccess = onRequestNotificationAccess
                         view.onOpenNotificationManager = { isNotificationManagerOpen = true }
                         view.onClosePanel = { onStageChange(QsExpansionStage.COLLAPSED) }
-                        view.onToggleEditMode = { isEditingTiles = true }
+                        view.onToggleEditMode = { enterEditMode() }
 
                         view.updateData(
                             tiles = kitKatActiveTiles,
@@ -793,10 +796,41 @@ fun QuickSettingsPanel(
                     },
                     modifier = Modifier.fillMaxSize()
                 )
+            } else if (isAndroidKitKatStyle && isEditingTiles) {
+                val showMonetSurfaceBackground by PanelPreferences.showMonetSurfaceBackground.collectAsState()
+                val qsPanelBgColor by PanelPreferences.qsPanelBackgroundColor.collectAsState()
+                KitKatTileEditorScreen(
+                    activeTiles = editActiveTiles ?: kitKatActiveTiles,
+                    inactiveTiles = editInactiveTiles ?: tiles.filter { !it.isVisible },
+                    gridLayout = gridLayout,
+                    editScrollState = editScrollState,
+                    onDragStateChange = { isTileDragging = it },
+                    onTilesUpdated = handleTilesUpdated,
+                    onDone = saveAndExitEditMode,
+                    carrierName = carrierName,
+                    isDark = isDark,
+                    showMonetSurface = showMonetSurfaceBackground,
+                    customPanelBg = qsPanelBgColor
+                )
+            } else if (isAndroidMarshmallowStyle && isEditingTiles) {
+                val showMonetSurfaceBackground by PanelPreferences.showMonetSurfaceBackground.collectAsState()
+                val qsPanelBgColor by PanelPreferences.qsPanelBackgroundColor.collectAsState()
+                MarshmallowTileEditorScreen(
+                    activeTiles = editActiveTiles ?: kitKatActiveTiles,
+                    inactiveTiles = editInactiveTiles ?: tiles.filter { !it.isVisible },
+                    gridLayout = gridLayout,
+                    editScrollState = editScrollState,
+                    onDragStateChange = { isTileDragging = it },
+                    onTilesUpdated = handleTilesUpdated,
+                    onDone = saveAndExitEditMode,
+                    carrierName = carrierName,
+                    isDark = isDark,
+                    showMonetSurface = showMonetSurfaceBackground,
+                    customPanelBg = qsPanelBgColor
+                )
             } else {
             val isAndroidOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
-            val isAndroidMarshmallowStyle by PanelPreferences.isAndroidMarshmallowStyle.collectAsState()
-            val isFlatLegacyStyle = isAndroidOreoStyle || isAndroidMarshmallowStyle
+            val isFlatLegacyStyle = isAndroidOreoStyle || isAndroidMarshmallowStyle || isAndroidKitKatStyle
 
             Column(
                 modifier = Modifier
@@ -1369,6 +1403,1651 @@ fun QsHeaderBar(
     }
 }
 
+@Composable
+fun KitKatEditTileCard(
+    tile: QsTileModel,
+    tileWidth: Dp? = null,
+    isActive: Boolean = true,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val isDark = LocalIsDarkTheme.current
+    val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
+    val showMonetSurface by PanelPreferences.showMonetSurfaceBackground.collectAsState()
+    val tileAccent = com.example.ui.theme.getQsTilesElementColor(isDark)
+    val cardBg = if (showMonetSurface) {
+        Color(MonetThemeHelper.getCardBackground(context, isDark))
+    } else {
+        if (isDark) Color(0xFF1E1E1E) else Color(MonetThemeHelper.getCardBackground(context, isDark))
+    }
+    val textPrimary = Color(MonetThemeHelper.getTextPrimary(context, isDark))
+    val textSecondary = Color(MonetThemeHelper.getTextSecondary(context, isDark))
+
+    val enableLegacyTileShapes by PanelPreferences.enableLegacyTileShapes.collectAsState()
+    val enabledTileShapeId by PanelPreferences.enabledTileShapeId.collectAsState()
+    val disabledTileShapeId by PanelPreferences.disabledTileShapeId.collectAsState()
+    val chosenShapeId = if (isActive) enabledTileShapeId else disabledTileShapeId
+
+    val inactiveIconColor = if (isDark) Color(0xFF999999) else textSecondary
+    val inactiveTextColor = if (isDark) Color(0xFFAAAAAA) else textSecondary
+
+    val iconTint = if (enableLegacyTileShapes) {
+        if (isActive) Color.White else inactiveIconColor
+    } else {
+        if (isActive) tileAccent else inactiveIconColor
+    }
+
+    val labelCol = if (isActive) (if (isDark) Color.White else textPrimary) else inactiveTextColor
+    val subCol = if (isActive) tileAccent else textSecondary
+
+    val baseModifier = if (tileWidth != null) {
+        modifier.width(tileWidth).aspectRatio(1f)
+    } else {
+        modifier.aspectRatio(1f)
+    }
+
+    val cardShape = RoundedCornerShape(panelOuterCorner.dp)
+
+    Box(
+        modifier = baseModifier
+            .clip(cardShape)
+            .background(cardBg),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 4.dp, vertical = 6.dp)
+        ) {
+            val isThirdParty = tile.isExternal || tile.category == TileCategory.THIRD_PARTY || tile.category == TileCategory.EXTERNAL || tile.id.contains("/")
+            Box(
+                modifier = Modifier.size(44.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (enableLegacyTileShapes) {
+                    val tileShape = com.example.ui.shape.QsShapeManager.getComposeShape(chosenShapeId)
+                    val inactiveBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(tileShape)
+                            .background(if (isActive) tileAccent else inactiveBgColor),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isThirdParty) {
+                            val pkg = tile.packageName ?: if (tile.id.contains("/")) tile.id.substringBefore('/') else null
+                            val cls = tile.serviceClassName ?: if (tile.id.contains("/")) tile.id.substringAfter('/') else null
+                            ExternalTileIcon(
+                                packageName = pkg,
+                                serviceClassName = cls,
+                                tintColor = iconTint,
+                                contentDescription = tile.label,
+                                fallbackDrawable = tile.externalDrawable,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        } else {
+                            val vector = com.example.ui.tile.QsTileIconHelper.getTileImageVector(tile)
+                            Icon(
+                                imageVector = vector,
+                                contentDescription = tile.label,
+                                tint = iconTint,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                } else {
+                    if (isThirdParty) {
+                        val pkg = tile.packageName ?: if (tile.id.contains("/")) tile.id.substringBefore('/') else null
+                        val cls = tile.serviceClassName ?: if (tile.id.contains("/")) tile.id.substringAfter('/') else null
+                        ExternalTileIcon(
+                            packageName = pkg,
+                            serviceClassName = cls,
+                            tintColor = iconTint,
+                            contentDescription = tile.label,
+                            fallbackDrawable = tile.externalDrawable,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    } else {
+                        val vector = com.example.ui.tile.QsTileIconHelper.getTileImageVector(tile)
+                        Icon(
+                            imageVector = vector,
+                            contentDescription = tile.label,
+                            tint = iconTint,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = tile.label.uppercase(),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = labelCol,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+
+            if (tile.subtitle.isNotBlank() && tile.subtitle != tile.label) {
+                Spacer(modifier = Modifier.height(1.dp))
+                Text(
+                    text = tile.subtitle.uppercase(),
+                    fontSize = 10.sp,
+                    color = subCol,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun KitKatTileEditorScreen(
+    activeTiles: List<QsTileModel>,
+    inactiveTiles: List<QsTileModel>,
+    gridLayout: QsGridLayout,
+    editScrollState: ScrollState,
+    onDragStateChange: (Boolean) -> Unit = {},
+    onTilesUpdated: (List<QsTileModel>, List<QsTileModel>) -> Unit,
+    onDone: () -> Unit,
+    carrierName: String,
+    isDark: Boolean,
+    showMonetSurface: Boolean,
+    customPanelBg: Int? = null,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
+
+    var localActive by remember(activeTiles) { mutableStateOf(activeTiles) }
+    var localInactive by remember(inactiveTiles) { mutableStateOf(inactiveTiles) }
+
+    var draggedTileId by remember { mutableStateOf<String?>(null) }
+    var dragSourceIndex by remember { mutableIntStateOf(-1) }
+    var hoveredTargetIndex by remember { mutableIntStateOf(-1) }
+    var currentDragCenter by remember { mutableStateOf(Offset.Zero) }
+
+    val slotBoundsMap = remember { mutableStateMapOf<Int, Rect>() }
+    val tileBoundsMap = remember { mutableStateMapOf<String, Rect>() }
+    var activeGridContainerBounds by remember { mutableStateOf<Rect?>(null) }
+    var inactiveDropZoneBounds by remember { mutableStateOf<Rect?>(null) }
+    var studioCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+
+    val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
+    val holoBlue = Color(0xFF33B5E5)
+    val textPrimary = Color(MonetThemeHelper.getTextPrimary(context, isDark))
+    val textSecondary = Color(MonetThemeHelper.getTextSecondary(context, isDark))
+
+    val panelSurfaceColor = when {
+        customPanelBg != null -> Color(customPanelBg)
+        showMonetSurface -> Color(MonetThemeHelper.getSurfaceBackground(context, isDark))
+        else -> if (isDark) Color.Black else Color(MonetThemeHelper.getSurfaceBackground(context, isDark))
+    }
+
+    val columns = gridLayout.columns.coerceAtLeast(1)
+
+    val isOverInactiveDropZone = draggedTileId != null &&
+        inactiveDropZoneBounds != null &&
+        activeGridContainerBounds != null &&
+        currentDragCenter.y > activeGridContainerBounds!!.bottom + 10f &&
+        currentDragCenter.y >= inactiveDropZoneBounds!!.top
+
+    val handleAddTileToActive: (QsTileModel, Int?) -> Unit = { targetTile, slotIndex ->
+        val updatedInactive = localInactive.toMutableList()
+        val moved = updatedInactive.firstOrNull { it.id == targetTile.id }
+        if (moved != null) {
+            updatedInactive.remove(moved)
+            val isExt = moved.isExternal || moved.category == TileCategory.THIRD_PARTY || moved.category == TileCategory.EXTERNAL || moved.id.contains("/")
+            val pkg = moved.packageName ?: if (moved.id.contains("/")) moved.id.substringBefore('/') else null
+            val cls = moved.serviceClassName ?: if (moved.id.contains("/")) moved.id.substringAfter('/') else null
+            val compId = if (isExt && pkg != null && cls != null) "$pkg/$cls" else moved.id
+
+            val activated = moved.copy(
+                id = compId,
+                isVisible = true,
+                isExternal = isExt,
+                category = if (isExt) TileCategory.THIRD_PARTY else moved.category,
+                packageName = pkg,
+                serviceClassName = cls
+            )
+            val updatedActive = localActive.toMutableList().apply {
+                if (slotIndex != null) {
+                    add(slotIndex.coerceIn(0, size), activated)
+                } else {
+                    add(activated)
+                }
+            }
+            localActive = updatedActive
+            localInactive = updatedInactive
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            onTilesUpdated(localActive, localInactive)
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(panelSurfaceColor)
+            .onGloballyPositioned { coords ->
+                studioCoords = coords
+            }
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // 1. KitKat Header Bar (Matching shade_layout_kitkat.xml)
+            val now = remember { java.util.Date() }
+            val timeFormatter = remember { java.text.SimpleDateFormat("H:mm", java.util.Locale.getDefault()) }
+            val dateFormatter = remember { java.text.SimpleDateFormat("EEE, MMMM d", java.util.Locale.getDefault()) }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Left: Bold digital clock + uppercase date
+                    Row(
+                        verticalAlignment = Alignment.Bottom,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = timeFormatter.format(now),
+                            fontSize = 38.sp,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
+                            fontWeight = FontWeight.Light,
+                            color = if (isDark) Color.White else textPrimary
+                        )
+                        Text(
+                            text = dateFormatter.format(now).uppercase(),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isDark) Color(0xFFB0BEC5) else textSecondary,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                    }
+
+                    // Right: Action button - Holo "DONE"
+                    Surface(
+                        onClick = onDone,
+                        shape = RoundedCornerShape(panelOuterCorner.dp),
+                        color = holoBlue,
+                        modifier = Modifier.testTag("kitkat_edit_done_button")
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Done",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "DONE",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+
+                // Centered Carrier / Status text
+                val resolvedCarrier = if (carrierName.isNotBlank()) carrierName.uppercase() else "EMERGENCY CALLS ONLY"
+                Text(
+                    text = resolvedCarrier,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp,
+                    color = if (isDark) Color(0xFF888888) else textSecondary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp),
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            // 2. Holo Blue Accent Line
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(2.dp)
+                    .background(holoBlue)
+            )
+
+            // 3. Scrollable Studio (Active & Available Grids)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .verticalScroll(editScrollState)
+                    .padding(horizontal = 1.5.dp, vertical = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Section Title Row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "QUICK SETTINGS TILES",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.2.sp,
+                        color = holoBlue
+                    )
+                    Text(
+                        text = "Hold to drag • Tap '-' to remove",
+                        fontSize = 10.5.sp,
+                        color = if (isDark) Color(0xFFAAAAAA) else Color(0xFF666666)
+                    )
+                }
+
+                // Active Tiles Grid (3-column rows, 3.dp gaps, 1:1 square cards)
+                val activeRows = remember(localActive, columns) {
+                    localActive.chunked(columns)
+                }
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onGloballyPositioned { coords ->
+                            activeGridContainerBounds = coords.boundsInRoot()
+                        }
+                ) {
+                    activeRows.forEachIndexed { rowIndex, rowTiles ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            rowTiles.forEachIndexed { colIndex, tile ->
+                                val slotIndex = rowIndex * columns + colIndex
+                                val isDragging = draggedTileId == tile.id
+                                val isHoverTarget = draggedTileId != null && hoveredTargetIndex == slotIndex
+
+                                key(tile.id) {
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .aspectRatio(1f)
+                                            .onGloballyPositioned { coords ->
+                                                slotBoundsMap[slotIndex] = coords.boundsInRoot()
+                                                tileBoundsMap[tile.id] = coords.boundsInRoot()
+                                            }
+                                            .pointerInput(tile.id) {
+                                                detectDragGesturesAfterLongPress(
+                                                    onDragStart = { offset ->
+                                                        val currentTile = localActive.getOrNull(slotIndex) ?: return@detectDragGesturesAfterLongPress
+                                                        draggedTileId = currentTile.id
+                                                        dragSourceIndex = slotIndex
+                                                        hoveredTargetIndex = -1
+                                                        onDragStateChange(true)
+                                                        val myBounds = slotBoundsMap[slotIndex] ?: tileBoundsMap[currentTile.id] ?: Rect.Zero
+                                                        currentDragCenter = myBounds.topLeft + offset
+                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    },
+                                                    onDrag = { change, dragAmount ->
+                                                        change.consume()
+                                                        currentDragCenter += dragAmount
+
+                                                        if (draggedTileId != null) {
+                                                            val activeContainer = activeGridContainerBounds
+                                                            val dropBounds = inactiveDropZoneBounds
+                                                            val isStrictlyAvailable = dropBounds != null &&
+                                                                activeContainer != null &&
+                                                                currentDragCenter.y > activeContainer.bottom + 10f &&
+                                                                currentDragCenter.y >= dropBounds.top
+
+                                                            if (isStrictlyAvailable) {
+                                                                hoveredTargetIndex = -1
+                                                            } else {
+                                                                var targetIndex = -1
+                                                                val totalCount = localActive.size
+                                                                for (i in 0 until totalCount) {
+                                                                    val b = slotBoundsMap[i] ?: continue
+                                                                    val expanded = Rect(b.left - 6f, b.top - 6f, b.right + 6f, b.bottom + 6f)
+                                                                    if (expanded.contains(currentDragCenter)) {
+                                                                        targetIndex = i
+                                                                        break
+                                                                    }
+                                                                }
+                                                                if (targetIndex != -1 && targetIndex != dragSourceIndex) {
+                                                                    if (hoveredTargetIndex != targetIndex) {
+                                                                        hoveredTargetIndex = targetIndex
+                                                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                    }
+                                                                } else {
+                                                                    hoveredTargetIndex = -1
+                                                                }
+                                                            }
+                                                        }
+                                                    },
+                                                    onDragEnd = {
+                                                        onDragStateChange(false)
+                                                        val activeId = draggedTileId
+                                                        val dropBounds = inactiveDropZoneBounds
+                                                        val activeContainer = activeGridContainerBounds
+                                                        val sourceIdx = dragSourceIndex
+                                                        val targetIdx = hoveredTargetIndex
+
+                                                        val isDropToAvailable = activeId != null && dropBounds != null &&
+                                                            ((activeContainer != null && currentDragCenter.y > activeContainer.bottom + 10f && currentDragCenter.y >= dropBounds.top) ||
+                                                             (activeContainer == null && currentDragCenter.y >= dropBounds.top))
+
+                                                        if (isDropToAvailable) {
+                                                            val updatedActive = localActive.toMutableList()
+                                                            val moved = updatedActive.firstOrNull { it.id == activeId }
+                                                            if (moved != null) {
+                                                                updatedActive.remove(moved)
+                                                                val updatedInactive = localInactive.toMutableList().apply {
+                                                                    add(0, moved.copy(isVisible = false))
+                                                                }
+                                                                localActive = updatedActive
+                                                                localInactive = updatedInactive
+                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                            }
+                                                        } else if (sourceIdx != -1 && targetIdx != -1 && sourceIdx != targetIdx &&
+                                                            sourceIdx in 0 until localActive.size && targetIdx in 0 until localActive.size
+                                                        ) {
+                                                            val updated = localActive.toMutableList()
+                                                            java.util.Collections.swap(updated, sourceIdx, targetIdx)
+                                                            localActive = updated
+                                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                        }
+                                                        draggedTileId = null
+                                                        dragSourceIndex = -1
+                                                        hoveredTargetIndex = -1
+                                                        onTilesUpdated(localActive, localInactive)
+                                                    },
+                                                    onDragCancel = {
+                                                        onDragStateChange(false)
+                                                        draggedTileId = null
+                                                        dragSourceIndex = -1
+                                                        hoveredTargetIndex = -1
+                                                        onTilesUpdated(localActive, localInactive)
+                                                    }
+                                                )
+                                            }
+                                    ) {
+                                        if (isDragging) {
+                                            Spacer(modifier = Modifier.fillMaxSize())
+                                        } else {
+                                            Box(modifier = Modifier.fillMaxSize()) {
+                                                if (isHoverTarget) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .fillMaxSize()
+                                                            .clip(RoundedCornerShape(panelOuterCorner.dp))
+                                                            .background(Color(0x3333B5E5))
+                                                            .border(1.5.dp, holoBlue, RoundedCornerShape(panelOuterCorner.dp))
+                                                    )
+                                                }
+                                                KitKatEditTileCard(
+                                                    tile = tile,
+                                                    isActive = true,
+                                                    modifier = Modifier.fillMaxSize()
+                                                )
+
+                                                // Top-right subtle minus remove button
+                                                if (draggedTileId == null) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .align(Alignment.TopEnd)
+                                                            .padding(top = 2.dp, end = 2.dp)
+                                                            .size(20.dp)
+                                                            .clip(RoundedCornerShape(3.dp))
+                                                            .background(Color(0xFFCC0000))
+                                                            .clickable(
+                                                                interactionSource = remember { MutableInteractionSource() },
+                                                                indication = null
+                                                            ) {
+                                                                val updatedActive = localActive.toMutableList()
+                                                                val moved = updatedActive.firstOrNull { it.id == tile.id }
+                                                                if (moved != null) {
+                                                                    updatedActive.remove(moved)
+                                                                    val updatedInactive = localInactive.toMutableList().apply {
+                                                                        removeAll { it.id == moved.id }
+                                                                        add(0, moved.copy(isVisible = false))
+                                                                    }
+                                                                    localActive = updatedActive
+                                                                    localInactive = updatedInactive
+                                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                    onTilesUpdated(localActive, localInactive)
+                                                                }
+                                                            },
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Remove,
+                                                            contentDescription = "Remove tile",
+                                                            tint = Color.White,
+                                                            modifier = Modifier.size(13.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            repeat(columns - rowTiles.size) {
+                                Spacer(modifier = Modifier.weight(1f).aspectRatio(1f))
+                            }
+                        }
+                    }
+                }
+
+                // Section 2: Available Tiles
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onGloballyPositioned { coords ->
+                            inactiveDropZoneBounds = coords.boundsInRoot()
+                        }
+                        .clip(RoundedCornerShape(panelOuterCorner.dp))
+                        .background(
+                            if (isOverInactiveDropZone) Color(0x3333B5E5)
+                            else if (isDark) Color(0xFF141414)
+                            else Color(0xFFECEFF1)
+                        )
+                        .border(
+                            width = if (isOverInactiveDropZone) 2.dp else 1.dp,
+                            color = if (isOverInactiveDropZone) holoBlue else (if (isDark) Color(0xFF262626) else Color(0xFFCFD8DC)),
+                            shape = RoundedCornerShape(panelOuterCorner.dp)
+                        )
+                        .padding(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = if (isOverInactiveDropZone) "DROP TO REMOVE FROM ACTIVE PANEL" else "AVAILABLE TILES (${localInactive.size})",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                            color = holoBlue
+                        )
+                        Text(
+                            text = if (isOverInactiveDropZone) "Release to drop" else "Tap '+' or drag to add",
+                            fontSize = 10.sp,
+                            color = if (isDark) Color.Gray else Color(0xFF666666)
+                        )
+                    }
+
+                    if (localInactive.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "All tiles are currently in your active panel",
+                                fontSize = 12.sp,
+                                color = if (isDark) Color.Gray else Color(0xFF888888)
+                            )
+                        }
+                    } else {
+                        val inactiveRows = remember(localInactive, columns) {
+                            localInactive.chunked(columns)
+                        }
+
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(3.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            inactiveRows.forEach { rowTiles ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    rowTiles.forEach { tile ->
+                                        val isThisDragging = draggedTileId == tile.id
+                                        key(tile.id) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .aspectRatio(1f)
+                                                    .onGloballyPositioned { coords ->
+                                                        if (draggedTileId != tile.id) {
+                                                            tileBoundsMap[tile.id] = coords.boundsInRoot()
+                                                        }
+                                                    }
+                                                    .pointerInput(tile.id) {
+                                                        detectDragGesturesAfterLongPress(
+                                                            onDragStart = { offset ->
+                                                                draggedTileId = tile.id
+                                                                onDragStateChange(true)
+                                                                val myBounds = tileBoundsMap[tile.id] ?: Rect.Zero
+                                                                currentDragCenter = myBounds.topLeft + offset
+                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                            },
+                                                            onDrag = { change, dragAmount ->
+                                                                change.consume()
+                                                                currentDragCenter += dragAmount
+                                                            },
+                                                            onDragEnd = {
+                                                                onDragStateChange(false)
+                                                                val dropBounds = inactiveDropZoneBounds
+                                                                val activeContainer = activeGridContainerBounds
+
+                                                                val isDraggedToActive = (activeContainer != null && currentDragCenter.y <= activeContainer.bottom + 10f) ||
+                                                                    (dropBounds != null && currentDragCenter.y < dropBounds.top)
+
+                                                                if (isDraggedToActive) {
+                                                                    var targetSlot = localActive.size
+                                                                    for (i in 0 until localActive.size) {
+                                                                        val b = slotBoundsMap[i] ?: continue
+                                                                        if (b.contains(currentDragCenter)) {
+                                                                            targetSlot = i
+                                                                            break
+                                                                        }
+                                                                    }
+                                                                    handleAddTileToActive(tile, targetSlot)
+                                                                }
+                                                                draggedTileId = null
+                                                            },
+                                                            onDragCancel = {
+                                                                onDragStateChange(false)
+                                                                draggedTileId = null
+                                                            }
+                                                        )
+                                                    }
+                                                    .clickable(
+                                                        interactionSource = remember { MutableInteractionSource() },
+                                                        indication = null
+                                                    ) {
+                                                        handleAddTileToActive(tile, null)
+                                                    }
+                                            ) {
+                                                if (isThisDragging) {
+                                                    Spacer(modifier = Modifier.fillMaxSize())
+                                                } else {
+                                                    Box(modifier = Modifier.fillMaxSize()) {
+                                                        KitKatEditTileCard(
+                                                            tile = tile,
+                                                            isActive = false,
+                                                            modifier = Modifier.fillMaxSize()
+                                                        )
+
+                                                        // Plus add button
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .align(Alignment.TopEnd)
+                                                                .padding(top = 2.dp, end = 2.dp)
+                                                                .size(20.dp)
+                                                                .clip(RoundedCornerShape(3.dp))
+                                                                .background(holoBlue)
+                                                                .clickable(
+                                                                    interactionSource = remember { MutableInteractionSource() },
+                                                                    indication = null
+                                                                ) { handleAddTileToActive(tile, null) },
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Default.Add,
+                                                                contentDescription = "Add tile",
+                                                                tint = Color.White,
+                                                                modifier = Modifier.size(13.dp)
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    repeat(columns - rowTiles.size) {
+                                        Spacer(modifier = Modifier.weight(1f).aspectRatio(1f))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(48.dp))
+            }
+        }
+
+        // Floating Drag Overlay for Dragged Tile
+        if (draggedTileId != null) {
+            val draggedTile = localActive.firstOrNull { it.id == draggedTileId }
+                ?: localInactive.firstOrNull { it.id == draggedTileId }
+            val currentStudio = studioCoords
+            if (draggedTile != null && currentStudio != null && currentStudio.isAttached) {
+                val studioOrigin = currentStudio.boundsInRoot().topLeft
+                val localX = currentDragCenter.x - studioOrigin.x
+                val localY = currentDragCenter.y - studioOrigin.y
+
+                val studioWidthPx = currentStudio.boundsInRoot().width
+                val gapPx = with(density) { 3.dp.toPx() }
+                val tileWidthPx = (studioWidthPx - (gapPx * (columns - 1))) / columns
+                val tileWidthDp = with(density) { tileWidthPx.toDp() }
+
+                Box(
+                    modifier = Modifier
+                        .offset {
+                            IntOffset(
+                                (localX - tileWidthPx / 2f).roundToInt(),
+                                (localY - tileWidthPx / 2f).roundToInt()
+                            )
+                        }
+                        .size(tileWidthDp)
+                        .zIndex(9999f)
+                        .graphicsLayer {
+                            scaleX = 1.05f
+                            scaleY = 1.05f
+                            alpha = 0.95f
+                            shadowElevation = 12f
+                        }
+                ) {
+                    KitKatEditTileCard(
+                        tile = draggedTile,
+                        isActive = true,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MarshmallowTileEditorScreen(
+    activeTiles: List<QsTileModel>,
+    inactiveTiles: List<QsTileModel>,
+    gridLayout: QsGridLayout,
+    editScrollState: ScrollState,
+    onDragStateChange: (Boolean) -> Unit = {},
+    onTilesUpdated: (List<QsTileModel>, List<QsTileModel>) -> Unit,
+    onDone: () -> Unit,
+    carrierName: String,
+    isDark: Boolean,
+    showMonetSurface: Boolean,
+    customPanelBg: Int? = null,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
+
+    var localActive by remember(activeTiles) { mutableStateOf(activeTiles) }
+    var localInactive by remember(inactiveTiles) { mutableStateOf(inactiveTiles) }
+
+    var draggedTileId by remember { mutableStateOf<String?>(null) }
+    var dragSourceIndex by remember { mutableIntStateOf(-1) }
+    var hoveredTargetIndex by remember { mutableIntStateOf(-1) }
+    var currentDragCenter by remember { mutableStateOf(Offset.Zero) }
+    var autoScrollDirection by remember { mutableIntStateOf(0) }
+
+    val slotBoundsMap = remember { mutableStateMapOf<Int, Rect>() }
+    val tileBoundsMap = remember { mutableStateMapOf<String, Rect>() }
+    var activeGridContainerBounds by remember { mutableStateOf<Rect?>(null) }
+    var inactiveDropZoneBounds by remember { mutableStateOf<Rect?>(null) }
+    var studioViewportBounds by remember { mutableStateOf<Rect?>(null) }
+    var studioCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+
+    val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
+    val effectiveCorner = panelOuterCorner.dp
+
+    val monetAccent = com.example.ui.theme.getQsTilesElementColor(isDark)
+    val baseSurfaceBg = MonetThemeHelper.getSurfaceBackground(context, isDark)
+    val darkHeaderBg = when {
+        customPanelBg != null -> Color(customPanelBg)
+        else -> if (isDark) {
+            Color(MonetThemeHelper.brightenColor(baseSurfaceBg, true))
+        } else {
+            val r = (android.graphics.Color.red(baseSurfaceBg) * 0.88f).toInt().coerceIn(0, 255)
+            val g = (android.graphics.Color.green(baseSurfaceBg) * 0.88f).toInt().coerceIn(0, 255)
+            val b = (android.graphics.Color.blue(baseSurfaceBg) * 0.88f).toInt().coerceIn(0, 255)
+            Color(android.graphics.Color.argb(255, r, g, b))
+        }
+    }
+    val bodyBg = when {
+        customPanelBg != null -> Color(customPanelBg)
+        else -> Color(MonetThemeHelper.getCardBackground(context, isDark))
+    }
+    val headerTextColor = Color(MonetThemeHelper.getTextPrimary(context, isDark))
+    val textLightSecondary = Color(MonetThemeHelper.getTextSecondary(context, isDark))
+
+    val columns = gridLayout.columns.coerceAtLeast(1)
+
+    // Lock/unlock parent scroll while dragging
+    LaunchedEffect(draggedTileId) {
+        onDragStateChange(draggedTileId != null)
+    }
+
+    // Edge auto-scroll
+    LaunchedEffect(draggedTileId, autoScrollDirection) {
+        if (draggedTileId != null && autoScrollDirection != 0) {
+            while (isActive && draggedTileId != null && autoScrollDirection != 0) {
+                val canScrollUp = autoScrollDirection < 0 && editScrollState.value > 0
+                val canScrollDown = autoScrollDirection > 0 && editScrollState.value < editScrollState.maxValue
+                if (!canScrollUp && !canScrollDown) {
+                    autoScrollDirection = 0
+                    break
+                }
+                val scrollDelta = with(density) {
+                    if (autoScrollDirection < 0) -9.dp.toPx() else 9.dp.toPx()
+                }
+                editScrollState.scrollBy(scrollDelta)
+                delay(16)
+            }
+        }
+    }
+
+    val checkAutoScroll: (Offset) -> Unit = { center ->
+        val vBounds = studioViewportBounds
+        if (vBounds != null && vBounds.height > 0) {
+            val edgeZoneHeight = vBounds.height * 0.12f
+            val topThreshold = vBounds.top + edgeZoneHeight
+            val bottomThreshold = vBounds.bottom - edgeZoneHeight
+            if (center.y <= topThreshold && editScrollState.value > 0) {
+                autoScrollDirection = -1
+            } else if (center.y >= bottomThreshold && editScrollState.value < editScrollState.maxValue) {
+                autoScrollDirection = 1
+            } else {
+                autoScrollDirection = 0
+            }
+        } else {
+            autoScrollDirection = 0
+        }
+    }
+
+    val isOverInactiveDropZone = draggedTileId != null &&
+        inactiveDropZoneBounds != null &&
+        activeGridContainerBounds != null &&
+        currentDragCenter.y > activeGridContainerBounds!!.bottom + 10f &&
+        currentDragCenter.y >= inactiveDropZoneBounds!!.top
+
+    val handleAddTileToActive: (QsTileModel, Int?) -> Unit = { targetTile, slotIndex ->
+        val updatedInactive = localInactive.toMutableList()
+        val moved = updatedInactive.firstOrNull { it.id == targetTile.id }
+        if (moved != null) {
+            updatedInactive.remove(moved)
+            val isExt = moved.isExternal || moved.category == TileCategory.THIRD_PARTY || moved.category == TileCategory.EXTERNAL || moved.id.contains("/")
+            val pkg = moved.packageName ?: if (moved.id.contains("/")) moved.id.substringBefore('/') else null
+            val cls = moved.serviceClassName ?: if (moved.id.contains("/")) moved.id.substringAfter('/') else null
+            val compId = if (isExt && pkg != null && cls != null) "$pkg/$cls" else moved.id
+
+            val activated = moved.copy(
+                id = compId,
+                isVisible = true,
+                isExternal = isExt,
+                category = if (isExt) TileCategory.THIRD_PARTY else moved.category,
+                packageName = pkg,
+                serviceClassName = cls
+            )
+            val updatedActive = localActive.toMutableList().apply {
+                if (slotIndex != null) {
+                    add(slotIndex.coerceIn(0, size), activated)
+                } else {
+                    add(activated)
+                }
+            }
+            localActive = updatedActive
+            localInactive = updatedInactive
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            onTilesUpdated(localActive, localInactive)
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .onGloballyPositioned { coords ->
+                studioCoords = coords
+                studioViewportBounds = coords.boundsInRoot()
+            }
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // 1. Marshmallow Header Bar (Dark Slate #263238)
+            val now = remember { java.util.Date() }
+            val timeFormatter = remember { java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()) }
+            val dateFormatter = remember { java.text.SimpleDateFormat("EEEE, MMMM d", java.util.Locale.getDefault()) }
+            val batteryInfo = rememberQqsBatteryState()
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(darkHeaderBg)
+                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp)
+            ) {
+                // Top status bar row: Carrier on Left, Battery + Settings + Profile on Right
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Left: Carrier name
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CellTower,
+                            contentDescription = null,
+                            tint = textLightSecondary,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            text = carrierName.ifBlank { "Emergency calls only" },
+                            fontSize = 13.sp,
+                            color = textLightSecondary
+                        )
+                    }
+
+                    // Right: Battery % + icon + Settings + User profile
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "${batteryInfo.percentage}%",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = headerTextColor
+                        )
+                        Icon(
+                            imageVector = if (batteryInfo.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
+                            contentDescription = "Battery",
+                            tint = if (batteryInfo.isCharging) Color(0xFF4CAF50) else headerTextColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        IconButton(
+                            onClick = {
+                                try {
+                                    val intent = Intent(Settings.ACTION_SETTINGS).apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {}
+                            },
+                            modifier = Modifier.size(26.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Settings",
+                                tint = headerTextColor,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.ic_qs_user),
+                            contentDescription = "User Avatar",
+                            tint = headerTextColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                // Time & Date
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = timeFormatter.format(now),
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = headerTextColor,
+                    modifier = Modifier.clickable { launchClockApp(context) }
+                )
+                Text(
+                    text = dateFormatter.format(now),
+                    fontSize = 13.sp,
+                    color = textLightSecondary,
+                    modifier = Modifier
+                        .padding(top = 2.dp)
+                        .clickable { launchCalendarApp(context) }
+                )
+
+                // Subheader & Done Button Row
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f, fill = false)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = null,
+                            tint = monetAccent,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            Text(
+                                text = "SYSTEM UI TUNER • QUICK SETTINGS",
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                color = monetAccent
+                            )
+                            Text(
+                                text = "Drag tiles to reorder. Tap '-' to remove.",
+                                fontSize = 10.5.sp,
+                                color = textLightSecondary
+                            )
+                        }
+                    }
+
+                    Surface(
+                        onClick = {
+                            onTilesUpdated(localActive, localInactive)
+                            onDone()
+                        },
+                        shape = RoundedCornerShape(effectiveCorner),
+                        color = monetAccent,
+                        modifier = Modifier.testTag("marshmallow_edit_done_button")
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Done",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "DONE",
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 2. Main QS Body (Solid Slate #37474F)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .clip(
+                        RoundedCornerShape(
+                            topStart = 0.dp,
+                            topEnd = 0.dp,
+                            bottomStart = effectiveCorner,
+                            bottomEnd = effectiveCorner
+                        )
+                    )
+                    .background(bodyBg)
+                    .verticalScroll(editScrollState)
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Active Tiles Grid (Columns = columns, row spacing = 10dp, column spacing = 8dp)
+                val activeRows = remember(localActive, columns) {
+                    localActive.chunked(columns)
+                }
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onGloballyPositioned { coords ->
+                            activeGridContainerBounds = coords.boundsInRoot()
+                        }
+                ) {
+                    activeRows.forEachIndexed { rowIndex, rowTiles ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            rowTiles.forEachIndexed { colIndex, tile ->
+                                val slotIndex = rowIndex * columns + colIndex
+                                val isDragging = draggedTileId == tile.id
+                                val isHoverTarget = draggedTileId != null && hoveredTargetIndex == slotIndex
+
+                                key(tile.id) {
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(86.dp)
+                                            .onGloballyPositioned { coords ->
+                                                slotBoundsMap[slotIndex] = coords.boundsInRoot()
+                                                tileBoundsMap[tile.id] = coords.boundsInRoot()
+                                            }
+                                            .pointerInput(tile.id) {
+                                                detectDragGesturesAfterLongPress(
+                                                    onDragStart = { offset ->
+                                                        val currentTile = localActive.getOrNull(slotIndex) ?: return@detectDragGesturesAfterLongPress
+                                                        draggedTileId = currentTile.id
+                                                        dragSourceIndex = slotIndex
+                                                        hoveredTargetIndex = -1
+                                                        onDragStateChange(true)
+                                                        val myBounds = slotBoundsMap[slotIndex] ?: tileBoundsMap[currentTile.id] ?: Rect.Zero
+                                                        currentDragCenter = myBounds.topLeft + offset
+                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    },
+                                                    onDrag = { change, dragAmount ->
+                                                        change.consume()
+                                                        currentDragCenter += dragAmount
+                                                        checkAutoScroll(currentDragCenter)
+
+                                                        if (draggedTileId != null) {
+                                                            val activeContainer = activeGridContainerBounds
+                                                            val dropBounds = inactiveDropZoneBounds
+                                                            val isStrictlyAvailable = dropBounds != null &&
+                                                                activeContainer != null &&
+                                                                currentDragCenter.y > activeContainer.bottom + 10f &&
+                                                                currentDragCenter.y >= dropBounds.top
+
+                                                            if (isStrictlyAvailable) {
+                                                                hoveredTargetIndex = -1
+                                                            } else {
+                                                                var targetIndex = -1
+                                                                val totalCount = localActive.size
+                                                                for (i in 0 until totalCount) {
+                                                                    val b = slotBoundsMap[i] ?: continue
+                                                                    val expanded = Rect(b.left - 6f, b.top - 6f, b.right + 6f, b.bottom + 6f)
+                                                                    if (expanded.contains(currentDragCenter)) {
+                                                                        targetIndex = i
+                                                                        break
+                                                                    }
+                                                                }
+                                                                if (targetIndex != -1 && targetIndex != dragSourceIndex) {
+                                                                    if (hoveredTargetIndex != targetIndex) {
+                                                                        hoveredTargetIndex = targetIndex
+                                                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                    }
+                                                                } else {
+                                                                    hoveredTargetIndex = -1
+                                                                }
+                                                            }
+                                                        }
+                                                    },
+                                                    onDragEnd = {
+                                                        autoScrollDirection = 0
+                                                        onDragStateChange(false)
+                                                        val activeId = draggedTileId
+                                                        val dropBounds = inactiveDropZoneBounds
+                                                        val activeContainer = activeGridContainerBounds
+                                                        val sourceIdx = dragSourceIndex
+                                                        val targetIdx = hoveredTargetIndex
+
+                                                        val isDropToAvailable = activeId != null && dropBounds != null &&
+                                                            ((activeContainer != null && currentDragCenter.y > activeContainer.bottom + 10f && currentDragCenter.y >= dropBounds.top) ||
+                                                             (activeContainer == null && currentDragCenter.y >= dropBounds.top))
+
+                                                        if (isDropToAvailable) {
+                                                            val updatedActive = localActive.toMutableList()
+                                                            val moved = updatedActive.firstOrNull { it.id == activeId }
+                                                            if (moved != null) {
+                                                                updatedActive.remove(moved)
+                                                                val updatedInactive = localInactive.toMutableList().apply {
+                                                                    add(0, moved.copy(isVisible = false))
+                                                                }
+                                                                localActive = updatedActive
+                                                                localInactive = updatedInactive
+                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                            }
+                                                        } else if (sourceIdx != -1 && targetIdx != -1 && sourceIdx != targetIdx &&
+                                                            sourceIdx in 0 until localActive.size && targetIdx in 0 until localActive.size
+                                                        ) {
+                                                            val updated = localActive.toMutableList()
+                                                            java.util.Collections.swap(updated, sourceIdx, targetIdx)
+                                                            localActive = updated
+                                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                        }
+                                                        draggedTileId = null
+                                                        dragSourceIndex = -1
+                                                        hoveredTargetIndex = -1
+                                                        onTilesUpdated(localActive, localInactive)
+                                                    },
+                                                    onDragCancel = {
+                                                        autoScrollDirection = 0
+                                                        onDragStateChange(false)
+                                                        draggedTileId = null
+                                                        dragSourceIndex = -1
+                                                        hoveredTargetIndex = -1
+                                                        onTilesUpdated(localActive, localInactive)
+                                                    }
+                                                )
+                                            }
+                                    ) {
+                                        if (isDragging) {
+                                            Spacer(modifier = Modifier.fillMaxSize())
+                                        } else {
+                                            Box(modifier = Modifier.fillMaxSize()) {
+                                                if (isHoverTarget) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .fillMaxSize()
+                                                            .clip(RoundedCornerShape(effectiveCorner))
+                                                            .background(monetAccent.copy(alpha = 0.2f))
+                                                            .border(1.5.dp, monetAccent, RoundedCornerShape(effectiveCorner))
+                                                    )
+                                                }
+                                                MarshmallowEditTileCard(
+                                                    tile = tile,
+                                                    tileWidth = Dp.Unspecified,
+                                                    isActive = true,
+                                                    modifier = Modifier.fillMaxSize()
+                                                )
+
+                                                // Top-right subtle minus remove button
+                                                if (draggedTileId == null) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .align(Alignment.TopEnd)
+                                                            .padding(top = 3.dp, end = 3.dp)
+                                                            .size(20.dp)
+                                                            .clip(CircleShape)
+                                                            .background(Color(0xFFE53935))
+                                                            .clickable(
+                                                                interactionSource = remember { MutableInteractionSource() },
+                                                                indication = null
+                                                            ) {
+                                                                val updatedActive = localActive.toMutableList()
+                                                                val moved = updatedActive.firstOrNull { it.id == tile.id }
+                                                                if (moved != null) {
+                                                                    updatedActive.remove(moved)
+                                                                    val updatedInactive = localInactive.toMutableList().apply {
+                                                                        removeAll { it.id == moved.id }
+                                                                        add(0, moved.copy(isVisible = false))
+                                                                    }
+                                                                    localActive = updatedActive
+                                                                    localInactive = updatedInactive
+                                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                    onTilesUpdated(localActive, localInactive)
+                                                                }
+                                                            },
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Remove,
+                                                            contentDescription = "Remove tile",
+                                                            tint = Color.White,
+                                                            modifier = Modifier.size(13.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            repeat(columns - rowTiles.size) {
+                                Spacer(modifier = Modifier.weight(1f).height(86.dp))
+                            }
+                        }
+                    }
+                }
+
+                // Available Tiles Section
+                val availableBg = if (isOverInactiveDropZone) monetAccent.copy(alpha = 0.2f)
+                else Color(MonetThemeHelper.getInactiveTilesColor(context, isDark))
+                val availableBorder = if (isOverInactiveDropZone) monetAccent
+                else Color(MonetThemeHelper.getCardOutline(context, isDark)).copy(alpha = 0.5f)
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onGloballyPositioned { coords ->
+                            inactiveDropZoneBounds = coords.boundsInRoot()
+                        }
+                        .clip(RoundedCornerShape(effectiveCorner))
+                        .background(availableBg)
+                        .border(
+                            width = if (isOverInactiveDropZone) 2.dp else 1.dp,
+                            color = availableBorder,
+                            shape = RoundedCornerShape(effectiveCorner)
+                        )
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = null,
+                            tint = monetAccent,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = if (isOverInactiveDropZone) {
+                                "DROP TO REMOVE FROM ACTIVE PANEL"
+                            } else {
+                                "AVAILABLE TILES (${localInactive.size})"
+                            },
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                            color = monetAccent
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        Text(
+                            text = if (isOverInactiveDropZone) "Release to drop" else "Tap '+' or drag to add",
+                            fontSize = 10.sp,
+                            color = textLightSecondary
+                        )
+                    }
+
+                    if (localInactive.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "All tiles are currently in your active panel",
+                                fontSize = 12.sp,
+                                color = textLightSecondary
+                            )
+                        }
+                    } else {
+                        val inactiveRows = remember(localInactive, columns) {
+                            localInactive.chunked(columns)
+                        }
+
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            inactiveRows.forEach { rowTiles ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    rowTiles.forEach { tile ->
+                                        val isThisDragging = draggedTileId == tile.id
+                                        key(tile.id) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .height(86.dp)
+                                                    .onGloballyPositioned { coords ->
+                                                        if (draggedTileId != tile.id) {
+                                                            tileBoundsMap[tile.id] = coords.boundsInRoot()
+                                                        }
+                                                    }
+                                                    .pointerInput(tile.id) {
+                                                        detectDragGesturesAfterLongPress(
+                                                            onDragStart = { offset ->
+                                                                draggedTileId = tile.id
+                                                                onDragStateChange(true)
+                                                                val myBounds = tileBoundsMap[tile.id] ?: Rect.Zero
+                                                                currentDragCenter = myBounds.topLeft + offset
+                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                            },
+                                                            onDrag = { change, dragAmount ->
+                                                                change.consume()
+                                                                currentDragCenter += dragAmount
+                                                            },
+                                                            onDragEnd = {
+                                                                onDragStateChange(false)
+                                                                val dropBounds = inactiveDropZoneBounds
+                                                                val activeContainer = activeGridContainerBounds
+
+                                                                val isDraggedToActive = (activeContainer != null && currentDragCenter.y <= activeContainer.bottom + 10f) ||
+                                                                    (dropBounds != null && currentDragCenter.y < dropBounds.top)
+
+                                                                if (isDraggedToActive) {
+                                                                    var targetSlot = localActive.size
+                                                                    for (i in 0 until localActive.size) {
+                                                                        val b = slotBoundsMap[i] ?: continue
+                                                                        if (b.contains(currentDragCenter)) {
+                                                                            targetSlot = i
+                                                                            break
+                                                                        }
+                                                                    }
+                                                                    handleAddTileToActive(tile, targetSlot)
+                                                                }
+                                                                draggedTileId = null
+                                                            },
+                                                            onDragCancel = {
+                                                                onDragStateChange(false)
+                                                                draggedTileId = null
+                                                            }
+                                                        )
+                                                    }
+                                                    .clickable(
+                                                        interactionSource = remember { MutableInteractionSource() },
+                                                        indication = null
+                                                    ) {
+                                                        handleAddTileToActive(tile, null)
+                                                    }
+                                            ) {
+                                                if (isThisDragging) {
+                                                    Spacer(modifier = Modifier.fillMaxSize())
+                                                } else {
+                                                    Box(modifier = Modifier.fillMaxSize()) {
+                                                        MarshmallowEditTileCard(
+                                                            tile = tile,
+                                                            tileWidth = Dp.Unspecified,
+                                                            isActive = false,
+                                                            modifier = Modifier.fillMaxSize()
+                                                        )
+
+                                                        // Plus add button
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .align(Alignment.TopEnd)
+                                                                .padding(top = 3.dp, end = 3.dp)
+                                                                .size(20.dp)
+                                                                .clip(CircleShape)
+                                                                .background(monetAccent)
+                                                                .clickable(
+                                                                    interactionSource = remember { MutableInteractionSource() },
+                                                                    indication = null
+                                                                ) { handleAddTileToActive(tile, null) },
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Default.Add,
+                                                                contentDescription = "Add tile",
+                                                                tint = Color.White,
+                                                                modifier = Modifier.size(13.dp)
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    repeat(columns - rowTiles.size) {
+                                        Spacer(modifier = Modifier.weight(1f).height(86.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(48.dp))
+            }
+        }
+
+        // Floating Drag Overlay for Dragged Tile
+        if (draggedTileId != null) {
+            val draggedTile = localActive.firstOrNull { it.id == draggedTileId }
+                ?: localInactive.firstOrNull { it.id == draggedTileId }
+            val currentStudio = studioCoords
+            if (draggedTile != null && currentStudio != null && currentStudio.isAttached) {
+                val studioOrigin = currentStudio.boundsInRoot().topLeft
+                val localX = currentDragCenter.x - studioOrigin.x
+                val localY = currentDragCenter.y - studioOrigin.y
+
+                val studioWidthPx = currentStudio.boundsInRoot().width
+                val gapPx = with(density) { 8.dp.toPx() }
+                val padPx = with(density) { 28.dp.toPx() }
+                val tileWidthPx = (studioWidthPx - padPx - (gapPx * (columns - 1))) / columns
+                val tileWidthDp = with(density) { tileWidthPx.toDp() }
+
+                Box(
+                    modifier = Modifier
+                        .offset {
+                            IntOffset(
+                                (localX - tileWidthPx / 2f).roundToInt(),
+                                (localY - 43.dp.toPx()).roundToInt()
+                            )
+                        }
+                        .size(width = tileWidthDp, height = 86.dp)
+                        .zIndex(9999f)
+                        .graphicsLayer {
+                            scaleX = 1.05f
+                            scaleY = 1.05f
+                            alpha = 0.95f
+                            shadowElevation = 12f
+                        }
+                ) {
+                    MarshmallowEditTileCard(
+                        tile = draggedTile,
+                        tileWidth = tileWidthDp,
+                        isActive = true,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MarshmallowEditTileCard(
+    tile: QsTileModel,
+    tileWidth: Dp = Dp.Unspecified,
+    isActive: Boolean = true,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val isDark = LocalIsDarkTheme.current
+    val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
+    val monetAccent = com.example.ui.theme.getQsTilesElementColor(isDark)
+    val cardBg = if (isActive) {
+        Color(MonetThemeHelper.getCardBackground(context, isDark))
+    } else {
+        Color(MonetThemeHelper.getInactiveTilesColor(context, isDark))
+    }
+    val labelCol = Color(MonetThemeHelper.getTextPrimary(context, isDark))
+    val corner = panelOuterCorner.dp
+
+    Box(
+        modifier = modifier
+            .then(if (tileWidth != Dp.Unspecified) Modifier.width(tileWidth) else Modifier)
+            .height(86.dp)
+            .clip(RoundedCornerShape(corner))
+            .background(cardBg),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 4.dp, vertical = 6.dp)
+        ) {
+            val isThirdParty = tile.isExternal || tile.category == TileCategory.THIRD_PARTY || tile.category == TileCategory.EXTERNAL || tile.id.contains("/")
+            val iconTint = if (isActive) monetAccent else Color(MonetThemeHelper.getTextSecondary(context, isDark))
+            if (isThirdParty) {
+                val pkg = tile.packageName ?: if (tile.id.contains("/")) tile.id.substringBefore('/') else null
+                val cls = tile.serviceClassName ?: if (tile.id.contains("/")) tile.id.substringAfter('/') else null
+                ExternalTileIcon(
+                    packageName = pkg,
+                    serviceClassName = cls,
+                    tintColor = iconTint,
+                    contentDescription = tile.label,
+                    fallbackDrawable = tile.externalDrawable,
+                    modifier = Modifier.size(28.dp)
+                )
+            } else {
+                val vector = com.example.ui.tile.QsTileIconHelper.getTileImageVector(tile)
+                Icon(
+                    imageVector = vector,
+                    contentDescription = tile.label,
+                    tint = iconTint,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = tile.label,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                color = labelCol,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun EditStudioTileView(
+    tile: QsTileModel,
+    tileWidth: Dp,
+    isKitKat: Boolean,
+    isMarshmallow: Boolean,
+    isActive: Boolean = true
+) {
+    if (isKitKat) {
+        KitKatEditTileCard(
+            tile = tile,
+            tileWidth = tileWidth,
+            isActive = isActive
+        )
+    } else if (isMarshmallow) {
+        MarshmallowEditTileCard(
+            tile = tile,
+            tileWidth = tileWidth,
+            isActive = isActive
+        )
+    } else {
+        CircularQsTile(
+            tile = tile,
+            morphProgress = 1f,
+            tileWidth = tileWidth,
+            isInteractive = false,
+            onClick = {},
+            onLongClick = {}
+        )
+    }
+}
+
 /**
  * Edit Mode Tile Studio: Native drag-and-drop tile reordering, edge-zone auto-scroll, and active/available pools
  */
@@ -1385,6 +3064,7 @@ fun EditModeTileStudio(
     val haptic = LocalHapticFeedback.current
     val isDark = LocalIsDarkTheme.current
     val density = LocalDensity.current
+    val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
 
     var localActive by remember { mutableStateOf(activeTiles) }
     var localInactive by remember { mutableStateOf(inactiveTiles) }
@@ -1459,7 +3139,7 @@ fun EditModeTileStudio(
     val isKitKat = PanelPreferences.isAndroidKitKatStyle(context)
     val isMarshmallow = PanelPreferences.isAndroidMarshmallowStyle(context)
     val isLegacyFlat = isKitKat || isMarshmallow
-    val legacyAccent = if (isKitKat) Color(0xFF33B5E5) else if (isMarshmallow) Color(0xFF00BFA5) else androidx.compose.material3.MaterialTheme.colorScheme.primary
+    val legacyAccent = if (isKitKat) Color(0xFF33B5E5) else if (isMarshmallow) com.example.ui.theme.getQsTilesElementColor(isDark) else androidx.compose.material3.MaterialTheme.colorScheme.primary
 
     Box(
         modifier = Modifier
@@ -1480,19 +3160,62 @@ fun EditModeTileStudio(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        text = if (isKitKat) "ANDROID 4.4.4 KITKAT TILES" else if (isMarshmallow) "ANDROID 6.0 MARSHMALLOW TILES" else "EDIT QUICK SETTINGS",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp,
-                        color = legacyAccent
-                    )
-                    Text(
-                        text = "Hold & drag to reorder tiles. Tap '-' to remove.",
-                        fontSize = 11.sp,
-                        color = if (isDark) Color.LightGray else Color(0xFF666666)
-                    )
+                if (isKitKat) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = "QUICK SETTINGS TILES",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.5.sp,
+                            color = Color(0xFF33B5E5)
+                        )
+                        Text(
+                            text = "Touch & hold to reorder. Tap '-' to remove.",
+                            fontSize = 10.5.sp,
+                            color = if (isDark) Color(0xFFAAAAAA) else Color(0xFF555555)
+                        )
+                    }
+                } else if (isMarshmallow) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = null,
+                            tint = legacyAccent,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            Text(
+                                text = "SYSTEM UI TUNER • QUICK SETTINGS",
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                color = legacyAccent
+                            )
+                            Text(
+                                text = "Drag tiles to reorder. Tap '-' to remove.",
+                                fontSize = 10.5.sp,
+                                color = if (isDark) Color(0xFFB0BEC5) else Color(0xFF546E7A)
+                            )
+                        }
+                    }
+                } else {
+                    Column {
+                        Text(
+                            text = "EDIT QUICK SETTINGS",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                            color = legacyAccent
+                        )
+                        Text(
+                            text = "Hold & drag to reorder tiles. Tap '-' to remove.",
+                            fontSize = 11.sp,
+                            color = if (isDark) Color.LightGray else Color(0xFF666666)
+                        )
+                    }
                 }
 
                 Surface(
@@ -1500,8 +3223,8 @@ fun EditModeTileStudio(
                         onTilesUpdated(localActive, localInactive)
                         onDone()
                     },
-                    shape = RoundedCornerShape(if (isLegacyFlat) 8.dp else 16.dp),
-                    color = legacyAccent,
+                    shape = RoundedCornerShape(if (isKitKat || isMarshmallow) panelOuterCorner.dp else 16.dp),
+                    color = if (isKitKat) Color(0xFF33B5E5) else if (isMarshmallow) legacyAccent else legacyAccent,
                     modifier = Modifier.testTag("inline_done_button")
                 ) {
                     Row(
@@ -1516,13 +3239,22 @@ fun EditModeTileStudio(
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
-                            text = "Done",
+                            text = if (isKitKat || isMarshmallow) "DONE" else "Done",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
                     }
                 }
+            }
+
+            if (isKitKat) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(2.dp)
+                        .background(Color(0xFF33B5E5))
+                )
             }
 
             // Active Tiles Grid Section
@@ -1681,31 +3413,50 @@ fun EditModeTileStudio(
                                             contentAlignment = Alignment.Center
                                         ) {
                                             if (isHoverTarget) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .requiredSize(width = targetTileWidth + 16.dp, height = 102.dp)
-                                                        .clip(RoundedCornerShape(20.dp))
-                                                        .background(availableTilesSolidBg)
-                                                )
+                                                if (isKitKat) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .requiredSize(width = targetTileWidth + 6.dp, height = 92.dp)
+                                                            .clip(RoundedCornerShape(4.dp))
+                                                            .background(Color(0x3333B5E5))
+                                                            .border(1.5.dp, Color(0xFF33B5E5), RoundedCornerShape(4.dp))
+                                                    )
+                                                } else if (isMarshmallow) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .requiredSize(width = targetTileWidth + 6.dp, height = 92.dp)
+                                                            .clip(RoundedCornerShape(panelOuterCorner.dp))
+                                                            .background(legacyAccent.copy(alpha = 0.2f))
+                                                            .border(1.5.dp, legacyAccent, RoundedCornerShape(panelOuterCorner.dp))
+                                                    )
+                                                } else {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .requiredSize(width = targetTileWidth + 16.dp, height = 102.dp)
+                                                            .clip(RoundedCornerShape(20.dp))
+                                                            .background(availableTilesSolidBg)
+                                                    )
+                                                }
                                             }
-                                            CircularQsTile(
+                                            EditStudioTileView(
                                                 tile = tile,
-                                                morphProgress = 1f,
                                                 tileWidth = targetTileWidth,
-                                                isInteractive = false,
-                                                onClick = {},
-                                                onLongClick = {}
+                                                isKitKat = isKitKat,
+                                                isMarshmallow = isMarshmallow,
+                                                isActive = true
                                             )
 
                                             // Minus remove button
                                             if (draggedTileId == null) {
+                                                val badgeShape = if (isKitKat) RoundedCornerShape(3.dp) else CircleShape
+                                                val badgeColor = if (isKitKat) Color(0xFFCC0000) else Color(0xFFE53935)
                                                 Box(
                                                     modifier = Modifier
                                                         .align(Alignment.TopEnd)
                                                         .padding(top = 2.dp, end = 2.dp)
                                                         .size(20.dp)
-                                                        .clip(CircleShape)
-                                                        .background(Color(0xFFE53935))
+                                                        .clip(badgeShape)
+                                                        .background(badgeColor)
                                                         .clickable(
                                                             interactionSource = remember { MutableInteractionSource() },
                                                             indication = null
@@ -1751,7 +3502,11 @@ fun EditModeTileStudio(
             val cardContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
             val activeAccent = legacyAccent
             val availableTilesBg = if (isOverInactiveDropZone) {
-                activeAccent.copy(alpha = 0.12f)
+                if (isKitKat) Color(0x3333B5E5) else if (isMarshmallow) legacyAccent.copy(alpha = 0.2f) else activeAccent.copy(alpha = 0.12f)
+            } else if (isKitKat) {
+                if (isDark) Color(0xFF161616) else Color(0xFFE8E8E8)
+            } else if (isMarshmallow) {
+                Color(MonetThemeHelper.getInactiveTilesColor(context, isDark))
             } else if (isDark) {
                 Color(
                     red = (cardContainerColor.red * 0.55f).coerceIn(0f, 1f),
@@ -1767,6 +3522,16 @@ fun EditModeTileStudio(
                     alpha = cardContainerColor.alpha
                 )
             }
+            val availableCornerRadius = if (isKitKat || isMarshmallow) panelOuterCorner.dp else 16.dp
+            val availableBorderColor = if (isOverInactiveDropZone) {
+                activeAccent
+            } else if (isKitKat) {
+                if (isDark) Color(0xFF2C2C2C) else Color(0xFFCCCCCC)
+            } else if (isMarshmallow) {
+                Color(MonetThemeHelper.getCardOutline(context, isDark)).copy(alpha = 0.5f)
+            } else {
+                Color.Transparent
+            }
 
             // Inactive / Available Tiles Section
             Column(
@@ -1775,14 +3540,12 @@ fun EditModeTileStudio(
                     .onGloballyPositioned { coords ->
                         inactiveDropZoneBounds = coords.boundsInRoot()
                     }
-                    .clip(RoundedCornerShape(if (isLegacyFlat) 12.dp else 16.dp))
+                    .clip(RoundedCornerShape(availableCornerRadius))
                     .background(availableTilesBg)
-                    .then(
-                        if (isOverInactiveDropZone) {
-                            Modifier.border(2.dp, activeAccent, RoundedCornerShape(if (isLegacyFlat) 12.dp else 16.dp))
-                        } else {
-                            Modifier
-                        }
+                    .border(
+                        width = if (isOverInactiveDropZone) 2.dp else (if (isKitKat || isMarshmallow) 1.dp else 0.dp),
+                        color = availableBorderColor,
+                        shape = RoundedCornerShape(availableCornerRadius)
                     )
                     .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -1892,6 +3655,8 @@ fun EditModeTileStudio(
                                             targetTileWidth = targetTileWidth,
                                             draggedTileId = draggedTileId,
                                             tileBoundsMap = tileBoundsMap,
+                                            isKitKat = isKitKat,
+                                            isMarshmallow = isMarshmallow,
                                             onDragStart = { offset ->
                                                 draggedTileId = tile.id
                                                 onDragStateChange(true)
@@ -1969,6 +3734,8 @@ fun EditModeTileStudio(
                                             targetTileWidth = targetTileWidth,
                                             draggedTileId = draggedTileId,
                                             tileBoundsMap = tileBoundsMap,
+                                            isKitKat = isKitKat,
+                                            isMarshmallow = isMarshmallow,
                                             onDragStart = { offset ->
                                                 draggedTileId = tile.id
                                                 onDragStateChange(true)
@@ -2054,16 +3821,15 @@ fun EditModeTileStudio(
                             scaleX = 1.08f
                             scaleY = 1.08f
                             alpha = 0.95f
-                            shadowElevation = 24f
+                            shadowElevation = if (isKitKat) 8f else if (isMarshmallow) 16f else 24f
                         }
                 ) {
-                    CircularQsTile(
+                    EditStudioTileView(
                         tile = draggedTile,
-                        morphProgress = 1f,
                         tileWidth = targetTileWidth,
-                        isInteractive = false,
-                        onClick = {},
-                        onLongClick = {}
+                        isKitKat = isKitKat,
+                        isMarshmallow = isMarshmallow,
+                        isActive = true
                     )
                 }
             }
@@ -2395,59 +4161,96 @@ fun UnifiedQsPanel(
                 )
             } else {
                 ContainerCard(
-                    shape = RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomStart = effectiveOuterCorner, bottomEnd = effectiveOuterCorner),
-                    containerColor = if (morphProgress < 0.5f && !isLandscape) darkHeaderBg else bodyBg,
+                    shape = RoundedCornerShape(
+                        topStart = 0.dp,
+                        topEnd = 0.dp,
+                        bottomStart = effectiveOuterCorner,
+                        bottomEnd = effectiveOuterCorner
+                    ),
+                    containerColor = bodyBg,
                     modifier = Modifier
                         .fillMaxWidth()
                         .wrapContentHeight()
-                        .then(shadeDragModifier)
                 ) {
+                    val qsScrollState = rememberScrollState()
+                    val nestedScrollConnection = remember {
+                        object : NestedScrollConnection {
+                            var accumulatedUpDrag = 0f
+
+                            override fun onPostScroll(
+                                consumed: Offset,
+                                available: Offset,
+                                source: NestedScrollSource
+                            ): Offset {
+                                if (available.y < -1f) {
+                                    accumulatedUpDrag += available.y
+                                    if (accumulatedUpDrag < -60f) {
+                                        accumulatedUpDrag = 0f
+                                        onCollapseToQqs()
+                                    }
+                                } else if (available.y > 1f) {
+                                    accumulatedUpDrag = 0f
+                                }
+                                return Offset.Zero
+                            }
+                        }
+                    }
+
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .wrapContentHeight()
                     ) {
-                        if (showCustomHeaderImage) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(customHeaderImageHeight.dp)
-                            ) {
-                                if (customHeaderImageUri.isNotBlank()) {
-                                    coil.compose.AsyncImage(
-                                        model = customHeaderImageUri,
-                                        contentDescription = "Custom Header Image",
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .graphicsLayer(alpha = customHeaderImageOpacity),
-                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        // 1. Top Header (shade_header - Solid Slate #263238)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(
+                                    RoundedCornerShape(
+                                        topStart = 0.dp,
+                                        topEnd = 0.dp,
+                                        bottomStart = if (morphProgress < 0.5f) effectiveOuterCorner else 0.dp,
+                                        bottomEnd = if (morphProgress < 0.5f) effectiveOuterCorner else 0.dp
                                     )
-                                } else {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(
-                                                Brush.horizontalGradient(
-                                                    listOf(
-                                                        com.example.ui.theme.getMiscElementColor(isDark).copy(alpha = 0.85f),
-                                                        androidx.compose.material3.MaterialTheme.colorScheme.tertiary.copy(alpha = 0.85f),
-                                                        androidx.compose.material3.MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f)
+                                )
+                                .background(darkHeaderBg)
+                                .then(shadeDragModifier)
+                        ) {
+                            if (showCustomHeaderImage) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(customHeaderImageHeight.dp)
+                                ) {
+                                    if (customHeaderImageUri.isNotBlank()) {
+                                        coil.compose.AsyncImage(
+                                            model = customHeaderImageUri,
+                                            contentDescription = "Custom Header Image",
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .graphicsLayer(alpha = customHeaderImageOpacity),
+                                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                        )
+                                    } else {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(
+                                                    Brush.horizontalGradient(
+                                                        listOf(
+                                                            com.example.ui.theme.getMiscElementColor(isDark).copy(alpha = 0.85f),
+                                                            androidx.compose.material3.MaterialTheme.colorScheme.tertiary.copy(alpha = 0.85f),
+                                                            androidx.compose.material3.MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f)
+                                                        )
                                                     )
                                                 )
-                                            )
-                                    )
+                                        )
+                                    }
                                 }
                             }
-                        }
 
-                        if (morphProgress < 0.5f && !isLandscape) {
-                            // --- COLLAPSED STATE (QQS / Closed Shade) ---
-                            // Compact top status header sitting directly above the notification list.
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(darkHeaderBg)
-                            ) {
+                            if (morphProgress < 0.5f && !isLandscape) {
+                                // --- COLLAPSED STATUS HEADER ---
                                 if (brightnessInQqs && !brightnessAtBottom) {
                                     Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
                                         BrightnessSliderRow(
@@ -2568,175 +4371,175 @@ fun UnifiedQsPanel(
                                         )
                                     }
                                 }
-                            }
-                        } else {
-                            // --- EXPANDED STATE (Full QS Panel) ---
-                            // 1. Darker top status header (Monet Surface palette)
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(darkHeaderBg)
-                                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                            } else {
+                                // --- EXPANDED STATUS HEADER ---
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 12.dp)
                                 ) {
-                                    if (showCarrier && !hideCarrierInExpanded) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        if (showCarrier && !hideCarrierInExpanded) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.CellTower,
+                                                    contentDescription = null,
+                                                    tint = textLightSecondary,
+                                                    modifier = Modifier.size(13.dp)
+                                                )
+                                                Text(
+                                                    text = carrierName.ifBlank { "Emergency calls only" },
+                                                    fontSize = 13.sp,
+                                                    color = textLightSecondary
+                                                )
+                                            }
+                                        } else {
+                                            Spacer(modifier = Modifier.width(1.dp))
+                                        }
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
+                                            if (isWifiTileEnabled && isWifiOn) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Wifi,
+                                                    contentDescription = "Wi-Fi",
+                                                    tint = headerTextColor,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                            if (isCellularTileEnabled && isCellularOn) {
+                                                Icon(
+                                                    imageVector = Icons.Default.CellTower,
+                                                    contentDescription = "Signal",
+                                                    tint = headerTextColor,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                            if (isBtTileEnabled && isBtOn) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Bluetooth,
+                                                    contentDescription = "Bluetooth",
+                                                    tint = headerTextColor,
+                                                    modifier = Modifier.size(15.dp)
+                                                )
+                                            }
+                                            if (batteryPercentageLocation == BatteryPercentageLocation.HEADER) {
+                                                Text(
+                                                    text = "${batteryInfo.percentage}%",
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = headerTextColor
+                                                )
+                                            }
                                             Icon(
-                                                imageVector = Icons.Default.CellTower,
-                                                contentDescription = null,
-                                                tint = textLightSecondary,
-                                                modifier = Modifier.size(13.dp)
-                                            )
-                                            Text(
-                                                text = carrierName.ifBlank { "Emergency calls only" },
-                                                fontSize = 13.sp,
-                                                color = textLightSecondary
-                                            )
-                                        }
-                                    } else {
-                                        Spacer(modifier = Modifier.width(1.dp))
-                                    }
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        if (isWifiTileEnabled && isWifiOn) {
-                                            Icon(
-                                                imageVector = Icons.Default.Wifi,
-                                                contentDescription = "Wi-Fi",
-                                                tint = headerTextColor,
+                                                imageVector = if (batteryInfo.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
+                                                contentDescription = "Battery",
+                                                tint = if (batteryInfo.isCharging) Color(0xFF4CAF50) else headerTextColor,
                                                 modifier = Modifier.size(16.dp)
                                             )
-                                        }
-                                        if (isCellularTileEnabled && isCellularOn) {
-                                            Icon(
-                                                imageVector = Icons.Default.CellTower,
-                                                contentDescription = "Signal",
-                                                tint = headerTextColor,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
-                                        if (isBtTileEnabled && isBtOn) {
-                                            Icon(
-                                                imageVector = Icons.Default.Bluetooth,
-                                                contentDescription = "Bluetooth",
-                                                tint = headerTextColor,
-                                                modifier = Modifier.size(15.dp)
-                                            )
-                                        }
-                                        if (batteryPercentageLocation == BatteryPercentageLocation.HEADER) {
-                                            Text(
-                                                text = "${batteryInfo.percentage}%",
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = headerTextColor
-                                            )
-                                        }
-                                        Icon(
-                                            imageVector = if (batteryInfo.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
-                                            contentDescription = "Battery",
-                                            tint = if (batteryInfo.isCharging) Color(0xFF4CAF50) else headerTextColor,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        IconButton(
-                                            onClick = onToggleEditMode,
-                                            modifier = Modifier.size(28.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Edit,
-                                                contentDescription = "Edit Tiles",
-                                                tint = headerTextColor,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-                                        if (settingsIconLocation == SettingsIconLocation.HEADER || settingsIconLocation == SettingsIconLocation.EXPANDED_QS) {
                                             IconButton(
-                                                onClick = onSettingsClick,
+                                                onClick = onToggleEditMode,
                                                 modifier = Modifier.size(28.dp)
                                             ) {
                                                 Icon(
-                                                    imageVector = Icons.Default.Settings,
-                                                    contentDescription = "Settings",
+                                                    imageVector = Icons.Default.Edit,
+                                                    contentDescription = "Edit Tiles",
                                                     tint = headerTextColor,
-                                                    modifier = Modifier.size(19.dp)
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                            if (settingsIconLocation == SettingsIconLocation.HEADER || settingsIconLocation == SettingsIconLocation.EXPANDED_QS) {
+                                                IconButton(
+                                                    onClick = onSettingsClick,
+                                                    modifier = Modifier.size(28.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Settings,
+                                                        contentDescription = "Settings",
+                                                        tint = headerTextColor,
+                                                        modifier = Modifier.size(19.dp)
+                                                    )
+                                                }
+                                            }
+                                            IconButton(
+                                                onClick = { onCollapseToQqs() },
+                                                modifier = Modifier.size(28.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.KeyboardArrowUp,
+                                                    contentDescription = "Collapse to QQS",
+                                                    tint = headerTextColor,
+                                                    modifier = Modifier.size(18.dp)
                                                 )
                                             }
                                         }
-                                        IconButton(
-                                            onClick = { onCollapseToQqs() },
-                                            modifier = Modifier.size(28.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.KeyboardArrowUp,
-                                                contentDescription = "Collapse to QQS",
-                                                tint = headerTextColor,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
                                     }
-                                }
 
-                                Spacer(modifier = Modifier.height(8.dp))
+                                    Spacer(modifier = Modifier.height(8.dp))
 
-                                Text(
-                                    text = timeFormatter.format(now),
-                                    fontSize = 26.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = headerTextColor,
-                                    modifier = Modifier.clickable { launchClockApp(context); onClosePanel() }
-                                )
-                                Text(
-                                    text = dateFormatter.format(now),
-                                    fontSize = 13.sp,
-                                    color = textLightSecondary,
-                                    modifier = Modifier.padding(top = 2.dp)
-                                )
-                            }
-
-                            // 2. Main QS Body (Monet Card palette - Vertically Scrollable with swipe up to collapse when at bottom)
-                            val qsScrollState = rememberScrollState()
-                            val nestedScrollConnection = remember {
-                                object : NestedScrollConnection {
-                                    var accumulatedUpDrag = 0f
-
-                                    override fun onPostScroll(
-                                        consumed: Offset,
-                                        available: Offset,
-                                        source: NestedScrollSource
-                                    ): Offset {
-                                        if (available.y < -1f) {
-                                            accumulatedUpDrag += available.y
-                                            if (accumulatedUpDrag < -60f) {
-                                                accumulatedUpDrag = 0f
-                                                onCollapseToQqs()
-                                            }
-                                        } else if (available.y > 1f) {
-                                            accumulatedUpDrag = 0f
-                                        }
-                                        return Offset.Zero
-                                    }
+                                    Text(
+                                        text = timeFormatter.format(now),
+                                        fontSize = 26.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = headerTextColor,
+                                        modifier = Modifier.clickable { launchClockApp(context); onClosePanel() }
+                                    )
+                                    Text(
+                                        text = dateFormatter.format(now),
+                                        fontSize = 13.sp,
+                                        color = textLightSecondary,
+                                        modifier = Modifier.padding(top = 2.dp)
+                                    )
                                 }
                             }
+                        }
 
+                        // 2. Existing Tile Container (qs_tile_container / ll_marshmallow_qs_body)
+                        // Positioned directly beneath the top header, peeking out by exactly 8dp in collapsed state
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clipToBounds()
+                                .background(bodyBg)
+                                .then(shadeDragModifier)
+                                .clickable(enabled = morphProgress < 0.2f && !isLandscape) { onExpandFull() }
+                                .layout { measurable, constraints ->
+                                    val placeable = measurable.measure(constraints.copy(minHeight = 0))
+                                    val fullHeight = placeable.height
+                                    val peekHeightPx = 8.dp.roundToPx()
+                                    val currentHeight = if (isLandscape) {
+                                        fullHeight
+                                    } else {
+                                        (peekHeightPx + (fullHeight - peekHeightPx) * morphProgress)
+                                            .roundToInt()
+                                            .coerceIn(peekHeightPx, fullHeight)
+                                    }
+                                    layout(placeable.width, currentHeight) {
+                                        placeable.placeRelative(0, 0)
+                                    }
+                                }
+                                .then(
+                                    if (!isLandscape && morphProgress >= 0.99f) {
+                                        Modifier
+                                            .nestedScroll(nestedScrollConnection)
+                                            .verticalScroll(qsScrollState)
+                                    } else Modifier
+                                )
+                                .padding(horizontal = 14.dp, vertical = 12.dp)
+                        ) {
+                            val contentAlpha = if (isLandscape) 1f else ((morphProgress - 0.05f) / 0.25f).coerceIn(0f, 1f)
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(bodyBg)
-                                    .then(
-                                        if (!isLandscape) {
-                                            Modifier
-                                                .nestedScroll(nestedScrollConnection)
-                                                .verticalScroll(qsScrollState)
-                                        } else Modifier
-                                    )
-                                    .padding(horizontal = 14.dp, vertical = 12.dp)
+                                    .graphicsLayer(alpha = contentAlpha)
                             ) {
                                 if (!brightnessAtBottom) {
                                     BrightnessSliderRow(
@@ -3921,7 +5724,7 @@ fun UnifiedQsPanel(
                         Modifier.fillMaxHeight()
                     }
                 ),
-            verticalArrangement = Arrangement.spacedBy(if (isAndroidOreoStyle) 0.dp else ExpressiveCardShapes.CardSpacing)
+            verticalArrangement = Arrangement.spacedBy(if (isAndroidOreoStyle || isAndroidMarshmallowStyle) 0.dp else ExpressiveCardShapes.CardSpacing)
         ) {
             qsCardContent()
             if (!isAndroidMarshmallowStyle) {
@@ -4898,9 +6701,11 @@ fun CircularQsTile(
     }
 
     val isAndroidOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
+    val enableLegacyTileShapes by PanelPreferences.enableLegacyTileShapes.collectAsState()
+    val renderShapeBg = !isAndroidOreoStyle || enableLegacyTileShapes
 
-    val (backgroundColor, iconColor) = remember(tile.state, isDark, primaryColor, onPrimaryColor, cardContainerColor, tileOutlineEnabled, inactiveTileColor, isAndroidOreoStyle) {
-        if (isAndroidOreoStyle) {
+    val (backgroundColor, iconColor) = remember(tile.state, isDark, primaryColor, onPrimaryColor, cardContainerColor, tileOutlineEnabled, inactiveTileColor, renderShapeBg) {
+        if (!renderShapeBg) {
             val fg = when (tile.state) {
                 TileState.ACTIVE -> primaryColor
                 TileState.INACTIVE -> if (isDark) Color(0xFFCCCCCC) else Color(0xFF555555)
@@ -4977,7 +6782,7 @@ fun CircularQsTile(
             modifier = Modifier
                 .size(circleSize)
                 .then(
-                    if (!isAndroidOreoStyle && tileOutlineEnabled) {
+                    if (renderShapeBg && tileOutlineEnabled) {
                         if (isActive && showQsTileGradient) {
                             Modifier.border(1.2.dp, tileGradientBrush, tileShape)
                         } else {
@@ -4987,9 +6792,9 @@ fun CircularQsTile(
                         Modifier
                     }
                 )
-                .then(if (!isAndroidOreoStyle) Modifier.clip(tileShape) else Modifier)
+                .then(if (renderShapeBg) Modifier.clip(tileShape) else Modifier)
                 .then(
-                    if (!isAndroidOreoStyle) {
+                    if (renderShapeBg) {
                         if (isActive && showQsTileGradient && !tileOutlineEnabled) {
                             Modifier.background(tileGradientBrush)
                         } else {
@@ -5371,6 +7176,8 @@ fun InactiveTileItem(
     targetTileWidth: Dp,
     draggedTileId: String?,
     tileBoundsMap: MutableMap<String, Rect>,
+    isKitKat: Boolean = false,
+    isMarshmallow: Boolean = false,
     onDragStart: (Offset) -> Unit,
     onDrag: (Offset) -> Unit,
     onDragEnd: () -> Unit,
@@ -5408,35 +7215,80 @@ fun InactiveTileItem(
             Spacer(modifier = Modifier.width(targetTileWidth).height(86.dp))
         } else {
             Box(modifier = Modifier.width(targetTileWidth)) {
-                CircularQsTile(
+                EditStudioTileView(
                     tile = tile,
-                    morphProgress = 1f,
                     tileWidth = targetTileWidth,
-                    isInteractive = false,
-                    onClick = {},
-                    onLongClick = {}
+                    isKitKat = isKitKat,
+                    isMarshmallow = isMarshmallow,
+                    isActive = false
                 )
 
                 // Plus add button
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 2.dp, end = 2.dp)
-                        .size(20.dp)
-                        .clip(CircleShape)
-                        .background(androidx.compose.material3.MaterialTheme.colorScheme.primary)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) { onClick() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Add tile",
-                        tint = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(13.dp)
-                    )
+                if (isKitKat) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 2.dp, end = 2.dp)
+                            .size(20.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(Color(0xFF33B5E5))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { onClick() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add tile",
+                            tint = Color.White,
+                            modifier = Modifier.size(13.dp)
+                        )
+                    }
+                } else if (isMarshmallow) {
+                    val isDark = LocalIsDarkTheme.current
+                    val marshmallowAccent = com.example.ui.theme.getQsTilesElementColor(isDark)
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 2.dp, end = 2.dp)
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .background(marshmallowAccent)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { onClick() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add tile",
+                            tint = Color.White,
+                            modifier = Modifier.size(13.dp)
+                        )
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 2.dp, end = 2.dp)
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .background(androidx.compose.material3.MaterialTheme.colorScheme.primary)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { onClick() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add tile",
+                            tint = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(13.dp)
+                        )
+                    }
                 }
             }
         }
@@ -5486,11 +7338,26 @@ private fun MarshmallowTileItem(
     val isDark = LocalIsDarkTheme.current
     val isActive = tile.state == TileState.ACTIVE
 
+    val enabledTileShapeId by PanelPreferences.enabledTileShapeId.collectAsState()
+    val disabledTileShapeId by PanelPreferences.disabledTileShapeId.collectAsState()
+    val enableLegacyTileShapes by PanelPreferences.enableLegacyTileShapes.collectAsState()
+
+    val chosenShapeId = if (isActive) enabledTileShapeId else disabledTileShapeId
+    val tileShape = remember(chosenShapeId) {
+        com.example.ui.shape.QsShapeManager.getComposeShape(chosenShapeId)
+    }
+
     val textPrimary = Color(MonetThemeHelper.getTextPrimary(context, isDark))
     val textSecondary = Color(MonetThemeHelper.getTextSecondary(context, isDark))
+    val inactiveTileColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
 
-    val iconTint = if (isActive) primaryAccent else textSecondary
+    val iconTint = if (enableLegacyTileShapes) {
+        if (isActive) Color.White else textSecondary
+    } else {
+        if (isActive) primaryAccent else textSecondary
+    }
     val textTint = if (isActive) textPrimary else textSecondary
+    val tileBgColor = if (isActive) primaryAccent else inactiveTileColor
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -5501,11 +7368,27 @@ private fun MarshmallowTileItem(
             )
             .padding(vertical = if (isTopTile) 4.dp else 6.dp)
     ) {
-        MarshmallowTileIcon(
-            tile = tile,
-            tint = iconTint,
-            modifier = Modifier.size(28.dp)
-        )
+        if (enableLegacyTileShapes) {
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(tileShape)
+                    .background(tileBgColor),
+                contentAlignment = Alignment.Center
+            ) {
+                MarshmallowTileIcon(
+                    tile = tile,
+                    tint = iconTint,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        } else {
+            MarshmallowTileIcon(
+                tile = tile,
+                tint = iconTint,
+                modifier = Modifier.size(28.dp)
+            )
+        }
         if (isTopTile) {
             Spacer(modifier = Modifier.height(4.dp))
             HorizontalDivider(

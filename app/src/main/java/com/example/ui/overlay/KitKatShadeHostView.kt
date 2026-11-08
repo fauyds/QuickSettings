@@ -26,8 +26,19 @@ import com.example.model.NotificationActionModel
 import com.example.model.NotificationItem
 import com.example.model.QsTileModel
 import com.example.model.TileState
+import android.graphics.Outline
+import android.graphics.Path
+import android.os.Build
+import android.view.ViewOutlineProvider
+import android.widget.ImageButton
+import androidx.core.graphics.ColorUtils
+import androidx.palette.graphics.Palette
+import com.example.service.MediaSessionManagerHelper
 import com.example.ui.notification.MonetThemeHelper
 import com.example.ui.notification.NotificationListView
+import com.example.ui.overlay.extractAndroidQNotificationColors
+import androidx.compose.ui.graphics.toArgb
+import com.example.ui.view.WavyProgressView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -37,6 +48,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -983,16 +995,78 @@ class KitKatShadeHostView @JvmOverloads constructor(
                             else androidx.compose.ui.graphics.Color(MonetThemeHelper.getCardBackground(context, isDarkTheme))
                         }
 
+                        val liveMediaState by com.example.service.MediaSessionManagerHelper.mediaState.collectAsState()
+                        val mediaSessionsList by com.example.service.MediaSessionManagerHelper.sessionsList.collectAsState()
+                        val selectedSessionIndex by com.example.service.MediaSessionManagerHelper.selectedSessionIndex.collectAsState()
+                        val showMediaInNotifContainer by PanelPreferences.showMediaInNotificationContainer.collectAsState()
+                        val forceShowMediaPreview by PanelPreferences.forceShowMediaPreview.collectAsState()
+                        val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
+
+                        val mediaToDisplay = liveMediaState ?: if (forceShowMediaPreview) com.example.model.MediaState.Preview else null
+                        val shouldShowOnQs = mediaToDisplay != null && !showMediaInNotifContainer
+
                         QuickPanelTheme(darkTheme = isDarkTheme) {
-                            KitKatBrightnessSliderBox(
-                                brightness = currentBrightness,
-                                onBrightnessChange = { newB ->
-                                    brightnessState.intValue = newB
-                                    onBrightnessChange?.invoke(newB)
-                                },
-                                isDarkTheme = isDarkTheme,
-                                cardColor = cardColor
-                            )
+                            val miscAccent = com.example.ui.theme.getMiscElementColor(isDarkTheme)
+                            Column(
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                if (!isBrightnessAtBottom) {
+                                    KitKatBrightnessSliderBox(
+                                        brightness = currentBrightness,
+                                        onBrightnessChange = { newB ->
+                                            brightnessState.intValue = newB
+                                            onBrightnessChange?.invoke(newB)
+                                        },
+                                        isDarkTheme = isDarkTheme,
+                                        cardColor = cardColor
+                                    )
+                                }
+
+                                if (shouldShowOnQs && mediaToDisplay != null) {
+                                    AdaptiveMediaPlayerCard(
+                                        mediaState = mediaToDisplay,
+                                        isExpanded = true,
+                                        sessions = mediaSessionsList,
+                                        selectedIndex = selectedSessionIndex,
+                                        onSelectSession = { index ->
+                                            com.example.service.MediaSessionManagerHelper.selectSession(index)
+                                        },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 1.5.dp, vertical = 1.5.dp),
+                                        cornerRadius = panelOuterCorner.dp,
+                                        backgroundColor = cardColor,
+                                        useArtworkColor = false,
+                                        accentColor = miscAccent,
+                                        contentColor = if (isDarkTheme) androidx.compose.ui.graphics.Color.White else androidx.compose.ui.graphics.Color(0xFF222222),
+                                        onPlayPauseClick = {
+                                            com.example.service.MediaSessionManagerHelper.playPause()
+                                        },
+                                        onPreviousClick = {
+                                            com.example.service.MediaSessionManagerHelper.previous()
+                                        },
+                                        onNextClick = {
+                                            com.example.service.MediaSessionManagerHelper.next()
+                                        },
+                                        onCardClick = {
+                                            com.example.service.MediaSessionManagerHelper.openActivePlayerApp(context)
+                                            onClosePanel?.invoke()
+                                        }
+                                    )
+                                }
+
+                                if (isBrightnessAtBottom) {
+                                    KitKatBrightnessSliderBox(
+                                        brightness = currentBrightness,
+                                        onBrightnessChange = { newB ->
+                                            brightnessState.intValue = newB
+                                            onBrightnessChange?.invoke(newB)
+                                        },
+                                        isDarkTheme = isDarkTheme,
+                                        cardColor = cardColor
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -1005,21 +1079,50 @@ class KitKatShadeHostView @JvmOverloads constructor(
                 val textPrimary = MonetThemeHelper.getTextPrimary(context, isDark)
                 val textSecondary = MonetThemeHelper.getTextSecondary(context, isDark)
 
+                val enableLegacyTileShapes = PanelPreferences.enableLegacyTileShapes.value
+                val enabledTileShapeId = PanelPreferences.enabledTileShapeId.value
+                val disabledTileShapeId = PanelPreferences.disabledTileShapeId.value
+                val chosenShapeId = if (isActive) enabledTileShapeId else disabledTileShapeId
+
                 val inactiveIconColor = if (isDark) Color.parseColor("#999999") else textSecondary
                 val inactiveTextColor = if (isDark) Color.parseColor("#AAAAAA") else textSecondary
-                val iconTint = if (isActive) androidx.compose.ui.graphics.Color(tileAccent) else androidx.compose.ui.graphics.Color(inactiveIconColor)
+                val activeBgColor = androidx.compose.ui.graphics.Color(tileAccent)
 
-                // 1. Jetpack Compose Tile Icon
+                val iconTint = if (enableLegacyTileShapes) {
+                    if (isActive) androidx.compose.ui.graphics.Color.White else androidx.compose.ui.graphics.Color(inactiveIconColor)
+                } else {
+                    if (isActive) androidx.compose.ui.graphics.Color(tileAccent) else androidx.compose.ui.graphics.Color(inactiveIconColor)
+                }
+
+                // 1. Jetpack Compose Tile Icon (with shape background when legacy shapes enabled)
                 holder.composeIcon.setContent {
+                    val tileShape = com.example.ui.shape.QsShapeManager.getComposeShape(chosenShapeId)
+                    val inactiveBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        KitKatTileIcon(
-                            tile = tile,
-                            tint = iconTint,
-                            modifier = Modifier.size(28.dp)
-                        )
+                        if (enableLegacyTileShapes) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(tileShape)
+                                    .background(if (isActive) activeBgColor else inactiveBgColor),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                KitKatTileIcon(
+                                    tile = tile,
+                                    tint = iconTint,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        } else {
+                            KitKatTileIcon(
+                                tile = tile,
+                                tint = iconTint,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
                     }
                 }
 

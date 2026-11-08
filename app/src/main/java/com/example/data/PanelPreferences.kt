@@ -513,9 +513,13 @@ object PanelPreferences {
     private const val KEY_PANEL_GLOBAL_CORNER_ENABLED = "panel_global_corner_enabled"
     private const val KEY_PANEL_OUTER_CORNER = "panel_outer_corner"
     private const val KEY_PANEL_INNER_CORNER = "panel_inner_corner"
+    private const val KEY_ENABLE_LEGACY_TILE_SHAPES = "enable_legacy_tile_shapes"
 
     private val _panelGlobalCornerEnabled = MutableStateFlow(false)
     val panelGlobalCornerEnabled: StateFlow<Boolean> = _panelGlobalCornerEnabled.asStateFlow()
+
+    private val _enableLegacyTileShapes = MutableStateFlow(false)
+    val enableLegacyTileShapes: StateFlow<Boolean> = _enableLegacyTileShapes.asStateFlow()
 
     private val _panelOuterCorner = MutableStateFlow(20.0f)
     val panelOuterCorner: StateFlow<Float> = _panelOuterCorner.asStateFlow()
@@ -1470,6 +1474,7 @@ object PanelPreferences {
         _straightCornerRadius.value = prefs.getFloat(KEY_STRAIGHT_CORNER_RADIUS, 4.0f)
         _straightThumbRadius.value = prefs.getFloat(KEY_STRAIGHT_THUMB_RADIUS, 6.0f)
         _panelGlobalCornerEnabled.value = prefs.getBoolean(KEY_PANEL_GLOBAL_CORNER_ENABLED, false)
+        _enableLegacyTileShapes.value = prefs.getBoolean(KEY_ENABLE_LEGACY_TILE_SHAPES, false)
         _panelOuterCorner.value = prefs.getFloat(KEY_PANEL_OUTER_CORNER, 20.0f)
         _panelInnerCorner.value = prefs.getFloat(KEY_PANEL_INNER_CORNER, 5.0f)
         _qsBackgroundCorner.value = prefs.getFloat(KEY_QS_BACKGROUND_CORNER, 20.0f)
@@ -2856,6 +2861,12 @@ object PanelPreferences {
         if (enabled) {
             setPanelInnerCorner(context, _panelOuterCorner.value)
         }
+    }
+
+    fun setEnableLegacyTileShapes(context: Context, enabled: Boolean) {
+        _enableLegacyTileShapes.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_ENABLE_LEGACY_TILE_SHAPES, enabled).apply()
     }
 
     fun setPanelOuterCorner(context: Context, value: Float) {
