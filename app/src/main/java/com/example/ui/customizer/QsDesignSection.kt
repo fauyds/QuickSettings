@@ -143,6 +143,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val qqsTileSizeValue by PanelPreferences.qqsTileSize.collectAsState()
     val qqsTileCount by PanelPreferences.qqsTileCount.collectAsState()
+    val enableQqsHorizontalScroll by PanelPreferences.enableQqsHorizontalScroll.collectAsState()
     val currentEnabledTileShapeId by PanelPreferences.enabledTileShapeId.collectAsState()
     val currentDisabledTileShapeId by PanelPreferences.disabledTileShapeId.collectAsState()
     val tileOutlineEnabled by PanelPreferences.tileOutlineEnabled.collectAsState()
@@ -487,6 +488,46 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     }
     }
 
+    // 2.4. QQS Tile Horizontal Scroll Card
+    val enableQqsHorizontalScrollCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("enable_qqs_horizontal_scroll_card", CustomizeCategory.QS_DESIGN, "QQS Horizontal Scroll") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("enable_qqs_horizontal_scroll_card")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = "Horizontal Scroll QQS Tiles",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Allow horizontally scrolling through all active QQS tiles in collapsed header.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = enableQqsHorizontalScroll,
+                        onCheckedChange = { PanelPreferences.setEnableQqsHorizontalScroll(context, it) },
+                        modifier = Modifier.testTag("enable_qqs_horizontal_scroll_switch")
+                    )
+                }
+            }
+        }
+    }
+
     // 2.5. Legacy Tile Background / Shape Support Card
     val legacyTileShapesSupportCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("legacy_tile_shapes_support_card", CustomizeCategory.QS_DESIGN, "QS Tile Background Support") {
@@ -497,7 +538,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 18.dp),
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -1928,7 +1969,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             text = "Show Brightness Slider in QQS",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = if (isAndroidOreoStyle) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface,
                             style = TextStyle(
                                 platformStyle = PlatformTextStyle(includeFontPadding = false),
                                 lineHeightStyle = LineHeightStyle(
@@ -1938,7 +1979,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             )
                         )
                         Text(
-                            text = "Show the brightness slider inside the compact QQS container view (always visible).",
+                            text = if (isAndroidOreoStyle) "Disabled for Android 8.0 Oreo QS panel style." else "Show the brightness slider inside the compact QQS container view (always visible).",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = TextStyle(
@@ -1953,7 +1994,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 }
 
                 Switch(
-                    checked = brightnessInQqs,
+                    checked = if (isAndroidOreoStyle) false else brightnessInQqs,
+                    enabled = !isAndroidOreoStyle,
                     onCheckedChange = { PanelPreferences.setBrightnessInQqs(context, it) },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
@@ -3210,6 +3252,183 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     }
     }
 
+    val disableClearAllLabelCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        val disableClearAllLabel by PanelPreferences.disableClearAllLabel.collectAsState()
+        val clearAllIconSize by PanelPreferences.clearAllIconSize.collectAsState()
+        val clearAllFabIcon by PanelPreferences.clearAllFabIcon.collectAsState()
+
+        PinnableCardWrapper("disable_clear_all_label_card", CustomizeCategory.QS_DESIGN, "Disable Clear All Label") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("disable_clear_all_label_card")
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.NotificationsOff,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(1.dp)
+                            ) {
+                                Text(
+                                    text = "Disable Clear All Label",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    lineHeight = 17.sp,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Hide the 'Clear All' text label, remove pill background, and keep only the clear icon.",
+                                    fontSize = 12.sp,
+                                    lineHeight = 15.sp,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Switch(
+                            checked = disableClearAllLabel,
+                            onCheckedChange = { PanelPreferences.setDisableClearAllLabel(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("disable_clear_all_label_toggle")
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = disableClearAllLabel,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                            // 1. Icon Size Slider
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Clear All Icon Size",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${clearAllIconSize}dp",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Slider(
+                                    value = clearAllIconSize.toFloat(),
+                                    onValueChange = { PanelPreferences.setClearAllIconSize(context, kotlin.math.round(it).toInt()) },
+                                    valueRange = 16f..48f,
+                                    steps = 31,
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary
+                                    ),
+                                    modifier = Modifier.testTag("clear_all_icon_size_slider")
+                                )
+                            }
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                            // 2. Clear All Icon Selection
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    text = "Clear All Icon",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    val allIcons = ClearAllFabIcon.entries
+                                    allIcons.forEach { iconItem ->
+                                        val isSelected = clearAllFabIcon == iconItem
+                                        val chipShape = SegmentedButtonShapes.getShape(
+                                            item = iconItem,
+                                            items = allIcons,
+                                            selectedItem = clearAllFabIcon
+                                        )
+                                        FilterChip(
+                                            selected = isSelected,
+                                            onClick = { PanelPreferences.setClearAllFabIcon(context, iconItem) },
+                                            leadingIcon = {
+                                                Icon(
+                                                    painter = androidx.compose.ui.res.painterResource(id = iconItem.drawableRes),
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(16.dp),
+                                                    tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+                                                )
+                                            },
+                                            label = { Text(iconItem.label, fontSize = 11.sp) },
+                                            shape = chipShape,
+                                            border = null,
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                                selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+                                                containerColor = MaterialTheme.colorScheme.background,
+                                                labelColor = MaterialTheme.colorScheme.onSurface
+                                            ),
+                                            modifier = Modifier.testTag("clear_all_icon_choice_${iconItem.id}")
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     val clearAllFabCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         var clearAllFabExpanded by rememberSaveable { mutableStateOf(false) }
         PinnableCardWrapper("clear_all_fab_card", CustomizeCategory.QS_DESIGN, "Clear All FAB Button") {
@@ -3645,10 +3864,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         "android_oreo_style_card" to androidOreoStyleCard,
         "qqs_icon_size_card" to qqsIconSizeCard,
         "qqs_icon_quantity_card" to qqsIconQuantityCard,
+        "enable_qqs_horizontal_scroll_card" to enableQqsHorizontalScrollCard,
         "legacy_tile_shapes_support_card" to legacyTileShapesSupportCard,
         "tile_shape_selection_card" to tileShapeSelectionCard,
         "tile_outline_card" to tileOutlineCard,
         "qs_tile_gradient_card" to qsTileGradientCard,
+        "disable_clear_all_label_card" to disableClearAllLabelCard,
         "clear_all_fab_card" to clearAllFabCard,
         "show_media_in_notif_container_card" to showMediaInNotifContainerCard,
         "compact_media_notification_card" to compactMediaNotificationCard,
@@ -3684,7 +3905,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 "tile_outline_card",
                 "qs_tile_gradient_card",
                 "qqs_icon_size_card",
-                "qqs_icon_quantity_card"
+                "qqs_icon_quantity_card",
+                "enable_qqs_horizontal_scroll_card"
             )
             if (!enableLegacyTileShapes) {
                 list.add("tile_shape_selection_card")
@@ -3697,6 +3919,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 "qs_tile_gradient_card",
                 "qqs_icon_size_card",
                 "qqs_icon_quantity_card",
+                "enable_qqs_horizontal_scroll_card",
                 "clear_all_fab_card",
                 "custom_header_monet_gradient_card",
                 "element_colors_preference_card",
@@ -3731,10 +3954,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         if (!hiddenDesignIds.contains("android_oreo_style_card") && !pinnedIds.contains("android_oreo_style_card")) unpinnedTileShapes.add(androidOreoStyleCard)
         if (!hiddenDesignIds.contains("qqs_icon_size_card") && !pinnedIds.contains("qqs_icon_size_card")) unpinnedTileShapes.add(qqsIconSizeCard)
         if (!hiddenDesignIds.contains("qqs_icon_quantity_card") && !pinnedIds.contains("qqs_icon_quantity_card")) unpinnedTileShapes.add(qqsIconQuantityCard)
+        if (!hiddenDesignIds.contains("enable_qqs_horizontal_scroll_card") && !pinnedIds.contains("enable_qqs_horizontal_scroll_card")) unpinnedTileShapes.add(enableQqsHorizontalScrollCard)
         if (!hiddenDesignIds.contains("legacy_tile_shapes_support_card") && !pinnedIds.contains("legacy_tile_shapes_support_card")) unpinnedTileShapes.add(legacyTileShapesSupportCard)
         if (!hiddenDesignIds.contains("tile_shape_selection_card") && !pinnedIds.contains("tile_shape_selection_card")) unpinnedTileShapes.add(tileShapeSelectionCard)
         if (!hiddenDesignIds.contains("tile_outline_card") && !pinnedIds.contains("tile_outline_card")) unpinnedTileShapes.add(tileOutlineCard)
         if (!hiddenDesignIds.contains("qs_tile_gradient_card") && !pinnedIds.contains("qs_tile_gradient_card")) unpinnedTileShapes.add(qsTileGradientCard)
+        if (!hiddenDesignIds.contains("disable_clear_all_label_card") && !pinnedIds.contains("disable_clear_all_label_card")) unpinnedTileShapes.add(disableClearAllLabelCard)
         if (!hiddenDesignIds.contains("clear_all_fab_card") && !pinnedIds.contains("clear_all_fab_card")) unpinnedTileShapes.add(clearAllFabCard)
         if (!hiddenDesignIds.contains("show_media_in_notif_container_card") && !pinnedIds.contains("show_media_in_notif_container_card")) unpinnedTileShapes.add(showMediaInNotifContainerCard)
 

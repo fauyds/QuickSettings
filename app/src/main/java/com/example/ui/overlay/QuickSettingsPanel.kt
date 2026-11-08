@@ -119,6 +119,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import android.graphics.Bitmap
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -140,6 +141,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.runtime.rememberCompositionContext
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -3964,9 +3966,14 @@ fun UnifiedQsPanel(
             availableRawTiles.filter { !it.isVisible }
         }
     }
+    val enableQqsHorizontalScroll by PanelPreferences.enableQqsHorizontalScroll.collectAsState()
     val qqsTileCount by PanelPreferences.qqsTileCount.collectAsState()
-    val qqsTiles = remember(activeTiles, qqsTileCount) {
-        activeTiles.take(qqsTileCount.coerceIn(2, 6))
+    val qqsTiles = remember(activeTiles, qqsTileCount, enableQqsHorizontalScroll) {
+        if (enableQqsHorizontalScroll) {
+            activeTiles
+        } else {
+            activeTiles.take(qqsTileCount.coerceIn(2, 6))
+        }
     }
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -4727,22 +4734,65 @@ fun UnifiedQsPanel(
                             Spacer(modifier = Modifier.height(4.dp))
                         }
 
-                        Row(
+                        val oQqsScrollState = rememberScrollState()
+                        val qqsFadeBgColor = solidOreoBg
+
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .offset(y = (-4).dp)
-                                .padding(vertical = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                                .height(IntrinsicSize.Min)
                         ) {
-                            qqsTiles.forEach { tile ->
-                                key(tile.id) {
-                                    CircularQsTile(
-                                        tile = tile,
-                                        morphProgress = 0f,
-                                        tileWidth = qqsTileSizeValue.dp,
-                                        onClick = { onTileClick(tile) },
-                                        onLongClick = { onTileLongClick(tile) }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .then(
+                                        if (enableQqsHorizontalScroll) {
+                                            Modifier.horizontalScroll(oQqsScrollState)
+                                        } else Modifier
+                                    )
+                                    .offset(y = (-4).dp)
+                                    .padding(vertical = 4.dp),
+                                horizontalArrangement = if (enableQqsHorizontalScroll) Arrangement.spacedBy(16.dp) else Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                qqsTiles.forEach { tile ->
+                                    key(tile.id) {
+                                        CircularQsTile(
+                                            tile = tile,
+                                            morphProgress = 0f,
+                                            tileWidth = qqsTileSizeValue.dp,
+                                            onClick = { onTileClick(tile) },
+                                            onLongClick = { onTileLongClick(tile) }
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (enableQqsHorizontalScroll) {
+                                if (oQqsScrollState.canScrollBackward) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.CenterStart)
+                                            .width(28.dp)
+                                            .fillMaxHeight()
+                                            .background(
+                                                Brush.horizontalGradient(
+                                                    colors = listOf(qqsFadeBgColor, Color.Transparent)
+                                                )
+                                            )
+                                    )
+                                }
+                                if (oQqsScrollState.canScrollForward) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.CenterEnd)
+                                            .width(28.dp)
+                                            .fillMaxHeight()
+                                            .background(
+                                                Brush.horizontalGradient(
+                                                    colors = listOf(Color.Transparent, qqsFadeBgColor)
+                                                )
+                                            )
                                     )
                                 }
                             }
@@ -5305,25 +5355,68 @@ fun UnifiedQsPanel(
                                 // Pure QQS Single Row
                                 val qqsAlpha = ((0.5f - morphProgress) / 0.5f).coerceIn(0f, 1f)
                                 val qqsScale = 1f - (morphProgress * 0.08f)
-                                Row(
+                                val dQqsScrollState = rememberScrollState()
+                                val qqsFadeBgColor = com.example.ui.theme.getQsPanelBackgroundColor(isDark)
+
+                                Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .height(IntrinsicSize.Min)
                                         .graphicsLayer {
                                             alpha = qqsAlpha
                                             scaleX = qqsScale
                                             scaleY = qqsScale
-                                        },
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                        }
                                 ) {
-                                    qqsTiles.forEach { tile ->
-                                        key(tile.id) {
-                                            CircularQsTile(
-                                                tile = tile,
-                                                morphProgress = morphProgress * 2f,
-                                                tileWidth = qqsTileSizeValue.dp,
-                                                onClick = { onTileClick(tile) },
-                                                onLongClick = { onTileLongClick(tile) }
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .then(
+                                                if (enableQqsHorizontalScroll) {
+                                                    Modifier.horizontalScroll(dQqsScrollState)
+                                                } else Modifier
+                                            ),
+                                        horizontalArrangement = if (enableQqsHorizontalScroll) Arrangement.spacedBy(16.dp) else Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        qqsTiles.forEach { tile ->
+                                            key(tile.id) {
+                                                CircularQsTile(
+                                                    tile = tile,
+                                                    morphProgress = morphProgress * 2f,
+                                                    tileWidth = qqsTileSizeValue.dp,
+                                                    onClick = { onTileClick(tile) },
+                                                    onLongClick = { onTileLongClick(tile) }
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    if (enableQqsHorizontalScroll) {
+                                        if (dQqsScrollState.canScrollBackward) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.CenterStart)
+                                                    .width(28.dp)
+                                                    .fillMaxHeight()
+                                                    .background(
+                                                        Brush.horizontalGradient(
+                                                            colors = listOf(qqsFadeBgColor, Color.Transparent)
+                                                        )
+                                                    )
+                                            )
+                                        }
+                                        if (dQqsScrollState.canScrollForward) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.CenterEnd)
+                                                    .width(28.dp)
+                                                    .fillMaxHeight()
+                                                    .background(
+                                                        Brush.horizontalGradient(
+                                                            colors = listOf(Color.Transparent, qqsFadeBgColor)
+                                                        )
+                                                    )
                                             )
                                         }
                                     }

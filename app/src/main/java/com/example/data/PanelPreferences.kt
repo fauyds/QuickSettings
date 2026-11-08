@@ -227,7 +227,16 @@ enum class ClearAllFabIcon(val id: String, val label: String, val drawableRes: I
     CLOSE("close", "Close / X", com.example.R.drawable.ic_notif_close),
     BRUSH("brush", "Brush", com.example.R.drawable.ic_notif_brush),
     DOUBLE_ARROW("double_arrow", "Double Arrow", com.example.R.drawable.ic_notif_double_arrow),
-    REFRESH("refresh", "Refresh", com.example.R.drawable.ic_notif_refresh);
+    REFRESH("refresh", "Refresh", com.example.R.drawable.ic_notif_refresh),
+    ERASER("eraser", "Eraser", com.example.R.drawable.ic_notif_eraser),
+    FIRE("fire", "Flame / Burn", com.example.R.drawable.ic_notif_fire),
+    SPARKLE_CLEAN("sparkle_clean", "Magic Wand", com.example.R.drawable.ic_notif_sparkle_clean),
+    BOLT("bolt", "Lightning / Zap", com.example.R.drawable.ic_notif_bolt),
+    HISTORY_CLEAR("history_clear", "Reset History", com.example.R.drawable.ic_notif_history_toggle),
+    DISMISS("dismiss", "Dismiss Cross", com.example.R.drawable.ic_notif_dismiss),
+    SWEEP("sweep", "Clean Sweep", com.example.R.drawable.ic_notif_sweep),
+    CHECK("check", "Checkmark", com.example.R.drawable.ic_notif_check),
+    STAGGERED_BARS("staggered_bars", "Staggered Bars", com.example.R.drawable.ic_notif_staggered_bars);
 
     companion object {
         fun fromId(id: String?): ClearAllFabIcon =
@@ -243,6 +252,9 @@ object PanelPreferences {
         "style_${style.id}_$key"
 
     private const val KEY_DISABLE_CLEAR_ALL_BG = "disable_clear_all_bg"
+    private const val KEY_DISABLE_CLEAR_ALL_LABEL = "disable_clear_all_label"
+    private const val KEY_CLEAR_ALL_ICON_SIZE = "clear_all_icon_size"
+    private const val KEY_ENABLE_QQS_HORIZONTAL_SCROLL = "enable_qqs_horizontal_scroll"
     private const val KEY_ENABLE_PANEL_SHADOWS = "enable_panel_shadows"
     private const val KEY_PANEL_SHADOW_ELEVATION = "panel_shadow_elevation"
     private const val KEY_PANEL_SHADOW_OFFSET_Y = "panel_shadow_offset_y"
@@ -953,6 +965,15 @@ object PanelPreferences {
     private val _disableClearAllBackground = MutableStateFlow(false)
     val disableClearAllBackground: StateFlow<Boolean> = _disableClearAllBackground.asStateFlow()
 
+    private val _disableClearAllLabel = MutableStateFlow(false)
+    val disableClearAllLabel: StateFlow<Boolean> = _disableClearAllLabel.asStateFlow()
+
+    private val _clearAllIconSize = MutableStateFlow(24)
+    val clearAllIconSize: StateFlow<Int> = _clearAllIconSize.asStateFlow()
+
+    private val _enableQqsHorizontalScroll = MutableStateFlow(false)
+    val enableQqsHorizontalScroll: StateFlow<Boolean> = _enableQqsHorizontalScroll.asStateFlow()
+
     private val _enablePanelShadows = MutableStateFlow(false)
     val enablePanelShadows: StateFlow<Boolean> = _enablePanelShadows.asStateFlow()
 
@@ -1148,6 +1169,9 @@ object PanelPreferences {
         _settingsIconLocation.value = SettingsIconLocation.fromId(savedSettingsLoc)
 
         _disableClearAllBackground.value = prefs.getBoolean(KEY_DISABLE_CLEAR_ALL_BG, false)
+        _disableClearAllLabel.value = prefs.getBoolean(KEY_DISABLE_CLEAR_ALL_LABEL, false)
+        _clearAllIconSize.value = prefs.getInt(KEY_CLEAR_ALL_ICON_SIZE, 24)
+        _enableQqsHorizontalScroll.value = prefs.getBoolean(KEY_ENABLE_QQS_HORIZONTAL_SCROLL, false)
         _enablePanelShadows.value = prefs.getBoolean(KEY_ENABLE_PANEL_SHADOWS, false)
         _panelShadowElevation.value = prefs.getFloat(KEY_PANEL_SHADOW_ELEVATION, 8f)
         _panelShadowOffsetY.value = prefs.getFloat(KEY_PANEL_SHADOW_OFFSET_Y, 0f)
@@ -1593,6 +1617,9 @@ object PanelPreferences {
             putFloat(getStyleKey(KEY_CLEAR_ALL_FAB_OFFSET_Y, style), _clearAllFabOffsetY.value)
             putInt(getStyleKey(KEY_CLEAR_ALL_FAB_SIZE, style), _clearAllFabSize.value)
             putBoolean(getStyleKey(KEY_DISABLE_CLEAR_ALL_BG, style), _disableClearAllBackground.value)
+            putBoolean(getStyleKey(KEY_DISABLE_CLEAR_ALL_LABEL, style), _disableClearAllLabel.value)
+            putInt(getStyleKey(KEY_CLEAR_ALL_ICON_SIZE, style), _clearAllIconSize.value)
+            putBoolean(getStyleKey(KEY_ENABLE_QQS_HORIZONTAL_SCROLL, style), _enableQqsHorizontalScroll.value)
             putBoolean(getStyleKey(KEY_HIDE_DATE_IN_EXPANDED, style), _hideDateInExpanded.value)
             putBoolean(getStyleKey(KEY_DISABLE_LABELS_IN_EXPANDED, style), _disableLabelsInExpanded.value)
             putFloat(getStyleKey(KEY_QS_TILE_LABEL_FONT_SIZE, style), _qsTileLabelFontSize.value)
@@ -1677,7 +1704,8 @@ object PanelPreferences {
             MediaNotificationStyle.fromId(styleStr)
         } else defaultMediaNotifStyle
         val targetBrightnessAtBottom = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_BRIGHTNESS_AT_BOTTOM, style), defaultBrightnessAtBottom) else defaultBrightnessAtBottom
-        val targetBrightnessInQqs = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_BRIGHTNESS_IN_QQS, style), defaultBrightnessInQqs) else defaultBrightnessInQqs
+        val defaultBrightnessInQqsForStyle = if (style == QsPanelStyle.ANDROID_OREO) false else defaultBrightnessInQqs
+        val targetBrightnessInQqs = if (style == QsPanelStyle.ANDROID_OREO) false else if (isInitialized) prefs.getBoolean(getStyleKey(KEY_BRIGHTNESS_IN_QQS, style), defaultBrightnessInQqsForStyle) else defaultBrightnessInQqsForStyle
         val targetShowBrightnessGradient = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SHOW_BRIGHTNESS_GRADIENT, style), false) else false
 
         val targetProgressBarStyle = if (isInitialized) {
@@ -1729,6 +1757,9 @@ object PanelPreferences {
         val targetClearAllFabOffsetY = if (isInitialized) prefs.getFloat(getStyleKey(KEY_CLEAR_ALL_FAB_OFFSET_Y, style), 0f) else 0f
         val targetClearAllFabSize = if (isInitialized) prefs.getInt(getStyleKey(KEY_CLEAR_ALL_FAB_SIZE, style), 56) else 56
         val targetDisableClearAllBg = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_DISABLE_CLEAR_ALL_BG, style), false) else false
+        val targetDisableClearAllLabel = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_DISABLE_CLEAR_ALL_LABEL, style), false) else false
+        val targetClearAllIconSize = if (isInitialized) prefs.getInt(getStyleKey(KEY_CLEAR_ALL_ICON_SIZE, style), 24) else 24
+        val targetEnableQqsHorizontalScroll = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_ENABLE_QQS_HORIZONTAL_SCROLL, style), false) else false
 
         val targetHideDateInExpanded = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_HIDE_DATE_IN_EXPANDED, style), false) else false
         val targetDisableLabelsInExpanded = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_DISABLE_LABELS_IN_EXPANDED, style), false) else false
@@ -1821,6 +1852,9 @@ object PanelPreferences {
         _clearAllFabOffsetY.value = targetClearAllFabOffsetY
         _clearAllFabSize.value = targetClearAllFabSize
         _disableClearAllBackground.value = targetDisableClearAllBg
+        _disableClearAllLabel.value = targetDisableClearAllLabel
+        _clearAllIconSize.value = targetClearAllIconSize
+        _enableQqsHorizontalScroll.value = targetEnableQqsHorizontalScroll
         _hideDateInExpanded.value = targetHideDateInExpanded
         _disableLabelsInExpanded.value = targetDisableLabelsInExpanded
         _qsTileLabelFontSize.value = targetQsTileLabelFontSize
@@ -1878,6 +1912,9 @@ object PanelPreferences {
             putFloat(KEY_CLEAR_ALL_FAB_OFFSET_Y, targetClearAllFabOffsetY)
             putInt(KEY_CLEAR_ALL_FAB_SIZE, targetClearAllFabSize)
             putBoolean(KEY_DISABLE_CLEAR_ALL_BG, targetDisableClearAllBg)
+            putBoolean(KEY_DISABLE_CLEAR_ALL_LABEL, targetDisableClearAllLabel)
+            putInt(KEY_CLEAR_ALL_ICON_SIZE, targetClearAllIconSize)
+            putBoolean(KEY_ENABLE_QQS_HORIZONTAL_SCROLL, targetEnableQqsHorizontalScroll)
             putBoolean(KEY_HIDE_DATE_IN_EXPANDED, targetHideDateInExpanded)
             putBoolean(KEY_DISABLE_LABELS_IN_EXPANDED, targetDisableLabelsInExpanded)
             putFloat(KEY_QS_TILE_LABEL_FONT_SIZE, targetQsTileLabelFontSize)
@@ -2073,7 +2110,37 @@ object PanelPreferences {
     fun setDisableClearAllBackground(context: Context, disable: Boolean) {
         _disableClearAllBackground.value = disable
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_DISABLE_CLEAR_ALL_BG, disable).apply()
+        prefs.edit()
+            .putBoolean(KEY_DISABLE_CLEAR_ALL_BG, disable)
+            .putBoolean(getStyleKey(KEY_DISABLE_CLEAR_ALL_BG), disable)
+            .apply()
+    }
+
+    fun setDisableClearAllLabel(context: Context, disable: Boolean) {
+        _disableClearAllLabel.value = disable
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean(KEY_DISABLE_CLEAR_ALL_LABEL, disable)
+            .putBoolean(getStyleKey(KEY_DISABLE_CLEAR_ALL_LABEL), disable)
+            .apply()
+    }
+
+    fun setClearAllIconSize(context: Context, size: Int) {
+        _clearAllIconSize.value = size
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putInt(KEY_CLEAR_ALL_ICON_SIZE, size)
+            .putInt(getStyleKey(KEY_CLEAR_ALL_ICON_SIZE), size)
+            .apply()
+    }
+
+    fun setEnableQqsHorizontalScroll(context: Context, enable: Boolean) {
+        _enableQqsHorizontalScroll.value = enable
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean(KEY_ENABLE_QQS_HORIZONTAL_SCROLL, enable)
+            .putBoolean(getStyleKey(KEY_ENABLE_QQS_HORIZONTAL_SCROLL), enable)
+            .apply()
     }
 
     fun setEnablePanelShadows(context: Context, enable: Boolean) {
@@ -2292,11 +2359,12 @@ object PanelPreferences {
     }
 
     fun setBrightnessInQqs(context: Context, value: Boolean) {
-        _brightnessInQqs.value = value
+        val effectiveValue = if (_isAndroidOreoStyle.value || _panelStyle.value == QsPanelStyle.ANDROID_OREO) false else value
+        _brightnessInQqs.value = effectiveValue
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
-            .putBoolean(KEY_BRIGHTNESS_IN_QQS, value)
-            .putBoolean(getStyleKey(KEY_BRIGHTNESS_IN_QQS), value)
+            .putBoolean(KEY_BRIGHTNESS_IN_QQS, effectiveValue)
+            .putBoolean(getStyleKey(KEY_BRIGHTNESS_IN_QQS), effectiveValue)
             .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }

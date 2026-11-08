@@ -9,6 +9,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.SeekBar
@@ -180,9 +181,17 @@ class QuickQuickSettingsView @JvmOverloads constructor(
         }
 
         // 3. QQS Tiles Row
+        val enableQqsHorizontalScroll = com.example.data.PanelPreferences.enableQqsHorizontalScroll.value
         val displayCount = qqsTileCount.coerceIn(2, 6)
-        val activeTiles = tiles.filter { it.isVisible }.take(displayCount)
+        val activeTiles = if (enableQqsHorizontalScroll) {
+            tiles.filter { it.isVisible }
+        } else {
+            tiles.filter { it.isVisible }.take(displayCount)
+        }
         this.currentTiles = activeTiles
+
+        val hsvScroll = llContainer.findViewById<HorizontalScrollView>(R.id.hsv_qqs_tiles_scroll)
+        hsvScroll?.isFillViewport = !enableQqsHorizontalScroll
 
         llTilesRow.removeAllViews()
         val circleSizePx = (qqsTileSizeDp * density).toInt()
@@ -190,8 +199,18 @@ class QuickQuickSettingsView @JvmOverloads constructor(
 
         activeTiles.forEachIndexed { index, tile ->
             val tileView = LayoutInflater.from(context).inflate(R.layout.item_qs_tile, llTilesRow, false)
-            val lp = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                gravity = android.view.Gravity.CENTER
+            val lp = if (enableQqsHorizontalScroll) {
+                val marginEndPx = (16 * density).toInt()
+                LinearLayout.LayoutParams(circleSizePx, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    gravity = android.view.Gravity.CENTER
+                    if (index < activeTiles.size - 1) {
+                        marginEnd = marginEndPx
+                    }
+                }
+            } else {
+                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    gravity = android.view.Gravity.CENTER
+                }
             }
             tileView.layoutParams = lp
 
@@ -209,6 +228,40 @@ class QuickQuickSettingsView @JvmOverloads constructor(
             )
 
             llTilesRow.addView(tileView)
+        }
+
+        val vFadeLeft = llContainer.findViewById<View>(R.id.v_qqs_fade_left)
+        val vFadeRight = llContainer.findViewById<View>(R.id.v_qqs_fade_right)
+
+        if (enableQqsHorizontalScroll && hsvScroll != null) {
+            val surfaceBgColor = MonetThemeHelper.getSurfaceBackground(context, isDark)
+            val transparentBgColor = Color.TRANSPARENT
+
+            vFadeLeft?.background = GradientDrawable(
+                GradientDrawable.Orientation.LEFT_RIGHT,
+                intArrayOf(surfaceBgColor, transparentBgColor)
+            )
+            vFadeRight?.background = GradientDrawable(
+                GradientDrawable.Orientation.LEFT_RIGHT,
+                intArrayOf(transparentBgColor, surfaceBgColor)
+            )
+
+            fun updateFades() {
+                val canScrollLeft = hsvScroll.canScrollHorizontally(-1)
+                val canScrollRight = hsvScroll.canScrollHorizontally(1)
+                vFadeLeft?.visibility = if (canScrollLeft) View.VISIBLE else View.GONE
+                vFadeRight?.visibility = if (canScrollRight) View.VISIBLE else View.GONE
+            }
+
+            hsvScroll.setOnScrollChangeListener { _, _, _, _, _ ->
+                updateFades()
+            }
+            hsvScroll.post {
+                updateFades()
+            }
+        } else {
+            vFadeLeft?.visibility = View.GONE
+            vFadeRight?.visibility = View.GONE
         }
 
         // 4. Drag Handle Pill Styling

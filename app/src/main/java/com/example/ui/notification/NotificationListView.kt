@@ -445,8 +445,9 @@ class NotificationListView @JvmOverloads constructor(
             onNotificationClick = { onNotificationClick?.invoke(it) },
             onNotificationDismiss = { onNotificationDismiss?.invoke(it) },
             onActionClick = { onActionClick?.invoke(it) },
-            onClearAll = { onClearAll?.invoke() }
+            onClearAll = { animateAndClearAll() }
         )
+        adapter?.onRequestClearAnimation = { animateAndClearAll() }
         rvNotifications.adapter = adapter
     }
 
@@ -655,11 +656,18 @@ class NotificationListView @JvmOverloads constructor(
                 ivFloatingClearAllIcon.setImageResource(fabIcon.drawableRes)
 
                 val clearAllAccent = MonetThemeHelper.getClearAllAccent(context, isDark)
+                val disableClearAllLabel = PanelPreferences.disableClearAllLabel.value
+                val showMonetSurface = PanelPreferences.showMonetSurfaceBackground.value
 
                 if (disableClearAllBg) {
                     btnFloatingClearAllFab.background = null
                     btnFloatingClearAllFab.elevation = 0f
-                    ivFloatingClearAllIcon.setColorFilter(clearAllAccent)
+                    val iconTint = if (disableClearAllLabel) {
+                        if (showMonetSurface) clearAllAccent else android.graphics.Color.WHITE
+                    } else {
+                        clearAllAccent
+                    }
+                    ivFloatingClearAllIcon.setColorFilter(iconTint)
                 } else {
                     btnFloatingClearAllFab.elevation = if (enablePanelShadows) shadowElevation * density else 6f * density
                     val shapeDrawable = com.example.ui.shape.QsShapeManager.createDrawable(fabShapeId, clearAllAccent)
@@ -670,12 +678,16 @@ class NotificationListView @JvmOverloads constructor(
                         shapeDrawable,
                         maskDrawable
                     )
-                    val iconTint = if (isDark) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+                    val iconTint = if (disableClearAllLabel) {
+                        if (showMonetSurface) clearAllAccent else android.graphics.Color.WHITE
+                    } else {
+                        if (isDark) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+                    }
                     ivFloatingClearAllIcon.setColorFilter(iconTint)
                 }
 
                 btnFloatingClearAllFab.setOnClickListener {
-                    onClearAll?.invoke()
+                    animateAndClearAll()
                 }
 
                 // Generous bottom padding so notification list items are never obscured under the floating FAB
@@ -696,6 +708,63 @@ class NotificationListView @JvmOverloads constructor(
         if (PanelPreferences.isAndroidOreoStyle(context) || PanelPreferences.isAndroidMarshmallowStyle(context) || PanelPreferences.isAndroidKitKatStyle(context)) {
             llHeader.visibility = View.GONE
             findViewById<View>(R.id.ll_notif_list_container)?.setPadding(0, 0, 0, 0)
+        }
+    }
+
+    fun animateAndClearAll() {
+        val rvWidth = if (rvNotifications.width > 0) rvNotifications.width.toFloat() else 1000f
+        var maxDelay = 0L
+        var count = 0
+
+        if (flFloatingClearAllContainer.visibility == View.VISIBLE) {
+            btnFloatingClearAllFab.animate()
+                .rotationBy(180f)
+                .scaleX(0.85f)
+                .scaleY(0.85f)
+                .setDuration(180)
+                .withEndAction {
+                    btnFloatingClearAllFab.scaleX = 1f
+                    btnFloatingClearAllFab.scaleY = 1f
+                    btnFloatingClearAllFab.rotation = 0f
+                }
+                .start()
+        }
+
+        val animatedViews = mutableListOf<View>()
+
+        for (i in 0 until rvNotifications.childCount) {
+            val child = rvNotifications.getChildAt(i)
+            val viewHolder = rvNotifications.getChildViewHolder(child)
+            if (viewHolder is NotificationAdapter.NotificationViewHolder) {
+                val item = viewHolder.notificationItem ?: adapter?.getNotificationItem(viewHolder.bindingAdapterPosition)
+                if (item != null && item.isClearable) {
+                    animatedViews.add(child)
+                    val delay = count * 35L
+                    count++
+                    if (delay > maxDelay) maxDelay = delay
+
+                    child.animate()
+                        .translationX(rvWidth)
+                        .alpha(0f)
+                        .setStartDelay(delay)
+                        .setDuration(220)
+                        .setInterpolator(android.view.animation.AccelerateInterpolator())
+                        .start()
+                }
+            }
+        }
+
+        val totalDuration = if (animatedViews.isNotEmpty()) maxDelay + 240L else 0L
+        if (totalDuration > 0L) {
+            rvNotifications.postDelayed({
+                for (v in animatedViews) {
+                    v.translationX = 0f
+                    v.alpha = 1f
+                }
+                onClearAll?.invoke()
+            }, totalDuration)
+        } else {
+            onClearAll?.invoke()
         }
     }
 }

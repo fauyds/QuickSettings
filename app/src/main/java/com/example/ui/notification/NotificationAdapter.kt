@@ -63,6 +63,7 @@ class NotificationAdapter(
     var customCardBackgroundColor: Int? = null
     var showFooter: Boolean = false
     var disableMonetNotifText: Boolean = false
+    var onRequestClearAnimation: (() -> Unit)? = null
     var isMediaCardShown: Boolean = false
     var mediaSessions: List<MediaState> = emptyList()
 
@@ -198,28 +199,41 @@ class NotificationAdapter(
             val fabPos = com.example.data.PanelPreferences.clearAllFabPosition.value
             val fabShapeId = com.example.data.PanelPreferences.clearAllFabShapeId.value
             val fabIcon = com.example.data.PanelPreferences.clearAllFabIcon.value
+            val disableClearAllLabel = com.example.data.PanelPreferences.disableClearAllLabel.value
+            val clearAllIconSize = com.example.data.PanelPreferences.clearAllIconSize.value
+            val showMonetSurface = com.example.data.PanelPreferences.showMonetSurfaceBackground.value
 
             if (!useFab) {
                 // When FAB button is disabled: "Clear All" button remains on right side anyway
                 llFooterRoot.gravity = android.view.Gravity.END or android.view.Gravity.CENTER_VERTICAL
 
-                tvClearAllText.visibility = View.VISIBLE
-                val params = btnClearAll.layoutParams as ViewGroup.MarginLayoutParams
-                params.width = ViewGroup.LayoutParams.WRAP_CONTENT
-                params.height = ViewGroup.LayoutParams.WRAP_CONTENT
-                btnClearAll.layoutParams = params
-                btnClearAll.setPadding((14 * density).toInt(), (6 * density).toInt(), (14 * density).toInt(), (6 * density).toInt())
+                if (disableClearAllLabel) {
+                    tvClearAllText.visibility = View.GONE
+                    llFooterRoot.setPadding(0, (6 * density).toInt(), (4 * density).toInt(), (8 * density).toInt())
+                    btnClearAll.setPadding((4 * density).toInt(), (6 * density).toInt(), (4 * density).toInt(), (6 * density).toInt())
+                } else {
+                    tvClearAllText.visibility = View.VISIBLE
+                    llFooterRoot.setPadding(0, (10 * density).toInt(), (4 * density).toInt(), (16 * density).toInt())
+                    btnClearAll.setPadding((14 * density).toInt(), (6 * density).toInt(), (14 * density).toInt(), (6 * density).toInt())
+                }
                 btnClearAll.gravity = android.view.Gravity.CENTER_VERTICAL
 
                 val iconParams = ivClearAllIcon.layoutParams as ViewGroup.MarginLayoutParams
-                iconParams.width = (16 * density).toInt()
-                iconParams.height = (16 * density).toInt()
+                val iconSizePx = if (disableClearAllLabel) (clearAllIconSize * density).toInt() else (16 * density).toInt()
+                iconParams.width = iconSizePx
+                iconParams.height = iconSizePx
                 iconParams.marginStart = 0
                 ivClearAllIcon.layoutParams = iconParams
-                ivClearAllIcon.setImageResource(R.drawable.ic_notif_clear_all)
+                ivClearAllIcon.setImageResource(fabIcon.drawableRes)
 
                 val clearAllAccent = MonetThemeHelper.getClearAllAccent(context, isDarkTheme)
-                val clearAllTextColor = if (disableBg) {
+                val clearAllTextColor = if (disableClearAllLabel) {
+                    if (showMonetSurface) {
+                        clearAllAccent
+                    } else {
+                        android.graphics.Color.WHITE
+                    }
+                } else if (disableBg) {
                     clearAllAccent
                 } else {
                     if (isDarkTheme) android.graphics.Color.BLACK else android.graphics.Color.WHITE
@@ -229,7 +243,7 @@ class NotificationAdapter(
 
                 val enablePanelShadows = com.example.data.PanelPreferences.enablePanelShadows.value
                 val shadowElevation = com.example.data.PanelPreferences.panelShadowElevation.value
-                if (disableBg) {
+                if (disableClearAllLabel || disableBg) {
                     btnClearAll.background = null
                     btnClearAll.elevation = 0f
                     btnClearAll.translationY = 0f
@@ -263,7 +277,10 @@ class NotificationAdapter(
                 ivClearAllIcon.layoutParams = iconParams
                 ivClearAllIcon.setImageResource(fabIcon.drawableRes)
 
-                val tintColor = if (disableBg) {
+                val clearAllAccent = MonetThemeHelper.getClearAllAccent(context, isDarkTheme)
+                val tintColor = if (disableClearAllLabel) {
+                    if (showMonetSurface) clearAllAccent else android.graphics.Color.WHITE
+                } else if (disableBg) {
                     MonetThemeHelper.getPrimaryAccent(context, isDarkTheme)
                 } else {
                     if (isDarkTheme) android.graphics.Color.BLACK else android.graphics.Color.WHITE
@@ -292,7 +309,22 @@ class NotificationAdapter(
             }
 
             btnClearAll.setOnClickListener {
-                onClearAll?.invoke()
+                btnClearAll.animate()
+                    .scaleX(0.85f)
+                    .scaleY(0.85f)
+                    .rotationBy(180f)
+                    .setDuration(180)
+                    .withEndAction {
+                        btnClearAll.scaleX = 1f
+                        btnClearAll.scaleY = 1f
+                        btnClearAll.rotation = 0f
+                    }
+                    .start()
+                if (onRequestClearAnimation != null) {
+                    onRequestClearAnimation?.invoke()
+                } else {
+                    onClearAll?.invoke()
+                }
             }
         }
     }

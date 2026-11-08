@@ -54,13 +54,41 @@
     </LinearLayout>
 
     <!-- QQS Tiles Row -->
-    <LinearLayout
-        android:id="@+id/ll_qqs_tiles_row"
+    <FrameLayout
+        android:id="@+id/fl_qqs_tiles_scroll_wrapper"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="horizontal"
-        android:paddingVertical="2dp" />
+        android:layout_height="wrap_content">
+
+        <HorizontalScrollView
+            android:id="@+id/hsv_qqs_tiles_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:id="@+id/ll_qqs_tiles_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingVertical="2dp" />
+        </HorizontalScrollView>
+
+        <View
+            android:id="@+id/v_qqs_fade_left"
+            android:layout_width="28dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="start"
+            android:visibility="gone" />
+
+        <View
+            android:id="@+id/v_qqs_fade_right"
+            android:layout_width="28dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="end"
+            android:visibility="gone" />
+    </FrameLayout>
 
     <!-- Bottom Drag Handle Pill -->
     <FrameLayout
