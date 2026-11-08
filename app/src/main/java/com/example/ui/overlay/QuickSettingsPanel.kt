@@ -4341,7 +4341,7 @@ fun UnifiedQsPanel(
                                     }
                                 }
 
-                                if (brightnessAtBottom) {
+                                if (brightnessInQqs && brightnessAtBottom) {
                                     Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
                                         BrightnessSliderRow(
                                             brightness = brightness,
