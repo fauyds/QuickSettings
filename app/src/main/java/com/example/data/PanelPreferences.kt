@@ -1626,6 +1626,7 @@ object PanelPreferences {
         }
         val defaultQqsTileSize = when (style) {
             QsPanelStyle.DEFAULT -> 18
+            QsPanelStyle.ANDROID_OREO -> 54
             else -> 24
         }
         val defaultQqsTileCount = when (style) {
@@ -1645,10 +1646,12 @@ object PanelPreferences {
         val defaultBrightnessInQqs = (style == QsPanelStyle.ANDROID_OREO)
         val defaultPanelOuterCorner = when (style) {
             QsPanelStyle.DEFAULT -> 20.0f
+            QsPanelStyle.ANDROID_MARSHMALLOW -> 4.0f
             else -> 0.0f
         }
         val defaultPanelInnerCorner = when (style) {
             QsPanelStyle.DEFAULT -> 5.0f
+            QsPanelStyle.ANDROID_MARSHMALLOW -> 4.0f
             else -> 0.0f
         }
         val defaultGlobalCornerEnabled = when (style) {
@@ -1663,7 +1666,10 @@ object PanelPreferences {
             QsGridLayout.fromId(gridStr)
         } else defaultGridLayout
 
-        val targetQqsTileSize = if (isInitialized) prefs.getInt(getStyleKey(KEY_QQS_TILE_SIZE, style), defaultQqsTileSize) else defaultQqsTileSize
+        val targetQqsTileSize = if (isInitialized) {
+            val size = prefs.getInt(getStyleKey(KEY_QQS_TILE_SIZE, style), defaultQqsTileSize)
+            if (style == QsPanelStyle.ANDROID_OREO && size == 24) defaultQqsTileSize else size
+        } else defaultQqsTileSize
         val targetQqsTileCount = if (isInitialized) prefs.getInt(getStyleKey(KEY_QQS_TILE_COUNT, style), defaultQqsTileCount) else defaultQqsTileCount
         val targetMediaInNotif = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SHOW_MEDIA_IN_NOTIFICATION_CONTAINER, style), defaultMediaInNotif) else defaultMediaInNotif
         val targetMediaNotifStyle = if (isInitialized) {
@@ -1692,8 +1698,14 @@ object PanelPreferences {
 
         val targetSliderSyncAll = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SLIDER_SYNC_ALL, style), true) else true
 
-        val targetPanelOuterCorner = if (isInitialized) prefs.getFloat(getStyleKey(KEY_PANEL_OUTER_CORNER, style), defaultPanelOuterCorner) else defaultPanelOuterCorner
-        val targetPanelInnerCorner = if (isInitialized) prefs.getFloat(getStyleKey(KEY_PANEL_INNER_CORNER, style), defaultPanelInnerCorner) else defaultPanelInnerCorner
+        val targetPanelOuterCorner = if (isInitialized) {
+            val corner = prefs.getFloat(getStyleKey(KEY_PANEL_OUTER_CORNER, style), defaultPanelOuterCorner)
+            if (style == QsPanelStyle.ANDROID_MARSHMALLOW && corner == 0.0f) defaultPanelOuterCorner else corner
+        } else defaultPanelOuterCorner
+        val targetPanelInnerCorner = if (isInitialized) {
+            val corner = prefs.getFloat(getStyleKey(KEY_PANEL_INNER_CORNER, style), defaultPanelInnerCorner)
+            if (style == QsPanelStyle.ANDROID_MARSHMALLOW && corner == 0.0f) defaultPanelInnerCorner else corner
+        } else defaultPanelInnerCorner
         val targetGlobalCorner = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_PANEL_GLOBAL_CORNER_ENABLED, style), defaultGlobalCornerEnabled) else defaultGlobalCornerEnabled
         val targetQsBgCorner = if (isInitialized) prefs.getFloat(getStyleKey(KEY_QS_BACKGROUND_CORNER, style), targetPanelOuterCorner) else targetPanelOuterCorner
 
