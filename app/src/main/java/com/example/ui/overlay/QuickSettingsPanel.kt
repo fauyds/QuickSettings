@@ -109,6 +109,9 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -4178,21 +4181,7 @@ fun UnifiedQsPanel(
                         .wrapContentHeight()
                 ) {
                     val qsScrollState = rememberScrollState()
-                    var canCollapseOnNextSwipe by remember { mutableStateOf(false) }
-
-                    LaunchedEffect(qsScrollState.isScrollInProgress, qsScrollState.value, qsScrollState.maxValue) {
-                        if (!qsScrollState.isScrollInProgress) {
-                            if (qsScrollState.maxValue == 0 || qsScrollState.value >= qsScrollState.maxValue - 4) {
-                                canCollapseOnNextSwipe = true
-                            } else {
-                                canCollapseOnNextSwipe = false
-                            }
-                        } else {
-                            if (qsScrollState.value < qsScrollState.maxValue - 10) {
-                                canCollapseOnNextSwipe = false
-                            }
-                        }
-                    }
+                    var isAtBottomOnTouchDown by remember { mutableStateOf(false) }
 
                     val nestedScrollConnection = remember(onCollapseToQqs) {
                         object : NestedScrollConnection {
@@ -4202,15 +4191,16 @@ fun UnifiedQsPanel(
                                 available: Offset,
                                 source: NestedScrollSource
                             ): Offset {
-                                if (canCollapseOnNextSwipe && available.y < -2f && (qsScrollState.maxValue == 0 || qsScrollState.value >= qsScrollState.maxValue - 4)) {
+                                if (isAtBottomOnTouchDown && available.y < -1f) {
                                     accumulatedUpDrag += available.y
-                                    if (accumulatedUpDrag < -30f) {
+                                    if (accumulatedUpDrag < -24f) {
                                         accumulatedUpDrag = 0f
-                                        canCollapseOnNextSwipe = false
+                                        isAtBottomOnTouchDown = false
                                         onCollapseToQqs()
                                     }
-                                } else if (available.y > 2f) {
+                                } else if (available.y > 1f) {
                                     accumulatedUpDrag = 0f
+                                    isAtBottomOnTouchDown = false
                                 }
                                 return Offset.Zero
                             }
@@ -4220,15 +4210,16 @@ fun UnifiedQsPanel(
                                 available: Offset,
                                 source: NestedScrollSource
                             ): Offset {
-                                if (canCollapseOnNextSwipe && available.y < -2f) {
+                                if (isAtBottomOnTouchDown && available.y < -1f) {
                                     accumulatedUpDrag += available.y
-                                    if (accumulatedUpDrag < -30f) {
+                                    if (accumulatedUpDrag < -24f) {
                                         accumulatedUpDrag = 0f
-                                        canCollapseOnNextSwipe = false
+                                        isAtBottomOnTouchDown = false
                                         onCollapseToQqs()
                                     }
-                                } else if (available.y > 2f) {
+                                } else if (available.y > 1f) {
                                     accumulatedUpDrag = 0f
+                                    isAtBottomOnTouchDown = false
                                 }
                                 return Offset.Zero
                             }
@@ -4237,9 +4228,9 @@ fun UnifiedQsPanel(
                                 consumed: Velocity,
                                 available: Velocity
                             ): Velocity {
-                                if (canCollapseOnNextSwipe && available.y < -120f) {
+                                if (isAtBottomOnTouchDown && available.y < -80f) {
                                     accumulatedUpDrag = 0f
-                                    canCollapseOnNextSwipe = false
+                                    isAtBottomOnTouchDown = false
                                     onCollapseToQqs()
                                 }
                                 return super.onPostFling(consumed, available)
@@ -4560,7 +4551,7 @@ fun UnifiedQsPanel(
                                 .fillMaxWidth()
                                 .clipToBounds()
                                 .background(bodyBg)
-                                .then(shadeDragModifier)
+                                .then(if (morphProgress < 0.5f) shadeDragModifier else Modifier)
                                 .clickable(enabled = morphProgress < 0.2f && !isLandscape) { onExpandFull() }
                                 .layout { measurable, constraints ->
                                     val placeable = measurable.measure(constraints.copy(minHeight = 0))
@@ -4580,6 +4571,12 @@ fun UnifiedQsPanel(
                                 .then(
                                     if (!isLandscape && morphProgress >= 0.99f) {
                                         Modifier
+                                            .pointerInput(Unit) {
+                                                awaitEachGesture {
+                                                    awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                                                    isAtBottomOnTouchDown = (qsScrollState.maxValue == 0 || qsScrollState.value >= qsScrollState.maxValue - 12)
+                                                }
+                                            }
                                             .nestedScroll(nestedScrollConnection)
                                             .verticalScroll(qsScrollState)
                                     } else Modifier
