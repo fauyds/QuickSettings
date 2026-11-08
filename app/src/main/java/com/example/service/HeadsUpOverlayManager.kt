@@ -270,6 +270,12 @@ object HeadsUpOverlayManager {
             return
         }
 
+        // Screen should turn on only for incoming call and alarm notifications
+        if (ScreenWakeHelper.isScreenOff(context) && !data.isCall && !data.isAlarm) {
+            Log.d(TAG, "Screen is off and notification is not call or alarm: skipping heads-up overlay to keep screen off.")
+            return
+        }
+
         val targetKey = data.key ?: data.id
 
         // 1. Prevent Loop on Duplicate Keys / Active Window Updates:
@@ -305,8 +311,8 @@ object HeadsUpOverlayManager {
                     activePinnedKey = targetKey
                     QuickPanelNotificationListenerService.activePinnedKey = activePinnedKey
                 }
-                if (data.isCall || data.isAlarm || ScreenWakeHelper.isScreenOff(context) || ScreenWakeHelper.isKeyguardLocked(context)) {
-                    ScreenWakeHelper.wakeScreen(context, if (data.isCall) "QuickPanel:HeadsUpCall" else "QuickPanel:HeadsUpWake")
+                if (data.isCall || data.isAlarm) {
+                    ScreenWakeHelper.wakeScreen(context, if (data.isCall) "QuickPanel:HeadsUpCall" else "QuickPanel:HeadsUpAlarm")
                     currentLayoutParams?.let { lp ->
                         @Suppress("DEPRECATION")
                         val callFlags = WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
@@ -314,6 +320,16 @@ object HeadsUpOverlayManager {
                                 WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
                         if ((lp.flags and callFlags) != callFlags) {
                             lp.flags = lp.flags or callFlags
+                            try {
+                                currentWindowManager?.updateViewLayout(currentComposeView, lp)
+                            } catch (_: Exception) {}
+                        }
+                    }
+                } else if (ScreenWakeHelper.isKeyguardLocked(context)) {
+                    currentLayoutParams?.let { lp ->
+                        val lockFlag = WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+                        if ((lp.flags and lockFlag) != lockFlag) {
+                            lp.flags = lp.flags or lockFlag
                             try {
                                 currentWindowManager?.updateViewLayout(currentComposeView, lp)
                             } catch (_: Exception) {}
@@ -336,8 +352,8 @@ object HeadsUpOverlayManager {
                     activePinnedKey = targetKey
                     QuickPanelNotificationListenerService.activePinnedKey = activePinnedKey
                 }
-                if (data.isCall || data.isAlarm || ScreenWakeHelper.isScreenOff(context) || ScreenWakeHelper.isKeyguardLocked(context)) {
-                    ScreenWakeHelper.wakeScreen(context, if (data.isCall) "QuickPanel:HeadsUpCall" else "QuickPanel:HeadsUpWake")
+                if (data.isCall || data.isAlarm) {
+                    ScreenWakeHelper.wakeScreen(context, if (data.isCall) "QuickPanel:HeadsUpCall" else "QuickPanel:HeadsUpAlarm")
                     currentLayoutParams?.let { lp ->
                         @Suppress("DEPRECATION")
                         val callFlags = WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
@@ -345,6 +361,16 @@ object HeadsUpOverlayManager {
                                 WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
                         if ((lp.flags and callFlags) != callFlags) {
                             lp.flags = lp.flags or callFlags
+                            try {
+                                currentWindowManager?.updateViewLayout(currentComposeView, lp)
+                            } catch (_: Exception) {}
+                        }
+                    }
+                } else if (ScreenWakeHelper.isKeyguardLocked(context)) {
+                    currentLayoutParams?.let { lp ->
+                        val lockFlag = WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+                        if ((lp.flags and lockFlag) != lockFlag) {
+                            lp.flags = lp.flags or lockFlag
                             try {
                                 currentWindowManager?.updateViewLayout(currentComposeView, lp)
                             } catch (_: Exception) {}
@@ -431,13 +457,16 @@ object HeadsUpOverlayManager {
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                 WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
 
-        if (data.isCall || data.isAlarm || isLocked || isScreenOff) {
+        val isCallOrAlarm = data.isCall || data.isAlarm
+        if (isCallOrAlarm) {
             @Suppress("DEPRECATION")
             windowFlags = windowFlags or
                     WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
                     WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
                     WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
-            ScreenWakeHelper.wakeScreen(targetContext, if (data.isCall) "QuickPanel:HeadsUpCall" else "QuickPanel:HeadsUpWake")
+            ScreenWakeHelper.wakeScreen(targetContext, if (data.isCall) "QuickPanel:HeadsUpCall" else "QuickPanel:HeadsUpAlarm")
+        } else if (isLocked) {
+            windowFlags = windowFlags or WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
         }
 
         val layoutParams = WindowManager.LayoutParams(

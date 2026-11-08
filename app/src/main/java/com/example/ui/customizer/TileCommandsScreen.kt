@@ -77,6 +77,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.TileCommandRepository
+import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.DoNotDisturb
 import com.example.model.CommandExecutionMode
 import com.example.model.TileCommandConfig
 import com.example.system.PrivilegeEngine
@@ -103,14 +106,18 @@ private val KnownTilesList = listOf(
     TileInfo("autorotate", "Auto-Rotate", Icons.Default.RotateRight),
     TileInfo("hotspot", "Hotspot / Wi-Fi Tethering", Icons.Default.WifiTethering),
     TileInfo("battery_saver", "Battery Saver", Icons.Default.BatterySaver),
+    TileInfo("dnd", "Do Not Disturb", Icons.Default.DoNotDisturb),
     TileInfo("sound_mode", "Sound Mode", Icons.Default.VolumeUp),
+    TileInfo("sound_profile", "Sound Profile", Icons.Default.VolumeUp),
     TileInfo("dark_mode", "Dark Mode", Icons.Default.Brightness4),
     TileInfo("aod", "Always-On Display", Icons.Default.Wallpaper),
     TileInfo("ambient_display", "Ambient Display", Icons.Default.Visibility),
     TileInfo("caffeine", "Caffeine", Icons.Default.LocalCafe),
     TileInfo("heads_up", "Heads Up", Icons.Default.NotificationsActive),
     TileInfo("screenshot", "Screenshot", Icons.Default.CameraAlt),
-    TileInfo("screenrecord", "Screen Record", Icons.Default.Videocam)
+    TileInfo("screenrecord", "Screen Record", Icons.Default.Videocam),
+    TileInfo("fps_info", "FPS Info", Icons.Default.Speed),
+    TileInfo("cpu_info", "CPU Info", Icons.Default.Memory)
 )
 
 @Composable

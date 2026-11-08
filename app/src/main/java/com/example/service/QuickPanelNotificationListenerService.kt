@@ -599,6 +599,12 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
 
         val isCallOrAlarm = isAlarm || isCall
 
+        // Screen should turn on only for incoming call and alarm notifications
+        if (ScreenWakeHelper.isScreenOff(this) && !isCallOrAlarm) {
+            Log.d(TAG, "Screen is off and notification is not call or alarm - skipping heads-up so screen stays off.")
+            return
+        }
+
         // Ignore group summary container notifications from chat apps (e.g. Telegram, WhatsApp, Gmail).
         val isGroupSummary = (n.flags and Notification.FLAG_GROUP_SUMMARY != 0)
         if (isGroupSummary && !isCallOrAlarm) {

@@ -35,7 +35,9 @@ object TileCommandRepository {
         "sound_mode" to ("cmd audio set-volume 3 100" to "cmd audio set-volume 3 0"),
         "sound_profile" to ("cmd audio set-volume 3 100" to "cmd audio set-volume 3 0"),
         "screenshot" to ("input keyevent 120" to "input keyevent 120"),
-        "screenrecord" to ("screenrecord --time-limit 15 /sdcard/screenrecord.mp4 &" to "pkill -2 screenrecord")
+        "screenrecord" to ("screenrecord --time-limit 15 /sdcard/screenrecord.mp4 &" to "pkill -2 screenrecord"),
+        "fps_info" to ("service call SurfaceFlinger 1013 i32 1" to "service call SurfaceFlinger 1013 i32 0"),
+        "cpu_info" to ("settings put global show_cpu 1" to "settings put global show_cpu 0")
     )
 
     fun init(context: Context) {

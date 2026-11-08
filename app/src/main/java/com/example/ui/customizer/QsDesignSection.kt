@@ -118,6 +118,8 @@ import androidx.compose.material.icons.filled.VerticalAlignBottom
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.RoundedCorner
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Layers
 import com.example.data.MediaNotificationStyle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -498,29 +500,69 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(20.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
-                        modifier = Modifier.weight(1f)
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Horizontal Scroll QQS Tiles",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Allow horizontally scrolling through all active QQS tiles in collapsed header.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SwapHoriz,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = "Horizontal Scroll QS Tiles",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = TextStyle(
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                    lineHeightStyle = LineHeightStyle(
+                                        alignment = LineHeightStyle.Alignment.Center,
+                                        trim = LineHeightStyle.Trim.Both
+                                    )
+                                )
+                            )
+                            Text(
+                                text = "Allow horizontally scrolling through all active QQS tiles in collapsed header.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = TextStyle(
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                    lineHeightStyle = LineHeightStyle(
+                                        alignment = LineHeightStyle.Alignment.Center,
+                                        trim = LineHeightStyle.Trim.Both
+                                    )
+                                )
+                            )
+                        }
                     }
                     Switch(
                         checked = enableQqsHorizontalScroll,
                         onCheckedChange = { PanelPreferences.setEnableQqsHorizontalScroll(context, it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                        ),
                         modifier = Modifier.testTag("enable_qqs_horizontal_scroll_switch")
                     )
                 }
@@ -538,32 +580,68 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(20.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
-                        modifier = Modifier.weight(1f)
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "QS Tile Background Support",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Enable tile shapes & backgrounds for Android 8, Android 6, and Android 4.4.4 styles.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Layers,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = "QS Tile Background Support",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = TextStyle(
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                    lineHeightStyle = LineHeightStyle(
+                                        alignment = LineHeightStyle.Alignment.Center,
+                                        trim = LineHeightStyle.Trim.Both
+                                    )
+                                )
+                            )
+                            Text(
+                                text = "Enable tile shapes & backgrounds for Android 8, Android 6, and Android 4.4.4 styles.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = TextStyle(
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                    lineHeightStyle = LineHeightStyle(
+                                        alignment = LineHeightStyle.Alignment.Center,
+                                        trim = LineHeightStyle.Trim.Both
+                                    )
+                                )
+                            )
+                        }
                     }
                     Switch(
                         checked = enableLegacyTileShapes,
                         onCheckedChange = { PanelPreferences.setEnableLegacyTileShapes(context, it) },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surface
                         ),
                         modifier = Modifier.testTag("legacy_tile_shapes_support_toggle")
                     )
