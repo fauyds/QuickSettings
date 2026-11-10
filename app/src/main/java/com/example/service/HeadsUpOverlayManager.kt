@@ -976,7 +976,7 @@ object HeadsUpOverlayManager {
                         start = if (edgeToEdge) 0.dp else 8.dp,
                         end = if (edgeToEdge) 0.dp else 8.dp,
                         top = topMargin.dp,
-                        bottom = 6.dp
+                        bottom = maxOf(elevation + 6, 12).dp
                     )
                     .testTag("heads_up_overlay_container"),
                 contentAlignment = Alignment.TopCenter
@@ -995,6 +995,9 @@ object HeadsUpOverlayManager {
                             cardHeightPx = it.height.toFloat()
                         }
                         .graphicsLayer {
+                            shadowElevation = elevation.dp.toPx()
+                            shape = cardShape
+                            clip = false
                             translationX = animOffsetX.value
                             translationY = animOffsetY.value
                             val progress = if (cardWidthPx > 0f) (abs(animOffsetX.value) / cardWidthPx) else 0f

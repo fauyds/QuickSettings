@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Style
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Tune
@@ -48,7 +49,7 @@ enum class CustomizeCategory(
     val description: String
 ) {
     HEADS_UP("Heads-Up", Icons.Default.NotificationsActive, "Notification banner gestures, taps & snooze actions"),
-    HEADS_UP_DESIGN("Heads-Up Design", Icons.Default.Palette, "Edge-to-edge, corners, elevation & margins"),
+    HEADS_UP_DESIGN("Heads-Up Design", Icons.Default.Style, "Edge-to-edge, corners, elevation & margins"),
     BASIC("Basic Settings", Icons.Default.Settings, "Theme mode & basic appearance"),
     QS_DESIGN("Quick Settings Design", Icons.Default.Apps, "Tile shapes, sizes, carrier & sliders"),
     QS_TWEAKS("Quick Settings Tweaks", Icons.Default.Tune, "Grid layout, drag handle & header options"),

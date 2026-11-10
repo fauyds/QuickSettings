@@ -422,8 +422,8 @@ fun HeadsUpDesignSection(modifier: Modifier = Modifier) {
                     Slider(
                         value = elevation.toFloat(),
                         onValueChange = { PanelPreferences.setHeadsUpElevation(context, it.toInt()) },
-                        valueRange = 0f..16f,
-                        steps = 15,
+                        valueRange = 0f..24f,
+                        steps = 23,
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("heads_up_elevation_slider"),

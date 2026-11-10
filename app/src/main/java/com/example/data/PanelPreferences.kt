@@ -915,7 +915,7 @@ object PanelPreferences {
     val headsUpCornerRadius: StateFlow<Int> = _headsUpCornerRadius.asStateFlow()
 
     private const val KEY_HEADS_UP_ELEVATION = "heads_up_elevation"
-    private val _headsUpElevation = MutableStateFlow(4)
+    private val _headsUpElevation = MutableStateFlow(8)
     val headsUpElevation: StateFlow<Int> = _headsUpElevation.asStateFlow()
 
     private const val KEY_HEADS_UP_TOP_MARGIN = "heads_up_top_margin"
@@ -1337,7 +1337,7 @@ object PanelPreferences {
         _headsUpTimeoutSeconds.value = prefs.getInt(KEY_HEADS_UP_TIMEOUT_SECONDS, 4)
         _headsUpEdgeToEdge.value = prefs.getBoolean(KEY_HEADS_UP_EDGE_TO_EDGE, false)
         _headsUpCornerRadius.value = prefs.getInt(KEY_HEADS_UP_CORNER_RADIUS, 8)
-        _headsUpElevation.value = prefs.getInt(KEY_HEADS_UP_ELEVATION, 4)
+        _headsUpElevation.value = prefs.getInt(KEY_HEADS_UP_ELEVATION, 8)
         _headsUpTopMargin.value = prefs.getInt(KEY_HEADS_UP_TOP_MARGIN, 8)
         _headsUpSwipeUpAction.value = HeadsUpAction.fromId(prefs.getString(KEY_HEADS_UP_SWIPE_UP_ACTION, HeadsUpAction.HIDE_BANNER.id))
         _headsUpSwipeDownAction.value = HeadsUpAction.fromId(prefs.getString(KEY_HEADS_UP_SWIPE_DOWN_ACTION, HeadsUpAction.OPEN_NOTIFICATION.id))
@@ -2712,7 +2712,7 @@ object PanelPreferences {
     }
 
     fun setHeadsUpElevation(context: Context, elevation: Int) {
-        val clamped = elevation.coerceIn(0, 16)
+        val clamped = elevation.coerceIn(0, 24)
         _headsUpElevation.value = clamped
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putInt(KEY_HEADS_UP_ELEVATION, clamped).apply()
