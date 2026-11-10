@@ -741,6 +741,7 @@ fun ManageFavoriteFeaturesDialog(
             CustomizeCategory.QS_TWEAKS to "QS Tweaks",
             CustomizeCategory.QS_DESIGN to "QS Design",
             CustomizeCategory.HEADS_UP to "Heads-Up",
+            CustomizeCategory.HEADS_UP_DESIGN to "Heads-Up Design",
             CustomizeCategory.BASIC to "Basic",
             CustomizeCategory.THEMES to "Themes",
             CustomizeCategory.MISCELLANEOUS to "Misc"

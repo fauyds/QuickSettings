@@ -335,7 +335,8 @@ fun MainScreen(viewModel: MainViewModel) {
                             }
                         },
                         onLaunchInitialSetup = { viewModel.openInitialSetup() },
-                        isInitialSetupDone = isInitialSetupCompleted
+                        isInitialSetupDone = isInitialSetupCompleted,
+                        onNavigateToPrivileges = { viewModel.setSelectedTab(4) }
                     )
                 }
 

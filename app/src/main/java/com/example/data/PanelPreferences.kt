@@ -905,6 +905,56 @@ object PanelPreferences {
     private val _headsUpTimeoutSeconds = MutableStateFlow(4)
     val headsUpTimeoutSeconds: StateFlow<Int> = _headsUpTimeoutSeconds.asStateFlow()
 
+    // Heads-Up Design Preferences
+    private const val KEY_HEADS_UP_EDGE_TO_EDGE = "heads_up_edge_to_edge"
+    private val _headsUpEdgeToEdge = MutableStateFlow(false)
+    val headsUpEdgeToEdge: StateFlow<Boolean> = _headsUpEdgeToEdge.asStateFlow()
+
+    private const val KEY_HEADS_UP_CORNER_RADIUS = "heads_up_corner_radius"
+    private val _headsUpCornerRadius = MutableStateFlow(8)
+    val headsUpCornerRadius: StateFlow<Int> = _headsUpCornerRadius.asStateFlow()
+
+    private const val KEY_HEADS_UP_ELEVATION = "heads_up_elevation"
+    private val _headsUpElevation = MutableStateFlow(4)
+    val headsUpElevation: StateFlow<Int> = _headsUpElevation.asStateFlow()
+
+    private const val KEY_HEADS_UP_TOP_MARGIN = "heads_up_top_margin"
+    private val _headsUpTopMargin = MutableStateFlow(8)
+    val headsUpTopMargin: StateFlow<Int> = _headsUpTopMargin.asStateFlow()
+
+    // Heads-Up Interaction (Swipe, Tap & Snooze) Preferences
+    private const val KEY_HEADS_UP_SWIPE_UP_ACTION = "heads_up_swipe_up_action"
+    private val _headsUpSwipeUpAction = MutableStateFlow(HeadsUpAction.HIDE_BANNER)
+    val headsUpSwipeUpAction: StateFlow<HeadsUpAction> = _headsUpSwipeUpAction.asStateFlow()
+
+    private const val KEY_HEADS_UP_SWIPE_DOWN_ACTION = "heads_up_swipe_down_action"
+    private val _headsUpSwipeDownAction = MutableStateFlow(HeadsUpAction.OPEN_NOTIFICATION)
+    val headsUpSwipeDownAction: StateFlow<HeadsUpAction> = _headsUpSwipeDownAction.asStateFlow()
+
+    private const val KEY_HEADS_UP_SWIPE_LEFT_ACTION = "heads_up_swipe_left_action"
+    private val _headsUpSwipeLeftAction = MutableStateFlow(HeadsUpAction.DISMISS)
+    val headsUpSwipeLeftAction: StateFlow<HeadsUpAction> = _headsUpSwipeLeftAction.asStateFlow()
+
+    private const val KEY_HEADS_UP_SWIPE_RIGHT_ACTION = "heads_up_swipe_right_action"
+    private val _headsUpSwipeRightAction = MutableStateFlow(HeadsUpAction.DISMISS)
+    val headsUpSwipeRightAction: StateFlow<HeadsUpAction> = _headsUpSwipeRightAction.asStateFlow()
+
+    private const val KEY_HEADS_UP_SINGLE_TAP_ACTION = "heads_up_single_tap_action"
+    private val _headsUpSingleTapAction = MutableStateFlow(HeadsUpAction.OPEN_NOTIFICATION)
+    val headsUpSingleTapAction: StateFlow<HeadsUpAction> = _headsUpSingleTapAction.asStateFlow()
+
+    private const val KEY_HEADS_UP_DOUBLE_TAP_ACTION = "heads_up_double_tap_action"
+    private val _headsUpDoubleTapAction = MutableStateFlow(HeadsUpAction.NONE)
+    val headsUpDoubleTapAction: StateFlow<HeadsUpAction> = _headsUpDoubleTapAction.asStateFlow()
+
+    private const val KEY_HEADS_UP_LONG_PRESS_ACTION = "heads_up_long_press_action"
+    private val _headsUpLongPressAction = MutableStateFlow(HeadsUpAction.SNOOZE_APP)
+    val headsUpLongPressAction: StateFlow<HeadsUpAction> = _headsUpLongPressAction.asStateFlow()
+
+    private const val KEY_HEADS_UP_SNOOZE_DURATION_MINUTES = "heads_up_snooze_duration_minutes"
+    private val _headsUpSnoozeDurationMinutes = MutableStateFlow(15)
+    val headsUpSnoozeDurationMinutes: StateFlow<Int> = _headsUpSnoozeDurationMinutes.asStateFlow()
+
     // Screen Recording Preferences
     private const val KEY_SCREEN_RECORD_RESOLUTION = "screen_record_resolution"
     private const val KEY_SCREEN_RECORD_AUDIO_SOURCE = "screen_record_audio_source"
@@ -1285,6 +1335,18 @@ object PanelPreferences {
         _enableSystemHeadsUp.value = prefs.getBoolean(KEY_ENABLE_SYSTEM_HEADS_UP, true)
         _enableHeadsUpOverlay.value = prefs.getBoolean(KEY_ENABLE_HEADS_UP_OVERLAY, true)
         _headsUpTimeoutSeconds.value = prefs.getInt(KEY_HEADS_UP_TIMEOUT_SECONDS, 4)
+        _headsUpEdgeToEdge.value = prefs.getBoolean(KEY_HEADS_UP_EDGE_TO_EDGE, false)
+        _headsUpCornerRadius.value = prefs.getInt(KEY_HEADS_UP_CORNER_RADIUS, 8)
+        _headsUpElevation.value = prefs.getInt(KEY_HEADS_UP_ELEVATION, 4)
+        _headsUpTopMargin.value = prefs.getInt(KEY_HEADS_UP_TOP_MARGIN, 8)
+        _headsUpSwipeUpAction.value = HeadsUpAction.fromId(prefs.getString(KEY_HEADS_UP_SWIPE_UP_ACTION, HeadsUpAction.HIDE_BANNER.id))
+        _headsUpSwipeDownAction.value = HeadsUpAction.fromId(prefs.getString(KEY_HEADS_UP_SWIPE_DOWN_ACTION, HeadsUpAction.OPEN_NOTIFICATION.id))
+        _headsUpSwipeLeftAction.value = HeadsUpAction.fromId(prefs.getString(KEY_HEADS_UP_SWIPE_LEFT_ACTION, HeadsUpAction.DISMISS.id))
+        _headsUpSwipeRightAction.value = HeadsUpAction.fromId(prefs.getString(KEY_HEADS_UP_SWIPE_RIGHT_ACTION, HeadsUpAction.DISMISS.id))
+        _headsUpSingleTapAction.value = HeadsUpAction.fromId(prefs.getString(KEY_HEADS_UP_SINGLE_TAP_ACTION, HeadsUpAction.OPEN_NOTIFICATION.id))
+        _headsUpDoubleTapAction.value = HeadsUpAction.fromId(prefs.getString(KEY_HEADS_UP_DOUBLE_TAP_ACTION, HeadsUpAction.NONE.id))
+        _headsUpLongPressAction.value = HeadsUpAction.fromId(prefs.getString(KEY_HEADS_UP_LONG_PRESS_ACTION, HeadsUpAction.SNOOZE_APP.id))
+        _headsUpSnoozeDurationMinutes.value = prefs.getInt(KEY_HEADS_UP_SNOOZE_DURATION_MINUTES, 15)
         val hiddenSaved = prefs.getString(KEY_HIDDEN_TILE_IDS, "") ?: ""
         _hiddenTileIds.value = hiddenSaved.split(",").filter { it.isNotBlank() }.toSet()
 
@@ -2634,6 +2696,82 @@ object PanelPreferences {
         _headsUpTimeoutSeconds.value = clamped
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putInt(KEY_HEADS_UP_TIMEOUT_SECONDS, clamped).apply()
+    }
+
+    fun setHeadsUpEdgeToEdge(context: Context, enabled: Boolean) {
+        _headsUpEdgeToEdge.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_HEADS_UP_EDGE_TO_EDGE, enabled).apply()
+    }
+
+    fun setHeadsUpCornerRadius(context: Context, radius: Int) {
+        val clamped = radius.coerceIn(0, 24)
+        _headsUpCornerRadius.value = clamped
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(KEY_HEADS_UP_CORNER_RADIUS, clamped).apply()
+    }
+
+    fun setHeadsUpElevation(context: Context, elevation: Int) {
+        val clamped = elevation.coerceIn(0, 16)
+        _headsUpElevation.value = clamped
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(KEY_HEADS_UP_ELEVATION, clamped).apply()
+    }
+
+    fun setHeadsUpTopMargin(context: Context, margin: Int) {
+        val clamped = margin.coerceIn(0, 24)
+        _headsUpTopMargin.value = clamped
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(KEY_HEADS_UP_TOP_MARGIN, clamped).apply()
+    }
+
+    fun setHeadsUpSwipeUpAction(context: Context, action: HeadsUpAction) {
+        _headsUpSwipeUpAction.value = action
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_HEADS_UP_SWIPE_UP_ACTION, action.id).apply()
+    }
+
+    fun setHeadsUpSwipeDownAction(context: Context, action: HeadsUpAction) {
+        _headsUpSwipeDownAction.value = action
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_HEADS_UP_SWIPE_DOWN_ACTION, action.id).apply()
+    }
+
+    fun setHeadsUpSwipeLeftAction(context: Context, action: HeadsUpAction) {
+        _headsUpSwipeLeftAction.value = action
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_HEADS_UP_SWIPE_LEFT_ACTION, action.id).apply()
+    }
+
+    fun setHeadsUpSwipeRightAction(context: Context, action: HeadsUpAction) {
+        _headsUpSwipeRightAction.value = action
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_HEADS_UP_SWIPE_RIGHT_ACTION, action.id).apply()
+    }
+
+    fun setHeadsUpSingleTapAction(context: Context, action: HeadsUpAction) {
+        _headsUpSingleTapAction.value = action
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_HEADS_UP_SINGLE_TAP_ACTION, action.id).apply()
+    }
+
+    fun setHeadsUpDoubleTapAction(context: Context, action: HeadsUpAction) {
+        _headsUpDoubleTapAction.value = action
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_HEADS_UP_DOUBLE_TAP_ACTION, action.id).apply()
+    }
+
+    fun setHeadsUpLongPressAction(context: Context, action: HeadsUpAction) {
+        _headsUpLongPressAction.value = action
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_HEADS_UP_LONG_PRESS_ACTION, action.id).apply()
+    }
+
+    fun setHeadsUpSnoozeDurationMinutes(context: Context, minutes: Int) {
+        val clamped = minutes.coerceIn(1, 120)
+        _headsUpSnoozeDurationMinutes.value = clamped
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(KEY_HEADS_UP_SNOOZE_DURATION_MINUTES, clamped).apply()
     }
 
     private const val KEY_SAVED_ACTIVE_TILE_IDS = "saved_active_tile_ids"

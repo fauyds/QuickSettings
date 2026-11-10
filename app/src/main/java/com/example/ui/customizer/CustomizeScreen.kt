@@ -81,6 +81,7 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
             val pinnedIds by com.example.data.PanelPreferences.pinnedFeatures.collectAsState()
             val allCategories = listOf(
                 CustomizeCategory.HEADS_UP,
+                CustomizeCategory.HEADS_UP_DESIGN,
                 CustomizeCategory.BASIC,
                 CustomizeCategory.QS_DESIGN,
                 CustomizeCategory.QS_TWEAKS,
@@ -264,6 +265,7 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
             ) {
                 when (activeCategory) {
                     CustomizeCategory.HEADS_UP -> HeadsUpSection()
+                    CustomizeCategory.HEADS_UP_DESIGN -> HeadsUpDesignSection()
                     CustomizeCategory.BASIC -> BasicSettingsSection()
                     CustomizeCategory.QS_DESIGN -> QsDesignSection()
                     CustomizeCategory.QS_TWEAKS -> QsTweaksSection()

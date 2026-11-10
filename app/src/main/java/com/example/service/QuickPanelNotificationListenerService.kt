@@ -599,6 +599,12 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
 
         val isCallOrAlarm = isAlarm || isCall
 
+        // Check Heads-Up Snooze (App-level or Global snooze with call/alarm bypass)
+        if (HeadsUpSnoozeManager.isSnoozed(sbn.packageName, isCall = isCall, isAlarm = isAlarm)) {
+            Log.d(TAG, "Heads-up for ${sbn.packageName} is temporarily snoozed - suppressing banner.")
+            return
+        }
+
         // Screen should turn on only for incoming call and alarm notifications
         if (ScreenWakeHelper.isScreenOff(this) && !isCallOrAlarm) {
             Log.d(TAG, "Screen is off and notification is not call or alarm - skipping heads-up so screen stays off.")

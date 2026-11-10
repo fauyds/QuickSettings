@@ -1,57 +1,82 @@
 package com.example.ui.customizer
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Snooze
+import androidx.compose.material.icons.filled.Swipe
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.HeadsUpAction
 import com.example.data.PanelPreferences
 import com.example.service.HeadsUpOverlayManager
+import com.example.service.HeadsUpSnoozeManager
 import com.example.service.QuickPanelNotificationListenerService
+import com.example.ui.theme.SegmentedButtonShapes
+import kotlin.math.roundToInt
 
 @Composable
 fun HeadsUpSection(modifier: Modifier = Modifier) {
@@ -74,6 +99,29 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
     }).collectAsState()
 
     val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.HEADS_UP, context).collectAsState()
+
+    // 4-Directional Swipe Actions
+    val swipeUpAction by PanelPreferences.headsUpSwipeUpAction.collectAsState()
+    val swipeDownAction by PanelPreferences.headsUpSwipeDownAction.collectAsState()
+    val swipeLeftAction by PanelPreferences.headsUpSwipeLeftAction.collectAsState()
+    val swipeRightAction by PanelPreferences.headsUpSwipeRightAction.collectAsState()
+
+    // Tap & Press Actions
+    val singleTapAction by PanelPreferences.headsUpSingleTapAction.collectAsState()
+    val doubleTapAction by PanelPreferences.headsUpDoubleTapAction.collectAsState()
+    val longPressAction by PanelPreferences.headsUpLongPressAction.collectAsState()
+
+    // Contextual Snooze Duration
+    val snoozeDurationMinutes by PanelPreferences.headsUpSnoozeDurationMinutes.collectAsState()
+
+    // Whether any interaction has been configured to a snooze action
+    val hasAnySnoozeAction = swipeUpAction.isSnoozeAction ||
+            swipeDownAction.isSnoozeAction ||
+            swipeLeftAction.isSnoozeAction ||
+            swipeRightAction.isSnoozeAction ||
+            singleTapAction.isSnoozeAction ||
+            doubleTapAction.isSnoozeAction ||
+            longPressAction.isSnoozeAction
 
     val masterToggleCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("heads_up_overlay_engine_card", CustomizeCategory.HEADS_UP) {
@@ -484,7 +532,7 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = androidx.compose.material.icons.Icons.Default.Timer,
+                                    imageVector = Icons.Default.Timer,
                                     contentDescription = null,
                                     tint = colorScheme.onPrimaryContainer,
                                     modifier = Modifier.size(18.dp)
@@ -538,21 +586,19 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
         }
     }
 
-    val gestureHintsCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
-        PinnableCardWrapper("heads_up_gestures_card", CustomizeCategory.HEADS_UP) {
-            SettingsCard(
-                shape = shape
-            ) {
+    // 4-Directional Swipe Actions Card with Horizontal Scrollable Segmented FilterChips
+    val swipeActionsCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("heads_up_swipe_actions_card", CustomizeCategory.HEADS_UP) {
+            SettingsCard(shape = shape) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier.padding(bottom = 4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Box(
                             modifier = Modifier
@@ -562,43 +608,245 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = androidx.compose.material.icons.Icons.Default.TouchApp,
+                                imageVector = Icons.Default.Swipe,
                                 contentDescription = null,
                                 tint = colorScheme.onPrimaryContainer,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
-                        Text(
-                            text = "Gesture Actions:",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 15.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = colorScheme.onSurface
+                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            Text(
+                                text = "4-Directional Swipe Gestures",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Choose what happens when swiping the floating notification banner in each direction.",
+                                fontSize = 11.sp,
+                                color = colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        HeadsUpActionChipChooserRow(
+                            icon = Icons.Default.KeyboardArrowUp,
+                            label = "Swipe Up",
+                            selectedAction = swipeUpAction,
+                            onActionSelected = { PanelPreferences.setHeadsUpSwipeUpAction(context, it) },
+                            testTag = "heads_up_swipe_up_chips"
+                        )
+                        HorizontalDivider(color = colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        HeadsUpActionChipChooserRow(
+                            icon = Icons.Default.KeyboardArrowDown,
+                            label = "Swipe Down",
+                            selectedAction = swipeDownAction,
+                            onActionSelected = { PanelPreferences.setHeadsUpSwipeDownAction(context, it) },
+                            testTag = "heads_up_swipe_down_chips"
+                        )
+                        HorizontalDivider(color = colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        HeadsUpActionChipChooserRow(
+                            icon = Icons.AutoMirrored.Filled.ArrowBack,
+                            label = "Swipe Left",
+                            selectedAction = swipeLeftAction,
+                            onActionSelected = { PanelPreferences.setHeadsUpSwipeLeftAction(context, it) },
+                            testTag = "heads_up_swipe_left_chips"
+                        )
+                        HorizontalDivider(color = colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        HeadsUpActionChipChooserRow(
+                            icon = Icons.AutoMirrored.Filled.ArrowForward,
+                            label = "Swipe Right",
+                            selectedAction = swipeRightAction,
+                            onActionSelected = { PanelPreferences.setHeadsUpSwipeRightAction(context, it) },
+                            testTag = "heads_up_swipe_right_chips"
                         )
                     }
-                    Text(
-                        text = "• Swipe Up / Left / Right: Dismiss heads-up banner",
-                        fontSize = 11.sp,
-                        lineHeight = 14.sp,
-                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                        color = colorScheme.onSurfaceVariant
+                }
+            }
+        }
+    }
+
+    // Tap & Press Actions Card with Horizontal Scrollable Segmented FilterChips
+    val tapActionsCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("heads_up_tap_actions_card", CustomizeCategory.HEADS_UP) {
+            SettingsCard(shape = shape) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(colorScheme.secondaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.TouchApp,
+                                contentDescription = null,
+                                tint = colorScheme.onSecondaryContainer,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            Text(
+                                text = "Tap & Press Actions",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Control banner response for single tap, double tap, and long press (with haptics).",
+                                fontSize = 11.sp,
+                                color = colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        HeadsUpActionChipChooserRow(
+                            icon = Icons.Default.TouchApp,
+                            label = "Single Tap",
+                            selectedAction = singleTapAction,
+                            onActionSelected = { PanelPreferences.setHeadsUpSingleTapAction(context, it) },
+                            testTag = "heads_up_single_tap_chips"
+                        )
+                        HorizontalDivider(color = colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        HeadsUpActionChipChooserRow(
+                            icon = Icons.Default.TouchApp,
+                            label = "Double Tap",
+                            selectedAction = doubleTapAction,
+                            onActionSelected = { PanelPreferences.setHeadsUpDoubleTapAction(context, it) },
+                            testTag = "heads_up_double_tap_chips"
+                        )
+                        HorizontalDivider(color = colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        HeadsUpActionChipChooserRow(
+                            icon = Icons.Default.Timer,
+                            label = "Long Press",
+                            selectedAction = longPressAction,
+                            onActionSelected = { PanelPreferences.setHeadsUpLongPressAction(context, it) },
+                            testTag = "heads_up_long_press_chips"
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // Contextual Temporary Snooze Duration Card (Dynamically displayed when any interaction is a snooze action)
+    val snoozeDurationCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("heads_up_snooze_duration_card", CustomizeCategory.HEADS_UP) {
+            SettingsCard(shape = shape) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(colorScheme.tertiaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Snooze,
+                                    contentDescription = null,
+                                    tint = colorScheme.onTertiaryContainer,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                                Text(
+                                    text = "Temporary Snooze Duration",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Mutes heads-up popups for this duration upon snooze gesture. Calls & alarms strictly bypass.",
+                                    fontSize = 11.sp,
+                                    color = colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Text(
+                            text = "$snoozeDurationMinutes min",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = colorScheme.tertiary,
+                            modifier = Modifier.testTag("snooze_duration_value_label")
+                        )
+                    }
+
+                    Slider(
+                        value = snoozeDurationMinutes.toFloat(),
+                        onValueChange = { PanelPreferences.setHeadsUpSnoozeDurationMinutes(context, it.roundToInt()) },
+                        valueRange = 1f..120f,
+                        steps = 119,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("heads_up_snooze_duration_slider"),
+                        colors = SliderDefaults.colors(
+                            thumbColor = colorScheme.tertiary,
+                            activeTrackColor = colorScheme.tertiary,
+                            inactiveTrackColor = colorScheme.tertiary.copy(alpha = 0.2f)
+                        )
                     )
-                    Text(
-                        text = "• Swipe Down: Directly trigger Custom Quick Settings Shade",
-                        fontSize = 11.sp,
-                        lineHeight = 14.sp,
-                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                        color = colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "• Tap: Open notification destination app",
-                        fontSize = 11.sp,
-                        lineHeight = 14.sp,
-                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                        color = colorScheme.onSurfaceVariant
-                    )
+
+                    // Active Snooze indicator if currently snoozing
+                    val isGlobalSnoozed = HeadsUpSnoozeManager.isGlobalSnoozed()
+                    val snoozedAppsCount = HeadsUpSnoozeManager.getSnoozedApps().size
+
+                    if (isGlobalSnoozed || snoozedAppsCount > 0) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (isGlobalSnoozed) "Global snooze active" else "$snoozedAppsCount app(s) snoozed",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = colorScheme.onSurfaceVariant
+                            )
+                            TextButton(
+                                onClick = {
+                                    HeadsUpSnoozeManager.clearSnooze()
+                                }
+                            ) {
+                                Text("Clear Snooze", fontSize = 11.sp, color = colorScheme.error)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -616,38 +864,178 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
             if (pinnedIds.contains("heads_up_permission_card")) pinnedCards.add(permissionStatusCard)
             if (pinnedIds.contains("heads_up_test_card")) pinnedCards.add(testPreviewCard)
             if (pinnedIds.contains("heads_up_timeout_card")) pinnedCards.add(timeoutSliderCard)
-            if (pinnedIds.contains("heads_up_gestures_card")) pinnedCards.add(gestureHintsCard)
+            if (pinnedIds.contains("heads_up_swipe_actions_card")) pinnedCards.add(swipeActionsCard)
+            if (pinnedIds.contains("heads_up_tap_actions_card")) pinnedCards.add(tapActionsCard)
+            if (hasAnySnoozeAction && pinnedIds.contains("heads_up_snooze_duration_card")) pinnedCards.add(snoozeDurationCard)
         }
 
         if (pinnedCards.isNotEmpty()) {
             ListSubheader(
                 text = "Pinned",
-                icon = androidx.compose.material.icons.Icons.Default.PushPin
+                icon = Icons.Default.PushPin
             )
             pinnedCards.forEachIndexed { index, card ->
                 card(CustomizeCardShapes.getShapeForIndex(index, pinnedCards.size))
             }
         }
 
-        // Unpinned Cards
-        if (!enableHeadsUpOverlay) {
-            val unpinnedDisabled = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-            if (!pinnedIds.contains("heads_up_overlay_engine_card")) unpinnedDisabled.add(masterToggleCard)
-            if (!pinnedIds.contains("system_heads_up_card")) unpinnedDisabled.add(systemHeadsUpCard)
+        // 2. Unpinned Group 1: Overlay Engine & Service
+        val engineGroup = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
+        if (!pinnedIds.contains("heads_up_overlay_engine_card")) engineGroup.add(masterToggleCard)
+        if (!enableHeadsUpOverlay && !pinnedIds.contains("system_heads_up_card")) engineGroup.add(systemHeadsUpCard)
+        if (enableHeadsUpOverlay && !pinnedIds.contains("heads_up_permission_card")) engineGroup.add(permissionStatusCard)
 
-            unpinnedDisabled.forEachIndexed { index, card ->
-                card(CustomizeCardShapes.getShapeForIndex(index, unpinnedDisabled.size))
+        if (engineGroup.isNotEmpty()) {
+            ListSubheader(
+                text = "Overlay Engine & Service",
+                icon = Icons.Default.Security
+            )
+            engineGroup.forEachIndexed { index, card ->
+                card(CustomizeCardShapes.getShapeForIndex(index, engineGroup.size))
             }
-        } else {
-            val unpinnedActive = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-            if (!pinnedIds.contains("heads_up_overlay_engine_card")) unpinnedActive.add(masterToggleCard)
-            if (!pinnedIds.contains("heads_up_permission_card")) unpinnedActive.add(permissionStatusCard)
-            if (!pinnedIds.contains("heads_up_test_card")) unpinnedActive.add(testPreviewCard)
-            if (!pinnedIds.contains("heads_up_timeout_card")) unpinnedActive.add(timeoutSliderCard)
-            if (!pinnedIds.contains("heads_up_gestures_card")) unpinnedActive.add(gestureHintsCard)
+        }
 
-            unpinnedActive.forEachIndexed { index, card ->
-                card(CustomizeCardShapes.getShapeForIndex(index, unpinnedActive.size))
+        if (enableHeadsUpOverlay) {
+            // 3. Unpinned Group 2: Display & Timeout
+            val displayGroup = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
+            if (!pinnedIds.contains("heads_up_test_card")) displayGroup.add(testPreviewCard)
+            if (!pinnedIds.contains("heads_up_timeout_card")) displayGroup.add(timeoutSliderCard)
+
+            if (displayGroup.isNotEmpty()) {
+                ListSubheader(
+                    text = "Display & Timeout",
+                    icon = Icons.Default.Timer
+                )
+                displayGroup.forEachIndexed { index, card ->
+                    card(CustomizeCardShapes.getShapeForIndex(index, displayGroup.size))
+                }
+            }
+
+            // 4. Unpinned Group 3: Gestures & Interactions
+            val gesturesGroup = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
+            if (!pinnedIds.contains("heads_up_swipe_actions_card")) gesturesGroup.add(swipeActionsCard)
+            if (!pinnedIds.contains("heads_up_tap_actions_card")) gesturesGroup.add(tapActionsCard)
+
+            if (gesturesGroup.isNotEmpty()) {
+                ListSubheader(
+                    text = "Gestures & Interactions",
+                    icon = Icons.Default.TouchApp
+                )
+                gesturesGroup.forEachIndexed { index, card ->
+                    card(CustomizeCardShapes.getShapeForIndex(index, gesturesGroup.size))
+                }
+            }
+
+            // 5. Unpinned Group 4: Snooze Control
+            if (hasAnySnoozeAction && !pinnedIds.contains("heads_up_snooze_duration_card")) {
+                ListSubheader(
+                    text = "Snooze Control",
+                    icon = Icons.Default.Snooze
+                )
+                snoozeDurationCard(CustomizeCardShapes.SingleCard)
+            }
+        }
+    }
+}
+
+@Composable
+private fun HeadsUpActionChipChooserRow(
+    icon: ImageVector,
+    label: String,
+    selectedAction: HeadsUpAction,
+    onActionSelected: (HeadsUpAction) -> Unit,
+    testTag: String
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val isDark = com.example.ui.theme.LocalIsDarkTheme.current
+    val screenBg = com.example.ui.theme.getSettingsScreenBackgroundColor(isDark)
+    val allActions = HeadsUpAction.entries
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = colorScheme.primary,
+                modifier = Modifier.size(18.dp)
+            )
+            Text(
+                text = label,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = if (selectedAction.isSnoozeAction) colorScheme.tertiaryContainer.copy(alpha = 0.85f)
+                else colorScheme.primaryContainer.copy(alpha = 0.6f)
+            ) {
+                Text(
+                    text = selectedAction.title,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (selectedAction.isSnoozeAction) colorScheme.onTertiaryContainer else colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+        }
+
+        // Horizontal scrollable FilterChip chooser matching standard customize design system
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .testTag(testTag),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            allActions.forEach { action ->
+                val isSelected = (action == selectedAction)
+                val isSnooze = action.isSnoozeAction
+                val chipShape = SegmentedButtonShapes.getShape(
+                    item = action,
+                    items = allActions,
+                    selectedItem = selectedAction
+                )
+
+                FilterChip(
+                    selected = isSelected,
+                    onClick = { onActionSelected(action) },
+                    shape = chipShape,
+                    border = null,
+                    label = {
+                        Text(
+                            text = action.title,
+                            fontSize = 11.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            style = TextStyle(
+                                platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                lineHeightStyle = LineHeightStyle(
+                                    alignment = LineHeightStyle.Alignment.Center,
+                                    trim = LineHeightStyle.Trim.Both
+                                )
+                            )
+                        )
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = screenBg,
+                        selectedContainerColor = if (isSnooze) colorScheme.tertiaryContainer else colorScheme.primaryContainer,
+                        selectedLabelColor = if (isSnooze) colorScheme.onTertiaryContainer else colorScheme.onPrimaryContainer,
+                        selectedLeadingIconColor = if (isSnooze) colorScheme.onTertiaryContainer else colorScheme.onPrimaryContainer,
+                        labelColor = colorScheme.onSurface
+                    ),
+                    modifier = Modifier.testTag("${testTag}_chip_${action.id}")
+                )
             }
         }
     }

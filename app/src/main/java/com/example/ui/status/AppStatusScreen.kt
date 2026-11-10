@@ -1,7 +1,10 @@
 package com.example.ui.status
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +28,8 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Refresh
@@ -48,7 +53,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
@@ -60,6 +69,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.PanelPreferences
 import com.example.model.PrivilegeMode
+import com.example.service.QuickPanelNotificationListenerService
 import com.example.ui.theme.ExpressiveCardShapes
 
 object AppStatusCardShapes {
@@ -84,6 +94,83 @@ object AppStatusCardShapes {
 }
 
 /**
+ * Radial Counter of Allowed Permissions
+ * Material You Red when 0 allowed, Material You Green when all allowed, Amber when partial.
+ */
+@Composable
+fun RadialPermissionCounter(
+    allowedCount: Int,
+    totalCount: Int,
+    modifier: Modifier = Modifier,
+    statusColor: Color? = null
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val isDark = com.example.ui.theme.LocalIsDarkTheme.current
+    val nonGrantedRed = com.example.ui.theme.getNonGrantedRedColor(isDark)
+    val materialYouGreen = if (!isDark) Color(0xFF2E7D32) else Color(0xFF4CAF50)
+    val materialYouAmber = if (!isDark) Color(0xFFE65100) else Color(0xFFFF9800)
+
+    val progressColor = statusColor ?: when {
+        allowedCount == 0 -> nonGrantedRed
+        allowedCount >= totalCount -> materialYouGreen
+        else -> materialYouAmber
+    }
+
+    val progress = if (totalCount > 0) (allowedCount.toFloat() / totalCount.toFloat()).coerceIn(0f, 1f) else 0f
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress,
+        animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
+        label = "radial_permission_progress_anim"
+    )
+
+    Box(
+        modifier = modifier.size(68.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(4.dp)
+        ) {
+            val strokeWidthPx = 6.dp.toPx()
+
+            // Background Track Arc
+            drawArc(
+                color = progressColor.copy(alpha = 0.18f),
+                startAngle = -90f,
+                sweepAngle = 360f,
+                useCenter = false,
+                style = Stroke(width = strokeWidthPx, cap = StrokeCap.Round)
+            )
+
+            // Active Progress Arc
+            if (animatedProgress > 0f) {
+                drawArc(
+                    color = progressColor,
+                    startAngle = -90f,
+                    sweepAngle = animatedProgress * 360f,
+                    useCenter = false,
+                    style = Stroke(width = strokeWidthPx, cap = StrokeCap.Round)
+                )
+            }
+        }
+
+        Box(
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "$allowedCount/$totalCount",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = progressColor,
+                lineHeight = 16.sp,
+                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+            )
+        }
+    }
+}
+
+/**
  * App Status screen displaying service health, overlay triggers, diagnostics,
  * and the top gesture trigger strip bar.
  */
@@ -104,8 +191,10 @@ fun AppStatusScreen(
     onOpenAccessibilitySettings: () -> Unit,
     onSimulateSwipeDown: () -> Unit,
     onLaunchInitialSetup: (() -> Unit)? = null,
-    isInitialSetupDone: Boolean? = null
+    isInitialSetupDone: Boolean? = null,
+    onNavigateToPrivileges: (() -> Unit)? = null
 ) {
+    val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
     val isDark = com.example.ui.theme.LocalIsDarkTheme.current
     val screenBg = com.example.ui.theme.getSettingsScreenBackgroundColor(isDark)
@@ -114,6 +203,16 @@ fun AppStatusScreen(
 
     val storedInitialSetupDone by PanelPreferences.initialSetupCompleted.collectAsStateWithLifecycle(initialValue = PanelPreferences.initialSetupCompleted.value)
     val effectiveSetupDone = isInitialSetupDone ?: storedInitialSetupDone
+
+    val isNotifGranted = remember(context) {
+        QuickPanelNotificationListenerService.isPermissionGranted(context)
+    }
+
+    val allowedCount = (if (hasOverlayPermission) 1 else 0) +
+            (if (isAccessibilityRunning) 1 else 0) +
+            (if (isNotifGranted) 1 else 0) +
+            (if (isOverlayEnabled || isOverlayRunning) 1 else 0)
+    val totalCount = 4
 
     Column(
         modifier = Modifier
@@ -254,7 +353,7 @@ fun AppStatusScreen(
             }
         }
 
-        // 2. The Recently Edited Element: Top Trigger Strip Bar
+        // 2. Top Trigger Strip Bar
         TopTriggerStripBar(
             isOverlayEnabled = isOverlayEnabled,
             isOverlayRunning = isOverlayRunning,
@@ -267,9 +366,7 @@ fun AppStatusScreen(
             onSimulateSwipeDown = onSimulateSwipeDown
         )
 
-        // 3. System Diagnostics & Services Stack (Consolidated Single Card)
-        val allPermissionsAllowed = hasOverlayPermission && isAccessibilityRunning && isOverlayRunning
-
+        // 3. Consolidated Single Tall Card with Radial Counter
         Text(
             text = "SERVICE HEALTH DIAGNOSTICS",
             fontSize = 11.sp,
@@ -278,9 +375,16 @@ fun AppStatusScreen(
             modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 2.dp)
         )
 
+        val serviceStatusColor = if (allowedCount >= totalCount) {
+            if (!isDark) Color(0xFF2E7D32) else Color(0xFF4CAF50)
+        } else {
+            nonGrantedRed
+        }
+        val serviceCardBg = serviceStatusColor.copy(alpha = if (isDark) 0.16f else 0.10f)
+
         Card(
             shape = AppStatusCardShapes.SingleCard,
-            colors = CardDefaults.cardColors(containerColor = cardBg),
+            colors = CardDefaults.cardColors(containerColor = serviceCardBg),
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag("app_status_service_health_card")
@@ -288,86 +392,103 @@ fun AppStatusScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 2.dp)
+                    .padding(vertical = 14.dp, horizontal = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                if (allPermissionsAllowed) {
-                    DiagnosticItemRow(
-                        icon = Icons.Default.CheckCircle,
-                        title = "All privileges are allowed",
-                        subtitle = "Overlay, accessibility & system permissions granted",
-                        isGood = true
-                    )
+                // Top Row: Icon + Title + Subtitle on Left, Radial Counter on Right
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(serviceStatusColor.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Security,
+                                contentDescription = null,
+                                tint = serviceStatusColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = "Permissions & Service Health",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = serviceStatusColor
+                            )
+                            Text(
+                                text = if (allowedCount >= totalCount) "All required permissions granted & active"
+                                else "Allow the required permissions",
+                                fontSize = 11.sp,
+                                lineHeight = 14.sp,
+                                color = serviceStatusColor.copy(alpha = 0.85f)
+                            )
+                        }
+                    }
 
-                    HorizontalDivider(
-                        color = colorScheme.outlineVariant.copy(alpha = 0.25f),
-                        modifier = Modifier.padding(horizontal = 14.dp)
-                    )
-                } else {
-                    // Item 1: Overlay Window Service
-                    DiagnosticItemRow(
-                        icon = Icons.Default.Dashboard,
-                        title = "Overlay Window Service",
-                        subtitle = if (isOverlayRunning) "Running & Ready for Gestures" else "Service Stopped / Inactive",
-                        isGood = isOverlayRunning,
-                        badgeText = if (isOverlayRunning) "ACTIVE" else "OFF",
-                        badgeContainerColor = if (isOverlayRunning) colorScheme.primaryContainer else nonGrantedRed,
-                        badgeContentColor = if (isOverlayRunning) colorScheme.onPrimaryContainer else Color.White
-                    )
+                    Spacer(modifier = Modifier.width(8.dp))
 
-                    HorizontalDivider(
-                        color = colorScheme.outlineVariant.copy(alpha = 0.25f),
-                        modifier = Modifier.padding(horizontal = 14.dp)
-                    )
-
-                    // Item 2: Accessibility Service
-                    DiagnosticItemRow(
-                        icon = Icons.Default.TouchApp,
-                        title = "Accessibility Service",
-                        subtitle = if (isAccessibilityRunning) "Top Edge Interceptor Active" else "Not running (tap to configure)",
-                        isGood = isAccessibilityRunning,
-                        badgeText = if (isAccessibilityRunning) "READY" else "Configure",
-                        badgeContainerColor = if (isAccessibilityRunning) colorScheme.tertiaryContainer else screenBg,
-                        badgeContentColor = if (isAccessibilityRunning) colorScheme.onTertiaryContainer else Color.White,
-                        onClick = if (!isAccessibilityRunning) onOpenAccessibilitySettings else null
-                    )
-
-                    HorizontalDivider(
-                        color = colorScheme.outlineVariant.copy(alpha = 0.25f),
-                        modifier = Modifier.padding(horizontal = 14.dp)
-                    )
-
-                    // Item 3: System Overlay Permission
-                    DiagnosticItemRow(
-                        icon = if (hasOverlayPermission) Icons.Default.Check else Icons.Default.Warning,
-                        title = "System Overlay Permission",
-                        subtitle = if (hasOverlayPermission) "Granted (SYSTEM_ALERT_WINDOW)" else "Permission Required",
-                        isGood = hasOverlayPermission,
-                        badgeText = if (hasOverlayPermission) "GRANTED" else "Grant",
-                        badgeContainerColor = if (hasOverlayPermission) colorScheme.primaryContainer else screenBg,
-                        badgeContentColor = if (hasOverlayPermission) colorScheme.onPrimaryContainer else Color.White,
-                        onClick = if (!hasOverlayPermission) onRequestPermission else null
-                    )
-
-                    HorizontalDivider(
-                        color = colorScheme.outlineVariant.copy(alpha = 0.25f),
-                        modifier = Modifier.padding(horizontal = 14.dp)
+                    RadialPermissionCounter(
+                        allowedCount = allowedCount,
+                        totalCount = totalCount,
+                        statusColor = serviceStatusColor,
+                        modifier = Modifier.size(68.dp)
                     )
                 }
 
-                // Item 4: Privilege Engine
-                DiagnosticItemRow(
-                    icon = Icons.Default.Security,
-                    title = "Privilege Engine",
-                    subtitle = "${currentMode.title} • Root: ${if (isRootAvailable) "Yes" else "No"} • Shizuku: ${if (isShizukuAvailable) "Yes" else "No"}",
-                    isGood = true,
-                    badgeText = currentMode.name,
-                    badgeContainerColor = colorScheme.secondaryContainer,
-                    badgeContentColor = colorScheme.onSecondaryContainer
-                )
+                if (onNavigateToPrivileges != null) {
+                    HorizontalDivider(color = serviceStatusColor.copy(alpha = 0.2f))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (allowedCount >= totalCount) "All permissions active" else "Enable the corresponding permissions",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = serviceStatusColor.copy(alpha = 0.9f),
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        FilledTonalButton(
+                            onClick = onNavigateToPrivileges,
+                            shape = RoundedCornerShape(8.dp),
+                            colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
+                                containerColor = serviceStatusColor.copy(alpha = 0.22f),
+                                contentColor = serviceStatusColor
+                            ),
+                            modifier = Modifier.testTag("btn_go_to_privileges")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Security,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Privileges Tab",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
             }
         }
 
-        // 4. Quick Stats & System Metric Cards (5dp inner corners)
+        // 4. Quick Stats & System Metric Cards
         Text(
             text = "SYSTEM OVERVIEW",
             fontSize = 11.sp,
@@ -615,112 +736,4 @@ fun TopTriggerStripBar(
     }
 }
 
-@Composable
-private fun DiagnosticItemRow(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    isGood: Boolean,
-    badgeText: String? = null,
-    badgeContainerColor: Color = Color.Transparent,
-    badgeContentColor: Color = Color.Unspecified,
-    onClick: (() -> Unit)? = null
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val isDark = com.example.ui.theme.LocalIsDarkTheme.current
-    val nonGrantedRed = com.example.ui.theme.getNonGrantedRedColor(isDark)
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.weight(1f)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(if (isGood) colorScheme.primary else nonGrantedRed),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = if (isGood) colorScheme.onPrimary else Color.White,
-                    modifier = Modifier.size(17.dp)
-                )
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Text(
-                    text = title,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    lineHeight = 16.sp,
-                    style = TextStyle(
-                        platformStyle = PlatformTextStyle(includeFontPadding = false),
-                        lineHeightStyle = LineHeightStyle(
-                            alignment = LineHeightStyle.Alignment.Center,
-                            trim = LineHeightStyle.Trim.Both
-                        )
-                    ),
-                    color = colorScheme.onSurface
-                )
-                Text(
-                    text = subtitle,
-                    fontSize = 11.sp,
-                    lineHeight = 14.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = TextStyle(
-                        platformStyle = PlatformTextStyle(includeFontPadding = false),
-                        lineHeightStyle = LineHeightStyle(
-                            alignment = LineHeightStyle.Alignment.Center,
-                            trim = LineHeightStyle.Trim.Both
-                        )
-                    ),
-                    color = if (isGood) colorScheme.primary else nonGrantedRed
-                )
-            }
-        }
-
-        if (!badgeText.isNullOrEmpty()) {
-            Spacer(modifier = Modifier.width(8.dp))
-
-            if (onClick != null) {
-                Surface(
-                    onClick = onClick,
-                    shape = RoundedCornerShape(8.dp),
-                    color = badgeContainerColor
-                ) {
-                    Text(
-                        text = badgeText,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = badgeContentColor,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            } else {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = badgeContainerColor
-                ) {
-                    Text(
-                        text = badgeText,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = badgeContentColor,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
-        }
-    }
-}
 

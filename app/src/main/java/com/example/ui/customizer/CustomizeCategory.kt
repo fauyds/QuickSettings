@@ -47,7 +47,8 @@ enum class CustomizeCategory(
     val icon: ImageVector,
     val description: String
 ) {
-    HEADS_UP("Heads-Up", Icons.Default.NotificationsActive, "Notification banner overlays & styles"),
+    HEADS_UP("Heads-Up", Icons.Default.NotificationsActive, "Notification banner gestures, taps & snooze actions"),
+    HEADS_UP_DESIGN("Heads-Up Design", Icons.Default.Palette, "Edge-to-edge, corners, elevation & margins"),
     BASIC("Basic Settings", Icons.Default.Settings, "Theme mode & basic appearance"),
     QS_DESIGN("Quick Settings Design", Icons.Default.Apps, "Tile shapes, sizes, carrier & sliders"),
     QS_TWEAKS("Quick Settings Tweaks", Icons.Default.Tune, "Grid layout, drag handle & header options"),

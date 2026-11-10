@@ -18,6 +18,8 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -30,6 +32,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import java.util.concurrent.ConcurrentHashMap
 import androidx.compose.foundation.horizontalScroll
@@ -50,6 +54,12 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalHapticFeedback
+import com.example.data.HeadsUpAction
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Alarm
@@ -496,6 +506,7 @@ object HeadsUpOverlayManager {
                     activeData?.let { dataItem ->
                         HeadsUpBannerCard(
                             data = dataItem,
+                            targetContext = targetContext,
                             onDismiss = {
                                 resetPinnedLock(dataItem.key)
                                 dismissHeadsUpAnimated()
@@ -782,17 +793,99 @@ object HeadsUpOverlayManager {
     @Composable
     private fun HeadsUpBannerCard(
         data: HeadsUpData,
+        targetContext: Context,
         onDismiss: () -> Unit,
         onOpen: () -> Unit,
         onSwipeDownToQs: () -> Unit,
         onActionTrigger: (NotificationActionModel) -> Unit
     ) {
         val coroutineScope = rememberCoroutineScope()
+        val haptic = LocalHapticFeedback.current
         var isVisible by remember { mutableStateOf(false) }
-        var offsetX by remember { mutableFloatStateOf(0f) }
-        var offsetY by remember { mutableFloatStateOf(0f) }
+
+        // Heads-Up Design Preferences
+        val edgeToEdge by PanelPreferences.headsUpEdgeToEdge.collectAsState()
+        val cornerRadius by PanelPreferences.headsUpCornerRadius.collectAsState()
+        val elevation by PanelPreferences.headsUpElevation.collectAsState()
+        val topMargin by PanelPreferences.headsUpTopMargin.collectAsState()
+
+        // Interaction Action Preferences
+        val swipeUpAction by PanelPreferences.headsUpSwipeUpAction.collectAsState()
+        val swipeDownAction by PanelPreferences.headsUpSwipeDownAction.collectAsState()
+        val swipeLeftAction by PanelPreferences.headsUpSwipeLeftAction.collectAsState()
+        val swipeRightAction by PanelPreferences.headsUpSwipeRightAction.collectAsState()
+
+        val singleTapAction by PanelPreferences.headsUpSingleTapAction.collectAsState()
+        val doubleTapAction by PanelPreferences.headsUpDoubleTapAction.collectAsState()
+        val longPressAction by PanelPreferences.headsUpLongPressAction.collectAsState()
+        val snoozeDurationMinutes by PanelPreferences.headsUpSnoozeDurationMinutes.collectAsState()
 
         val configuredSeconds by PanelPreferences.headsUpTimeoutSeconds.collectAsState()
+
+        // Physics Animatable offsets
+        val animOffsetX = remember { Animatable(0f) }
+        val animOffsetY = remember { Animatable(0f) }
+        var cardWidthPx by remember { mutableFloatStateOf(1000f) }
+        var cardHeightPx by remember { mutableFloatStateOf(300f) }
+        var isExpanded by remember { mutableStateOf(false) }
+
+        fun executeAction(action: HeadsUpAction) {
+            when (action) {
+                HeadsUpAction.DISMISS -> {
+                    data.key?.let { key ->
+                        QuickPanelNotificationListenerService.dismissNotification(key)
+                    }
+                    onDismiss()
+                }
+                HeadsUpAction.HIDE_BANNER -> {
+                    onDismiss()
+                }
+                HeadsUpAction.OPEN_SHADE -> {
+                    onSwipeDownToQs()
+                }
+                HeadsUpAction.OPEN_NOTIFICATION -> {
+                    onOpen()
+                }
+                HeadsUpAction.OPEN_APP -> {
+                    try {
+                        val launchIntent = targetContext.packageManager.getLaunchIntentForPackage(data.packageName)
+                        if (launchIntent != null) {
+                            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            targetContext.startActivity(launchIntent)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed launching app for ${data.packageName}: ${e.message}")
+                    }
+                    onDismiss()
+                }
+                HeadsUpAction.EXPAND_NOTIFICATION -> {
+                    isExpanded = !isExpanded
+                }
+                HeadsUpAction.SNOOZE_APP -> {
+                    val duration = snoozeDurationMinutes
+                    HeadsUpSnoozeManager.snoozePackage(data.packageName, duration)
+                    Toast.makeText(
+                        targetContext,
+                        "Snoozed ${data.appName} for $duration min",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    onDismiss()
+                }
+                HeadsUpAction.SNOOZE_ALL -> {
+                    val duration = snoozeDurationMinutes
+                    HeadsUpSnoozeManager.snoozeAll(duration)
+                    Toast.makeText(
+                        targetContext,
+                        "Snoozed all heads-up banners for $duration min",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    onDismiss()
+                }
+                HeadsUpAction.NONE -> {
+                    // Do nothing
+                }
+            }
+        }
 
         // Monet dynamic theme colors
         val monetPrimary = MaterialTheme.colorScheme.primary
@@ -816,8 +909,7 @@ object HeadsUpOverlayManager {
 
         val isDark = LocalIsDarkTheme.current
 
-        // Fully opaque (100% solid, NO transparency) container background for all heads-up types
-        // Brighter background color in light mode, darker background color in dark mode
+        // Fully opaque container background
         val cardContainerColor = if (!isDark) {
             MaterialTheme.colorScheme.surfaceContainerHigh
         } else {
@@ -838,7 +930,7 @@ object HeadsUpOverlayManager {
 
         dismissAnimatedCallback = dismissWithAnimation
 
-        // Keep Alarm & Call Heads-Up Overlay PINNED until action (no auto-dismiss timer for Alarms or Calls!)
+        // Keep Alarm & Call Heads-Up Overlay PINNED until action
         LaunchedEffect(data.id, data.isAlarm, data.isCall) {
             isVisible = true
             if (!data.isAlarm && !data.isCall) {
@@ -849,6 +941,21 @@ object HeadsUpOverlayManager {
                     delay(200)
                     dismissExistingOverlay()
                 }
+            }
+        }
+
+        // Card Shape calculation: Edge-to-Edge locks top corners to 0dp; Corner Radius applies strictly to bottom corners.
+        // When Edge-to-Edge is OFF: Corner Radius applies symmetrically to all 4 corners.
+        val cardShape = remember(edgeToEdge, cornerRadius) {
+            if (edgeToEdge) {
+                RoundedCornerShape(
+                    topStart = 0.dp,
+                    topEnd = 0.dp,
+                    bottomStart = cornerRadius.dp,
+                    bottomEnd = cornerRadius.dp
+                )
+            } else {
+                RoundedCornerShape(cornerRadius.dp)
             }
         }
 
@@ -865,91 +972,144 @@ object HeadsUpOverlayManager {
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(horizontal = 14.dp, vertical = 6.dp)
+                    .padding(
+                        start = if (edgeToEdge) 0.dp else 8.dp,
+                        end = if (edgeToEdge) 0.dp else 8.dp,
+                        top = topMargin.dp,
+                        bottom = 6.dp
+                    )
                     .testTag("heads_up_overlay_container"),
                 contentAlignment = Alignment.TopCenter
             ) {
                 Card(
-                    shape = RoundedCornerShape(22.dp),
+                    shape = cardShape,
                     colors = CardDefaults.cardColors(
                         containerColor = cardContainerColor
                     ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = elevation.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .widthIn(max = 440.dp)
-                        .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
-                        .pointerInput(Unit) {
-                            var lockedDirection = 0 // 0 = uncommitted, 1 = horizontal (left/right), 2 = vertical (up/down)
-                            var dragAccumX = 0f
-                            var dragAccumY = 0f
+                        .then(if (edgeToEdge) Modifier else Modifier.widthIn(max = 440.dp))
+                        .onSizeChanged {
+                            cardWidthPx = it.width.toFloat()
+                            cardHeightPx = it.height.toFloat()
+                        }
+                        .graphicsLayer {
+                            translationX = animOffsetX.value
+                            translationY = animOffsetY.value
+                            val progress = if (cardWidthPx > 0f) (abs(animOffsetX.value) / cardWidthPx) else 0f
+                            alpha = (1f - progress).coerceIn(0f, 1f)
+                        }
+                        .animateContentSize()
+                        .pointerInput(
+                            swipeUpAction, swipeDownAction, swipeLeftAction, swipeRightAction,
+                            singleTapAction, doubleTapAction, longPressAction, snoozeDurationMinutes
+                        ) {
+                            val velocityTracker = VelocityTracker()
+                            var lastTapTime = 0L
 
-                            detectDragGestures(
-                                onDragStart = {
-                                    lockedDirection = 0
-                                    dragAccumX = 0f
-                                    dragAccumY = 0f
-                                },
-                                onDragEnd = {
-                                    val currentX = offsetX
-                                    val currentY = offsetY
-                                    when {
-                                        // Swipe Up -> Dismiss
-                                        lockedDirection == 2 && currentY < -40f -> {
-                                            onDismiss()
-                                        }
-                                        // Swipe Down -> Trigger Custom QS Shade
-                                        lockedDirection == 2 && currentY > 45f -> {
-                                            onSwipeDownToQs()
-                                        }
-                                        // Swipe Left/Right -> Dismiss
-                                        lockedDirection == 1 && abs(currentX) > 80f -> {
-                                            onDismiss()
-                                        }
-                                        // Reset position
-                                        else -> {
-                                            offsetX = 0f
-                                            offsetY = 0f
-                                        }
-                                    }
-                                    lockedDirection = 0
-                                    dragAccumX = 0f
-                                    dragAccumY = 0f
-                                },
-                                onDragCancel = {
-                                    offsetX = 0f
-                                    offsetY = 0f
-                                    lockedDirection = 0
-                                    dragAccumX = 0f
-                                    dragAccumY = 0f
-                                },
-                                onDrag = { change, dragAmount ->
-                                    change.consume()
-                                    dragAccumX += dragAmount.x
-                                    dragAccumY += dragAmount.y
+                            awaitEachGesture {
+                                val down = awaitFirstDown(requireUnconsumed = false)
+                                val startPosition = down.position
+                                val touchSlop = viewConfiguration.touchSlop
+                                velocityTracker.resetTracking()
+                                velocityTracker.addPosition(down.uptimeMillis, down.position)
 
-                                    if (lockedDirection == 0) {
-                                        val slopThreshold = 6f
-                                        if (abs(dragAccumX) > slopThreshold || abs(dragAccumY) > slopThreshold) {
-                                            lockedDirection = if (abs(dragAccumX) >= abs(dragAccumY)) 1 else 2
-                                        }
-                                    }
+                                var isDragging = false
+                                var isLongPressed = false
+                                var dragAxis = 0 // 1 = horizontal, 2 = vertical
 
-                                    if (lockedDirection == 1) {
-                                        offsetX += dragAmount.x
-                                        offsetY = 0f
-                                    } else if (lockedDirection == 2) {
-                                        offsetY += dragAmount.y
-                                        offsetX = 0f
+                                val longPressJob = coroutineScope.launch {
+                                    delay(viewConfiguration.longPressTimeoutMillis)
+                                    if (!isDragging) {
+                                        isLongPressed = true
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        executeAction(longPressAction)
                                     }
                                 }
-                            )
+
+                                var pointer = down
+                                while (pointer.pressed) {
+                                    val event = awaitPointerEvent()
+                                    val currentPointer = event.changes.firstOrNull { it.id == down.id } ?: break
+                                    pointer = currentPointer
+                                    velocityTracker.addPosition(currentPointer.uptimeMillis, currentPointer.position)
+
+                                    val totalDeltaX = currentPointer.position.x - startPosition.x
+                                    val totalDeltaY = currentPointer.position.y - startPosition.y
+
+                                    if (!isDragging && (abs(totalDeltaX) > touchSlop || abs(totalDeltaY) > touchSlop)) {
+                                        isDragging = true
+                                        longPressJob.cancel()
+                                        dragAxis = if (abs(totalDeltaX) >= abs(totalDeltaY)) 1 else 2
+                                    }
+
+                                    if (isDragging) {
+                                        currentPointer.consume()
+                                        coroutineScope.launch {
+                                            if (dragAxis == 1) {
+                                                animOffsetX.snapTo(totalDeltaX)
+                                                animOffsetY.snapTo(0f)
+                                            } else {
+                                                animOffsetY.snapTo(totalDeltaY)
+                                                animOffsetX.snapTo(0f)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                longPressJob.cancel()
+
+                                if (isDragging) {
+                                    val velocity = velocityTracker.calculateVelocity()
+                                    val currentX = animOffsetX.value
+                                    val currentY = animOffsetY.value
+                                    val widthThreshold = cardWidthPx * 0.30f
+                                    val heightThreshold = cardHeightPx * 0.30f
+                                    val velThreshold = 800f
+
+                                    val isHorizontalSwipe = dragAxis == 1 && (abs(currentX) > widthThreshold || abs(velocity.x) > velThreshold)
+                                    val isVerticalSwipe = dragAxis == 2 && (abs(currentY) > heightThreshold || abs(velocity.y) > velThreshold)
+
+                                    if (isHorizontalSwipe) {
+                                        val toRight = if (abs(velocity.x) > velThreshold) velocity.x > 0 else currentX > 0
+                                        val targetAction = if (toRight) swipeRightAction else swipeLeftAction
+                                        coroutineScope.launch {
+                                            animOffsetX.animateTo(if (toRight) cardWidthPx else -cardWidthPx, tween(150))
+                                            executeAction(targetAction)
+                                        }
+                                    } else if (isVerticalSwipe) {
+                                        val toDown = if (abs(velocity.y) > velThreshold) velocity.y > 0 else currentY > 0
+                                        val targetAction = if (toDown) swipeDownAction else swipeUpAction
+                                        coroutineScope.launch {
+                                            animOffsetY.animateTo(if (toDown) cardHeightPx else -cardHeightPx, tween(150))
+                                            executeAction(targetAction)
+                                        }
+                                    } else {
+                                        // Spring back
+                                        coroutineScope.launch {
+                                            launch { animOffsetX.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioLowBouncy)) }
+                                            launch { animOffsetY.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioLowBouncy)) }
+                                        }
+                                    }
+                                } else if (!isLongPressed) {
+                                    val tapTime = System.currentTimeMillis()
+                                    if (tapTime - lastTapTime < 300L) {
+                                        lastTapTime = 0L
+                                        executeAction(doubleTapAction)
+                                    } else {
+                                        lastTapTime = tapTime
+                                        coroutineScope.launch {
+                                            delay(300L)
+                                            if (lastTapTime == tapTime) {
+                                                lastTapTime = 0L
+                                                executeAction(singleTapAction)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = onOpen
-                        )
                         .testTag("heads_up_banner_card")
                 ) {
                     Column(
@@ -1076,6 +1236,21 @@ object HeadsUpOverlayManager {
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
+                                if (isExpanded) {
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = monetPrimary.copy(alpha = 0.15f)
+                                    ) {
+                                        Text(
+                                            text = "EXPANDED",
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = monetPrimary,
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                        )
+                                    }
+                                }
+
                                 Text(
                                     text = "now",
                                     fontSize = 10.sp,
@@ -1153,7 +1328,7 @@ object HeadsUpOverlayManager {
                                             text = currentText,
                                             fontSize = 12.sp,
                                             color = monetOnSurfaceVariant,
-                                            maxLines = 2,
+                                            maxLines = if (isExpanded) 16 else 2,
                                             overflow = TextOverflow.Ellipsis,
                                             lineHeight = 15.sp
                                         )
