@@ -50,7 +50,7 @@
                 android:id="@+id/tv_tile_subtitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
+                android:layout_marginTop="0dp"
                 android:ellipsize="end"
                 android:gravity="center"
                 android:lines="1"

@@ -1,21 +1,31 @@
 package com.example.system
 
+import android.Manifest
 import android.app.NotificationManager
+import android.bluetooth.BluetoothA2dp
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothHeadset
 import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothProfile
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.database.ContentObserver
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.location.LocationManager
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.net.wifi.SupplicantState
+import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.nfc.NfcAdapter
 import android.telephony.TelephonyManager
@@ -25,13 +35,18 @@ import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
+import androidx.core.content.ContextCompat
 import com.example.data.PanelPreferences
 import com.example.model.PrivilegeMode
 import com.example.model.QsTileModel
 import com.example.model.TileState
 import com.example.service.QuickPanelAccessibilityService
+import java.lang.ref.WeakReference
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArraySet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,8 +71,17 @@ class NativeTileManager(
     private val _isWifiEnabled = MutableStateFlow(false)
     val isWifiEnabled: StateFlow<Boolean> = _isWifiEnabled.asStateFlow()
 
+    private val _isWifiConnected = MutableStateFlow(false)
+    val isWifiConnected: StateFlow<Boolean> = _isWifiConnected.asStateFlow()
+
+    private val _wifiSsid = MutableStateFlow<String?>(null)
+    val wifiSsid: StateFlow<String?> = _wifiSsid.asStateFlow()
+
     private val _isBluetoothEnabled = MutableStateFlow(false)
     val isBluetoothEnabled: StateFlow<Boolean> = _isBluetoothEnabled.asStateFlow()
+
+    private val _bluetoothDeviceName = MutableStateFlow<String?>(null)
+    val bluetoothDeviceName: StateFlow<String?> = _bluetoothDeviceName.asStateFlow()
 
     private val _isCellularEnabled = MutableStateFlow(false)
     val isCellularEnabled: StateFlow<Boolean> = _isCellularEnabled.asStateFlow()
@@ -145,10 +169,26 @@ class NativeTileManager(
     private val nfcAdapter = NfcAdapter.getDefaultAdapter(context)
 
     private var torchCameraId: String? = null
+    private val bluetoothProfiles = ConcurrentHashMap<Int, BluetoothProfile>()
+    private val requestedBluetoothProfiles = ConcurrentHashMap.newKeySet<Int>()
+    @Volatile
+    private var cachedCallbackWifiSsid: String? = null
+    @Volatile
+    private var lastAclConnectedDevice: BluetoothDevice? = null
+    @Volatile
+    private var wifiNetworkCallback: ConnectivityManager.NetworkCallback? = null
+    @Volatile
+    private var permissionsAutoGrantAttempted: Boolean = false
 
     init {
         instance = this
+        activeInstances.removeAll { it.get() == null }
+        activeInstances.add(WeakReference(this))
         initTorch()
+        initBluetoothProfileProxies()
+        scope.launch(Dispatchers.IO) {
+            ensureConnectivityPermissionsGranted()
+        }
         refreshAllStates()
         registerObservers()
     }
@@ -156,6 +196,184 @@ class NativeTileManager(
     companion object {
         var instance: NativeTileManager? = null
             private set
+
+        private val activeInstances = CopyOnWriteArraySet<WeakReference<NativeTileManager>>()
+
+        fun notifyAllInstancesPrivilegeOrPermissionsUpdated() {
+            activeInstances.removeAll { it.get() == null }
+            for (ref in activeInstances) {
+                ref.get()?.onPrivilegeOrPermissionsUpdatedInternal()
+            }
+        }
+
+        internal fun cleanSsid(raw: String?): String? {
+            if (raw == null) return null
+            val trimmed = raw.trim().removeSurrounding("\"")
+            if (trimmed.isBlank()) return null
+            if (trimmed.equals("<unknown ssid>", ignoreCase = true)) return null
+            if (trimmed.equals("0x", ignoreCase = true)) return null
+            if (trimmed.equals("null", ignoreCase = true)) return null
+            return trimmed
+        }
+
+        internal fun parseWifiSsidFromShellOutput(output: String?): String? {
+            if (output.isNullOrBlank()) return null
+            val cmdWifiRegex = Regex("""Wifi is connected to\s+"([^"]+)"""", RegexOption.IGNORE_CASE)
+            cmdWifiRegex.find(output)?.groupValues?.getOrNull(1)?.let { match ->
+                cleanSsid(match)?.let { return it }
+            }
+            val quotedSsidRegex = Regex("""\bSSID:\s*"([^"]+)"""")
+            for (m in quotedSsidRegex.findAll(output)) {
+                cleanSsid(m.groupValues.getOrNull(1))?.let { return it }
+            }
+            val unquotedSsidRegex = Regex("""\bSSID:\s*([^,\r\n]+),\s*BSSID:""")
+            for (m in unquotedSsidRegex.findAll(output)) {
+                cleanSsid(m.groupValues.getOrNull(1))?.let { return it }
+            }
+            return null
+        }
+
+        internal fun parseConnectedBluetoothFromShellOutput(output: String?): String? {
+            if (output.isNullOrBlank()) return null
+            // 1. Direct line pattern: MAC [type] DeviceName (Connected)
+            val directConnectedRegex = Regex(
+                """(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}\s+(?:\[[^\]]+\]\s+)?([^\r\n(]+?)\s*\(Connected\)""",
+                RegexOption.IGNORE_CASE
+            )
+            directConnectedRegex.find(output)?.groupValues?.getOrNull(1)?.trim()?.takeIf { it.isNotBlank() }?.let {
+                return it
+            }
+
+            // 2. Extract Bonded devices map (MAC -> Name) and cross-reference active/connected MACs
+            val bondedMap = LinkedHashMap<String, String>()
+            val bondedLineRegex = Regex("""^\s*((?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2})\s+(?:\[[^\]]+\]\s+)?(.+?)\s*$""")
+            var inBondedSection = false
+            for (line in output.lineSequence()) {
+                val trimmed = line.trim()
+                if (trimmed.startsWith("Bonded devices:", ignoreCase = true)) {
+                    inBondedSection = true
+                    continue
+                }
+                if (inBondedSection) {
+                    val m = bondedLineRegex.matchEntire(line)
+                    if (m != null) {
+                        val mac = m.groupValues[1].uppercase()
+                        val rawName = m.groupValues[2]
+                            .replace(Regex("""\((?:Connected|Disconnected)\)""", RegexOption.IGNORE_CASE), "")
+                            .trim()
+                        if (rawName.isNotBlank()) {
+                            bondedMap[mac] = rawName
+                        }
+                    } else if (trimmed.isNotEmpty() && !line.startsWith("  ")) {
+                        inBondedSection = false
+                    }
+                }
+            }
+
+            if (bondedMap.isNotEmpty()) {
+                // Active device reference (e.g. mActiveDevice: AA:BB:CC:DD:EE:FF)
+                val activeDeviceRegex = Regex("""mActiveDevice:\s*((?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2})""")
+                for (m in activeDeviceRegex.findAll(output)) {
+                    val mac = m.groupValues[1].uppercase()
+                    bondedMap[mac]?.let { return it }
+                }
+                // StateMachine block in Connected state
+                val stateMachineRegex = Regex(
+                    """((?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2})[^\r\n]*(?:\r?\n\s+[^\r\n]+){0,8}?\b(?:CurState|mCurrentState|state)=Connected\b""",
+                    RegexOption.IGNORE_CASE
+                )
+                for (m in stateMachineRegex.findAll(output)) {
+                    val mac = m.groupValues[1].uppercase()
+                    bondedMap[mac]?.let { return it }
+                }
+            }
+            return null
+        }
+    }
+
+    fun onPrivilegeOrPermissionsUpdated() {
+        notifyAllInstancesPrivilegeOrPermissionsUpdated()
+    }
+
+    private fun onPrivilegeOrPermissionsUpdatedInternal() {
+        permissionsAutoGrantAttempted = false
+        scope.launch(Dispatchers.IO) {
+            ensureConnectivityPermissionsGranted()
+            handler.post {
+                registerWifiNetworkCallback()
+                initBluetoothProfileProxies()
+            }
+            refreshAllStates()
+        }
+    }
+
+    private fun hasConnectivityPermissions(): Boolean {
+        val fineGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val btGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+        return fineGranted && btGranted
+    }
+
+    private fun ensureConnectivityPermissionsGranted(): Boolean {
+        if (hasConnectivityPermissions()) return true
+        if (permissionsAutoGrantAttempted) return false
+        if (!privilegeEngine.isRootGranted() && !privilegeEngine.isShizukuGranted()) return false
+        permissionsAutoGrantAttempted = true
+        val pkg = context.packageName
+        try {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                privilegeEngine.executeShellWithOutput("pm grant $pkg android.permission.ACCESS_COARSE_LOCATION")
+            }
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                privilegeEngine.executeShellWithOutput("pm grant $pkg android.permission.ACCESS_FINE_LOCATION")
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED
+            ) {
+                privilegeEngine.executeShellWithOutput("pm grant $pkg android.permission.BLUETOOTH_CONNECT")
+            }
+        } catch (_: Throwable) {}
+        return hasConnectivityPermissions()
+    }
+
+    private fun initBluetoothProfileProxies() {
+        val adapter = try { bluetoothManager?.adapter } catch (_: Throwable) { null } ?: return
+        val profileIds = listOf(
+            BluetoothProfile.A2DP,
+            BluetoothProfile.HEADSET,
+            4,  // BluetoothProfile.HID_HOST
+            21, // BluetoothProfile.HEARING_AID
+            22  // BluetoothProfile.LE_AUDIO
+        )
+        for (profileId in profileIds) {
+            if (bluetoothProfiles.containsKey(profileId) || !requestedBluetoothProfiles.add(profileId)) continue
+            try {
+                adapter.getProfileProxy(
+                    context.applicationContext,
+                    object : BluetoothProfile.ServiceListener {
+                        override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
+                            bluetoothProfiles[profile] = proxy
+                            scope.launch(Dispatchers.IO) {
+                                val btOn = try { bluetoothManager?.adapter?.isEnabled == true } catch (_: Throwable) { false }
+                                _isBluetoothEnabled.value = btOn
+                                _bluetoothDeviceName.value = if (btOn) resolveConnectedBluetoothDevice() else null
+                            }
+                        }
+
+                        override fun onServiceDisconnected(profile: Int) {
+                            bluetoothProfiles.remove(profile)
+                            requestedBluetoothProfiles.remove(profile)
+                        }
+                    },
+                    profileId
+                )
+            } catch (_: Throwable) {
+                requestedBluetoothProfiles.remove(profileId)
+            }
+        }
     }
 
     private fun initTorch() {
@@ -220,15 +438,226 @@ class NativeTileManager(
         }
     }
 
+    fun checkWifiConnected(): Boolean {
+        try {
+            connectivityManager?.let { cm ->
+                for (network in cm.allNetworks) {
+                    val caps = cm.getNetworkCapabilities(network) ?: continue
+                    if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                        return true
+                    }
+                }
+            }
+        } catch (_: Throwable) {}
+        try {
+            val info = wifiManager?.connectionInfo
+            if (info != null && info.networkId != -1 && info.supplicantState == SupplicantState.COMPLETED) {
+                return true
+            }
+        } catch (_: Throwable) {}
+        return false
+    }
+
+    @Suppress("DEPRECATION")
+    fun resolveWifiSsid(): String? {
+        val isOffMainThread = Looper.myLooper() != Looper.getMainLooper()
+        if (isOffMainThread && !hasConnectivityPermissions()) {
+            ensureConnectivityPermissionsGranted()
+        }
+
+        // Tier 1: Cached callback SSID (from NetworkCallback with FLAG_INCLUDE_LOCATION_INFO) & ConnectivityManager transportInfo
+        if (checkWifiConnected()) {
+            cleanSsid(cachedCallbackWifiSsid)?.let { return it }
+        }
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                connectivityManager?.let { cm ->
+                    for (network in cm.allNetworks) {
+                        val caps = cm.getNetworkCapabilities(network) ?: continue
+                        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                            val wifiInfo = caps.transportInfo as? WifiInfo
+                            cleanSsid(wifiInfo?.ssid)?.let { return it }
+                        }
+                    }
+                }
+            }
+        } catch (_: Throwable) {}
+
+        // Tier 2: WifiManager connectionInfo + configuredNetworks lookup by networkId + NetworkInfo.extraInfo
+        try {
+            val connectionInfo = wifiManager?.connectionInfo
+            cleanSsid(connectionInfo?.ssid)?.let { return it }
+            val netId = connectionInfo?.networkId ?: -1
+            if (netId != -1) {
+                try {
+                    val configured = wifiManager?.configuredNetworks
+                    val match = configured?.firstOrNull { it.networkId == netId }
+                    cleanSsid(match?.SSID)?.let { return it }
+                } catch (_: SecurityException) {
+                } catch (_: Throwable) {}
+            }
+        } catch (_: Throwable) {}
+
+        try {
+            val extra = connectivityManager?.getNetworkInfo(ConnectivityManager.TYPE_WIFI)?.extraInfo
+            cleanSsid(extra)?.let { return it }
+        } catch (_: Throwable) {}
+
+        // Tier 3: Privileged shell fallback (works even when device GPS/Location toggle is OFF)
+        if (isOffMainThread && (privilegeEngine.isRootGranted() || privilegeEngine.isShizukuGranted())) {
+            try {
+                val cmdWifiOut = privilegeEngine.executeShellWithOutput("cmd wifi status")
+                parseWifiSsidFromShellOutput(cmdWifiOut)?.let { return it }
+
+                val dumpsysOut = privilegeEngine.executeShellWithOutput("dumpsys wifi | grep -m 8 'SSID:'")
+                parseWifiSsidFromShellOutput(dumpsysOut)?.let { return it }
+            } catch (_: Throwable) {}
+        }
+
+        return null
+    }
+
+    private fun getBluetoothDeviceDisplayName(device: BluetoothDevice?): String? {
+        if (device == null) return null
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val alias = device.alias
+                if (!alias.isNullOrBlank()) return alias.trim()
+            }
+        } catch (_: SecurityException) {
+        } catch (_: Throwable) {}
+        return try {
+            val name = device.name
+            if (!name.isNullOrBlank()) name.trim() else null
+        } catch (_: SecurityException) {
+            null
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    fun resolveConnectedBluetoothDevice(): String? {
+        val isOffMainThread = Looper.myLooper() != Looper.getMainLooper()
+        if (isOffMainThread && !hasConnectivityPermissions()) {
+            ensureConnectivityPermissionsGranted()
+        }
+
+        val adapter = try { bluetoothManager?.adapter } catch (_: Throwable) { null } ?: return null
+        val enabled = try { adapter.isEnabled } catch (_: Throwable) { false }
+        if (!enabled) return null
+
+        // Ensure profile proxies are initialized if not yet bound
+        if (bluetoothProfiles.isEmpty()) {
+            handler.post { initBluetoothProfileProxies() }
+        }
+
+        // Tier 1: Connected BluetoothProfile proxies & BluetoothManager GATT/GATT_SERVER
+        for (proxy in bluetoothProfiles.values) {
+            try {
+                val devices = proxy.connectedDevices
+                if (!devices.isNullOrEmpty()) {
+                    for (dev in devices) {
+                        getBluetoothDeviceDisplayName(dev)?.let { return it }
+                    }
+                }
+            } catch (_: SecurityException) {
+            } catch (_: Throwable) {}
+        }
+        for (gattProfile in intArrayOf(BluetoothProfile.GATT, BluetoothProfile.GATT_SERVER)) {
+            try {
+                val gattDevices = bluetoothManager?.getConnectedDevices(gattProfile)
+                if (!gattDevices.isNullOrEmpty()) {
+                    for (dev in gattDevices) {
+                        getBluetoothDeviceDisplayName(dev)?.let { return it }
+                    }
+                }
+            } catch (_: SecurityException) {
+            } catch (_: Throwable) {}
+        }
+
+        // Tier 2: Zero-permission AudioManager active Bluetooth audio output/input routing
+        try {
+            audioManager?.let { am ->
+                val devices = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS) +
+                    am.getDevices(AudioManager.GET_DEVICES_INPUTS)
+                for (info in devices) {
+                    val isBtAudio = info.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+                        info.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                        info.type == AudioDeviceInfo.TYPE_HEARING_AID ||
+                        info.type == 26 || // TYPE_BLE_HEADSET
+                        info.type == 27 || // TYPE_BLE_SPEAKER
+                        info.type == 30    // TYPE_BLE_BROADCAST
+                    if (isBtAudio) {
+                        val prodName = info.productName?.toString()?.trim()
+                        if (!prodName.isNullOrBlank() && !prodName.equals(Build.MODEL, ignoreCase = true)) {
+                            return prodName
+                        }
+                    }
+                }
+            }
+        } catch (_: Throwable) {}
+
+        // Tier 3: Bonded devices reflection `isConnected` + recent ACL connected device
+        try {
+            val bonded = adapter.bondedDevices
+            if (!bonded.isNullOrEmpty()) {
+                for (device in bonded) {
+                    try {
+                        val isConnectedMethod = device.javaClass.getMethod("isConnected")
+                        if (isConnectedMethod.invoke(device) == true) {
+                            getBluetoothDeviceDisplayName(device)?.let { return it }
+                        }
+                    } catch (_: Throwable) {}
+                }
+            }
+        } catch (_: SecurityException) {
+        } catch (_: Throwable) {}
+
+        lastAclConnectedDevice?.let { aclDev ->
+            try {
+                val isConnectedMethod = aclDev.javaClass.getMethod("isConnected")
+                if (isConnectedMethod.invoke(aclDev) == true) {
+                    getBluetoothDeviceDisplayName(aclDev)?.let { return it }
+                }
+            } catch (_: Throwable) {
+                getBluetoothDeviceDisplayName(aclDev)?.let { return it }
+            }
+        }
+
+        // Tier 4: Privileged shell fallback (`dumpsys bluetooth_manager`)
+        if (isOffMainThread && (privilegeEngine.isRootGranted() || privilegeEngine.isShizukuGranted())) {
+            try {
+                val btDump = privilegeEngine.executeShellWithOutput("dumpsys bluetooth_manager")
+                parseConnectedBluetoothFromShellOutput(btDump)?.let { return it }
+            } catch (_: Throwable) {}
+        }
+
+        return null
+    }
+
+    @Volatile
+    private var pendingRefreshAfterDrag: Boolean = false
+
     @Volatile
     var isDraggingShade: Boolean = false
+        set(value) {
+            val wasDragging = field
+            field = value
+            if (wasDragging && !value && pendingRefreshAfterDrag) {
+                pendingRefreshAfterDrag = false
+                refreshAllStates()
+            }
+        }
 
     /**
      * Automatic Real-Time State Mirroring:
      * Reflects live system states into StateFlows so the UI mirrors stock SystemUI immediately.
      */
     fun refreshAllStates() {
-        if (isDraggingShade) return
+        if (isDraggingShade) {
+            pendingRefreshAfterDrag = true
+            return
+        }
         scope.launch(Dispatchers.IO) {
             val wifi = wifiManager?.isWifiEnabled == true
             val bt = bluetoothManager?.adapter?.isEnabled == true
@@ -275,8 +704,15 @@ class NativeTileManager(
                 curNotif = am.getStreamVolume(AudioManager.STREAM_NOTIFICATION).toFloat() / maxNotif
             }
 
+            val wifiConnected = if (wifi) checkWifiConnected() else false
+            val resolvedWifiSsid = if (wifi) resolveWifiSsid() else null
+            val resolvedBtName = if (bt) resolveConnectedBluetoothDevice() else null
+
             _isWifiEnabled.value = wifi
+            _isWifiConnected.value = wifiConnected || !resolvedWifiSsid.isNullOrBlank()
+            _wifiSsid.value = resolvedWifiSsid
             _isBluetoothEnabled.value = bt
+            _bluetoothDeviceName.value = resolvedBtName
             _isCellularEnabled.value = mobile
             _isHotspotEnabled.value = hotspot
             _isAutoRotateEnabled.value = autoRotate
@@ -362,24 +798,44 @@ class NativeTileManager(
                 true,
                 object : ContentObserver(handler) {
                     override fun onChange(selfChange: Boolean) {
-                        _isWifiEnabled.value = wifiManager?.isWifiEnabled == true
+                        val enabled = wifiManager?.isWifiEnabled == true
+                        _isWifiEnabled.value = enabled
+                        if (!enabled) {
+                            _isWifiConnected.value = false
+                            _wifiSsid.value = null
+                            cachedCallbackWifiSsid = null
+                        } else {
+                            scope.launch(Dispatchers.IO) {
+                                val ssid = resolveWifiSsid()
+                                _isWifiConnected.value = checkWifiConnected() || !ssid.isNullOrBlank()
+                                _wifiSsid.value = ssid
+                            }
+                        }
                     }
                 }
             )
         } catch (e: Exception) {}
 
-        // Observer for Location Setting
+        // Observer for Location Setting (turning Location ON unlocks SSID reading on Android 10+)
         try {
             contentResolver.registerContentObserver(
                 Settings.Secure.getUriFor("location_mode"),
                 true,
                 object : ContentObserver(handler) {
                     override fun onChange(selfChange: Boolean) {
-                        _isLocationEnabled.value = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        val locEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                             locationManager?.isLocationEnabled == true
                         } else {
                             locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true ||
                             locationManager?.isProviderEnabled(LocationManager.NETWORK_PROVIDER) == true
+                        }
+                        _isLocationEnabled.value = locEnabled
+                        if (locEnabled && _isWifiEnabled.value) {
+                            scope.launch(Dispatchers.IO) {
+                                val ssid = resolveWifiSsid()
+                                _isWifiConnected.value = checkWifiConnected() || !ssid.isNullOrBlank()
+                                _wifiSsid.value = ssid
+                            }
                         }
                     }
                 }
@@ -490,34 +946,57 @@ class NativeTileManager(
             )
         } catch (e: Exception) {}
 
-        // Network Callback
+        // Network Callbacks (Wi-Fi with location info for SSID + Cellular)
+        registerWifiNetworkCallback()
         connectivityManager?.let { cm ->
-            val request = NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .build()
-            cm.registerNetworkCallback(request, object : ConnectivityManager.NetworkCallback() {
-                override fun onAvailable(network: Network) {
-                    val caps = cm.getNetworkCapabilities(network)
-                    if (caps != null) {
-                        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-                            _isWifiEnabled.value = true
-                        }
-                        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
-                            _isCellularEnabled.value = true
-                        }
+            try {
+                val cellRequest = NetworkRequest.Builder()
+                    .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    .build()
+                cm.registerNetworkCallback(cellRequest, object : ConnectivityManager.NetworkCallback() {
+                    override fun onAvailable(network: Network) {
+                        _isCellularEnabled.value = true
+                    }
+                    override fun onLost(network: Network) {
+                        _isCellularEnabled.value = isMobileDataActive(context)
+                    }
+                })
+            } catch (_: Throwable) {}
+        }
+
+        // Zero-permission AudioDeviceCallback for instant Bluetooth audio device name updates
+        try {
+            audioManager?.registerAudioDeviceCallback(object : AudioDeviceCallback() {
+                override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) {
+                    scope.launch(Dispatchers.IO) {
+                        val btOn = try { bluetoothManager?.adapter?.isEnabled == true } catch (_: Throwable) { false }
+                        _isBluetoothEnabled.value = btOn
+                        _bluetoothDeviceName.value = if (btOn) resolveConnectedBluetoothDevice() else null
                     }
                 }
-                override fun onLost(network: Network) {
-                    _isWifiEnabled.value = wifiManager?.isWifiEnabled == true
+
+                override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) {
+                    scope.launch(Dispatchers.IO) {
+                        val btOn = try { bluetoothManager?.adapter?.isEnabled == true } catch (_: Throwable) { false }
+                        _isBluetoothEnabled.value = btOn
+                        _bluetoothDeviceName.value = if (btOn) resolveConnectedBluetoothDevice() else null
+                    }
                 }
-            })
-        }
+            }, handler)
+        } catch (_: Throwable) {}
 
         // Comprehensive BroadcastReceiver for real-time system state synchronization
         val filter = IntentFilter().apply {
             addAction(WifiManager.WIFI_STATE_CHANGED_ACTION)
             addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION)
+            addAction(WifiManager.SUPPLICANT_STATE_CHANGED_ACTION)
             addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
+            addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)
+            addAction(BluetoothDevice.ACTION_ACL_CONNECTED)
+            addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
+            addAction(BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED)
+            addAction(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED)
             addAction(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED)
             addAction(NotificationManager.ACTION_NOTIFICATION_POLICY_CHANGED)
             addAction(LocationManager.PROVIDERS_CHANGED_ACTION)
@@ -539,23 +1018,90 @@ class NativeTileManager(
                         val state = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, WifiManager.WIFI_STATE_UNKNOWN)
                         if (state == WifiManager.WIFI_STATE_ENABLED) {
                             _isWifiEnabled.value = true
+                            scope.launch(Dispatchers.IO) {
+                                val ssid = resolveWifiSsid()
+                                _isWifiConnected.value = checkWifiConnected() || !ssid.isNullOrBlank()
+                                _wifiSsid.value = ssid
+                            }
                         } else if (state == WifiManager.WIFI_STATE_DISABLED) {
                             _isWifiEnabled.value = false
+                            _isWifiConnected.value = false
+                            _wifiSsid.value = null
+                            cachedCallbackWifiSsid = null
                         } else {
-                            _isWifiEnabled.value = wifiManager?.isWifiEnabled == true
+                            val on = wifiManager?.isWifiEnabled == true
+                            _isWifiEnabled.value = on
+                            if (!on) {
+                                _isWifiConnected.value = false
+                                _wifiSsid.value = null
+                                cachedCallbackWifiSsid = null
+                            } else {
+                                scope.launch(Dispatchers.IO) {
+                                    val ssid = resolveWifiSsid()
+                                    _isWifiConnected.value = checkWifiConnected() || !ssid.isNullOrBlank()
+                                    _wifiSsid.value = ssid
+                                }
+                            }
                         }
                     }
-                    WifiManager.NETWORK_STATE_CHANGED_ACTION -> {
-                        _isWifiEnabled.value = wifiManager?.isWifiEnabled == true
-                    }
-                    BluetoothAdapter.ACTION_STATE_CHANGED -> {
-                        val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)
-                        if (state == BluetoothAdapter.STATE_ON) {
-                            _isBluetoothEnabled.value = true
-                        } else if (state == BluetoothAdapter.STATE_OFF) {
-                            _isBluetoothEnabled.value = false
+                    WifiManager.NETWORK_STATE_CHANGED_ACTION,
+                    WifiManager.SUPPLICANT_STATE_CHANGED_ACTION -> {
+                        val on = wifiManager?.isWifiEnabled == true
+                        _isWifiEnabled.value = on
+                        if (!on) {
+                            _isWifiConnected.value = false
+                            _wifiSsid.value = null
+                            cachedCallbackWifiSsid = null
                         } else {
-                            _isBluetoothEnabled.value = bluetoothManager?.adapter?.isEnabled == true
+                            @Suppress("DEPRECATION")
+                            val wifiInfo = intent.getParcelableExtra<WifiInfo>(WifiManager.EXTRA_WIFI_INFO)
+                            cleanSsid(wifiInfo?.ssid)?.let { directSsid ->
+                                cachedCallbackWifiSsid = directSsid
+                                _isWifiConnected.value = true
+                                _wifiSsid.value = directSsid
+                            }
+                            scope.launch(Dispatchers.IO) {
+                                val ssid = resolveWifiSsid()
+                                _isWifiConnected.value = checkWifiConnected() || !ssid.isNullOrBlank()
+                                _wifiSsid.value = ssid
+                                delay(800)
+                                if (_isWifiEnabled.value) {
+                                    val delayedSsid = resolveWifiSsid()
+                                    _isWifiConnected.value = checkWifiConnected() || !delayedSsid.isNullOrBlank()
+                                    _wifiSsid.value = delayedSsid
+                                }
+                            }
+                        }
+                    }
+                    BluetoothAdapter.ACTION_STATE_CHANGED,
+                    BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED,
+                    BluetoothDevice.ACTION_ACL_CONNECTED,
+                    BluetoothDevice.ACTION_ACL_DISCONNECTED,
+                    BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED,
+                    BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED -> {
+                        @Suppress("DEPRECATION")
+                        val extraDevice = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
+                        if (intent.action == BluetoothDevice.ACTION_ACL_CONNECTED && extraDevice != null) {
+                            lastAclConnectedDevice = extraDevice
+                        } else if (intent.action == BluetoothDevice.ACTION_ACL_DISCONNECTED && extraDevice != null) {
+                            if (lastAclConnectedDevice?.address == extraDevice.address) {
+                                lastAclConnectedDevice = null
+                            }
+                        }
+                        val on = try { bluetoothManager?.adapter?.isEnabled == true } catch (_: Throwable) { false }
+                        _isBluetoothEnabled.value = on
+                        if (!on) {
+                            lastAclConnectedDevice = null
+                            _bluetoothDeviceName.value = null
+                        } else {
+                            initBluetoothProfileProxies()
+                            scope.launch(Dispatchers.IO) {
+                                _bluetoothDeviceName.value = resolveConnectedBluetoothDevice()
+                                delay(800)
+                                if (_isBluetoothEnabled.value) {
+                                    _bluetoothDeviceName.value = resolveConnectedBluetoothDevice()
+                                }
+                            }
                         }
                     }
                     NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED,
@@ -565,11 +1111,19 @@ class NativeTileManager(
                     }
                     LocationManager.PROVIDERS_CHANGED_ACTION,
                     "android.location.MODE_CHANGED" -> {
-                        _isLocationEnabled.value = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        val locOn = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                             locationManager?.isLocationEnabled == true
                         } else {
                             locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true ||
                             locationManager?.isProviderEnabled(LocationManager.NETWORK_PROVIDER) == true
+                        }
+                        _isLocationEnabled.value = locOn
+                        if (locOn && _isWifiEnabled.value) {
+                            scope.launch(Dispatchers.IO) {
+                                val ssid = resolveWifiSsid()
+                                _isWifiConnected.value = checkWifiConnected() || !ssid.isNullOrBlank()
+                                _wifiSsid.value = ssid
+                            }
                         }
                     }
                     PowerManager.ACTION_POWER_SAVE_MODE_CHANGED -> {
@@ -606,6 +1160,116 @@ class NativeTileManager(
                 }
             }
         }, filter)
+    }
+
+    private fun registerWifiNetworkCallback() {
+        val cm = connectivityManager ?: return
+        wifiNetworkCallback?.let { prev ->
+            try {
+                cm.unregisterNetworkCallback(prev)
+            } catch (_: Throwable) {}
+        }
+        val request = NetworkRequest.Builder()
+            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+            .build()
+
+        val callback = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            object : ConnectivityManager.NetworkCallback(FLAG_INCLUDE_LOCATION_INFO) {
+                override fun onAvailable(network: Network) {
+                    handleWifiNetworkAvailable(cm, network, null)
+                }
+
+                override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+                    handleWifiNetworkAvailable(cm, network, networkCapabilities)
+                }
+
+                override fun onLost(network: Network) {
+                    handleWifiNetworkLost()
+                }
+            }
+        } else {
+            object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) {
+                    handleWifiNetworkAvailable(cm, network, null)
+                }
+
+                override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+                    handleWifiNetworkAvailable(cm, network, networkCapabilities)
+                }
+
+                override fun onLost(network: Network) {
+                    handleWifiNetworkLost()
+                }
+            }
+        }
+
+        try {
+            cm.registerNetworkCallback(request, callback)
+            wifiNetworkCallback = callback
+        } catch (_: Throwable) {
+            // Fallback without flags if OEM restricts FLAG_INCLUDE_LOCATION_INFO
+            try {
+                val fallbackCb = object : ConnectivityManager.NetworkCallback() {
+                    override fun onAvailable(network: Network) {
+                        handleWifiNetworkAvailable(cm, network, null)
+                    }
+
+                    override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+                        handleWifiNetworkAvailable(cm, network, networkCapabilities)
+                    }
+
+                    override fun onLost(network: Network) {
+                        handleWifiNetworkLost()
+                    }
+                }
+                cm.registerNetworkCallback(request, fallbackCb)
+                wifiNetworkCallback = fallbackCb
+            } catch (_: Throwable) {}
+        }
+    }
+
+    private fun handleWifiNetworkAvailable(
+        cm: ConnectivityManager,
+        network: Network,
+        providedCaps: NetworkCapabilities?
+    ) {
+        _isWifiEnabled.value = true
+        _isWifiConnected.value = true
+        val caps = providedCaps ?: try { cm.getNetworkCapabilities(network) } catch (_: Throwable) { null }
+        val directSsid = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            cleanSsid((caps?.transportInfo as? WifiInfo)?.ssid)
+        } else {
+            null
+        }
+        if (directSsid != null) {
+            cachedCallbackWifiSsid = directSsid
+            _wifiSsid.value = directSsid
+        } else {
+            scope.launch(Dispatchers.IO) {
+                val resolved = resolveWifiSsid()
+                if (resolved != null) {
+                    cachedCallbackWifiSsid = resolved
+                }
+                _wifiSsid.value = resolved
+            }
+        }
+    }
+
+    private fun handleWifiNetworkLost() {
+        cachedCallbackWifiSsid = null
+        val enabled = wifiManager?.isWifiEnabled == true
+        _isWifiEnabled.value = enabled
+        if (!enabled) {
+            _isWifiConnected.value = false
+            _wifiSsid.value = null
+        } else {
+            scope.launch(Dispatchers.IO) {
+                val stillConnected = checkWifiConnected()
+                val ssid = if (stillConnected) resolveWifiSsid() else null
+                _isWifiConnected.value = stillConnected || !ssid.isNullOrBlank()
+                _wifiSsid.value = ssid
+            }
+        }
     }
 
     fun getTileActiveState(tileId: String): Boolean {
@@ -873,6 +1537,11 @@ class NativeTileManager(
     fun toggleWifi() {
         val target = !_isWifiEnabled.value
         _isWifiEnabled.value = target
+        if (!target) {
+            _isWifiConnected.value = false
+            _wifiSsid.value = null
+            cachedCallbackWifiSsid = null
+        }
         scope.launch {
             val cmd = if (target) "svc wifi enable" else "svc wifi disable"
             val fallback = Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY)
@@ -883,6 +1552,10 @@ class NativeTileManager(
     fun toggleBluetooth() {
         val target = !_isBluetoothEnabled.value
         _isBluetoothEnabled.value = target
+        if (!target) {
+            lastAclConnectedDevice = null
+            _bluetoothDeviceName.value = null
+        }
         scope.launch {
             val cmd = if (target) "cmd bluetooth_manager enable" else "cmd bluetooth_manager disable"
             val fallback = Intent(Settings.ACTION_BLUETOOTH_SETTINGS)

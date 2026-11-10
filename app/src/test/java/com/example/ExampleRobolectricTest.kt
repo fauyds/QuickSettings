@@ -669,6 +669,129 @@ class ExampleRobolectricTest {
         engine.refreshPermissions()
         org.junit.Assert.assertTrue("Root state should remain granted after refreshPermissions", engine.isRootAvailable.value)
     }
+
+    @Test
+    fun `verify wifi ssid and bluetooth connected device parsing helpers`() {
+        org.junit.Assert.assertNull(com.example.system.NativeTileManager.cleanSsid("<unknown ssid>"))
+        org.junit.Assert.assertNull(com.example.system.NativeTileManager.cleanSsid("\"\""))
+        org.junit.Assert.assertNull(com.example.system.NativeTileManager.cleanSsid("0x"))
+        assertEquals("HomeFiber_5G", com.example.system.NativeTileManager.cleanSsid("\"HomeFiber_5G\""))
+
+        val cmdWifiOutput = """
+            Wifi is enabled
+            Wifi is connected to "Pixel_Hotspot_6GHz"
+            WifiInfo: SSID: "Pixel_Hotspot_6GHz", BSSID: aa:bb:cc:dd:ee:ff
+        """.trimIndent()
+        assertEquals("Pixel_Hotspot_6GHz", com.example.system.NativeTileManager.parseWifiSsidFromShellOutput(cmdWifiOutput))
+
+        val dumpsysWifiOutput = "mWifiInfo SSID: Office_Guest, BSSID: 11:22:33:44:55:66, MAC: 02:00:00:00:00:00"
+        assertEquals("Office_Guest", com.example.system.NativeTileManager.parseWifiSsidFromShellOutput(dumpsysWifiOutput))
+
+        val btDumpDirect = """
+            Bonded devices:
+              AA:BB:CC:DD:EE:01 [BR/EDR] Galaxy Buds2 Pro (Connected)
+        """.trimIndent()
+        assertEquals("Galaxy Buds2 Pro", com.example.system.NativeTileManager.parseConnectedBluetoothFromShellOutput(btDumpDirect))
+
+        val btDumpStateMachine = """
+            Bonded devices:
+              11:22:33:44:55:66 [ DUAL ] Sony WH-1000XM5
+              AA:BB:CC:DD:EE:FF [ LE ] Keychron K3
+            A2dpService:
+              mActiveDevice: 11:22:33:44:55:66
+        """.trimIndent()
+        assertEquals("Sony WH-1000XM5", com.example.system.NativeTileManager.parseConnectedBluetoothFromShellOutput(btDumpStateMachine))
+    }
+
+    @Test
+    fun `verify wifi and bluetooth subtitles and Android 6 label renaming`() {
+        for (style in com.example.data.QsPanelStyle.values()) {
+            // Wi-Fi replaces "Connected" with Wi-Fi name when connected, "On" when disconnected, "Off" when disabled
+            assertEquals(
+                "MyWiFi_5G",
+                com.example.system.TileRegistry.resolveWifiSubtitle(
+                    wifiOn = true,
+                    wifiConnected = true,
+                    wifiSsidName = "\"MyWiFi_5G\"",
+                    panelStyle = style
+                )
+            )
+            assertEquals(
+                "On",
+                com.example.system.TileRegistry.resolveWifiSubtitle(
+                    wifiOn = true,
+                    wifiConnected = false,
+                    wifiSsidName = null,
+                    panelStyle = style
+                )
+            )
+            assertEquals(
+                "Off",
+                com.example.system.TileRegistry.resolveWifiSubtitle(
+                    wifiOn = false,
+                    wifiConnected = false,
+                    wifiSsidName = "MyWiFi_5G",
+                    panelStyle = style
+                )
+            )
+
+            // Bluetooth replaces "On" with connected Bluetooth device name, "On" when no device connected, "Off" when disabled
+            assertEquals(
+                "Pixel Buds Pro",
+                com.example.system.TileRegistry.resolveBluetoothSubtitle(
+                    btOn = true,
+                    btDeviceName = "Pixel Buds Pro",
+                    panelStyle = style
+                )
+            )
+            assertEquals(
+                "On",
+                com.example.system.TileRegistry.resolveBluetoothSubtitle(
+                    btOn = true,
+                    btDeviceName = null,
+                    panelStyle = style
+                )
+            )
+            assertEquals(
+                "Off",
+                com.example.system.TileRegistry.resolveBluetoothSubtitle(
+                    btOn = false,
+                    btDeviceName = "Pixel Buds Pro",
+                    panelStyle = style
+                )
+            )
+        }
+
+        // Android 6 (Marshmallow) label renaming (no subtitle, single label renamed when enabled)
+        val wifiOffTile = com.example.model.QsTileModel(
+            id = "wifi",
+            label = "Internet",
+            subtitle = "Off",
+            state = TileState.INACTIVE,
+            category = TileCategory.CONNECTIVITY
+        )
+        val wifiOnDisconnectedTile = wifiOffTile.copy(state = TileState.ACTIVE, subtitle = "On")
+        val wifiOnConnectedTile = wifiOffTile.copy(state = TileState.ACTIVE, subtitle = "MyWiFi_5G")
+
+        assertEquals("Internet", com.example.system.TileRegistry.resolveMarshmallowTileLabel(wifiOffTile, wifiSsidName = "MyWiFi_5G"))
+        assertEquals("Wi-Fi", com.example.system.TileRegistry.resolveMarshmallowTileLabel(wifiOnDisconnectedTile, wifiSsidName = null))
+        assertEquals("MyWiFi_5G", com.example.system.TileRegistry.resolveMarshmallowTileLabel(wifiOnConnectedTile, wifiSsidName = "\"MyWiFi_5G\""))
+
+        val btOffTile = com.example.model.QsTileModel(
+            id = "bluetooth",
+            label = "Bluetooth",
+            subtitle = "Off",
+            state = TileState.INACTIVE,
+            category = TileCategory.CONNECTIVITY
+        )
+        val btOnDisconnectedTile = btOffTile.copy(state = TileState.ACTIVE, subtitle = "On")
+        val btOnConnectedTile = btOffTile.copy(state = TileState.ACTIVE, subtitle = "Pixel Buds Pro")
+
+        assertEquals("Bluetooth", com.example.system.TileRegistry.resolveMarshmallowTileLabel(btOffTile, btDeviceName = "Pixel Buds Pro"))
+        assertEquals("Bluetooth", com.example.system.TileRegistry.resolveMarshmallowTileLabel(btOnDisconnectedTile, btDeviceName = null))
+        assertEquals("Pixel Buds Pro", com.example.system.TileRegistry.resolveMarshmallowTileLabel(btOnConnectedTile, btDeviceName = "Pixel Buds Pro"))
+    }
 }
+
 
 

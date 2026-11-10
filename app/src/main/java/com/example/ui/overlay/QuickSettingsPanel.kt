@@ -1544,14 +1544,14 @@ fun KitKatEditTileCard(
             )
 
             if (tile.subtitle.isNotBlank() && tile.subtitle != tile.label) {
-                Spacer(modifier = Modifier.height(1.dp))
                 Text(
                     text = tile.subtitle.uppercase(),
                     fontSize = 10.sp,
                     color = subCol,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.offset(y = (-1).dp)
                 )
             }
         }
@@ -6771,6 +6771,7 @@ fun CircularQsTile(
     onClick: () -> Unit = {},
     onLongClick: () -> Unit = {}
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val haptic = LocalHapticFeedback.current
 
     val qqsTileSizeValue by PanelPreferences.qqsTileSize.collectAsState()
@@ -6999,6 +7000,9 @@ fun CircularQsTile(
                 overflow = TextOverflow.Ellipsis
             )
 
+            val isMarshmallowStyle = PanelPreferences.isAndroidMarshmallowStyle(context)
+            val subtitleOffset = if (isMarshmallowStyle) 1.dp else (-1.5).dp
+
             Text(
                 text = tile.subtitle,
                 fontSize = qsTileSubtitleFontSize.sp,
@@ -7006,7 +7010,7 @@ fun CircularQsTile(
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.offset(y = 1.dp),
+                modifier = Modifier.offset(y = subtitleOffset),
                 style = androidx.compose.ui.text.TextStyle(
                     platformStyle = androidx.compose.ui.text.PlatformTextStyle(
                         includeFontPadding = false
@@ -7479,6 +7483,17 @@ private fun MarshmallowTileItem(
     val isDark = LocalIsDarkTheme.current
     val isActive = tile.state == TileState.ACTIVE
 
+    val nativeMgr = com.example.system.NativeTileManager.instance
+    val liveWifiSsid by (nativeMgr?.wifiSsid ?: remember { kotlinx.coroutines.flow.MutableStateFlow<String?>(null) }).collectAsState()
+    val liveBtName by (nativeMgr?.bluetoothDeviceName ?: remember { kotlinx.coroutines.flow.MutableStateFlow<String?>(null) }).collectAsState()
+    val displayLabel = remember(tile.id, tile.label, tile.subtitle, tile.state, liveWifiSsid, liveBtName) {
+        com.example.system.TileRegistry.resolveMarshmallowTileLabel(
+            tile = tile,
+            wifiSsidName = liveWifiSsid,
+            btDeviceName = liveBtName
+        )
+    }
+
     val enabledTileShapeId by PanelPreferences.enabledTileShapeId.collectAsState()
     val disabledTileShapeId by PanelPreferences.disabledTileShapeId.collectAsState()
     val enableLegacyTileShapes by PanelPreferences.enableLegacyTileShapes.collectAsState()
@@ -7531,7 +7546,7 @@ private fun MarshmallowTileItem(
             )
         }
         if (isTopTile) {
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(3.dp))
             HorizontalDivider(
                 modifier = Modifier
                     .fillMaxWidth(0.55f)
@@ -7542,27 +7557,30 @@ private fun MarshmallowTileItem(
             Spacer(modifier = Modifier.height(2.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(horizontal = 4.dp)
             ) {
                 Text(
-                    text = tile.subtitle.ifBlank { tile.label },
+                    text = displayLabel,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     color = textTint,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
                 )
+                Spacer(modifier = Modifier.width(2.dp))
                 Icon(
                     imageVector = Icons.Default.ArrowDropDown,
                     contentDescription = null,
-                    tint = textTint,
+                    tint = textSecondary,
                     modifier = Modifier.size(16.dp)
                 )
             }
         } else {
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = tile.label,
+                text = displayLabel,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Normal,
                 color = textTint,

@@ -151,6 +151,8 @@ fun MainScreen(viewModel: MainViewModel) {
     val lastLog by viewModel.privilegeEngine.lastExecutionLog.collectAsStateWithLifecycle()
 
     val hasOverlayPermission by viewModel.privilegeEngine.hasOverlay.collectAsStateWithLifecycle()
+    val hasWriteSettingsPermission by viewModel.privilegeEngine.hasWriteSettings.collectAsStateWithLifecycle()
+    val hasNotificationPolicyPermission by viewModel.privilegeEngine.hasNotificationPolicy.collectAsStateWithLifecycle()
     val isAccessibilityRunning by viewModel.privilegeEngine.hasAccessibility.collectAsStateWithLifecycle()
     val showScreenRecordSheet by viewModel.tileRegistry.showScreenRecordSheet.collectAsStateWithLifecycle()
 
@@ -317,6 +319,8 @@ fun MainScreen(viewModel: MainViewModel) {
                         isOverlayEnabled = isOverlayEnabled,
                         isOverlayRunning = isOverlayRunning,
                         hasOverlayPermission = hasOverlayPermission,
+                        hasWriteSettingsPermission = hasWriteSettingsPermission,
+                        hasNotificationPolicyPermission = hasNotificationPolicyPermission,
                         isAccessibilityRunning = isAccessibilityRunning,
                         currentMode = currentMode,
                         isRootAvailable = isRootAvail,

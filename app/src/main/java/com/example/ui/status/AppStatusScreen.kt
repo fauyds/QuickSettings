@@ -102,7 +102,8 @@ fun RadialPermissionCounter(
     allowedCount: Int,
     totalCount: Int,
     modifier: Modifier = Modifier,
-    statusColor: Color? = null
+    statusColor: Color? = null,
+    textColor: Color? = null
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val isDark = com.example.ui.theme.LocalIsDarkTheme.current
@@ -115,6 +116,8 @@ fun RadialPermissionCounter(
         allowedCount >= totalCount -> materialYouGreen
         else -> materialYouAmber
     }
+
+    val effectiveTextColor = textColor ?: if (isDark) Color.White else Color.Black
 
     val progress = if (totalCount > 0) (allowedCount.toFloat() / totalCount.toFloat()).coerceIn(0f, 1f) else 0f
     val animatedProgress by animateFloatAsState(
@@ -162,7 +165,7 @@ fun RadialPermissionCounter(
                 text = "$allowedCount/$totalCount",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = progressColor,
+                color = effectiveTextColor,
                 lineHeight = 16.sp,
                 style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
             )
@@ -179,6 +182,8 @@ fun AppStatusScreen(
     isOverlayEnabled: Boolean,
     isOverlayRunning: Boolean,
     hasOverlayPermission: Boolean,
+    hasWriteSettingsPermission: Boolean = false,
+    hasNotificationPolicyPermission: Boolean = false,
     isAccessibilityRunning: Boolean,
     currentMode: PrivilegeMode,
     isRootAvailable: Boolean,
@@ -204,14 +209,15 @@ fun AppStatusScreen(
     val storedInitialSetupDone by PanelPreferences.initialSetupCompleted.collectAsStateWithLifecycle(initialValue = PanelPreferences.initialSetupCompleted.value)
     val effectiveSetupDone = isInitialSetupDone ?: storedInitialSetupDone
 
-    val isNotifGranted = remember(context) {
-        QuickPanelNotificationListenerService.isPermissionGranted(context)
-    }
-
+    // The 4 system permissions displayed in the System Permissions Checklist under Privileges tab:
+    // 1. Draw Over Other Apps (SYSTEM_ALERT_WINDOW)
+    // 2. Modify System Settings (WRITE_SETTINGS)
+    // 3. Notification Policy Access (ACCESS_NOTIFICATION_POLICY for DND)
+    // 4. QuickPanel Accessibility Service (BIND_ACCESSIBILITY_SERVICE)
     val allowedCount = (if (hasOverlayPermission) 1 else 0) +
-            (if (isAccessibilityRunning) 1 else 0) +
-            (if (isNotifGranted) 1 else 0) +
-            (if (isOverlayEnabled || isOverlayRunning) 1 else 0)
+            (if (hasWriteSettingsPermission) 1 else 0) +
+            (if (hasNotificationPolicyPermission) 1 else 0) +
+            (if (isAccessibilityRunning) 1 else 0)
     val totalCount = 4
 
     Column(
@@ -425,14 +431,14 @@ fun AppStatusScreen(
                                 text = "Permissions & Service Health",
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = serviceStatusColor
+                                color = if (isDark) Color.White else Color.Black
                             )
                             Text(
                                 text = if (allowedCount >= totalCount) "All required permissions granted & active"
                                 else "Allow the required permissions",
                                 fontSize = 11.sp,
                                 lineHeight = 14.sp,
-                                color = serviceStatusColor.copy(alpha = 0.85f)
+                                color = if (isDark) Color.White.copy(alpha = 0.85f) else Color.Black.copy(alpha = 0.75f)
                             )
                         }
                     }
@@ -443,11 +449,12 @@ fun AppStatusScreen(
                         allowedCount = allowedCount,
                         totalCount = totalCount,
                         statusColor = serviceStatusColor,
+                        textColor = if (isDark) Color.White else Color.Black,
                         modifier = Modifier.size(68.dp)
                     )
                 }
 
-                if (onNavigateToPrivileges != null) {
+                if (onNavigateToPrivileges != null && allowedCount < totalCount) {
                     HorizontalDivider(color = serviceStatusColor.copy(alpha = 0.2f))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -458,7 +465,7 @@ fun AppStatusScreen(
                             text = if (allowedCount >= totalCount) "All permissions active" else "Enable the corresponding permissions",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
-                            color = serviceStatusColor.copy(alpha = 0.9f),
+                            color = if (isDark) Color.White.copy(alpha = 0.9f) else Color.Black.copy(alpha = 0.85f),
                             modifier = Modifier.weight(1f)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -467,7 +474,7 @@ fun AppStatusScreen(
                             shape = RoundedCornerShape(8.dp),
                             colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
                                 containerColor = serviceStatusColor.copy(alpha = 0.22f),
-                                contentColor = serviceStatusColor
+                                contentColor = if (isDark) Color.White else Color.Black
                             ),
                             modifier = Modifier.testTag("btn_go_to_privileges")
                         ) {

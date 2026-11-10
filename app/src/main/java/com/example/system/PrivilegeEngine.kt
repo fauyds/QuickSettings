@@ -85,6 +85,7 @@ class PrivilegeEngine(private val context: Context) {
             _isShizukuAvailable.value = true
             _shizukuStatus.value = ShizukuStatusState.RUNNING_GRANTED
             _lastExecutionLog.value = "Shizuku permission granted!"
+            NativeTileManager.instance?.onPrivilegeOrPermissionsUpdated()
         } else {
             _isShizukuAvailable.value = false
             _shizukuStatus.value = ShizukuStatusState.PERMISSION_REQUIRED
@@ -206,6 +207,9 @@ class PrivilegeEngine(private val context: Context) {
         }
         _isRootAvailable.value = isRootGrantedMemory
         _lastExecutionLog.value = if (granted) "Root access granted!" else "Root access denied or su unavailable."
+        if (granted) {
+            NativeTileManager.instance?.onPrivilegeOrPermissionsUpdated()
+        }
         return granted
     }
 
@@ -546,5 +550,50 @@ class PrivilegeEngine(private val context: Context) {
             Log.w("PrivilegeEngine", "Shell command failed: ${e.message}")
             false
         }
+    }
+
+    /**
+     * Executes a read-only shell command via Root or Shizuku and returns clean stdout,
+     * or null if neither Root nor Shizuku is granted or command produces no output.
+     */
+    fun executeShellWithOutput(command: String): String? {
+        if (isRootGranted()) {
+            try {
+                val proc = Runtime.getRuntime().exec(arrayOf("su", "-c", command))
+                val stdout = proc.inputStream.bufferedReader().readText().trim()
+                proc.errorStream.bufferedReader().readText()
+                val exit = proc.waitFor()
+                if (exit == 0 && stdout.isNotBlank()) {
+                    return stdout
+                }
+            } catch (_: Exception) {}
+        }
+
+        if (isShizukuGranted()) {
+            try {
+                val newProcessMethod = try {
+                    Shizuku::class.java.getDeclaredMethod(
+                        "newProcess",
+                        Array<String>::class.java,
+                        Array<String>::class.java,
+                        String::class.java
+                    )
+                } catch (_: NoSuchMethodException) {
+                    Shizuku::class.java.methods.firstOrNull { it.name == "newProcess" }
+                }
+                if (newProcessMethod != null) {
+                    newProcessMethod.isAccessible = true
+                    val proc = newProcessMethod.invoke(null, arrayOf("sh", "-c", command), null, null) as java.lang.Process
+                    val stdout = proc.inputStream.bufferedReader().readText().trim()
+                    proc.errorStream.bufferedReader().readText()
+                    val exit = proc.waitFor()
+                    if (exit == 0 && stdout.isNotBlank()) {
+                        return stdout
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+
+        return null
     }
 }

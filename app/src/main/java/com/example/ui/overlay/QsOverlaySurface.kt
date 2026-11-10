@@ -336,6 +336,17 @@ fun QsOverlaySurface(
     }
 
     // Panel & Surface Colors matching QuickSettingsPanel.kt & Color.kt
+    val nativeTileManager = com.example.system.NativeTileManager.instance
+    val isWifiConnected by (nativeTileManager?.isWifiConnected ?: remember { kotlinx.coroutines.flow.MutableStateFlow(false) }).collectAsState()
+    val wifiSsid by (nativeTileManager?.wifiSsid ?: remember { kotlinx.coroutines.flow.MutableStateFlow<String?>(null) }).collectAsState()
+    val btDeviceName by (nativeTileManager?.bluetoothDeviceName ?: remember { kotlinx.coroutines.flow.MutableStateFlow<String?>(null) }).collectAsState()
+    val liveWifiSubtitle = remember(wifiSsid, isWifiConnected) {
+        if (!wifiSsid.isNullOrBlank()) wifiSsid!! else if (isWifiConnected) "Wi-Fi" else "On"
+    }
+    val liveBtSubtitle = remember(btDeviceName) {
+        if (!btDeviceName.isNullOrBlank()) btDeviceName!! else "Off"
+    }
+
     val basePanelBg = config.qsPanelBackgroundColor?.let { Color(it) } ?: if (isPanelDark) Color(0xFF14171A) else Color(0xFFF3F4F6)
     val surfaceContainerColor = if (config.surfaceBgColorTertiary) {
         MaterialTheme.colorScheme.tertiaryContainer
@@ -666,7 +677,7 @@ fun QsOverlaySurface(
                                 SharedQsTileView(
                                     icon = Icons.Default.Wifi,
                                     label = "Wi-Fi",
-                                    subtitle = "Connected",
+                                    subtitle = liveWifiSubtitle,
                                     isActive = true,
                                     tileShape = enabledTileShape,
                                     hasOutline = config.tileOutlineEnabled,
@@ -686,7 +697,7 @@ fun QsOverlaySurface(
                                 SharedQsTileView(
                                     icon = Icons.Default.Bluetooth,
                                     label = "Bluetooth",
-                                    subtitle = "Off",
+                                    subtitle = liveBtSubtitle,
                                     isActive = false,
                                     tileShape = disabledTileShape,
                                     hasOutline = config.tileOutlineEnabled,
@@ -785,7 +796,7 @@ fun QsOverlaySurface(
                             SharedQsTileView(
                                 icon = Icons.Default.Wifi,
                                 label = "Wi-Fi",
-                                subtitle = "Connected",
+                                subtitle = liveWifiSubtitle,
                                 isActive = true,
                                 tileShape = enabledTileShape,
                                 hasOutline = config.tileOutlineEnabled,
@@ -804,7 +815,7 @@ fun QsOverlaySurface(
                             SharedQsTileView(
                                 icon = Icons.Default.Bluetooth,
                                 label = "Bluetooth",
-                                subtitle = "Off",
+                                subtitle = liveBtSubtitle,
                                 isActive = false,
                                 tileShape = disabledTileShape,
                                 hasOutline = config.tileOutlineEnabled,

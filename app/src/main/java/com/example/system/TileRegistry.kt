@@ -91,6 +91,64 @@ class TileRegistry(
             TileEntity("screenshot", "Screenshot", "Capture", TileCategory.HARDWARE.name, 20, isVisible = false, isQqsFavorite = false),
             TileEntity("screenrecord", "Screen Record", "Recorder", TileCategory.HARDWARE.name, 21, isVisible = true, isQqsFavorite = false)
         )
+
+        internal fun resolveWifiSubtitle(
+            wifiOn: Boolean,
+            wifiConnected: Boolean,
+            wifiSsidName: String?,
+            panelStyle: com.example.data.QsPanelStyle = com.example.data.QsPanelStyle.DEFAULT
+        ): String {
+            if (!wifiOn) return "Off"
+            val cleaned = NativeTileManager.cleanSsid(wifiSsidName)
+            return when {
+                !cleaned.isNullOrBlank() -> cleaned
+                wifiConnected -> "Wi-Fi"
+                else -> "On"
+            }
+        }
+
+        internal fun resolveBluetoothSubtitle(
+            btOn: Boolean,
+            btDeviceName: String?,
+            panelStyle: com.example.data.QsPanelStyle = com.example.data.QsPanelStyle.DEFAULT
+        ): String {
+            if (!btOn) return "Off"
+            val cleaned = btDeviceName?.trim()
+            return if (!cleaned.isNullOrBlank()) cleaned else "On"
+        }
+
+        internal fun resolveMarshmallowTileLabel(
+            tile: QsTileModel,
+            wifiSsidName: String? = null,
+            btDeviceName: String? = null
+        ): String {
+            if (tile.state != TileState.ACTIVE) {
+                return tile.label
+            }
+            return when (tile.id) {
+                "wifi" -> {
+                    val directSsid = NativeTileManager.cleanSsid(wifiSsidName)
+                    val subtitleSsid = tile.subtitle.takeIf {
+                        it.isNotBlank() && it !in setOf(
+                            "On", "Off", "Connected", "Wi-Fi",
+                            "Active", "Always Active", "Forced On", "Forced Off", "Toggle"
+                        )
+                    }
+                    directSsid ?: subtitleSsid ?: "Wi-Fi"
+                }
+                "bluetooth" -> {
+                    val directBt = btDeviceName?.trim()?.takeIf { it.isNotBlank() }
+                    val subtitleBt = tile.subtitle.takeIf {
+                        it.isNotBlank() && it !in setOf(
+                            "On", "Off", "Devices",
+                            "Active", "Always Active", "Forced On", "Forced Off", "Toggle"
+                        )
+                    }
+                    directBt ?: subtitleBt ?: tile.label
+                }
+                else -> tile.label
+            }
+        }
     }
 
     val showScreenRecordSheet = MutableStateFlow(false)
@@ -124,6 +182,8 @@ class TileRegistry(
         repository.allTiles,
         nativeTileManager.isWifiEnabled,
         nativeTileManager.isBluetoothEnabled,
+        nativeTileManager.wifiSsid,
+        nativeTileManager.bluetoothDeviceName,
         nativeTileManager.isTorchEnabled,
         nativeTileManager.isAutoRotateEnabled,
         nativeTileManager.isDndEnabled,
@@ -143,37 +203,43 @@ class TileRegistry(
         externalTileScanner.scannedTiles,
         TileCommandRepository.tileConfigs,
         forcedStates,
-        customTileActiveStates
+        customTileActiveStates,
+        nativeTileManager.isWifiConnected,
+        PanelPreferences.panelStyle
     ) { args ->
         @Suppress("UNCHECKED_CAST")
         val entities = args[0] as List<TileEntity>
         val wifiOn = args[1] as Boolean
         val btOn = args[2] as Boolean
-        val torchOn = args[3] as Boolean
-        val rotateOn = args[4] as Boolean
-        val dndOn = args[5] as Boolean
-        val airplaneOn = args[6] as Boolean
-        val locationOn = args[7] as Boolean
-        val cellularOn = args[8] as Boolean
-        val hotspotOn = args[9] as Boolean
-        val batterySaverOn = args[10] as Boolean
-        val nfcOn = args[11] as Boolean
-        val darkThemeOn = args[12] as Boolean
-        val aodOn = args[13] as Boolean
-        val ambientDisplayOn = args[14] as Boolean
-        val caffeineOn = args[15] as Boolean
-        val headsUpOn = args[16] as Boolean
-        val screenRecordOn = args[17] as Boolean
+        val wifiSsidName = args[3] as? String
+        val btDeviceName = args[4] as? String
+        val torchOn = args[5] as Boolean
+        val rotateOn = args[6] as Boolean
+        val dndOn = args[7] as Boolean
+        val airplaneOn = args[8] as Boolean
+        val locationOn = args[9] as Boolean
+        val cellularOn = args[10] as Boolean
+        val hotspotOn = args[11] as Boolean
+        val batterySaverOn = args[12] as Boolean
+        val nfcOn = args[13] as Boolean
+        val darkThemeOn = args[14] as Boolean
+        val aodOn = args[15] as Boolean
+        val ambientDisplayOn = args[16] as Boolean
+        val caffeineOn = args[17] as Boolean
+        val headsUpOn = args[18] as Boolean
+        val screenRecordOn = args[19] as Boolean
         @Suppress("UNCHECKED_CAST")
-        val customStates = args[18] as Map<String, Boolean>
+        val customStates = args[20] as Map<String, Boolean>
         @Suppress("UNCHECKED_CAST")
-        val externalTiles = args[19] as List<QsTileModel>
+        val externalTiles = args[21] as List<QsTileModel>
         @Suppress("UNCHECKED_CAST")
-        val configsMap = args[20] as Map<String, com.example.model.TileCommandConfig>
+        val configsMap = args[22] as Map<String, com.example.model.TileCommandConfig>
         @Suppress("UNCHECKED_CAST")
-        val forced = args[21] as Map<String, Boolean>
+        val forced = args[23] as Map<String, Boolean>
         @Suppress("UNCHECKED_CAST")
-        val customTileStates = args[22] as Map<String, Boolean>
+        val customTileStates = args[24] as Map<String, Boolean>
+        val wifiConnected = args[25] as Boolean
+        val panelStyle = args[26] as com.example.data.QsPanelStyle
 
         val externalMap = externalTiles.associateBy { it.id }
 
@@ -220,8 +286,23 @@ class TileRegistry(
                 val config = configsMap[entity.tileId] ?: com.example.model.TileCommandConfig(entity.tileId)
                 val customOn = customStates[entity.tileId] == true
                 var (state, vector, sub) = when (entity.tileId) {
-                    "wifi" -> Triple(if (wifiOn) TileState.ACTIVE else TileState.INACTIVE, Icons.Default.Wifi, if (wifiOn) "Connected" else "Off")
-                    "bluetooth" -> Triple(if (btOn) TileState.ACTIVE else TileState.INACTIVE, Icons.Default.Bluetooth, if (btOn) "On" else "Off")
+                    "wifi" -> {
+                        val wifiSubtitle = resolveWifiSubtitle(
+                            wifiOn = wifiOn,
+                            wifiConnected = wifiConnected,
+                            wifiSsidName = wifiSsidName,
+                            panelStyle = panelStyle
+                        )
+                        Triple(if (wifiOn) TileState.ACTIVE else TileState.INACTIVE, Icons.Default.Wifi, wifiSubtitle)
+                    }
+                    "bluetooth" -> {
+                        val btSubtitle = resolveBluetoothSubtitle(
+                            btOn = btOn,
+                            btDeviceName = btDeviceName,
+                            panelStyle = panelStyle
+                        )
+                        Triple(if (btOn) TileState.ACTIVE else TileState.INACTIVE, Icons.Default.Bluetooth, btSubtitle)
+                    }
                     "torch" -> Triple(if (torchOn) TileState.ACTIVE else TileState.INACTIVE, if (torchOn) Icons.Default.FlashlightOn else Icons.Default.FlashlightOff, if (torchOn) "On" else "Off")
                     "autorotate" -> Triple(if (rotateOn) TileState.ACTIVE else TileState.INACTIVE, Icons.Default.ScreenRotation, if (rotateOn) "Auto" else "Locked")
                     "dnd" -> Triple(if (dndOn) TileState.ACTIVE else TileState.INACTIVE, Icons.Default.DoNotDisturb, if (dndOn) "Priority" else "Off")

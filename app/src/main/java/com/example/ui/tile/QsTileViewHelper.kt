@@ -173,6 +173,8 @@ object QsTileViewHelper {
 
         android.util.Log.d("TileDebug", "QsTileViewHelper.bindTile: tile='${tile.label}', subtitle='${tile.subtitle}', tvSubtitle=$tvSubtitle")
 
+        val isMarshmallow = PanelPreferences.isAndroidMarshmallowStyle(context)
+
         val labelFontSize = PanelPreferences.qsTileLabelFontSize.value
         val subtitleFontSize = PanelPreferences.qsTileSubtitleFontSize.value
 
@@ -180,7 +182,7 @@ object QsTileViewHelper {
         tvLabel.text = tile.label
         tvLabel.setTextColor(textPrimary)
         tvLabel.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, labelFontSize)
-        if (tileIndex == 1) {
+        if (!isMarshmallow && tileIndex == 1) {
             tvLabel.translationY = -8f * density
         } else {
             tvLabel.translationY = 0f
@@ -197,10 +199,13 @@ object QsTileViewHelper {
             tvSubtitle.maxLines = 1
             tvSubtitle.ellipsize = android.text.TextUtils.TruncateAt.END
             tvSubtitle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, subtitleFontSize)
-            if (tileIndex == 1) {
-                tvSubtitle.translationY = -8f * density
+            if (isMarshmallow) {
+                // Android 6.0 Marshmallow QS: Do not touch at all
+                tvSubtitle.translationY = 0f
+            } else if (tileIndex == 1) {
+                tvSubtitle.translationY = -9f * density
             } else {
-                tvSubtitle.translationY = -3.5f * density
+                tvSubtitle.translationY = -5f * density
             }
             tvSubtitle.post {
                 tvSubtitle.visibility = View.VISIBLE

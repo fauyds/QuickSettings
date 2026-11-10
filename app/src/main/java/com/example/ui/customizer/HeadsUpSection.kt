@@ -631,7 +631,7 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
 
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         HeadsUpActionChipChooserRow(
                             icon = Icons.Default.KeyboardArrowUp,
@@ -640,7 +640,7 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
                             onActionSelected = { PanelPreferences.setHeadsUpSwipeUpAction(context, it) },
                             testTag = "heads_up_swipe_up_chips"
                         )
-                        HorizontalDivider(color = colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        Spacer(modifier = Modifier.height(4.dp))
                         HeadsUpActionChipChooserRow(
                             icon = Icons.Default.KeyboardArrowDown,
                             label = "Swipe Down",
@@ -648,7 +648,7 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
                             onActionSelected = { PanelPreferences.setHeadsUpSwipeDownAction(context, it) },
                             testTag = "heads_up_swipe_down_chips"
                         )
-                        HorizontalDivider(color = colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        Spacer(modifier = Modifier.height(4.dp))
                         HeadsUpActionChipChooserRow(
                             icon = Icons.AutoMirrored.Filled.ArrowBack,
                             label = "Swipe Left",
@@ -656,7 +656,7 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
                             onActionSelected = { PanelPreferences.setHeadsUpSwipeLeftAction(context, it) },
                             testTag = "heads_up_swipe_left_chips"
                         )
-                        HorizontalDivider(color = colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        Spacer(modifier = Modifier.height(4.dp))
                         HeadsUpActionChipChooserRow(
                             icon = Icons.AutoMirrored.Filled.ArrowForward,
                             label = "Swipe Right",
@@ -715,7 +715,7 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
 
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         HeadsUpActionChipChooserRow(
                             icon = Icons.Default.TouchApp,
@@ -724,7 +724,7 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
                             onActionSelected = { PanelPreferences.setHeadsUpSingleTapAction(context, it) },
                             testTag = "heads_up_single_tap_chips"
                         )
-                        HorizontalDivider(color = colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        Spacer(modifier = Modifier.height(4.dp))
                         HeadsUpActionChipChooserRow(
                             icon = Icons.Default.TouchApp,
                             label = "Double Tap",
@@ -732,7 +732,7 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
                             onActionSelected = { PanelPreferences.setHeadsUpDoubleTapAction(context, it) },
                             testTag = "heads_up_double_tap_chips"
                         )
-                        HorizontalDivider(color = colorScheme.outlineVariant.copy(alpha = 0.4f))
+                        Spacer(modifier = Modifier.height(4.dp))
                         HeadsUpActionChipChooserRow(
                             icon = Icons.Default.Timer,
                             label = "Long Press",

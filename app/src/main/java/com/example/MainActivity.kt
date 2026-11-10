@@ -1,13 +1,26 @@
 package com.example
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.core.content.ContextCompat
 import com.example.service.QuickSettingsOverlayService
+import com.example.system.NativeTileManager
 import com.example.ui.MainScreen
 import com.example.ui.MainViewModel
 import com.example.ui.overlay.QsExpansionStage
@@ -58,6 +71,47 @@ class MainActivity : ComponentActivity() {
         handleTriggerIntent(intent)
 
         setContent {
+            val showInitialSetup by viewModel.showInitialSetup.collectAsState()
+            var requestedConnectivityPerms by rememberSaveable { mutableStateOf(false) }
+            val connectivityPermissionsLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.RequestMultiplePermissions()
+            ) {
+                NativeTileManager.notifyAllInstancesPrivilegeOrPermissionsUpdated()
+            }
+
+            LaunchedEffect(showInitialSetup) {
+                if (!showInitialSetup && !requestedConnectivityPerms) {
+                    requestedConnectivityPerms = true
+                    val missing = buildList {
+                        if (ContextCompat.checkSelfPermission(
+                                this@MainActivity,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            ) != PackageManager.PERMISSION_GRANTED
+                        ) {
+                            add(Manifest.permission.ACCESS_COARSE_LOCATION)
+                        }
+                        if (ContextCompat.checkSelfPermission(
+                                this@MainActivity,
+                                Manifest.permission.ACCESS_FINE_LOCATION
+                            ) != PackageManager.PERMISSION_GRANTED
+                        ) {
+                            add(Manifest.permission.ACCESS_FINE_LOCATION)
+                        }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                            ContextCompat.checkSelfPermission(
+                                this@MainActivity,
+                                Manifest.permission.BLUETOOTH_CONNECT
+                            ) != PackageManager.PERMISSION_GRANTED
+                        ) {
+                            add(Manifest.permission.BLUETOOTH_CONNECT)
+                        }
+                    }
+                    if (missing.isNotEmpty()) {
+                        connectivityPermissionsLauncher.launch(missing.toTypedArray())
+                    }
+                }
+            }
+
             AppSettingsTheme {
                 MainScreen(viewModel = viewModel)
             }
@@ -67,6 +121,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.refreshServiceState()
+        NativeTileManager.notifyAllInstancesPrivilegeOrPermissionsUpdated()
 
         // Auto-start overlay service if permission is granted
         if (Settings.canDrawOverlays(this) && !QuickSettingsOverlayService.isRunning) {
