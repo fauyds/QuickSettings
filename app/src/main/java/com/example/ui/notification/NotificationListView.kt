@@ -125,15 +125,15 @@ class NotificationListView @JvmOverloads constructor(
         rvNotifications.isNestedScrollingEnabled = false
         rvNotifications.overScrollMode = View.OVER_SCROLL_NEVER
         rvNotifications.clipToPadding = false
-        rvNotifications.clipChildren = true
+        rvNotifications.clipChildren = false
         this.clipToPadding = false
         this.clipChildren = false
-        flPermissionCard.clipChildren = true
+        flPermissionCard.clipChildren = false
         flPermissionCard.clipToPadding = false
-        flEmptyCard.clipChildren = true
+        flEmptyCard.clipChildren = false
         flEmptyCard.clipToPadding = false
         root.findViewById<ViewGroup>(R.id.ll_notif_list_container)?.apply {
-            clipChildren = true
+            clipChildren = false
             clipToPadding = false
             if (PanelPreferences.isAndroidOreoStyle(context) || PanelPreferences.isAndroidMarshmallowStyle(context) || PanelPreferences.isAndroidKitKatStyle(context)) {
                 setPadding(0, 0, 0, 0)
@@ -554,10 +554,20 @@ class NotificationListView @JvmOverloads constructor(
         val enablePanelShadows = PanelPreferences.enablePanelShadows.value
         val shadowElevation = PanelPreferences.panelShadowElevation.value
         val shadowOffsetY = PanelPreferences.panelShadowOffsetY.value
+        val panelShadowAlpha = PanelPreferences.panelShadowAlpha.value
         val cardRadius = PanelPreferences.panelOuterCorner.value * density
         val cardBg = panelCardBackgroundColor ?: MonetThemeHelper.getCardBackground(context, isDark)
-        flPermissionCard.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, cardRadius, customBgColor = cardBg)
-        flPermissionCard.elevation = if (enablePanelShadows) shadowElevation * density else 0f
+        val permDrawable = MonetThemeHelper.createMonetCardDrawable(context, isDark, cardRadius, customBgColor = cardBg)
+        CustomShadowHelper.applyCustomShadowBackground(
+            flPermissionCard,
+            permDrawable,
+            cornerRadius = cardRadius,
+            elevation = if (enablePanelShadows) shadowElevation else 0f,
+            isDark = isDark,
+            customAlpha = panelShadowAlpha,
+            customOffsetY = shadowOffsetY
+        )
+        flPermissionCard.elevation = 0f
         flPermissionCard.translationY = 0f
         ivPermissionIcon.setColorFilter(MonetThemeHelper.getTertiaryAccent(context, isDark))
         tvPermissionTitle.setTextColor(textPrimary)
@@ -584,8 +594,17 @@ class NotificationListView @JvmOverloads constructor(
             ivEmptyIcon.setColorFilter(emptyColor)
             tvEmptyText.setTextColor(emptyColor)
         } else {
-            flEmptyCard.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, cardRadius, customBgColor = cardBg)
-            flEmptyCard.elevation = if (enablePanelShadows) shadowElevation * density else 0f
+            val emptyDrawable = MonetThemeHelper.createMonetCardDrawable(context, isDark, cardRadius, customBgColor = cardBg)
+            CustomShadowHelper.applyCustomShadowBackground(
+                flEmptyCard,
+                emptyDrawable,
+                cornerRadius = cardRadius,
+                elevation = if (enablePanelShadows) shadowElevation else 0f,
+                isDark = isDark,
+                customAlpha = panelShadowAlpha,
+                customOffsetY = shadowOffsetY
+            )
+            flEmptyCard.elevation = 0f
             flEmptyCard.translationY = 0f
             tvEmptyText.text = "No new notifications"
             ivEmptyIcon.setColorFilter(textSecondary)
@@ -669,14 +688,29 @@ class NotificationListView @JvmOverloads constructor(
                     }
                     ivFloatingClearAllIcon.setColorFilter(iconTint)
                 } else {
-                    btnFloatingClearAllFab.elevation = if (enablePanelShadows) shadowElevation * density else 6f * density
+                    btnFloatingClearAllFab.elevation = 0f
                     val shapeDrawable = com.example.ui.shape.QsShapeManager.createDrawable(fabShapeId, clearAllAccent)
                     val maskDrawable = com.example.ui.shape.QsShapeManager.createDrawable(fabShapeId, android.graphics.Color.WHITE)
                     val rippleColor = if (isDark) android.graphics.Color.parseColor("#44FFFFFF") else android.graphics.Color.parseColor("#33000000")
-                    btnFloatingClearAllFab.background = android.graphics.drawable.RippleDrawable(
+                    val rippleDrawable = android.graphics.drawable.RippleDrawable(
                         android.content.res.ColorStateList.valueOf(rippleColor),
                         shapeDrawable,
                         maskDrawable
+                    )
+                    val shapeItem = com.example.ui.shape.QsShapeManager.getShapeItem(fabShapeId)
+                    val effectiveFabElevation = if (enablePanelShadows) (if (shadowElevation > 0f) shadowElevation else 6f) else 6f
+                    val panelShadowAlpha = PanelPreferences.panelShadowAlpha.value
+                    val panelShadowOffsetY = PanelPreferences.panelShadowOffsetY.value
+                    CustomShadowHelper.applyCustomShadowBackground(
+                        btnFloatingClearAllFab,
+                        rippleDrawable,
+                        pathData = shapeItem.pathData,
+                        viewportWidth = shapeItem.viewportWidth,
+                        viewportHeight = shapeItem.viewportHeight,
+                        elevation = effectiveFabElevation,
+                        isDark = isDark,
+                        customAlpha = panelShadowAlpha,
+                        customOffsetY = panelShadowOffsetY
                     )
                     val iconTint = if (disableClearAllLabel) {
                         if (showMonetSurface) clearAllAccent else android.graphics.Color.WHITE

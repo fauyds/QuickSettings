@@ -4,9 +4,11 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="end"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:paddingTop="10dp"
-    android:paddingEnd="4dp"
-    android:paddingBottom="16dp">
+    android:paddingEnd="12dp"
+    android:paddingBottom="20dp">
 
     <LinearLayout
         android:id="@+id/btn_notif_clear_all"
@@ -15,6 +17,9 @@
         android:background="@drawable/bg_notif_clear_all"
         android:clickable="true"
         android:focusable="true"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:elevation="0dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingHorizontal="14dp"

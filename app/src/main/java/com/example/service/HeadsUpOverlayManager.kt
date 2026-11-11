@@ -5,8 +5,15 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.BlurMaskFilter
 import android.graphics.PixelFormat
 import android.graphics.drawable.Drawable
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.unit.Dp
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -14,6 +21,7 @@ import android.provider.Settings
 import android.util.Log
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
@@ -499,6 +507,17 @@ object HeadsUpOverlayManager {
 
         val composeView = ComposeView(targetContext).apply {
             setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            clipChildren = false
+            clipToPadding = false
+            setOnHierarchyChangeListener(object : ViewGroup.OnHierarchyChangeListener {
+                override fun onChildViewAdded(parent: View?, child: View?) {
+                    if (child is ViewGroup) {
+                        child.clipChildren = false
+                        child.clipToPadding = false
+                    }
+                }
+                override fun onChildViewRemoved(parent: View?, child: View?) {}
+            })
             lifecycleOwner.attachTo(this)
             setContent {
                 QuickPanelTheme {
@@ -790,6 +809,66 @@ object HeadsUpOverlayManager {
         ScreenWakeHelper.releaseWakeLock()
     }
 
+    /**
+     * Remade realistic multi-layer shadow drawn via Canvas BlurMaskFilter.
+     * Eliminates native RenderNode elevation artifacts (such as dark smudges on asymmetrical corners)
+     * and continues rendering smoothly when translated out of bounds during gestures or in Edge-to-Edge mode.
+     */
+    private fun Modifier.headsUpCustomShadow(
+        shape: Shape,
+        elevation: Dp,
+        isDark: Boolean
+    ): Modifier = if (elevation > 0.dp) {
+        this.drawBehind {
+            val elevationPx = elevation.toPx()
+            if (elevationPx <= 0.5f || size.width <= 0f || size.height <= 0f) return@drawBehind
+
+            val outline = shape.createOutline(size, layoutDirection, this)
+
+            val ambientBaseAlpha = if (isDark) 0.22f else 0.10f
+            val keyBaseAlpha = if (isDark) 0.32f else 0.16f
+            val elevationFactor = (elevation.value / 8f).coerceIn(0.6f, 1.8f)
+            val ambientAlpha = (ambientBaseAlpha * elevationFactor).coerceIn(0.05f, 0.45f)
+            val keyAlpha = (keyBaseAlpha * elevationFactor).coerceIn(0.08f, 0.55f)
+
+            val ambientRadius = (elevationPx * 1.3f).coerceAtLeast(1f)
+            val ambientOffsetY = elevationPx * 0.25f
+
+            val keyRadius = (elevationPx * 0.75f).coerceAtLeast(1f)
+            val keyOffsetY = elevationPx * 0.65f
+
+            drawIntoCanvas { canvas ->
+                val paint = Paint()
+                val frameworkPaint = paint.asFrameworkPaint()
+                frameworkPaint.isAntiAlias = true
+
+                // 1. Ambient soft omnidirectional shadow
+                frameworkPaint.color = android.graphics.Color.argb((ambientAlpha * 255).toInt(), 0, 0, 0)
+                frameworkPaint.maskFilter = BlurMaskFilter(
+                    ambientRadius,
+                    BlurMaskFilter.Blur.NORMAL
+                )
+                canvas.save()
+                canvas.translate(0f, ambientOffsetY)
+                canvas.drawOutline(outline, paint)
+                canvas.restore()
+
+                // 2. Key directional drop shadow
+                frameworkPaint.color = android.graphics.Color.argb((keyAlpha * 255).toInt(), 0, 0, 0)
+                frameworkPaint.maskFilter = BlurMaskFilter(
+                    keyRadius,
+                    BlurMaskFilter.Blur.NORMAL
+                )
+                canvas.save()
+                canvas.translate(0f, keyOffsetY)
+                canvas.drawOutline(outline, paint)
+                canvas.restore()
+            }
+        }
+    } else {
+        this
+    }
+
     @Composable
     private fun HeadsUpBannerCard(
         data: HeadsUpData,
@@ -959,6 +1038,10 @@ object HeadsUpOverlayManager {
             }
         }
 
+        val sidePaddingDp = if (edgeToEdge) 0.dp else 8.dp
+        val bottomPaddingDp = maxOf(elevation * 3 + 32, 64).dp
+        val topPaddingDp = topMargin.dp
+
         AnimatedVisibility(
             visible = isVisible,
             enter = slideInVertically(
@@ -973,20 +1056,15 @@ object HeadsUpOverlayManager {
                     .fillMaxWidth()
                     .statusBarsPadding()
                     .padding(
-                        start = if (edgeToEdge) 0.dp else 8.dp,
-                        end = if (edgeToEdge) 0.dp else 8.dp,
-                        top = topMargin.dp,
-                        bottom = maxOf(elevation + 6, 12).dp
+                        start = sidePaddingDp,
+                        end = sidePaddingDp,
+                        top = topPaddingDp,
+                        bottom = bottomPaddingDp
                     )
                     .testTag("heads_up_overlay_container"),
                 contentAlignment = Alignment.TopCenter
             ) {
-                Card(
-                    shape = cardShape,
-                    colors = CardDefaults.cardColors(
-                        containerColor = cardContainerColor
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = elevation.dp),
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .then(if (edgeToEdge) Modifier else Modifier.widthIn(max = 440.dp))
@@ -995,14 +1073,17 @@ object HeadsUpOverlayManager {
                             cardHeightPx = it.height.toFloat()
                         }
                         .graphicsLayer {
-                            shadowElevation = elevation.dp.toPx()
-                            shape = cardShape
-                            clip = false
                             translationX = animOffsetX.value
                             translationY = animOffsetY.value
                             val progress = if (cardWidthPx > 0f) (abs(animOffsetX.value) / cardWidthPx) else 0f
                             alpha = (1f - progress).coerceIn(0f, 1f)
+                            clip = false
                         }
+                        .headsUpCustomShadow(
+                            shape = cardShape,
+                            elevation = elevation.dp,
+                            isDark = isDark
+                        )
                         .animateContentSize()
                         .pointerInput(
                             swipeUpAction, swipeDownAction, swipeLeftAction, swipeRightAction,
@@ -1115,12 +1196,19 @@ object HeadsUpOverlayManager {
                         }
                         .testTag("heads_up_banner_card")
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    Surface(
+                        shape = cardShape,
+                        color = cardContainerColor,
+                        shadowElevation = 0.dp,
+                        tonalElevation = 0.dp,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                         // Top Header: App Icon, App Name, Badges, Time, and Close Button
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1505,4 +1593,5 @@ object HeadsUpOverlayManager {
             }
         }
     }
+}
 }

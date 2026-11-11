@@ -429,33 +429,55 @@ fun AdaptiveMediaPlayerCard(
     val shadowModifier = if (!isClassicStyle && enablePanelShadows && panelShadowElevation > 0f) {
         Modifier
             .drawBehind {
-                val shadowRadius = panelShadowElevation.dp.toPx()
-                val offsetY = panelShadowOffsetY.dp.toPx()
-                if (shadowRadius > 0f) {
-                    drawIntoCanvas { canvas ->
-                        val paint = androidx.compose.ui.graphics.Paint()
-                        val frameworkPaint = paint.asFrameworkPaint()
-                        frameworkPaint.color = android.graphics.Color.argb((panelShadowAlpha * 255).toInt(), 0, 0, 0)
-                        frameworkPaint.maskFilter = android.graphics.BlurMaskFilter(
-                            shadowRadius,
-                            android.graphics.BlurMaskFilter.Blur.NORMAL
-                        )
-                        canvas.save()
-                        canvas.translate(0f, offsetY)
-                        canvas.drawOutline(
-                            outline = cardShape.createOutline(size, layoutDirection, this),
-                            paint = paint
-                        )
-                        canvas.restore()
-                    }
+                val elevationPx = panelShadowElevation.dp.toPx()
+                if (elevationPx <= 0.5f || size.width <= 0f || size.height <= 0f) return@drawBehind
+
+                val outline = cardShape.createOutline(size, layoutDirection, this)
+
+                val ambientBaseAlpha = if (isDark) 0.22f else 0.10f
+                val keyBaseAlpha = if (isDark) 0.32f else 0.16f
+                val elevationFactor = (panelShadowElevation / 8f).coerceIn(0.6f, 1.8f)
+                val alphaScale = (panelShadowAlpha / 0.35f).coerceIn(0.3f, 2.5f)
+
+                val ambientAlpha = (ambientBaseAlpha * elevationFactor * alphaScale).coerceIn(0.04f, 0.45f)
+                val keyAlpha = (keyBaseAlpha * elevationFactor * alphaScale).coerceIn(0.06f, 0.55f)
+
+                val ambientRadius = (elevationPx * 1.3f).coerceAtLeast(1f)
+                val ambientOffsetY = panelShadowOffsetY.dp.toPx() + (elevationPx * 0.15f)
+
+                val keyRadius = (elevationPx * 0.75f).coerceAtLeast(1f)
+                val keyOffsetY = panelShadowOffsetY.dp.toPx() + (elevationPx * 0.55f)
+
+                drawIntoCanvas { canvas ->
+                    val paint = androidx.compose.ui.graphics.Paint()
+                    val frameworkPaint = paint.asFrameworkPaint()
+                    frameworkPaint.isAntiAlias = true
+
+                    // 1. Ambient soft omnidirectional shadow
+                    frameworkPaint.color = android.graphics.Color.argb((ambientAlpha * 255).toInt(), 0, 0, 0)
+                    frameworkPaint.maskFilter = android.graphics.BlurMaskFilter(
+                        ambientRadius,
+                        android.graphics.BlurMaskFilter.Blur.NORMAL
+                    )
+                    canvas.save()
+                    canvas.translate(0f, ambientOffsetY)
+                    canvas.drawOutline(outline = outline, paint = paint)
+                    canvas.restore()
+
+                    // 2. Key directional drop shadow
+                    frameworkPaint.color = android.graphics.Color.argb((keyAlpha * 255).toInt(), 0, 0, 0)
+                    frameworkPaint.maskFilter = android.graphics.BlurMaskFilter(
+                        keyRadius,
+                        android.graphics.BlurMaskFilter.Blur.NORMAL
+                    )
+                    canvas.save()
+                    canvas.translate(0f, keyOffsetY)
+                    canvas.drawOutline(outline = outline, paint = paint)
+                    canvas.restore()
                 }
             }
             .graphicsLayer {
-                shadowElevation = panelShadowElevation.dp.toPx()
-                this.shape = cardShape
                 clip = false
-                ambientShadowColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = panelShadowAlpha)
-                spotShadowColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = panelShadowAlpha)
             }
     } else {
         Modifier

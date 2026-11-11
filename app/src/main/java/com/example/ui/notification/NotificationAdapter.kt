@@ -203,18 +203,28 @@ class NotificationAdapter(
             val clearAllIconSize = com.example.data.PanelPreferences.clearAllIconSize.value
             val showMonetSurface = com.example.data.PanelPreferences.showMonetSurfaceBackground.value
 
+            llFooterRoot.clipChildren = false
+            llFooterRoot.clipToPadding = false
+            btnClearAll.clipChildren = false
+            btnClearAll.clipToPadding = false
+
             if (!useFab) {
                 // When FAB button is disabled: "Clear All" button remains on right side anyway
                 llFooterRoot.gravity = android.view.Gravity.END or android.view.Gravity.CENTER_VERTICAL
 
+                val params = btnClearAll.layoutParams as ViewGroup.MarginLayoutParams
+                params.width = ViewGroup.LayoutParams.WRAP_CONTENT
+                params.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                btnClearAll.layoutParams = params
+
                 if (disableClearAllLabel) {
                     tvClearAllText.visibility = View.GONE
-                    llFooterRoot.setPadding(0, (6 * density).toInt(), (4 * density).toInt(), (8 * density).toInt())
-                    btnClearAll.setPadding((4 * density).toInt(), (6 * density).toInt(), (4 * density).toInt(), (6 * density).toInt())
+                    llFooterRoot.setPadding(0, (6 * density).toInt(), (12 * density).toInt(), (12 * density).toInt())
+                    btnClearAll.setPadding((8 * density).toInt(), (8 * density).toInt(), (8 * density).toInt(), (8 * density).toInt())
                 } else {
                     tvClearAllText.visibility = View.VISIBLE
-                    llFooterRoot.setPadding(0, (10 * density).toInt(), (4 * density).toInt(), (16 * density).toInt())
-                    btnClearAll.setPadding((14 * density).toInt(), (6 * density).toInt(), (14 * density).toInt(), (6 * density).toInt())
+                    llFooterRoot.setPadding(0, (10 * density).toInt(), (12 * density).toInt(), (20 * density).toInt())
+                    btnClearAll.setPadding((16 * density).toInt(), (8 * density).toInt(), (16 * density).toInt(), (8 * density).toInt())
                 }
                 btnClearAll.gravity = android.view.Gravity.CENTER_VERTICAL
 
@@ -243,14 +253,27 @@ class NotificationAdapter(
 
                 val enablePanelShadows = com.example.data.PanelPreferences.enablePanelShadows.value
                 val shadowElevation = com.example.data.PanelPreferences.panelShadowElevation.value
+                val panelShadowAlpha = com.example.data.PanelPreferences.panelShadowAlpha.value
+                val panelShadowOffsetY = com.example.data.PanelPreferences.panelShadowOffsetY.value
+                val effectiveButtonElevation = if (enablePanelShadows) (if (shadowElevation > 0f) shadowElevation else 6f) else 6f
+
                 if (disableClearAllLabel || disableBg) {
                     btnClearAll.background = null
                     btnClearAll.elevation = 0f
                     btnClearAll.translationY = 0f
                 } else {
-                    btnClearAll.elevation = if (enablePanelShadows) shadowElevation * density else 0f
+                    btnClearAll.elevation = 0f
                     btnClearAll.translationY = 0f
-                    btnClearAll.background = MonetThemeHelper.createMonetPrimaryPillDrawable(context, isDarkTheme, 14f * density, customBgColor = clearAllAccent)
+                    val pillDrawable = MonetThemeHelper.createMonetPrimaryPillDrawable(context, isDarkTheme, 999f * density, customBgColor = clearAllAccent)
+                    CustomShadowHelper.applyCustomShadowBackground(
+                        view = btnClearAll,
+                        contentDrawable = pillDrawable,
+                        isPill = true,
+                        elevation = effectiveButtonElevation,
+                        isDark = isDarkTheme,
+                        customAlpha = panelShadowAlpha,
+                        customOffsetY = panelShadowOffsetY
+                    )
                 }
             } else {
                 // When FAB button is enabled: positioned according to fabPos and bigger (64dp)
@@ -289,21 +312,36 @@ class NotificationAdapter(
 
                 val enablePanelShadows = com.example.data.PanelPreferences.enablePanelShadows.value
                 val shadowElevation = com.example.data.PanelPreferences.panelShadowElevation.value
+                val panelShadowAlpha = com.example.data.PanelPreferences.panelShadowAlpha.value
+                val panelShadowOffsetY = com.example.data.PanelPreferences.panelShadowOffsetY.value
                 if (disableBg) {
                     btnClearAll.background = null
                     btnClearAll.elevation = 0f
                     btnClearAll.translationY = 0f
                 } else {
-                    btnClearAll.elevation = if (enablePanelShadows) shadowElevation * density else 0f
+                    btnClearAll.elevation = 0f
                     btnClearAll.translationY = 0f
                     val primaryColor = MonetThemeHelper.getPrimaryAccent(context, isDarkTheme)
                     val shapeDrawable = com.example.ui.shape.QsShapeManager.createDrawable(fabShapeId, primaryColor)
                     val maskDrawable = com.example.ui.shape.QsShapeManager.createDrawable(fabShapeId, android.graphics.Color.WHITE)
                     val rippleColor = if (isDarkTheme) android.graphics.Color.parseColor("#44FFFFFF") else android.graphics.Color.parseColor("#33000000")
-                    btnClearAll.background = android.graphics.drawable.RippleDrawable(
+                    val rippleDrawable = android.graphics.drawable.RippleDrawable(
                         android.content.res.ColorStateList.valueOf(rippleColor),
                         shapeDrawable,
                         maskDrawable
+                    )
+                    val shapeItem = com.example.ui.shape.QsShapeManager.getShapeItem(fabShapeId)
+                    val effectiveFabElevation = if (enablePanelShadows) (if (shadowElevation > 0f) shadowElevation else 6f) else 6f
+                    CustomShadowHelper.applyCustomShadowBackground(
+                        btnClearAll,
+                        rippleDrawable,
+                        pathData = shapeItem.pathData,
+                        viewportWidth = shapeItem.viewportWidth,
+                        viewportHeight = shapeItem.viewportHeight,
+                        elevation = effectiveFabElevation,
+                        isDark = isDarkTheme,
+                        customAlpha = panelShadowAlpha,
+                        customOffsetY = panelShadowOffsetY
                     )
                 }
             }
@@ -411,7 +449,7 @@ class NotificationAdapter(
                 }
             }
 
-            if (isOreoStyle) {
+            val contentDrawable = if (isOreoStyle) {
                 val strokeColor = if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#33000000")
                 val strokePx = (1 * density).toInt().coerceAtLeast(1)
                 val baseDrawable = GradientDrawable().apply {
@@ -423,45 +461,37 @@ class NotificationAdapter(
                     setStroke(strokePx, strokeColor)
                     setColor(Color.TRANSPARENT)
                 }
-                flRoot.background = android.graphics.drawable.LayerDrawable(arrayOf(baseDrawable, strokeDrawable)).apply {
+                android.graphics.drawable.LayerDrawable(arrayOf(baseDrawable, strokeDrawable)).apply {
                     setLayerInset(1, -strokePx, 0, -strokePx, 0)
                 }
             } else {
-                val cardDrawable = GradientDrawable().apply {
+                GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
                     cornerRadii = radii
                     setColor(cardBgColorInt)
                 }
-                flRoot.background = cardDrawable
             }
 
             val enablePanelShadows = PanelPreferences.enablePanelShadows.value
             val shadowElevation = PanelPreferences.panelShadowElevation.value
-            flRoot.elevation = if (enablePanelShadows && !isOreoStyle) shadowElevation * density else 0f
+            val panelShadowAlpha = PanelPreferences.panelShadowAlpha.value
+            val panelShadowOffsetY = PanelPreferences.panelShadowOffsetY.value
+
+            CustomShadowHelper.applyCustomShadowBackground(
+                view = flRoot,
+                contentDrawable = contentDrawable,
+                radii = radii,
+                elevation = if (enablePanelShadows && !isOreoStyle) shadowElevation else 0f,
+                isDark = isDark,
+                customAlpha = panelShadowAlpha,
+                customOffsetY = panelShadowOffsetY
+            )
+            flRoot.elevation = 0f
             flRoot.translationY = 0f
-            flRoot.clipToOutline = true
-            flRoot.outlineProvider = object : ViewOutlineProvider() {
-                private val path = Path()
-                override fun getOutline(view: View, outline: Outline) {
-                    if (view.width > 0 && view.height > 0) {
-                        if (isOreoStyle) {
-                            outline.setRect(0, 0, view.width, view.height)
-                        } else {
-                            path.reset()
-                            path.addRoundRect(
-                                0f, 0f, view.width.toFloat(), view.height.toFloat(),
-                                radii,
-                                Path.Direction.CW
-                            )
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                outline.setPath(path)
-                            } else {
-                                outline.setConvexPath(path)
-                            }
-                        }
-                    }
-                }
-            }
+            flRoot.clipChildren = false
+            flRoot.clipToPadding = false
+            flRoot.clipToOutline = false
+            flRoot.outlineProvider = null
 
             // Distance between notification & media items: 4dp (0dp in Oreo style)
             val lp = flRoot.layoutParams as? ViewGroup.MarginLayoutParams
@@ -785,7 +815,7 @@ class NotificationAdapter(
                 customCardBackgroundColor ?: MonetThemeHelper.getCardBackground(context, isDarkTheme)
             }
 
-            if (isOreoStyle) {
+            val contentDrawable = if (isOreoStyle) {
                 val strokeColor = if (isDarkTheme) Color.parseColor("#33FFFFFF") else Color.parseColor("#33000000")
                 val strokePx = (1 * density).toInt().coerceAtLeast(1)
                 val solidOreoBg = if (isDarkTheme) Color.parseColor("#212121") else Color.parseColor("#FFFFFF")
@@ -798,41 +828,37 @@ class NotificationAdapter(
                     setStroke(strokePx, strokeColor)
                     setColor(Color.TRANSPARENT)
                 }
-                flRoot.background = android.graphics.drawable.LayerDrawable(arrayOf(baseDrawable, strokeDrawable)).apply {
+                android.graphics.drawable.LayerDrawable(arrayOf(baseDrawable, strokeDrawable)).apply {
                     setLayerInset(1, -strokePx, 0, -strokePx, 0)
                 }
             } else {
-                val cardDrawable = GradientDrawable().apply {
+                GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
                     cornerRadii = radii
                     setColor(cardBg)
                 }
-                flRoot.background = cardDrawable
             }
 
             val enablePanelShadows = PanelPreferences.enablePanelShadows.value
             val shadowElevation = PanelPreferences.panelShadowElevation.value
-            flRoot.elevation = if (enablePanelShadows && !isOreoStyle) shadowElevation * density else 0f
+            val panelShadowAlpha = PanelPreferences.panelShadowAlpha.value
+            val panelShadowOffsetY = PanelPreferences.panelShadowOffsetY.value
+
+            CustomShadowHelper.applyCustomShadowBackground(
+                view = flRoot,
+                contentDrawable = contentDrawable,
+                radii = radii,
+                elevation = if (enablePanelShadows && !isOreoStyle) shadowElevation else 0f,
+                isDark = isDarkTheme,
+                customAlpha = panelShadowAlpha,
+                customOffsetY = panelShadowOffsetY
+            )
+            flRoot.elevation = 0f
             flRoot.translationY = 0f
-            flRoot.clipToOutline = true
-            flRoot.outlineProvider = object : ViewOutlineProvider() {
-                private val path = Path()
-                override fun getOutline(view: View, outline: Outline) {
-                    if (view.width > 0 && view.height > 0) {
-                        if (isOreoStyle) {
-                            outline.setRect(0, 0, view.width, view.height)
-                        } else {
-                            path.reset()
-                            path.addRoundRect(0f, 0f, view.width.toFloat(), view.height.toFloat(), radii, Path.Direction.CW)
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                outline.setPath(path)
-                            } else {
-                                outline.setConvexPath(path)
-                            }
-                        }
-                    }
-                }
-            }
+            flRoot.clipChildren = false
+            flRoot.clipToPadding = false
+            flRoot.clipToOutline = false
+            flRoot.outlineProvider = null
 
             val lp = flRoot.layoutParams as? ViewGroup.MarginLayoutParams
             if (lp != null) {
@@ -981,7 +1007,7 @@ class NotificationAdapter(
             } else {
                 customCardBackgroundColor ?: MonetThemeHelper.getCardBackground(context, isDark)
             }
-            if (isOreoStyle) {
+            val contentDrawable = if (isOreoStyle) {
                 val strokeColor = if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#33000000")
                 val strokePx = (1 * density).toInt().coerceAtLeast(1)
                 val baseDrawable = GradientDrawable().apply {
@@ -993,44 +1019,33 @@ class NotificationAdapter(
                     setStroke(strokePx, strokeColor)
                     setColor(Color.TRANSPARENT)
                 }
-                flRoot.background = android.graphics.drawable.LayerDrawable(arrayOf(baseDrawable, strokeDrawable)).apply {
+                android.graphics.drawable.LayerDrawable(arrayOf(baseDrawable, strokeDrawable)).apply {
                     setLayerInset(1, -strokePx, 0, -strokePx, 0)
                 }
             } else {
-                flRoot.background = MonetThemeHelper.createMonetCardDrawable(context, isDark, radii, customBgColor = cardBg)
+                MonetThemeHelper.createMonetCardDrawable(context, isDark, radii, customBgColor = cardBg)
             }
 
             val enablePanelShadows = com.example.data.PanelPreferences.enablePanelShadows.value
             val shadowElevation = com.example.data.PanelPreferences.panelShadowElevation.value
-            flRoot.elevation = if (enablePanelShadows && !isOreoStyle && !isKitKatStyle) shadowElevation * density else 0f
+            val panelShadowAlpha = com.example.data.PanelPreferences.panelShadowAlpha.value
+            val panelShadowOffsetY = com.example.data.PanelPreferences.panelShadowOffsetY.value
+
+            CustomShadowHelper.applyCustomShadowBackground(
+                view = flRoot,
+                contentDrawable = contentDrawable,
+                radii = radii,
+                elevation = if (enablePanelShadows && !isOreoStyle && !isKitKatStyle) shadowElevation else 0f,
+                isDark = isDark,
+                customAlpha = panelShadowAlpha,
+                customOffsetY = panelShadowOffsetY
+            )
+            flRoot.elevation = 0f
             flRoot.translationY = 0f
             flRoot.clipChildren = false
             flRoot.clipToPadding = false
-
-            // Outline provider for casting elevation shadow to the dynamic shape without clipping bounds
-            flRoot.outlineProvider = object : ViewOutlineProvider() {
-                private val path = Path()
-                override fun getOutline(view: View, outline: Outline) {
-                    if (view.width > 0 && view.height > 0) {
-                        if (isOreoStyle) {
-                            outline.setRect(0, 0, view.width, view.height)
-                        } else {
-                            path.reset()
-                            path.addRoundRect(
-                                0f, 0f, view.width.toFloat(), view.height.toFloat(),
-                                radii,
-                                Path.Direction.CW
-                            )
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                outline.setPath(path)
-                            } else {
-                                outline.setConvexPath(path)
-                            }
-                        }
-                    }
-                }
-            }
             flRoot.clipToOutline = false
+            flRoot.outlineProvider = null
 
             // Distance between notifications & media cards: 4dp (0dp in Oreo style)
             val lp = flRoot.layoutParams as? ViewGroup.MarginLayoutParams
