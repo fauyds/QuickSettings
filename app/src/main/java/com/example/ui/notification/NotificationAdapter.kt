@@ -347,11 +347,14 @@ class NotificationAdapter(
             }
 
             btnClearAll.setOnClickListener {
-                btnClearAll.animate()
+                val shouldRotate = useFab && !disableClearAllLabel
+                val anim = btnClearAll.animate()
                     .scaleX(0.85f)
                     .scaleY(0.85f)
-                    .rotationBy(180f)
-                    .setDuration(180)
+                if (shouldRotate) {
+                    anim.rotationBy(180f)
+                }
+                anim.setDuration(180)
                     .withEndAction {
                         btnClearAll.scaleX = 1f
                         btnClearAll.scaleY = 1f

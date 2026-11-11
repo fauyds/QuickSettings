@@ -751,11 +751,14 @@ class NotificationListView @JvmOverloads constructor(
         var count = 0
 
         if (flFloatingClearAllContainer.visibility == View.VISIBLE) {
-            btnFloatingClearAllFab.animate()
-                .rotationBy(180f)
+            val disableClearAllLabel = PanelPreferences.disableClearAllLabel.value
+            val anim = btnFloatingClearAllFab.animate()
                 .scaleX(0.85f)
                 .scaleY(0.85f)
-                .setDuration(180)
+            if (!disableClearAllLabel) {
+                anim.rotationBy(180f)
+            }
+            anim.setDuration(180)
                 .withEndAction {
                     btnFloatingClearAllFab.scaleX = 1f
                     btnFloatingClearAllFab.scaleY = 1f
