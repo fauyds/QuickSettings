@@ -3448,57 +3448,57 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                     modifier = Modifier.testTag("clear_all_icon_size_slider")
                                 )
                             }
+                        }
+                    }
 
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
-                            // 2. Clear All Icon Selection
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(
-                                    text = "Clear All Icon",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
+                    // 2. Clear All Icon Selection
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "Clear All Icon",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val allIcons = ClearAllFabIcon.entries
+                            allIcons.forEach { iconItem ->
+                                val isSelected = clearAllFabIcon == iconItem
+                                val chipShape = SegmentedButtonShapes.getShape(
+                                    item = iconItem,
+                                    items = allIcons,
+                                    selectedItem = clearAllFabIcon
                                 )
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState()),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    val allIcons = ClearAllFabIcon.entries
-                                    allIcons.forEach { iconItem ->
-                                        val isSelected = clearAllFabIcon == iconItem
-                                        val chipShape = SegmentedButtonShapes.getShape(
-                                            item = iconItem,
-                                            items = allIcons,
-                                            selectedItem = clearAllFabIcon
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { PanelPreferences.setClearAllFabIcon(context, iconItem) },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = androidx.compose.ui.res.painterResource(id = iconItem.drawableRes),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp),
+                                            tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
                                         )
-                                        FilterChip(
-                                            selected = isSelected,
-                                            onClick = { PanelPreferences.setClearAllFabIcon(context, iconItem) },
-                                            leadingIcon = {
-                                                Icon(
-                                                    painter = androidx.compose.ui.res.painterResource(id = iconItem.drawableRes),
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(16.dp),
-                                                    tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
-                                                )
-                                            },
-                                            label = { Text(iconItem.label, fontSize = 11.sp) },
-                                            shape = chipShape,
-                                            border = null,
-                                            colors = FilterChipDefaults.filterChipColors(
-                                                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                                selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
-                                                containerColor = MaterialTheme.colorScheme.background,
-                                                labelColor = MaterialTheme.colorScheme.onSurface
-                                            ),
-                                            modifier = Modifier.testTag("clear_all_icon_choice_${iconItem.id}")
-                                        )
-                                    }
-                                }
+                                    },
+                                    label = { Text(iconItem.label, fontSize = 11.sp) },
+                                    shape = chipShape,
+                                    border = null,
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+                                        containerColor = MaterialTheme.colorScheme.background,
+                                        labelColor = MaterialTheme.colorScheme.onSurface
+                                    ),
+                                    modifier = Modifier.testTag("clear_all_icon_choice_${iconItem.id}")
+                                )
                             }
                         }
                     }
@@ -3802,6 +3802,75 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                                 iconColor = MaterialTheme.colorScheme.primary
                                             ),
                                             modifier = Modifier.testTag("clear_all_fab_icon_${iconItem.id}")
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    AnimatedVisibility(
+                        visible = !useClearAllFab && (!collapseExpandOptions || clearAllFabExpanded),
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                            // Default Clear All Icon Selection
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    text = "Clear All Icon",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Choose the icon displayed on the default Clear All button",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    val allIcons = ClearAllFabIcon.entries
+                                    allIcons.forEach { iconItem ->
+                                        val isSelected = clearAllFabIcon == iconItem
+                                        val chipShape = SegmentedButtonShapes.getShape(
+                                            item = iconItem,
+                                            items = allIcons,
+                                            selectedItem = clearAllFabIcon
+                                        )
+                                        FilterChip(
+                                            selected = isSelected,
+                                            onClick = { PanelPreferences.setClearAllFabIcon(context, iconItem) },
+                                            leadingIcon = {
+                                                Icon(
+                                                    painter = androidx.compose.ui.res.painterResource(id = iconItem.drawableRes),
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(16.dp),
+                                                    tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+                                                )
+                                            },
+                                            label = { Text(iconItem.label, fontSize = 11.sp) },
+                                            shape = chipShape,
+                                            border = null,
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                                selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+                                                containerColor = MaterialTheme.colorScheme.background,
+                                                labelColor = MaterialTheme.colorScheme.onSurface,
+                                                iconColor = MaterialTheme.colorScheme.primary
+                                            ),
+                                            modifier = Modifier.testTag("default_clear_all_icon_${iconItem.id}")
                                         )
                                     }
                                 }

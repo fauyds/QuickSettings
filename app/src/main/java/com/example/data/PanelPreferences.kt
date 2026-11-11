@@ -1810,14 +1810,22 @@ object PanelPreferences {
         val targetShowCarrierDivider = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SHOW_CARRIER_DIVIDER, style), true) else true
         val targetHideCarrierInExpanded = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_HIDE_CARRIER_IN_EXPANDED, style), false) else false
 
-        val targetUseClearAllFab = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_USE_CLEAR_ALL_FAB, style), defaultUseClearAllFab) else defaultUseClearAllFab
-        val targetClearAllFabPos = if (isInitialized) ClearAllFabPosition.fromId(prefs.getString(getStyleKey(KEY_CLEAR_ALL_FAB_POSITION, style), ClearAllFabPosition.CENTER.id)) else ClearAllFabPosition.CENTER
-        val targetClearAllFabShapeId = if (isInitialized) prefs.getString(getStyleKey(KEY_CLEAR_ALL_FAB_SHAPE_ID, style), "circle") ?: "circle" else "circle"
-        val targetClearAllFabShape = if (isInitialized) ClearAllFabShape.fromId(prefs.getString(getStyleKey(KEY_CLEAR_ALL_FAB_SHAPE, style), ClearAllFabShape.CIRCLE.id)) else ClearAllFabShape.CIRCLE
-        val targetClearAllFabIcon = if (isInitialized) ClearAllFabIcon.fromId(prefs.getString(getStyleKey(KEY_CLEAR_ALL_FAB_ICON, style), ClearAllFabIcon.CLEAR_ALL.id)) else ClearAllFabIcon.CLEAR_ALL
-        val targetClearAllFabOffsetX = if (isInitialized) prefs.getFloat(getStyleKey(KEY_CLEAR_ALL_FAB_OFFSET_X, style), 0f) else 0f
-        val targetClearAllFabOffsetY = if (isInitialized) prefs.getFloat(getStyleKey(KEY_CLEAR_ALL_FAB_OFFSET_Y, style), 0f) else 0f
-        val targetClearAllFabSize = if (isInitialized) prefs.getInt(getStyleKey(KEY_CLEAR_ALL_FAB_SIZE, style), 56) else 56
+        val savedGlobalUseClearAllFab = prefs.getBoolean(KEY_USE_CLEAR_ALL_FAB, defaultUseClearAllFab)
+        val targetUseClearAllFab = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_USE_CLEAR_ALL_FAB, style), savedGlobalUseClearAllFab) else defaultUseClearAllFab
+        val savedGlobalPos = prefs.getString(KEY_CLEAR_ALL_FAB_POSITION, ClearAllFabPosition.CENTER.id)
+        val targetClearAllFabPos = if (isInitialized) ClearAllFabPosition.fromId(prefs.getString(getStyleKey(KEY_CLEAR_ALL_FAB_POSITION, style), savedGlobalPos)) else ClearAllFabPosition.fromId(savedGlobalPos)
+        val savedGlobalFabShapeId = prefs.getString(KEY_CLEAR_ALL_FAB_SHAPE_ID, "circle") ?: "circle"
+        val targetClearAllFabShapeId = if (isInitialized) prefs.getString(getStyleKey(KEY_CLEAR_ALL_FAB_SHAPE_ID, style), savedGlobalFabShapeId) ?: savedGlobalFabShapeId else savedGlobalFabShapeId
+        val savedGlobalFabShape = prefs.getString(KEY_CLEAR_ALL_FAB_SHAPE, ClearAllFabShape.CIRCLE.id)
+        val targetClearAllFabShape = if (isInitialized) ClearAllFabShape.fromId(prefs.getString(getStyleKey(KEY_CLEAR_ALL_FAB_SHAPE, style), savedGlobalFabShape)) else ClearAllFabShape.fromId(savedGlobalFabShape)
+        val savedGlobalFabIcon = prefs.getString(KEY_CLEAR_ALL_FAB_ICON, ClearAllFabIcon.CLEAR_ALL.id)
+        val targetClearAllFabIcon = if (isInitialized) ClearAllFabIcon.fromId(prefs.getString(getStyleKey(KEY_CLEAR_ALL_FAB_ICON, style), savedGlobalFabIcon)) else ClearAllFabIcon.fromId(savedGlobalFabIcon)
+        val savedGlobalFabOffsetX = prefs.getFloat(KEY_CLEAR_ALL_FAB_OFFSET_X, 0f)
+        val targetClearAllFabOffsetX = if (isInitialized) prefs.getFloat(getStyleKey(KEY_CLEAR_ALL_FAB_OFFSET_X, style), savedGlobalFabOffsetX) else savedGlobalFabOffsetX
+        val savedGlobalFabOffsetY = prefs.getFloat(KEY_CLEAR_ALL_FAB_OFFSET_Y, 0f)
+        val targetClearAllFabOffsetY = if (isInitialized) prefs.getFloat(getStyleKey(KEY_CLEAR_ALL_FAB_OFFSET_Y, style), savedGlobalFabOffsetY) else savedGlobalFabOffsetY
+        val savedGlobalFabSize = prefs.getInt(KEY_CLEAR_ALL_FAB_SIZE, 56)
+        val targetClearAllFabSize = if (isInitialized) prefs.getInt(getStyleKey(KEY_CLEAR_ALL_FAB_SIZE, style), savedGlobalFabSize) else savedGlobalFabSize
         val targetDisableClearAllBg = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_DISABLE_CLEAR_ALL_BG, style), false) else false
         val targetDisableClearAllLabel = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_DISABLE_CLEAR_ALL_LABEL, style), false) else false
         val targetClearAllIconSize = if (isInitialized) prefs.getInt(getStyleKey(KEY_CLEAR_ALL_ICON_SIZE, style), 24) else 24
@@ -2244,13 +2252,19 @@ object PanelPreferences {
     fun setUseClearAllFab(context: Context, use: Boolean) {
         _useClearAllFab.value = use
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_USE_CLEAR_ALL_FAB, use).apply()
+        prefs.edit()
+            .putBoolean(KEY_USE_CLEAR_ALL_FAB, use)
+            .putBoolean(getStyleKey(KEY_USE_CLEAR_ALL_FAB), use)
+            .apply()
     }
 
     fun setClearAllFabPosition(context: Context, pos: ClearAllFabPosition) {
         _clearAllFabPosition.value = pos
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putString(KEY_CLEAR_ALL_FAB_POSITION, pos.id).apply()
+        prefs.edit()
+            .putString(KEY_CLEAR_ALL_FAB_POSITION, pos.id)
+            .putString(getStyleKey(KEY_CLEAR_ALL_FAB_POSITION), pos.id)
+            .apply()
     }
 
     fun setClearAllFabShape(context: Context, shape: ClearAllFabShape) {
@@ -2260,6 +2274,8 @@ object PanelPreferences {
         prefs.edit()
             .putString(KEY_CLEAR_ALL_FAB_SHAPE, shape.id)
             .putString(KEY_CLEAR_ALL_FAB_SHAPE_ID, shape.id)
+            .putString(getStyleKey(KEY_CLEAR_ALL_FAB_SHAPE), shape.id)
+            .putString(getStyleKey(KEY_CLEAR_ALL_FAB_SHAPE_ID), shape.id)
             .apply()
     }
 
@@ -2271,31 +2287,45 @@ object PanelPreferences {
         prefs.edit()
             .putString(KEY_CLEAR_ALL_FAB_SHAPE_ID, shapeId)
             .putString(KEY_CLEAR_ALL_FAB_SHAPE, shapeId)
+            .putString(getStyleKey(KEY_CLEAR_ALL_FAB_SHAPE_ID), shapeId)
+            .putString(getStyleKey(KEY_CLEAR_ALL_FAB_SHAPE), shapeId)
             .apply()
     }
 
     fun setClearAllFabIcon(context: Context, icon: ClearAllFabIcon) {
         _clearAllFabIcon.value = icon
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putString(KEY_CLEAR_ALL_FAB_ICON, icon.id).apply()
+        prefs.edit()
+            .putString(KEY_CLEAR_ALL_FAB_ICON, icon.id)
+            .putString(getStyleKey(KEY_CLEAR_ALL_FAB_ICON), icon.id)
+            .apply()
     }
 
     fun setClearAllFabOffsetX(context: Context, offset: Float) {
         _clearAllFabOffsetX.value = offset
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putFloat(KEY_CLEAR_ALL_FAB_OFFSET_X, offset).apply()
+        prefs.edit()
+            .putFloat(KEY_CLEAR_ALL_FAB_OFFSET_X, offset)
+            .putFloat(getStyleKey(KEY_CLEAR_ALL_FAB_OFFSET_X), offset)
+            .apply()
     }
 
     fun setClearAllFabOffsetY(context: Context, offset: Float) {
         _clearAllFabOffsetY.value = offset
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putFloat(KEY_CLEAR_ALL_FAB_OFFSET_Y, offset).apply()
+        prefs.edit()
+            .putFloat(KEY_CLEAR_ALL_FAB_OFFSET_Y, offset)
+            .putFloat(getStyleKey(KEY_CLEAR_ALL_FAB_OFFSET_Y), offset)
+            .apply()
     }
 
     fun setClearAllFabSize(context: Context, size: Int) {
         _clearAllFabSize.value = size
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putInt(KEY_CLEAR_ALL_FAB_SIZE, size).apply()
+        prefs.edit()
+            .putInt(KEY_CLEAR_ALL_FAB_SIZE, size)
+            .putInt(getStyleKey(KEY_CLEAR_ALL_FAB_SIZE), size)
+            .apply()
     }
 
     fun resetClearAllFabOffsets(context: Context) {
@@ -2307,6 +2337,9 @@ object PanelPreferences {
             .putFloat(KEY_CLEAR_ALL_FAB_OFFSET_X, 0f)
             .putFloat(KEY_CLEAR_ALL_FAB_OFFSET_Y, 0f)
             .putInt(KEY_CLEAR_ALL_FAB_SIZE, 64)
+            .putFloat(getStyleKey(KEY_CLEAR_ALL_FAB_OFFSET_X), 0f)
+            .putFloat(getStyleKey(KEY_CLEAR_ALL_FAB_OFFSET_Y), 0f)
+            .putInt(getStyleKey(KEY_CLEAR_ALL_FAB_SIZE), 64)
             .apply()
     }
 
