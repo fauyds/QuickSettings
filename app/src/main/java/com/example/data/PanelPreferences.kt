@@ -1690,7 +1690,6 @@ object PanelPreferences {
             putFloat(getStyleKey(KEY_PANEL_SHADOW_ELEVATION, style), _panelShadowElevation.value)
             putFloat(getStyleKey(KEY_PANEL_SHADOW_OFFSET_Y, style), _panelShadowOffsetY.value)
             putFloat(getStyleKey(KEY_PANEL_SHADOW_ALPHA, style), _panelShadowAlpha.value)
-            putBoolean(getStyleKey(KEY_COLLAPSE_EXPAND_OPTIONS, style), _collapseExpandOptions.value)
             putBoolean(getStyleKey(KEY_SHOW_CUSTOM_HEADER_IMAGE, style), _showCustomHeaderImage.value)
             putString(getStyleKey(KEY_CUSTOM_HEADER_IMAGE_URI, style), _customHeaderImageUri.value)
             putString(getStyleKey(KEY_CUSTOM_HEADER_IMAGE_TITLE, style), _customHeaderImageTitle.value)
@@ -1841,7 +1840,7 @@ object PanelPreferences {
         val targetPanelShadowOffsetY = if (isInitialized) prefs.getFloat(getStyleKey(KEY_PANEL_SHADOW_OFFSET_Y, style), 4.0f) else 4.0f
         val targetPanelShadowAlpha = if (isInitialized) prefs.getFloat(getStyleKey(KEY_PANEL_SHADOW_ALPHA, style), 0.15f) else 0.15f
 
-        val targetCollapseExpandOptions = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_COLLAPSE_EXPAND_OPTIONS, style), true) else true
+        val targetCollapseExpandOptions = prefs.getBoolean(KEY_COLLAPSE_EXPAND_OPTIONS, false)
         val targetShowCustomHeaderImage = if (isInitialized && prefs.contains(getStyleKey(KEY_SHOW_CUSTOM_HEADER_IMAGE, style))) {
             prefs.getBoolean(getStyleKey(KEY_SHOW_CUSTOM_HEADER_IMAGE, style), false)
         } else {

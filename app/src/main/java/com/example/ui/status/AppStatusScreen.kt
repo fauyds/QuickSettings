@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
@@ -184,6 +185,8 @@ fun AppStatusScreen(
     hasOverlayPermission: Boolean,
     hasWriteSettingsPermission: Boolean = false,
     hasNotificationPolicyPermission: Boolean = false,
+    hasLocationPermission: Boolean = false,
+    hasNearbyDevicesPermission: Boolean = false,
     isAccessibilityRunning: Boolean,
     currentMode: PrivilegeMode,
     isRootAvailable: Boolean,
@@ -209,16 +212,13 @@ fun AppStatusScreen(
     val storedInitialSetupDone by PanelPreferences.initialSetupCompleted.collectAsStateWithLifecycle(initialValue = PanelPreferences.initialSetupCompleted.value)
     val effectiveSetupDone = isInitialSetupDone ?: storedInitialSetupDone
 
-    // The 4 system permissions displayed in the System Permissions Checklist under Privileges tab:
-    // 1. Draw Over Other Apps (SYSTEM_ALERT_WINDOW)
-    // 2. Modify System Settings (WRITE_SETTINGS)
-    // 3. Notification Policy Access (ACCESS_NOTIFICATION_POLICY for DND)
-    // 4. QuickPanel Accessibility Service (BIND_ACCESSIBILITY_SERVICE)
     val allowedCount = (if (hasOverlayPermission) 1 else 0) +
             (if (hasWriteSettingsPermission) 1 else 0) +
             (if (hasNotificationPolicyPermission) 1 else 0) +
-            (if (isAccessibilityRunning) 1 else 0)
-    val totalCount = 4
+            (if (isAccessibilityRunning) 1 else 0) +
+            (if (hasLocationPermission) 1 else 0) +
+            (if (hasNearbyDevicesPermission) 1 else 0)
+    val totalCount = 6
 
     Column(
         modifier = Modifier
@@ -568,6 +568,13 @@ fun AppStatusScreen(
         Spacer(modifier = Modifier.height(16.dp))
     }
 }
+
+private data class StatusPillData(
+    val text: String,
+    val containerColor: Color,
+    val contentColor: Color,
+    val icon: ImageVector
+)
 
 /**
  * Top Trigger Strip Bar with Clear Master ON / OFF Switch & Floating Overlay Trigger

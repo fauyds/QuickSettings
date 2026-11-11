@@ -19,9 +19,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Security
@@ -123,6 +125,20 @@ fun PrivilegeWizardScreen(
     val hasWriteSettings by privilegeEngine.hasWriteSettings.collectAsStateWithLifecycle()
     val hasDnd by privilegeEngine.hasNotificationPolicy.collectAsStateWithLifecycle()
     val hasAccessibility by privilegeEngine.hasAccessibility.collectAsStateWithLifecycle()
+    val hasLocation by privilegeEngine.hasLocation.collectAsStateWithLifecycle()
+    val hasNearbyDevices by privilegeEngine.hasNearbyDevices.collectAsStateWithLifecycle()
+
+    val locationLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ ->
+        privilegeEngine.refreshPermissions()
+    }
+
+    val nearbyDevicesLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ ->
+        privilegeEngine.refreshPermissions()
+    }
 
     Column(
         modifier = modifier
@@ -356,7 +372,6 @@ fun PrivilegeWizardScreen(
                     )
 
                     // 4. Accessibility Service
-                    val isModeAccessVisible = currentMode == PrivilegeMode.SHIZUKU || currentMode == PrivilegeMode.ROOT
                     PermissionCheckRow(
                         title = "QuickPanel Accessibility Service",
                         description = "Enables global shade expansion and gestures",
@@ -364,6 +379,55 @@ fun PrivilegeWizardScreen(
                         isGranted = hasAccessibility,
                         onGrant = {
                             privilegeEngine.openAccessibilitySettings()
+                            privilegeEngine.refreshPermissions()
+                        },
+                        shape = RoundedCornerShape(4.dp)
+                    )
+
+                    // 5. Location Permission
+                    PermissionCheckRow(
+                        title = "Location Permission",
+                        description = "ACCESS_FINE_LOCATION for Wi-Fi SSID & location tiles",
+                        icon = Icons.Default.LocationOn,
+                        isGranted = hasLocation,
+                        onGrant = {
+                            try {
+                                locationLauncher.launch(
+                                    arrayOf(
+                                        android.Manifest.permission.ACCESS_FINE_LOCATION,
+                                        android.Manifest.permission.ACCESS_COARSE_LOCATION
+                                    )
+                                )
+                            } catch (e: Exception) {
+                                privilegeEngine.requestLocationPermission()
+                            }
+                            privilegeEngine.refreshPermissions()
+                        },
+                        shape = RoundedCornerShape(4.dp)
+                    )
+
+                    // 6. Nearby Devices Permission
+                    val isModeAccessVisible = currentMode == PrivilegeMode.SHIZUKU || currentMode == PrivilegeMode.ROOT
+                    PermissionCheckRow(
+                        title = "Nearby Devices Permission",
+                        description = "BLUETOOTH_CONNECT & BLUETOOTH_SCAN for Bluetooth tiles",
+                        icon = Icons.Default.Bluetooth,
+                        isGranted = hasNearbyDevices,
+                        onGrant = {
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                                try {
+                                    nearbyDevicesLauncher.launch(
+                                        arrayOf(
+                                            android.Manifest.permission.BLUETOOTH_CONNECT,
+                                            android.Manifest.permission.BLUETOOTH_SCAN
+                                        )
+                                    )
+                                } catch (e: Exception) {
+                                    privilegeEngine.requestNearbyDevicesPermission()
+                                }
+                            } else {
+                                privilegeEngine.requestNearbyDevicesPermission()
+                            }
                             privilegeEngine.refreshPermissions()
                         },
                         shape = if (!isModeAccessVisible) {

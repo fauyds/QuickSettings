@@ -644,8 +644,15 @@ class NotificationListView @JvmOverloads constructor(
             rvNotifications.visibility = View.VISIBLE
             
             val hasClearable = notifications.any { it.isClearable }
+            val isKitKatStyle = PanelPreferences.isAndroidKitKatStyle(context)
             
-            if (useClearAllFab && hasClearable) {
+            if (isKitKatStyle) {
+                flFloatingClearAllContainer.visibility = View.GONE
+                btnFloatingClearAllFab.translationX = 0f
+                btnFloatingClearAllFab.translationY = 0f
+                rvNotifications.setPadding(0, 0, 0, 0)
+                adapter?.showFooter = false
+            } else if (useClearAllFab && hasClearable) {
                 flFloatingClearAllContainer.visibility = View.VISIBLE
 
                 // Position and size floating FAB at the bottom (Left, Center, or Right)

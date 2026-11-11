@@ -1,5 +1,6 @@
 package com.example.service
 
+import android.app.KeyguardManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -348,6 +349,13 @@ class QuickSettingsOverlayService : Service() {
      * Show the floating custom Quick Settings overlay window with smooth finger-tracking animations.
      */
     fun showOverlayPanel(initialStage: QsExpansionStage) {
+        val km = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+        if (km?.isKeyguardLocked == true || km?.inKeyguardRestrictedInputMode() == true) {
+            return
+        }
+        if (QuickPanelAccessibilityService.instance?.isLockedOrUnlocking() == true) {
+            return
+        }
         if (isPanelShowing && overlayComposeView != null) {
             return
         }

@@ -150,6 +150,17 @@ class TriggerContainerLayout @JvmOverloads constructor(
             return false
         }
 
+        val service = QuickPanelAccessibilityService.instance
+        if (service?.isLockedOrUnlocking() == true) {
+            isTrackingSwipe = false
+            return false
+        }
+        val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
+        if (keyguardManager?.isKeyguardLocked == true || keyguardManager?.inKeyguardRestrictedInputMode() == true) {
+            isTrackingSwipe = false
+            return false
+        }
+
         val density = resources.displayMetrics.density
         val immediateSwipeThresholdPx = 5f * density
 

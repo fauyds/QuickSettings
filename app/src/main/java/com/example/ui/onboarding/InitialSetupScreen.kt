@@ -163,8 +163,10 @@ fun InitialSetupScreen(
     val hasWriteSettings by privilegeEngine.hasWriteSettings.collectAsStateWithLifecycle()
     val hasDnd by privilegeEngine.hasNotificationPolicy.collectAsStateWithLifecycle()
     val hasAccessibility by privilegeEngine.hasAccessibility.collectAsStateWithLifecycle()
+    val hasLocation by privilegeEngine.hasLocation.collectAsStateWithLifecycle()
+    val hasNearbyDevices by privilegeEngine.hasNearbyDevices.collectAsStateWithLifecycle()
 
-    val allPermissionsGranted = hasOverlay && hasWriteSettings && hasDnd && hasAccessibility
+    val allPermissionsGranted = hasOverlay && hasWriteSettings && hasDnd && hasAccessibility && hasLocation && hasNearbyDevices
 
     BackHandler {
         if (currentStep > 0) {
@@ -235,7 +237,9 @@ fun InitialSetupScreen(
                     hasOverlay = hasOverlay,
                     hasWriteSettings = hasWriteSettings,
                     hasDnd = hasDnd,
-                    hasAccessibility = hasAccessibility
+                    hasAccessibility = hasAccessibility,
+                    hasLocation = hasLocation,
+                    hasNearbyDevices = hasNearbyDevices
                 )
                 1 -> PrivilegeEngineStep(viewModel = viewModel)
                 2 -> TileCommandsStep(viewModel = viewModel)
@@ -390,11 +394,25 @@ private fun PermissionsSetupStep(
     hasOverlay: Boolean,
     hasWriteSettings: Boolean,
     hasDnd: Boolean,
-    hasAccessibility: Boolean
+    hasAccessibility: Boolean,
+    hasLocation: Boolean,
+    hasNearbyDevices: Boolean
 ) {
     val privilegeEngine = viewModel.privilegeEngine
     val isDark = LocalIsDarkTheme.current
     val cardBg = getSettingsCardBackgroundColor(isDark)
+
+    val locationLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ ->
+        privilegeEngine.refreshPermissions()
+    }
+
+    val nearbyDevicesLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ ->
+        privilegeEngine.refreshPermissions()
+    }
 
     SetupStepHeader(
         icon = Icons.Default.Security,
@@ -473,6 +491,54 @@ private fun PermissionsSetupStep(
                     isGranted = hasAccessibility,
                     onGrant = {
                         privilegeEngine.openAccessibilitySettings()
+                        privilegeEngine.refreshPermissions()
+                    },
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                // 5. Location Permission
+                PermissionCheckRow(
+                    title = "Location Permission",
+                    description = "ACCESS_FINE_LOCATION for Wi-Fi SSID & location tiles",
+                    icon = Icons.Default.LocationOn,
+                    isGranted = hasLocation,
+                    onGrant = {
+                        try {
+                            locationLauncher.launch(
+                                arrayOf(
+                                    android.Manifest.permission.ACCESS_FINE_LOCATION,
+                                    android.Manifest.permission.ACCESS_COARSE_LOCATION
+                                )
+                            )
+                        } catch (e: Exception) {
+                            privilegeEngine.requestLocationPermission()
+                        }
+                        privilegeEngine.refreshPermissions()
+                    },
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                // 6. Nearby Devices Permission
+                PermissionCheckRow(
+                    title = "Nearby Devices Permission",
+                    description = "BLUETOOTH_CONNECT & BLUETOOTH_SCAN for Bluetooth tiles",
+                    icon = Icons.Default.Bluetooth,
+                    isGranted = hasNearbyDevices,
+                    onGrant = {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                            try {
+                                nearbyDevicesLauncher.launch(
+                                    arrayOf(
+                                        android.Manifest.permission.BLUETOOTH_CONNECT,
+                                        android.Manifest.permission.BLUETOOTH_SCAN
+                                    )
+                                )
+                            } catch (e: Exception) {
+                                privilegeEngine.requestNearbyDevicesPermission()
+                            }
+                        } else {
+                            privilegeEngine.requestNearbyDevicesPermission()
+                        }
                         privilegeEngine.refreshPermissions()
                     },
                     shape = RoundedCornerShape(12.dp)

@@ -256,7 +256,8 @@ class QuickPanelAccessibilityService : AccessibilityService() {
 
     private var dismissAnimatedCallback: (() -> Unit)? = null
     private var lastShadeInterceptionTime = 0L
-    private var lastUnlockTransitionTime = 0L
+    var lastUnlockTransitionTime = 0L
+        internal set
     private var lastHunEventTime = 0L
     private var lastDetectorCheckTime = 0L
 
@@ -277,8 +278,15 @@ class QuickPanelAccessibilityService : AccessibilityService() {
     }
 
     var isUnlocking: Boolean = false
-        private set
+        internal set
     private var unlockResetJob: Job? = null
+
+    fun isLockedOrUnlocking(): Boolean {
+        val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+        val isLocked = keyguardManager?.isKeyguardLocked == true || keyguardManager?.inKeyguardRestrictedInputMode() == true
+        val isRecentlyUnlocked = isUnlocking || (System.currentTimeMillis() - lastUnlockTransitionTime < 1200L)
+        return isLocked || isRecentlyUnlocked
+    }
 
     private fun updateLauncherPackages() {
         val pkgs = mutableSetOf(
@@ -401,12 +409,19 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                     expansionStage.value = QsExpansionStage.COLLAPSED
                     destroyOverlayWindow()
                 }
+                Intent.ACTION_SCREEN_ON -> {
+                    val km = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+                    if (km?.isKeyguardLocked == true || km?.inKeyguardRestrictedInputMode() == true) {
+                        wasKeyguardLocked = true
+                    }
+                }
                 Intent.ACTION_USER_PRESENT -> {
                     isUnlocking = true
+                    wasKeyguardLocked = false
                     lastUnlockTransitionTime = System.currentTimeMillis()
                     unlockResetJob?.cancel()
                     unlockResetJob = serviceScope.launch {
-                        delay(800)
+                        delay(1200)
                         isUnlocking = false
                     }
                 }
@@ -486,6 +501,7 @@ class QuickPanelAccessibilityService : AccessibilityService() {
 
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
             addAction(Intent.ACTION_USER_PRESENT)
             addAction("android.media.VOLUME_CHANGED_ACTION")
             addAction("android.media.STREAM_DEVICES_CHANGED_ACTION")
@@ -596,7 +612,41 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         // 3. Keyguard & Immersive Check
         val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
         val isCurrentlyLocked = keyguardManager?.isKeyguardLocked == true || keyguardManager?.inKeyguardRestrictedInputMode() == true
-        if (isCurrentlyLocked || isImmersiveModeActive()) {
+
+        // Filter out any keyguard, bouncer, or lockscreen events explicitly
+        val isKeyguardNode = cls.contains("keyguard", ignoreCase = true) ||
+                cls.contains("bouncer", ignoreCase = true) ||
+                cls.contains("lockscreen", ignoreCase = true) ||
+                viewId.contains("keyguard", ignoreCase = true) ||
+                viewId.contains("bouncer", ignoreCase = true) ||
+                desc.contains("keyguard", ignoreCase = true) ||
+                text.contains("keyguard", ignoreCase = true)
+
+        if (isKeyguardNode) {
+            wasKeyguardLocked = true
+            return
+        }
+
+        // Detect transition from locked -> unlocked before USER_PRESENT broadcast
+        if (wasKeyguardLocked && !isCurrentlyLocked) {
+            wasKeyguardLocked = false
+            isUnlocking = true
+            lastUnlockTransitionTime = now
+            unlockResetJob?.cancel()
+            unlockResetJob = serviceScope.launch {
+                delay(1200)
+                isUnlocking = false
+            }
+            return
+        }
+
+        if (isCurrentlyLocked) {
+            wasKeyguardLocked = true
+            return
+        }
+
+        val isRecentlyUnlocked = isUnlocking || (now - lastUnlockTransitionTime < 1200L)
+        if (isRecentlyUnlocked || isImmersiveModeActive()) {
             return
         }
 
@@ -1257,8 +1307,7 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         val strip = AccessibilityStatusTriggerView(this).apply {
             visibility = if (isImmersiveModeActive()) View.GONE else View.VISIBLE
             onSwipeDownDetected = { isDeepSwipe ->
-                val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
-                if (keyguardManager?.isKeyguardLocked != true && keyguardManager?.inKeyguardRestrictedInputMode() != true) {
+                if (!isLockedOrUnlocking()) {
                     collapseStockNotificationShade()
                     if (isDeepSwipe) {
                         showOverlayPanel(QsExpansionStage.FULL_QS)
@@ -1270,8 +1319,7 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         }
         container.setChildTriggerView(strip)
         container.onSwipeDownToOpen = { _ ->
-            val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
-            if (keyguardManager?.isKeyguardLocked != true && keyguardManager?.inKeyguardRestrictedInputMode() != true) {
+            if (!isLockedOrUnlocking()) {
                 collapseStockNotificationShade()
                 showOverlayPanel(QsExpansionStage.QQS)
             }
@@ -1315,6 +1363,9 @@ class QuickPanelAccessibilityService : AccessibilityService() {
      * Show custom Quick Settings overlay with TYPE_ACCESSIBILITY_OVERLAY
      */
     fun showOverlayPanel(initialStage: QsExpansionStage) {
+        if (isLockedOrUnlocking()) {
+            return
+        }
         if (isPanelShowing && overlayComposeView != null) {
             return
         }
@@ -1817,6 +1868,19 @@ class AccessibilityStatusTriggerView(context: Context) : View(context) {
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        val service = QuickPanelAccessibilityService.instance
+        if (service?.isLockedOrUnlocking() == true) {
+            isDragging = false
+            setPressedState(false)
+            return false
+        }
+        val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+        if (keyguardManager?.isKeyguardLocked == true || keyguardManager?.inKeyguardRestrictedInputMode() == true) {
+            isDragging = false
+            setPressedState(false)
+            return false
+        }
+
         val density = resources.displayMetrics.density
         val immediateSwipeThresholdPx = (3 * density).toInt()
         val deepSwipeThresholdPx = (40 * density).toInt()

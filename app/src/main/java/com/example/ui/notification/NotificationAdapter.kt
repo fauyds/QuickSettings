@@ -125,7 +125,8 @@ class NotificationAdapter(
     override fun getItemCount(): Int {
         val mediaCount = mediaSessions.size
         val notifCount = currentList.size
-        val footerCount = if (showFooter && notifCount > 0) 1 else 0
+        val isKitKatStyle = attachedRecyclerView?.context?.let { PanelPreferences.isAndroidKitKatStyle(it) } ?: false
+        val footerCount = if (showFooter && notifCount > 0 && !isKitKatStyle) 1 else 0
         return mediaCount + notifCount + footerCount
     }
 
