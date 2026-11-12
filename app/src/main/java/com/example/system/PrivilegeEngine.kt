@@ -161,18 +161,16 @@ class PrivilegeEngine(private val context: Context) {
         } catch (_: Exception) { null }
         val savedRoot = prefs?.getBoolean("root_access_granted", false) == true
 
-        if (checkRootBinary() || checkSuInPath() || savedRoot) {
-            isRootGrantedMemory = true
-        }
-        _isRootAvailable.value = isRootGrantedMemory
+        isRootGrantedMemory = savedRoot
+        _isRootAvailable.value = savedRoot
         updateShizukuStatus()
 
-        // Background check for live su command execution
-        CoroutineScope(Dispatchers.IO).launch {
-            if (testRootAccess()) {
-                isRootGrantedMemory = true
-                _isRootAvailable.value = true
-                prefs?.edit()?.putBoolean("root_access_granted", true)?.apply()
+        if (savedRoot) {
+            CoroutineScope(Dispatchers.IO).launch {
+                val liveGranted = testRootAccess()
+                isRootGrantedMemory = liveGranted
+                _isRootAvailable.value = liveGranted
+                prefs?.edit()?.putBoolean("root_access_granted", liveGranted)?.apply()
             }
         }
     }
@@ -210,7 +208,7 @@ class PrivilegeEngine(private val context: Context) {
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
             val stdout = process.inputStream.bufferedReader().readText().trim()
             val exitCode = process.waitFor()
-            exitCode == 0 && (stdout.contains("uid=0") || stdout.contains("root") || stdout.isNotBlank())
+            exitCode == 0 && (stdout.contains("uid=0") || stdout.contains("root"))
         } catch (e: Exception) {
             false
         }
@@ -253,14 +251,14 @@ class PrivilegeEngine(private val context: Context) {
     }
 
     fun requestRootPermission(): Boolean {
-        val granted = testRootAccess() || runRootCommand("id") || checkRootBinary() || checkSuInPath()
+        val granted = testRootAccess()
+        isRootGrantedMemory = granted
+        _isRootAvailable.value = granted
+        try {
+            val prefs = context.getSharedPreferences("quickpanel_prefs", Context.MODE_PRIVATE)
+            prefs.edit().putBoolean("root_access_granted", granted).apply()
+        } catch (_: Exception) {}
         if (granted) {
-            isRootGrantedMemory = true
-            _isRootAvailable.value = true
-            try {
-                val prefs = context.getSharedPreferences("quickpanel_prefs", Context.MODE_PRIVATE)
-                prefs.edit().putBoolean("root_access_granted", true).apply()
-            } catch (_: Exception) {}
             NativeTileManager.instance?.onPrivilegeOrPermissionsUpdated()
         }
         _lastExecutionLog.value = if (granted) "Root access granted!" else "Root access denied or su unavailable."
@@ -543,7 +541,7 @@ class PrivilegeEngine(private val context: Context) {
     }
 
     fun isRootGranted(): Boolean {
-        return _isRootAvailable.value || checkRootBinary()
+        return _isRootAvailable.value
     }
 
     /**

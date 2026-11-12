@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.FlashlightOff
 import androidx.compose.material.icons.filled.FlashlightOn
 import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LocalCafe
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Memory
@@ -67,6 +68,8 @@ object QsTileIconHelper {
             "sound_mode" -> Icons.Default.VolumeUp
             "screenshot" -> Icons.Default.CameraAlt
             "screenrecord" -> Icons.Default.Videocam
+            "settings" -> Icons.Default.Settings
+            "customize" -> Icons.Default.Layers
             else -> Icons.Default.Settings
         }
     }
@@ -105,6 +108,8 @@ object QsTileIconHelper {
             "sound_mode" -> R.drawable.ic_qs_volume
             "screenshot" -> R.drawable.ic_qs_screenshot
             "screenrecord" -> R.drawable.ic_qs_videocam
+            "settings" -> R.drawable.ic_qs_settings
+            "customize" -> R.drawable.ic_qs_customize
             else -> R.drawable.ic_qs_wifi
         }
     }

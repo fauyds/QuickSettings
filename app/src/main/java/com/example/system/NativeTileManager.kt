@@ -1414,6 +1414,28 @@ class NativeTileManager(
             "caffeine" -> toggleCaffeine()
             "heads_up" -> toggleHeadsUp()
             "screenrecord" -> toggleScreenRecord()
+            "settings" -> {
+                try {
+                    val intent = Intent(Settings.ACTION_SETTINGS).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    Log.w("NativeTileManager", "Settings intent error: ${e.message}")
+                }
+            }
+            "customize" -> {
+                try {
+                    val intent = Intent().apply {
+                        setClassName(context.packageName, "com.example.MainActivity")
+                        putExtra("TARGET_TAB", 5)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    }
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    Log.w("NativeTileManager", "Customize intent error: ${e.message}")
+                }
+            }
             else -> {
                 // Custom ROM / System tile fallback: toggle local state & launch settings intent
                 toggleCustomRomState(tileId)
@@ -1461,6 +1483,8 @@ class NativeTileManager(
             "sound_profile" -> listOf("sound profile", "ringer", "vibrate", "silent")
             "screenshot" -> listOf("screenshot", "screen capture", "capture")
             "screenrecord" -> listOf("screen record", "screen recorder", "record screen")
+            "settings" -> listOf("settings", "system settings", "configure", "preferences")
+            "customize" -> listOf("customize", "customizer", "theme", "qs style", "quick panel")
             else -> listOf(tileId)
         }
     }
@@ -1489,6 +1513,8 @@ class NativeTileManager(
             "sound_profile" -> "volume"
             "screenshot" -> "screenshot"
             "screenrecord" -> "screenrecord"
+            "settings" -> "settings"
+            "customize" -> "customize"
             else -> tileId
         }
     }
@@ -1529,6 +1555,8 @@ class NativeTileManager(
             "aod" -> Intent("android.settings.LOCK_SCREEN_SETTINGS")
             "ambient_display", "caffeine" -> Intent(Settings.ACTION_DISPLAY_SETTINGS)
             "heads_up" -> Intent("android.settings.NOTIFICATION_SETTINGS")
+            "settings" -> Intent(Settings.ACTION_SETTINGS)
+            "customize" -> Intent().apply { setClassName(context.packageName, "com.example.MainActivity"); putExtra("TARGET_TAB", 5) }
             else -> Intent(Settings.ACTION_SETTINGS)
         }
     }

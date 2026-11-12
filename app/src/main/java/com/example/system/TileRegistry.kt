@@ -15,12 +15,14 @@ import androidx.compose.material.icons.filled.FlashlightOff
 import androidx.compose.material.icons.filled.FlashlightOn
 import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LocalCafe
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.ScreenRotation
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.Visibility
@@ -89,7 +91,9 @@ class TileRegistry(
             TileEntity("reading_mode", "Reading Mode", "Eye Comfort", TileCategory.AUDIO_DISPLAY.name, 18, isVisible = false, isQqsFavorite = false),
             TileEntity("sound_profile", "Sound Profile", "Ringer Mode", TileCategory.SYSTEM.name, 19, isVisible = false, isQqsFavorite = false),
             TileEntity("screenshot", "Screenshot", "Capture", TileCategory.HARDWARE.name, 20, isVisible = false, isQqsFavorite = false),
-            TileEntity("screenrecord", "Screen Record", "Recorder", TileCategory.HARDWARE.name, 21, isVisible = true, isQqsFavorite = false)
+            TileEntity("screenrecord", "Screen Record", "Recorder", TileCategory.HARDWARE.name, 21, isVisible = true, isQqsFavorite = false),
+            TileEntity("settings", "Settings", "System", TileCategory.SYSTEM.name, 23, isVisible = true, isQqsFavorite = false, settingsAction = Settings.ACTION_SETTINGS),
+            TileEntity("customize", "Customize", "Quick Panel", TileCategory.SYSTEM.name, 24, isVisible = true, isQqsFavorite = false)
         )
 
         internal fun resolveWifiSubtitle(
@@ -171,6 +175,14 @@ class TileRegistry(
                     val screenRecordTile = currentList.find { it.tileId == "screenrecord" }
                     if (screenRecordTile == null) {
                         repository.insert(TileEntity("screenrecord", "Screen Record", "Recorder", TileCategory.HARDWARE.name, 21, isVisible = true, isQqsFavorite = false))
+                    }
+                    val settingsTile = currentList.find { it.tileId == "settings" }
+                    if (settingsTile == null) {
+                        repository.insert(TileEntity("settings", "Settings", "System", TileCategory.SYSTEM.name, 23, isVisible = true, isQqsFavorite = false, settingsAction = Settings.ACTION_SETTINGS))
+                    }
+                    val customizeTile = currentList.find { it.tileId == "customize" }
+                    if (customizeTile == null) {
+                        repository.insert(TileEntity("customize", "Customize", "Quick Panel", TileCategory.SYSTEM.name, 24, isVisible = true, isQqsFavorite = false))
                     }
                 }
             }
@@ -326,12 +338,14 @@ class TileRegistry(
                     "sound_profile" -> Triple(if (customOn) TileState.ACTIVE else TileState.INACTIVE, Icons.Default.VolumeUp, if (customOn) "Ring" else "Vibrate")
                     "screenshot" -> Triple(TileState.INACTIVE, Icons.Default.CameraAlt, "Capture")
                     "screenrecord" -> Triple(if (screenRecordOn) TileState.ACTIVE else TileState.INACTIVE, Icons.Default.Videocam, if (screenRecordOn) "Recording..." else "Record")
+                    "settings" -> Triple(TileState.INACTIVE, Icons.Default.Settings, "System")
+                    "customize" -> Triple(TileState.INACTIVE, Icons.Default.Layers, "Quick Panel")
 
                     else -> Triple(if (customOn) TileState.ACTIVE else TileState.INACTIVE, Icons.Default.Wifi, "Toggle")
                 }
 
                 val isCustomActive = customTileStates[entity.tileId] ?: forced[entity.tileId]
-                val isPureCustomTile = entity.tileId in listOf("sound_search", "cpu_info", "fps_info", "reading_mode", "sound_profile", "screenshot")
+                val isPureCustomTile = entity.tileId in listOf("sound_search", "cpu_info", "fps_info", "reading_mode", "sound_profile", "screenshot", "settings", "customize")
                 if (isCustomActive != null && (isPureCustomTile || config.isOverrideEnabled || config.forceStateChangeAnyway)) {
                     state = if (isCustomActive) TileState.ACTIVE else TileState.INACTIVE
                     sub = if (isCustomActive) "Active" else "Off"
@@ -395,7 +409,7 @@ class TileRegistry(
                 TileActionOverrideType.DEFAULT -> false
             }
         }
-        return tileId in listOf("screenshot", "sound_search")
+        return tileId in listOf("screenshot", "sound_search", "settings", "customize")
     }
 
     /**
@@ -412,7 +426,7 @@ class TileRegistry(
         val isNativeSystemTile = tile.id in listOf(
             "wifi", "bluetooth", "torch", "autorotate", "dnd", "airplane", "location",
             "cellular", "hotspot", "battery_saver", "nfc", "dark_mode", "aod",
-            "ambient_display", "caffeine", "heads_up", "screenrecord"
+            "ambient_display", "caffeine", "heads_up", "screenrecord", "settings", "customize"
         )
 
         // 1. Only toggle local custom state for pure custom action overrides or non-system custom tiles

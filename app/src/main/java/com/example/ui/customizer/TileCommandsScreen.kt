@@ -80,6 +80,8 @@ import com.example.data.TileCommandRepository
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.DoNotDisturb
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Layers
 import com.example.model.CommandExecutionMode
 import com.example.model.TileCommandConfig
 import com.example.system.PrivilegeEngine
@@ -117,7 +119,9 @@ private val KnownTilesList = listOf(
     TileInfo("screenshot", "Screenshot", Icons.Default.CameraAlt),
     TileInfo("screenrecord", "Screen Record", Icons.Default.Videocam),
     TileInfo("fps_info", "FPS Info", Icons.Default.Speed),
-    TileInfo("cpu_info", "CPU Info", Icons.Default.Memory)
+    TileInfo("cpu_info", "CPU Info", Icons.Default.Memory),
+    TileInfo("settings", "Settings", Icons.Default.Settings),
+    TileInfo("customize", "Customize", Icons.Default.Layers)
 )
 
 @Composable
