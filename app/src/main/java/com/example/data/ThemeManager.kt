@@ -231,7 +231,12 @@ object ThemeManager {
                             "straight_thickness", "straight_inactive_thickness", "straight_corner_radius", "straight_thumb_radius",
                             "panel_outer_corner", "panel_inner_corner"
                         )
-                        if (key in floatKeys || value is Double) {
+                        val isFloatKey = key in floatKeys || key.contains("_hue") || key.contains("_sat") || key.contains("_val") || key.contains("_opacity") || key.contains("_height") || key.contains("_offset")
+                        val isIntKey = key.contains("custom_color") || key.contains("size") || key.contains("min_") || key.contains("max_")
+
+                        if (isIntKey) {
+                            editor.putInt(key, value.toInt())
+                        } else if (isFloatKey || value is Double || value is Float) {
                             editor.putFloat(key, value.toFloat())
                         } else if (value is Long) {
                             editor.putLong(key, value.toLong())

@@ -716,24 +716,18 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        OutlinedButton(
+                        IconButton(
                             onClick = { showImportDialog = true },
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                            modifier = Modifier.testTag("import_xml_shape_button"),
-                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                                containerColor = com.example.ui.theme.getSettingsScreenBackgroundColor(isSystemInDarkTheme())
-                            )
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(com.example.ui.theme.getSettingsScreenBackgroundColor(isSystemInDarkTheme()))
+                                .testTag("import_xml_shape_button")
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = "Add Shape",
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = "Add Shape",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(start = 4.dp)
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
@@ -1792,38 +1786,59 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
+                    Row(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Solid Monet Surface",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            style = TextStyle(
-                                platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                lineHeightStyle = LineHeightStyle(
-                                    alignment = LineHeightStyle.Alignment.Center,
-                                    trim = LineHeightStyle.Trim.Both
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Layers,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = "Solid Monet Surface",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = TextStyle(
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                    lineHeightStyle = LineHeightStyle(
+                                        alignment = LineHeightStyle.Alignment.Center,
+                                        trim = LineHeightStyle.Trim.Both
+                                    )
                                 )
                             )
-                        )
-                        Text(
-                            text = "Enables dynamic Monet color on the surface behind everything and removes transparency.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = TextStyle(
-                                platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                lineHeightStyle = LineHeightStyle(
-                                    alignment = LineHeightStyle.Alignment.Center,
-                                    trim = LineHeightStyle.Trim.Both
+                            Text(
+                                text = "Enables dynamic Monet color on the surface behind everything and removes transparency.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = TextStyle(
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                    lineHeightStyle = LineHeightStyle(
+                                        alignment = LineHeightStyle.Alignment.Center,
+                                        trim = LineHeightStyle.Trim.Both
+                                    )
                                 )
                             )
-                        )
+                        }
                     }
 
                     Switch(
@@ -3886,82 +3901,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             )
                         }
                     }
-
-                    val useMediaArtworkColors by PanelPreferences.useMediaArtworkColors.collectAsState()
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                        thickness = 1.dp
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                            Text(
-                                text = "Dynamic Artwork Colors",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Extract background & accent colors from album art. Disable to use Monet / Panel colors.",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = useMediaArtworkColors,
-                            onCheckedChange = { PanelPreferences.setUseMediaArtworkColors(context, it) }
-                        )
-                    }
                 }
             }
         }
     }
 
     val compactMediaNotificationCard = showMediaInNotifContainerCard
-
-    val useMediaArtworkColorsCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
-        val useMediaArtworkColors by PanelPreferences.useMediaArtworkColors.collectAsState()
-        PinnableCardWrapper("use_media_artwork_colors_card", CustomizeCategory.QS_DESIGN, "Dynamic Artwork Colors") {
-            SettingsCard(
-                shape = shape,
-                modifier = Modifier.testTag("use_media_artwork_colors_card")
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 18.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(end = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Text(
-                            text = "Dynamic Artwork Colors",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Extract background & accent colors from album art. Disable to use Monet / Panel colors.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = useMediaArtworkColors,
-                        onCheckedChange = { checked -> PanelPreferences.setUseMediaArtworkColors(context, checked) }
-                    )
-                }
-            }
-        }
-    }
 
     val pinnedCardsMap = mapOf<String, @Composable (androidx.compose.ui.graphics.Shape) -> Unit>(
         "android_oreo_style_card" to androidOreoStyleCard,
@@ -3976,7 +3921,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         "clear_all_fab_card" to clearAllFabCard,
         "show_media_in_notif_container_card" to showMediaInNotifContainerCard,
         "compact_media_notification_card" to compactMediaNotificationCard,
-        "use_media_artwork_colors_card" to useMediaArtworkColorsCard,
         "show_carrier_card" to showCarrierCard,
         "carrier_divider_card" to carrierDividerCard,
         "hide_carrier_in_expanded_card" to hideCarrierInExpandedCard,

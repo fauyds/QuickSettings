@@ -27,6 +27,10 @@ object MonetThemeHelper {
     }
 
     fun getClearAllAccent(context: Context, isDark: Boolean): Int {
+        val useCustom = com.example.data.PanelPreferences.getClearAllUseCustom(isDark).value
+        if (useCustom) {
+            return com.example.data.PanelPreferences.getClearAllCustomColor(isDark).value
+        }
         val isTertiary = com.example.data.PanelPreferences.getClearAllColorTertiary(isDark).value
         val baseColor = if (isTertiary) getTertiaryAccent(context, isDark) else getPrimaryAccent(context, isDark)
         val hue = com.example.data.PanelPreferences.getClearAllHue(isDark).value
@@ -46,6 +50,10 @@ object MonetThemeHelper {
     }
 
     fun getQsTilesAccent(context: Context, isDark: Boolean): Int {
+        val useCustom = com.example.data.PanelPreferences.getQsTilesUseCustom(isDark).value
+        if (useCustom) {
+            return com.example.data.PanelPreferences.getQsTilesCustomColor(isDark).value
+        }
         val isTertiary = com.example.data.PanelPreferences.getQsTilesColorTertiary(isDark).value
         val baseColor = if (isTertiary) getTertiaryAccent(context, isDark) else getPrimaryAccent(context, isDark)
         val hue = com.example.data.PanelPreferences.getQsTilesHue(isDark).value
@@ -65,6 +73,10 @@ object MonetThemeHelper {
     }
 
     fun getSlidersAccent(context: Context, isDark: Boolean): Int {
+        val useCustom = com.example.data.PanelPreferences.getSlidersUseCustom(isDark).value
+        if (useCustom) {
+            return com.example.data.PanelPreferences.getSlidersCustomColor(isDark).value
+        }
         val isTertiary = com.example.data.PanelPreferences.getSlidersColorTertiary(isDark).value
         val baseColor = if (isTertiary) getTertiaryAccent(context, isDark) else getPrimaryAccent(context, isDark)
         val hue = com.example.data.PanelPreferences.getSlidersHue(isDark).value
@@ -84,6 +96,10 @@ object MonetThemeHelper {
     }
 
     fun getInactiveTilesColor(context: Context, isDark: Boolean): Int {
+        val useCustom = com.example.data.PanelPreferences.getInactiveTilesUseCustom(isDark).value
+        if (useCustom) {
+            return com.example.data.PanelPreferences.getInactiveTilesCustomColor(isDark).value
+        }
         val isPrimary = com.example.data.PanelPreferences.getInactiveTilesColorPrimary(isDark).value
         val isTertiary = com.example.data.PanelPreferences.getInactiveTilesColorTertiary(isDark).value
         val baseColor = when {
@@ -108,6 +124,10 @@ object MonetThemeHelper {
     }
 
     fun getHeaderGradientColor(context: Context, isDark: Boolean): Int {
+        val useCustom = com.example.data.PanelPreferences.getHeaderGradientUseCustom(isDark).value
+        if (useCustom) {
+            return com.example.data.PanelPreferences.getHeaderGradientCustomColor(isDark).value
+        }
         val isTertiary = com.example.data.PanelPreferences.getHeaderGradientColorTertiary(isDark).value
         val baseColor = if (isDark) {
             if (isTertiary) getTertiaryAccent(context, isDark) else getPrimaryAccent(context, isDark)
