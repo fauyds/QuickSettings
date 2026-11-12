@@ -460,15 +460,16 @@ class NativeTileManager(
 
     @Suppress("DEPRECATION")
     fun resolveWifiSsid(): String? {
+        if (!checkWifiConnected()) {
+            return null
+        }
         val isOffMainThread = Looper.myLooper() != Looper.getMainLooper()
         if (isOffMainThread && !hasConnectivityPermissions()) {
             ensureConnectivityPermissionsGranted()
         }
 
         // Tier 1: Cached callback SSID (from NetworkCallback with FLAG_INCLUDE_LOCATION_INFO) & ConnectivityManager transportInfo
-        if (checkWifiConnected()) {
-            cleanSsid(cachedCallbackWifiSsid)?.let { return it }
-        }
+        cleanSsid(cachedCallbackWifiSsid)?.let { return it }
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 connectivityManager?.let { cm ->
@@ -705,11 +706,11 @@ class NativeTileManager(
             }
 
             val wifiConnected = if (wifi) checkWifiConnected() else false
-            val resolvedWifiSsid = if (wifi) resolveWifiSsid() else null
+            val resolvedWifiSsid = if (wifiConnected) resolveWifiSsid() else null
             val resolvedBtName = if (bt) resolveConnectedBluetoothDevice() else null
 
             _isWifiEnabled.value = wifi
-            _isWifiConnected.value = wifiConnected || !resolvedWifiSsid.isNullOrBlank()
+            _isWifiConnected.value = wifiConnected
             _wifiSsid.value = resolvedWifiSsid
             _isBluetoothEnabled.value = bt
             _bluetoothDeviceName.value = resolvedBtName
@@ -806,8 +807,9 @@ class NativeTileManager(
                             cachedCallbackWifiSsid = null
                         } else {
                             scope.launch(Dispatchers.IO) {
-                                val ssid = resolveWifiSsid()
-                                _isWifiConnected.value = checkWifiConnected() || !ssid.isNullOrBlank()
+                                val isConn = checkWifiConnected()
+                                val ssid = if (isConn) resolveWifiSsid() else null
+                                _isWifiConnected.value = isConn
                                 _wifiSsid.value = ssid
                             }
                         }
@@ -832,8 +834,9 @@ class NativeTileManager(
                         _isLocationEnabled.value = locEnabled
                         if (locEnabled && _isWifiEnabled.value) {
                             scope.launch(Dispatchers.IO) {
-                                val ssid = resolveWifiSsid()
-                                _isWifiConnected.value = checkWifiConnected() || !ssid.isNullOrBlank()
+                                val isConn = checkWifiConnected()
+                                val ssid = if (isConn) resolveWifiSsid() else null
+                                _isWifiConnected.value = isConn
                                 _wifiSsid.value = ssid
                             }
                         }
@@ -1019,8 +1022,9 @@ class NativeTileManager(
                         if (state == WifiManager.WIFI_STATE_ENABLED) {
                             _isWifiEnabled.value = true
                             scope.launch(Dispatchers.IO) {
-                                val ssid = resolveWifiSsid()
-                                _isWifiConnected.value = checkWifiConnected() || !ssid.isNullOrBlank()
+                                val isConn = checkWifiConnected()
+                                val ssid = if (isConn) resolveWifiSsid() else null
+                                _isWifiConnected.value = isConn
                                 _wifiSsid.value = ssid
                             }
                         } else if (state == WifiManager.WIFI_STATE_DISABLED) {
@@ -1037,8 +1041,9 @@ class NativeTileManager(
                                 cachedCallbackWifiSsid = null
                             } else {
                                 scope.launch(Dispatchers.IO) {
-                                    val ssid = resolveWifiSsid()
-                                    _isWifiConnected.value = checkWifiConnected() || !ssid.isNullOrBlank()
+                                    val isConn = checkWifiConnected()
+                                    val ssid = if (isConn) resolveWifiSsid() else null
+                                    _isWifiConnected.value = isConn
                                     _wifiSsid.value = ssid
                                 }
                             }
@@ -1053,21 +1058,30 @@ class NativeTileManager(
                             _wifiSsid.value = null
                             cachedCallbackWifiSsid = null
                         } else {
-                            @Suppress("DEPRECATION")
-                            val wifiInfo = intent.getParcelableExtra<WifiInfo>(WifiManager.EXTRA_WIFI_INFO)
-                            cleanSsid(wifiInfo?.ssid)?.let { directSsid ->
-                                cachedCallbackWifiSsid = directSsid
-                                _isWifiConnected.value = true
-                                _wifiSsid.value = directSsid
+                            val isConn = checkWifiConnected()
+                            if (isConn) {
+                                @Suppress("DEPRECATION")
+                                val wifiInfo = intent.getParcelableExtra<WifiInfo>(WifiManager.EXTRA_WIFI_INFO)
+                                cleanSsid(wifiInfo?.ssid)?.let { directSsid ->
+                                    cachedCallbackWifiSsid = directSsid
+                                    _isWifiConnected.value = true
+                                    _wifiSsid.value = directSsid
+                                }
+                            } else {
+                                _isWifiConnected.value = false
+                                _wifiSsid.value = null
+                                cachedCallbackWifiSsid = null
                             }
                             scope.launch(Dispatchers.IO) {
-                                val ssid = resolveWifiSsid()
-                                _isWifiConnected.value = checkWifiConnected() || !ssid.isNullOrBlank()
+                                val stillConn = checkWifiConnected()
+                                val ssid = if (stillConn) resolveWifiSsid() else null
+                                _isWifiConnected.value = stillConn
                                 _wifiSsid.value = ssid
                                 delay(800)
                                 if (_isWifiEnabled.value) {
-                                    val delayedSsid = resolveWifiSsid()
-                                    _isWifiConnected.value = checkWifiConnected() || !delayedSsid.isNullOrBlank()
+                                    val finalConn = checkWifiConnected()
+                                    val delayedSsid = if (finalConn) resolveWifiSsid() else null
+                                    _isWifiConnected.value = finalConn
                                     _wifiSsid.value = delayedSsid
                                 }
                             }

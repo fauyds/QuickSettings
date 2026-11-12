@@ -341,7 +341,7 @@ fun QsOverlaySurface(
     val wifiSsid by (nativeTileManager?.wifiSsid ?: remember { kotlinx.coroutines.flow.MutableStateFlow<String?>(null) }).collectAsState()
     val btDeviceName by (nativeTileManager?.bluetoothDeviceName ?: remember { kotlinx.coroutines.flow.MutableStateFlow<String?>(null) }).collectAsState()
     val liveWifiSubtitle = remember(wifiSsid, isWifiConnected) {
-        if (!wifiSsid.isNullOrBlank()) wifiSsid!! else if (isWifiConnected) "Wi-Fi" else "On"
+        if (isWifiConnected && !wifiSsid.isNullOrBlank()) wifiSsid!! else if (isWifiConnected) "Wi-Fi" else "On"
     }
     val liveBtSubtitle = remember(btDeviceName) {
         if (!btDeviceName.isNullOrBlank()) btDeviceName!! else "Off"

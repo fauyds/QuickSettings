@@ -105,12 +105,9 @@ class TileRegistry(
             panelStyle: com.example.data.QsPanelStyle = com.example.data.QsPanelStyle.DEFAULT
         ): String {
             if (!wifiOn) return "Off"
+            if (!wifiConnected) return "On"
             val cleaned = NativeTileManager.cleanSsid(wifiSsidName)
-            return when {
-                !cleaned.isNullOrBlank() -> cleaned
-                wifiConnected -> "Wi-Fi"
-                else -> "On"
-            }
+            return if (!cleaned.isNullOrBlank()) cleaned else "Wi-Fi"
         }
 
         internal fun resolveBluetoothSubtitle(
@@ -133,14 +130,18 @@ class TileRegistry(
             }
             return when (tile.id) {
                 "wifi" -> {
-                    val directSsid = NativeTileManager.cleanSsid(wifiSsidName)
-                    val subtitleSsid = tile.subtitle.takeIf {
-                        it.isNotBlank() && it !in setOf(
-                            "On", "Off", "Connected", "Wi-Fi",
-                            "Active", "Always Active", "Forced On", "Forced Off", "Toggle"
-                        )
+                    if (tile.subtitle == "On") {
+                        "Wi-Fi"
+                    } else {
+                        val directSsid = NativeTileManager.cleanSsid(wifiSsidName)
+                        val subtitleSsid = tile.subtitle.takeIf {
+                            it.isNotBlank() && it !in setOf(
+                                "On", "Off", "Connected", "Wi-Fi",
+                                "Active", "Always Active", "Forced On", "Forced Off", "Toggle"
+                            )
+                        }
+                        directSsid ?: subtitleSsid ?: "Wi-Fi"
                     }
-                    directSsid ?: subtitleSsid ?: "Wi-Fi"
                 }
                 "bluetooth" -> {
                     val directBt = btDeviceName?.trim()?.takeIf { it.isNotBlank() }
