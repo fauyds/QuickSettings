@@ -164,15 +164,6 @@ class PrivilegeEngine(private val context: Context) {
         isRootGrantedMemory = savedRoot
         _isRootAvailable.value = savedRoot
         updateShizukuStatus()
-
-        if (savedRoot) {
-            CoroutineScope(Dispatchers.IO).launch {
-                val liveGranted = testRootAccess()
-                isRootGrantedMemory = liveGranted
-                _isRootAvailable.value = liveGranted
-                prefs?.edit()?.putBoolean("root_access_granted", liveGranted)?.apply()
-            }
-        }
     }
 
     private fun checkRootBinary(): Boolean {

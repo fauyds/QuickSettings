@@ -30,6 +30,9 @@ interface TileDao {
     @Query("UPDATE qs_tiles SET isQqsFavorite = :isFavorite WHERE tileId = :id")
     suspend fun setQqsFavorite(id: String, isFavorite: Boolean)
 
+    @Query("DELETE FROM qs_tiles WHERE tileId = :id")
+    suspend fun deleteById(id: String)
+
     @Query("SELECT value FROM app_preferences WHERE `key` = :key")
     fun getPreference(key: String): Flow<String?>
 

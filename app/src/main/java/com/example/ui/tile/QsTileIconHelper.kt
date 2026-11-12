@@ -40,6 +40,12 @@ import com.example.model.TileState
 object QsTileIconHelper {
 
     fun getTileImageVector(tile: QsTileModel): ImageVector {
+        if (tile.id.startsWith("custom_")) {
+            val config = com.example.data.TileCommandRepository.getConfig(tile.id)
+            if (config.iconName.isNotBlank()) {
+                return GoogleIconLibrary.findIconByName(config.iconName)
+            }
+        }
         tile.iconVector?.let { return it }
 
         val canonicalId = if (tile.id == "sound_profile") "sound_mode" else tile.id
@@ -70,7 +76,10 @@ object QsTileIconHelper {
             "screenrecord" -> Icons.Default.Videocam
             "settings" -> Icons.Default.Settings
             "customize" -> Icons.Default.Layers
-            else -> Icons.Default.Settings
+            else -> {
+                val config = com.example.data.TileCommandRepository.getConfig(tile.id)
+                if (config.iconName.isNotBlank()) GoogleIconLibrary.findIconByName(config.iconName) else Icons.Default.Settings
+            }
         }
     }
 

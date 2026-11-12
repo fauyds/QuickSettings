@@ -21,6 +21,8 @@ class TileRepository(private val tileDao: TileDao) {
 
     suspend fun setQqsFavorite(id: String, isFavorite: Boolean) = tileDao.setQqsFavorite(id, isFavorite)
 
+    suspend fun deleteById(id: String) = tileDao.deleteById(id)
+
     fun getPreference(key: String): Flow<String?> = tileDao.getPreference(key)
 
     suspend fun setPreference(key: String, value: String) {

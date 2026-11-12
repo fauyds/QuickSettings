@@ -43,6 +43,10 @@ import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.LocalCafe
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Wallpaper
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Delete
+import com.example.data.local.QuickPanelDatabase
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.WifiTethering
 import androidx.compose.material3.Button
@@ -132,11 +136,25 @@ fun TileCommandsScreen(
     val coroutineScope = rememberCoroutineScope()
     val configs by TileCommandRepository.tileConfigs.collectAsStateWithLifecycle()
 
+    var showCreateDialog by remember { mutableStateOf(false) }
+    var editingConfig by remember { mutableStateOf<TileCommandConfig?>(null) }
+    val tileRepo = remember(context) {
+        com.example.data.repository.TileRepository(
+            com.example.data.local.QuickPanelDatabase.getInstance(context).tileDao()
+        )
+    }
+
+    val customTileConfigs = remember(configs) {
+        configs.filterKeys { key -> key.startsWith("custom_") || KnownTilesList.none { kt -> kt.id == key } }
+    }
+
     // Also include custom / third-party tiles with configurations
     val allDisplayTiles = remember(configs) {
         val customTileIds = configs.keys.filter { key -> KnownTilesList.none { it.id == key } }
         KnownTilesList + customTileIds.map { id ->
-            TileInfo(id, id.substringAfterLast('.').ifBlank { id }, Icons.Default.Terminal)
+            val iconVec = com.example.ui.tile.GoogleIconLibrary.findIconByName(configs[id]?.iconName ?: "Terminal")
+            val displayTitle = configs[id]?.labelOn?.ifBlank { id.substringAfterLast('.').ifBlank { id } } ?: id.substringAfterLast('.').ifBlank { id }
+            TileInfo(id, displayTitle, iconVec)
         }
     }
 
@@ -149,6 +167,29 @@ fun TileCommandsScreen(
     val isDark = com.example.ui.theme.LocalIsDarkTheme.current
     val screenBg = com.example.ui.theme.getSettingsScreenBackgroundColor(isDark)
 
+    if (showCreateDialog || editingConfig != null) {
+        CustomQsTileEditorDialog(
+            initialConfig = editingConfig,
+            onDismiss = {
+                showCreateDialog = false
+                editingConfig = null
+            },
+            onSave = { label, subtitle, config ->
+                TileCommandRepository.createCustomTile(
+                    context = context,
+                    repository = tileRepo,
+                    label = label,
+                    subtitle = subtitle,
+                    config = config,
+                    scope = coroutineScope
+                )
+                Toast.makeText(context, "Saved Custom Tile '${label}'!", Toast.LENGTH_SHORT).show()
+                showCreateDialog = false
+                editingConfig = null
+            }
+        )
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -157,6 +198,163 @@ fun TileCommandsScreen(
             .testTag("tile_commands_screen"),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        // Custom QS Tiles Manager & Creator Card
+        item {
+            SettingsCard(
+                shape = ExpressiveCardShapes.SingleCard,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("custom_qs_manager_card")
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Default.Add,
+                                    contentDescription = null,
+                                    tint = colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Custom QS Tiles Creator",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Create custom QS tiles for apps, URLs, commands & action chains with 500+ icons.",
+                                    fontSize = 11.5.sp,
+                                    lineHeight = 14.sp,
+                                    color = colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = { showCreateDialog = true },
+                            shape = CircleShape,
+                            modifier = Modifier.testTag("btn_create_custom_qs_tile")
+                        ) {
+                            Text("+ Create Tile", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    if (customTileConfigs.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "CREATED CUSTOM TILES (${customTileConfigs.size})",
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.8.sp,
+                            color = colorScheme.primary
+                        )
+
+                        customTileConfigs.forEach { (id, cfg) ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (isDark) Color(0xFF383838) else Color(0xFFF0F0F0))
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    val iconVec = com.example.ui.tile.GoogleIconLibrary.findIconByName(cfg.iconName)
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(colorScheme.primary),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = iconVec,
+                                            contentDescription = cfg.iconName,
+                                            tint = colorScheme.onPrimary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = cfg.labelOn.ifBlank { id },
+                                            fontSize = 13.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "${cfg.overrideType.displayName} • ${cfg.iconName}",
+                                            fontSize = 11.sp,
+                                            color = colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+
+                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    FilledTonalButton(
+                                        onClick = { editingConfig = cfg },
+                                        shape = CircleShape,
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                        modifier = Modifier
+                                            .height(32.dp)
+                                            .testTag("btn_edit_custom_tile_$id")
+                                    ) {
+                                        Icon(androidx.compose.material.icons.Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(3.dp))
+                                        Text("Edit", fontSize = 11.sp)
+                                    }
+
+                                    FilledTonalButton(
+                                        onClick = {
+                                            TileCommandRepository.deleteCustomTile(context, tileRepo, id, coroutineScope)
+                                            Toast.makeText(context, "Deleted custom tile", Toast.LENGTH_SHORT).show()
+                                        },
+                                        shape = CircleShape,
+                                        colors = ButtonDefaults.filledTonalButtonColors(
+                                            containerColor = colorScheme.errorContainer,
+                                            contentColor = colorScheme.onErrorContainer
+                                        ),
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                        modifier = Modifier
+                                            .height(32.dp)
+                                            .testTag("btn_delete_custom_tile_$id")
+                                    ) {
+                                        Icon(androidx.compose.material.icons.Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(3.dp))
+                                        Text("Delete", fontSize = 11.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         item {
             SettingsCard(
                 shape = ExpressiveCardShapes.SingleCard,

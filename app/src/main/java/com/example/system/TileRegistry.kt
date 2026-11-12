@@ -3,7 +3,9 @@ package com.example.system
 import android.content.Context
 import android.content.ComponentName
 import android.content.Intent
+import android.net.Uri
 import android.provider.Settings
+import com.example.model.LongPressActionType
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatterySaver
 import androidx.compose.material.icons.filled.Bluetooth
@@ -404,8 +406,11 @@ class TileRegistry(
                 TileActionOverrideType.MEDIA_PREV,
                 TileActionOverrideType.SCREENSHOT,
                 TileActionOverrideType.MUTE_AUDIO,
-                TileActionOverrideType.DIRECT_INTENT -> true
-                TileActionOverrideType.SYSTEM_COMMAND -> config.commandOff.isBlank()
+                TileActionOverrideType.APP_LAUNCH,
+                TileActionOverrideType.URL_DEEP_LINK,
+                TileActionOverrideType.ACTION_CHAIN,
+                TileActionOverrideType.DIRECT_INTENT -> !config.isStateToggle
+                TileActionOverrideType.SYSTEM_COMMAND -> if (config.isStateToggle) false else config.commandOff.isBlank()
                 TileActionOverrideType.DEFAULT -> false
             }
         }
@@ -478,6 +483,92 @@ class TileRegistry(
 
     suspend fun executeOverriddenTileAction(tile: QsTileModel, config: TileCommandConfig) {
         val isCurrentlyActive = tile.state == TileState.ACTIVE
+
+        // Handle URL / Deep Link
+        if (config.overrideType == TileActionOverrideType.URL_DEEP_LINK || config.urlOrDeepLink.isNotBlank()) {
+            val url = config.urlOrDeepLink
+            if (url.isNotBlank()) {
+                withContext(Dispatchers.Main) {
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        Log.w("TileRegistry", "Failed to launch URL/DeepLink: ${e.message}")
+                    }
+                }
+            }
+        }
+
+        // Handle App Launching
+        if (config.overrideType == TileActionOverrideType.APP_LAUNCH || config.targetAppPackage.isNotBlank()) {
+            val pkg = config.targetAppPackage
+            if (pkg.isNotBlank()) {
+                withContext(Dispatchers.Main) {
+                    try {
+                        val launchIntent = context.packageManager.getLaunchIntentForPackage(pkg)
+                        if (launchIntent != null) {
+                            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            context.startActivity(launchIntent)
+                        } else {
+                            val intent = Intent(Intent.ACTION_MAIN).apply {
+                                setPackage(pkg)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
+                        }
+                    } catch (e: Exception) {
+                        Log.w("TileRegistry", "Failed to launch app: ${e.message}")
+                    }
+                }
+            }
+        }
+
+        // Handle Action Chaining
+        if (config.overrideType == TileActionOverrideType.ACTION_CHAIN || config.actionChainSteps.isNotEmpty()) {
+            for (step in config.actionChainSteps) {
+                if (step.delayMs > 0) {
+                    kotlinx.coroutines.delay(step.delayMs)
+                }
+                when (step.type.uppercase()) {
+                    "SHELL" -> {
+                        if (step.target.isNotBlank()) {
+                            nativeTileManager.privilegeEngine.executeCommandWithMode(step.target, config.executionMode, null)
+                        }
+                    }
+                    "URL" -> {
+                        if (step.target.isNotBlank()) {
+                            withContext(Dispatchers.Main) {
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(step.target)).apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {}
+                            }
+                        }
+                    }
+                    "APP" -> {
+                        if (step.target.isNotBlank()) {
+                            withContext(Dispatchers.Main) {
+                                try {
+                                    val launchIntent = context.packageManager.getLaunchIntentForPackage(step.target)
+                                    launchIntent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    if (launchIntent != null) context.startActivity(launchIntent)
+                                } catch (_: Exception) {}
+                            }
+                        }
+                    }
+                    "INTENT" -> {
+                        if (step.target.isNotBlank()) {
+                            dispatchDirectIntent(step.target, "", "", config.executionMode)
+                        }
+                    }
+                }
+            }
+        }
+
         when (config.overrideType) {
             TileActionOverrideType.MEDIA_PLAY_PAUSE -> {
                 dispatchMediaKeyEvent(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, "input keyevent 85", config.executionMode)
@@ -505,7 +596,7 @@ class TileRegistry(
                     dispatchDirectIntent(config.customIntentAction, config.customIntentPackage, config.customIntentComponent, config.executionMode)
                 }
             }
-            TileActionOverrideType.SYSTEM_COMMAND, TileActionOverrideType.DEFAULT -> {
+            TileActionOverrideType.SYSTEM_COMMAND, TileActionOverrideType.DEFAULT, TileActionOverrideType.APP_LAUNCH, TileActionOverrideType.URL_DEEP_LINK, TileActionOverrideType.ACTION_CHAIN -> {
                 val cmd = if (isCurrentlyActive && config.commandOff.isNotBlank()) config.commandOff else config.commandOn
                 var ranCmd = false
                 if (cmd.isNotBlank()) {
@@ -610,6 +701,56 @@ class TileRegistry(
     }
 
     fun handleTileLongClick(tile: QsTileModel) {
+        val config = TileCommandRepository.getConfig(tile.id)
+        if (config.longPressActionType != LongPressActionType.DEFAULT) {
+            when (config.longPressActionType) {
+                LongPressActionType.URL_DEEP_LINK -> {
+                    if (config.longPressCommand.isNotBlank()) {
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(config.longPressCommand)).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
+                            return
+                        } catch (e: Exception) {
+                            Log.w("TileRegistry", "Long click URL error: ${e.message}")
+                        }
+                    }
+                }
+                LongPressActionType.APP_LAUNCH -> {
+                    if (config.longPressCommand.isNotBlank()) {
+                        try {
+                            val launchIntent = context.packageManager.getLaunchIntentForPackage(config.longPressCommand)
+                            launchIntent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            if (launchIntent != null) {
+                                context.startActivity(launchIntent)
+                                return
+                            }
+                        } catch (e: Exception) {
+                            Log.w("TileRegistry", "Long click app launch error: ${e.message}")
+                        }
+                    }
+                }
+                LongPressActionType.SYSTEM_COMMAND -> {
+                    if (config.longPressCommand.isNotBlank()) {
+                        scope.launch(Dispatchers.IO) {
+                            nativeTileManager.privilegeEngine.executeCommandWithMode(config.longPressCommand, config.executionMode)
+                        }
+                        return
+                    }
+                }
+                LongPressActionType.DIRECT_INTENT -> {
+                    if (config.longPressCommand.isNotBlank()) {
+                        scope.launch(Dispatchers.IO) {
+                            dispatchDirectIntent(config.longPressCommand, "", "", config.executionMode)
+                        }
+                        return
+                    }
+                }
+                else -> {}
+            }
+        }
+
         if (tile.id == "screenrecord") {
             showScreenRecordSheet.value = true
             return
