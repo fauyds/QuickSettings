@@ -1843,9 +1843,9 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     }
     }
 
-    // Per-Element Monet Accent Colors Preference Card
+    // Per-Element Accent Colors Preference Card
     val elementColorsPreferenceCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
-        PinnableCardWrapper("element_colors_preference_card", CustomizeCategory.QS_DESIGN, "Per-Element Monet Accent Colors") {
+        PinnableCardWrapper("element_colors_preference_card", CustomizeCategory.QS_DESIGN, "Per-Element Accent Colors") {
             SettingsCard(
                 shape = shape,
                 onClick = {
@@ -1885,7 +1885,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Text(
-                            text = "Per-Element Monet Accent Colors",
+                            text = "Per-Element Accent Colors",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -3886,12 +3886,82 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             )
                         }
                     }
+
+                    val useMediaArtworkColors by PanelPreferences.useMediaArtworkColors.collectAsState()
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                        thickness = 1.dp
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                            Text(
+                                text = "Dynamic Artwork Colors",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Extract background & accent colors from album art. Disable to use Monet / Panel colors.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = useMediaArtworkColors,
+                            onCheckedChange = { PanelPreferences.setUseMediaArtworkColors(context, it) }
+                        )
+                    }
                 }
             }
         }
     }
 
     val compactMediaNotificationCard = showMediaInNotifContainerCard
+
+    val useMediaArtworkColorsCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        val useMediaArtworkColors by PanelPreferences.useMediaArtworkColors.collectAsState()
+        PinnableCardWrapper("use_media_artwork_colors_card", CustomizeCategory.QS_DESIGN, "Dynamic Artwork Colors") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("use_media_artwork_colors_card")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 18.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            text = "Dynamic Artwork Colors",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Extract background & accent colors from album art. Disable to use Monet / Panel colors.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = useMediaArtworkColors,
+                        onCheckedChange = { checked -> PanelPreferences.setUseMediaArtworkColors(context, checked) }
+                    )
+                }
+            }
+        }
+    }
 
     val pinnedCardsMap = mapOf<String, @Composable (androidx.compose.ui.graphics.Shape) -> Unit>(
         "android_oreo_style_card" to androidOreoStyleCard,
@@ -3906,6 +3976,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         "clear_all_fab_card" to clearAllFabCard,
         "show_media_in_notif_container_card" to showMediaInNotifContainerCard,
         "compact_media_notification_card" to compactMediaNotificationCard,
+        "use_media_artwork_colors_card" to useMediaArtworkColorsCard,
         "show_carrier_card" to showCarrierCard,
         "carrier_divider_card" to carrierDividerCard,
         "hide_carrier_in_expanded_card" to hideCarrierInExpandedCard,

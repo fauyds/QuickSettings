@@ -143,6 +143,11 @@ fun getQsMonetSurfaceBackgroundColor(isDark: Boolean): Color {
     val hue = PanelPreferences.getSurfaceBgHue(isDark).collectAsState().value
     val sat = PanelPreferences.getSurfaceBgSat(isDark).collectAsState().value
     val valFactor = PanelPreferences.getSurfaceBgVal(isDark).collectAsState().value
+    val useCustom = PanelPreferences.getSurfaceBgUseCustom(isDark).collectAsState().value
+    if (useCustom) {
+        val customColor = PanelPreferences.getSurfaceBgCustomColor(isDark).collectAsState().value
+        return Color(customColor)
+    }
     return applyHsvAdjustments(solidBg, hue, sat, valFactor)
 }
 
@@ -151,6 +156,11 @@ fun getQsMonetSurfaceBackgroundColor(isDark: Boolean): Color {
  */
 @Composable
 fun getQsCardContainerColor(isDark: Boolean): Color {
+    val useCustom = PanelPreferences.getPanelContainerUseCustom(isDark).collectAsState().value
+    if (useCustom) {
+        val customColor = PanelPreferences.getPanelContainerCustomColor(isDark).collectAsState().value
+        return Color(customColor)
+    }
     val panelTertiary = PanelPreferences.getPanelContainerColorTertiary(isDark).collectAsState().value
     return if (panelTertiary) {
         androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer
@@ -165,6 +175,11 @@ fun getQsCardContainerColor(isDark: Boolean): Color {
  */
 @Composable
 fun getQsPanelBackgroundColor(isDark: Boolean): Color {
+    val useCustom = PanelPreferences.getPanelContainerUseCustom(isDark).collectAsState().value
+    if (useCustom) {
+        val customColor = PanelPreferences.getPanelContainerCustomColor(isDark).collectAsState().value
+        return Color(customColor)
+    }
     val customColor = PanelPreferences.qsPanelBackgroundColor.collectAsState().value
         ?: PanelPreferences.qsBackgroundColor.collectAsState().value
     val baseColor = if (customColor != null) {
@@ -196,6 +211,11 @@ fun getQsNotificationContainerColor(isDark: Boolean): Color {
 
 @Composable
 fun getQsTilesElementColor(isDark: Boolean): Color {
+    val useCustom = PanelPreferences.getQsTilesUseCustom(isDark).collectAsState().value
+    if (useCustom) {
+        val customColor = PanelPreferences.getQsTilesCustomColor(isDark).collectAsState().value
+        return Color(customColor)
+    }
     val isTertiary = PanelPreferences.getQsTilesColorTertiary(isDark).collectAsState().value
     val baseColor = if (isTertiary) {
         androidx.compose.material3.MaterialTheme.colorScheme.tertiary
@@ -210,6 +230,11 @@ fun getQsTilesElementColor(isDark: Boolean): Color {
 
 @Composable
 fun getInactiveTilesElementColor(isDark: Boolean): Color {
+    val useCustom = PanelPreferences.getInactiveTilesUseCustom(isDark).collectAsState().value
+    if (useCustom) {
+        val customColor = PanelPreferences.getInactiveTilesCustomColor(isDark).collectAsState().value
+        return Color(customColor)
+    }
     val isPrimary = PanelPreferences.getInactiveTilesColorPrimary(isDark).collectAsState().value
     val isTertiary = PanelPreferences.getInactiveTilesColorTertiary(isDark).collectAsState().value
     val cardContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
@@ -236,6 +261,11 @@ fun getInactiveTilesElementColor(isDark: Boolean): Color {
 
 @Composable
 fun getSlidersElementColor(isDark: Boolean): Color {
+    val useCustom = PanelPreferences.getSlidersUseCustom(isDark).collectAsState().value
+    if (useCustom) {
+        val customColor = PanelPreferences.getSlidersCustomColor(isDark).collectAsState().value
+        return Color(customColor)
+    }
     val isTertiary = PanelPreferences.getSlidersColorTertiary(isDark).collectAsState().value
     val baseColor = if (isTertiary) {
         androidx.compose.material3.MaterialTheme.colorScheme.tertiary
@@ -250,6 +280,11 @@ fun getSlidersElementColor(isDark: Boolean): Color {
 
 @Composable
 fun getHeaderGradientElementColor(isDark: Boolean): Color {
+    val useCustom = PanelPreferences.getHeaderGradientUseCustom(isDark).collectAsState().value
+    if (useCustom) {
+        val customColor = PanelPreferences.getHeaderGradientCustomColor(isDark).collectAsState().value
+        return Color(customColor)
+    }
     val isTertiary = PanelPreferences.getHeaderGradientColorTertiary(isDark).collectAsState().value
     val baseColor = if (isDark) {
         if (isTertiary) androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer
@@ -266,6 +301,11 @@ fun getHeaderGradientElementColor(isDark: Boolean): Color {
 
 @Composable
 fun getMiscElementColor(isDark: Boolean): Color {
+    val useCustom = PanelPreferences.getMiscElementsUseCustom(isDark).collectAsState().value
+    if (useCustom) {
+        val customColor = PanelPreferences.getMiscElementsCustomColor(isDark).collectAsState().value
+        return Color(customColor)
+    }
     val isTertiary = PanelPreferences.getMiscElementsColorTertiary(isDark).collectAsState().value
     val baseColor = if (isTertiary) {
         androidx.compose.material3.MaterialTheme.colorScheme.tertiary
@@ -280,6 +320,11 @@ fun getMiscElementColor(isDark: Boolean): Color {
 
 @Composable
 fun getClearAllElementColor(isDark: Boolean): Color {
+    val useCustom = PanelPreferences.getClearAllUseCustom(isDark).collectAsState().value
+    if (useCustom) {
+        val customColor = PanelPreferences.getClearAllCustomColor(isDark).collectAsState().value
+        return Color(customColor)
+    }
     val isTertiary = PanelPreferences.getClearAllColorTertiary(isDark).collectAsState().value
     val baseColor = if (isTertiary) {
         androidx.compose.material3.MaterialTheme.colorScheme.tertiary

@@ -301,9 +301,9 @@ enum class FavoriteFeature(
     ),
     DESIGN_ELEMENT_COLORS(
         id = "design_element_colors",
-        title = "Per-Element Monet Accent Colors",
+        title = "Per-Element Accent Colors",
         category = CustomizeCategory.QS_DESIGN,
-        description = "Detailed Hue, Saturation & Brightness slider coloring for panel elements",
+        description = "Custom colors and Monet accents with 2-tab color picker for panel elements",
         icon = Icons.Default.ColorLens
     ),
 

@@ -39,6 +39,7 @@ import com.example.data.MediaNotificationStyle
 import com.example.model.MediaState
 import com.example.service.MediaSessionManagerHelper
 import com.example.ui.overlay.extractAndroidQNotificationColors
+import com.example.ui.overlay.trimTopBottomBlackLines
 import com.example.ui.view.WavyProgressView
 
 class NotificationDiffCallback : DiffUtil.ItemCallback<NotificationItem>() {
@@ -407,15 +408,26 @@ class NotificationAdapter(
                     .clearFilters()
                     .generate()
             }
+            val useMediaArtworkColors = PanelPreferences.useMediaArtworkColors.value
+            val isPanelCustomized = PanelPreferences.qsPanelBackgroundColor.value != null ||
+                PanelPreferences.getPanelContainerColorTertiary(isDark).value ||
+                PanelPreferences.getPanelContainerHue(isDark).value != 0f ||
+                PanelPreferences.getPanelContainerSat(isDark).value != 1f ||
+                PanelPreferences.getPanelContainerVal(isDark).value != 1f ||
+                PanelPreferences.showMonetSurfaceBackground.value
+
+            val fallbackBg = customCardBackgroundColor ?: if (isDark) Color.parseColor("#25262B") else Color.parseColor("#EAEBEF")
+            val fallbackAccent = customPrimaryColor ?: MonetThemeHelper.getPrimaryAccent(context, isDark)
+
             val cardBgColorInt: Int
             val accentColorInt: Int
-            if (artwork != null) {
+            if (useMediaArtworkColors && artwork != null && !isPanelCustomized) {
                 val extractedColors = extractAndroidQNotificationColors(artwork, palette)
                 cardBgColorInt = extractedColors.backgroundColor.toArgb()
                 accentColorInt = extractedColors.accentColor.toArgb()
             } else {
-                cardBgColorInt = if (isDark) Color.parseColor("#25262B") else Color.parseColor("#EAEBEF")
-                accentColorInt = MonetThemeHelper.getPrimaryAccent(context, isDark)
+                cardBgColorInt = fallbackBg
+                accentColorInt = fallbackAccent
             }
             val subTextColorInt = ColorUtils.setAlphaComponent(accentColorInt, (255 * 0.80f).toInt())
             val dimAccentColorInt = ColorUtils.setAlphaComponent(accentColorInt, (255 * 0.45f).toInt())
@@ -511,21 +523,44 @@ class NotificationAdapter(
 
             // 2. Right-side Artwork & Gradient
             if (artwork != null) {
+                val displayBitmap = trimTopBottomBlackLines(artwork)
                 ivArtwork.visibility = View.VISIBLE
-                ivArtwork.setImageBitmap(artwork)
+                ivArtwork.setImageBitmap(displayBitmap)
                 flArtworkFallback.visibility = View.GONE
 
                 val gradient = GradientDrawable(
                     GradientDrawable.Orientation.LEFT_RIGHT,
                     intArrayOf(
                         cardBgColorInt,
-                        ColorUtils.setAlphaComponent(cardBgColorInt, (255 * 0.85f).toInt()),
-                        ColorUtils.setAlphaComponent(cardBgColorInt, (255 * 0.35f).toInt()),
+                        ColorUtils.setAlphaComponent(cardBgColorInt, (255 * 0.92f).toInt()),
+                        ColorUtils.setAlphaComponent(cardBgColorInt, (255 * 0.50f).toInt()),
                         Color.TRANSPARENT
                     )
                 )
                 vArtworkGradient.background = gradient
                 vArtworkGradient.visibility = View.VISIBLE
+
+                val artworkOutlineProvider = object : ViewOutlineProvider() {
+                    override fun getOutline(view: View, outline: Outline) {
+                        val path = Path().apply {
+                            addRoundRect(
+                                0f, 0f, view.width.toFloat(), view.height.toFloat(),
+                                radii,
+                                Path.Direction.CW
+                            )
+                        }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            outline.setPath(path)
+                        } else {
+                            @Suppress("DEPRECATION")
+                            outline.setConvexPath(path)
+                        }
+                    }
+                }
+                ivArtwork.outlineProvider = artworkOutlineProvider
+                ivArtwork.clipToOutline = true
+                vArtworkGradient.outlineProvider = artworkOutlineProvider
+                vArtworkGradient.clipToOutline = true
             } else {
                 ivArtwork.visibility = View.GONE
                 vArtworkGradient.visibility = View.GONE
@@ -679,6 +714,7 @@ class NotificationAdapter(
             wavySeekBar.isPlaying = mediaState.isPlaying
             wavySeekBar.activeColor = accentColorInt
             wavySeekBar.thumbColor = accentColorInt
+            wavySeekBar.inactiveColor = dimAccentColorInt
             if (!wavySeekBar.isCurrentlyDragging) {
                 wavySeekBar.progress = mediaState.progress.coerceIn(0f, 1f)
                 tvCurrTime.text = MediaState.formatDuration(mediaState.currentPositionMs)

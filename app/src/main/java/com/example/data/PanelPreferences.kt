@@ -310,6 +310,7 @@ object PanelPreferences {
     private const val KEY_FORCE_SHOW_MEDIA_PREVIEW = "force_show_media_preview"
     private const val KEY_SHOW_MEDIA_IN_NOTIFICATION_CONTAINER = "show_media_in_notification_container"
     private const val KEY_MEDIA_NOTIFICATION_STYLE = "media_notification_style"
+    private const val KEY_USE_MEDIA_ARTWORK_COLORS = "use_media_artwork_colors"
     private const val KEY_ENABLE_CUSTOM_VOLUME_PANEL = "enable_custom_volume_panel"
     private const val KEY_ANIMATION_SPEED_SCALE = "animation_speed_scale"
     private const val KEY_DISABLE_PANEL_ANIMATIONS = "disable_panel_animations"
@@ -499,6 +500,47 @@ object PanelPreferences {
     private const val KEY_ELEM_CLEAR_ALL_HUE_DARK = "elem_clear_all_hue_dark"
     private const val KEY_ELEM_CLEAR_ALL_SAT_DARK = "elem_clear_all_sat_dark"
     private const val KEY_ELEM_CLEAR_ALL_VAL_DARK = "elem_clear_all_val_dark"
+
+    // Custom Color Keys
+    private const val KEY_ELEM_SURFACE_BG_USE_CUSTOM_LIGHT = "elem_surface_bg_use_custom_light"
+    private const val KEY_ELEM_SURFACE_BG_USE_CUSTOM_DARK = "elem_surface_bg_use_custom_dark"
+    private const val KEY_ELEM_SURFACE_BG_CUSTOM_COLOR_LIGHT = "elem_surface_bg_custom_color_light"
+    private const val KEY_ELEM_SURFACE_BG_CUSTOM_COLOR_DARK = "elem_surface_bg_custom_color_dark"
+
+    private const val KEY_ELEM_PANEL_CONTAINER_USE_CUSTOM_LIGHT = "elem_panel_container_use_custom_light"
+    private const val KEY_ELEM_PANEL_CONTAINER_USE_CUSTOM_DARK = "elem_panel_container_use_custom_dark"
+    private const val KEY_ELEM_PANEL_CONTAINER_CUSTOM_COLOR_LIGHT = "elem_panel_container_custom_color_light"
+    private const val KEY_ELEM_PANEL_CONTAINER_CUSTOM_COLOR_DARK = "elem_panel_container_custom_color_dark"
+
+    private const val KEY_ELEM_HEADER_GRADIENT_USE_CUSTOM_LIGHT = "elem_header_gradient_use_custom_light"
+    private const val KEY_ELEM_HEADER_GRADIENT_USE_CUSTOM_DARK = "elem_header_gradient_use_custom_dark"
+    private const val KEY_ELEM_HEADER_GRADIENT_CUSTOM_COLOR_LIGHT = "elem_header_gradient_custom_color_light"
+    private const val KEY_ELEM_HEADER_GRADIENT_CUSTOM_COLOR_DARK = "elem_header_gradient_custom_color_dark"
+
+    private const val KEY_ELEM_QS_TILES_USE_CUSTOM_LIGHT = "elem_qs_tiles_use_custom_light"
+    private const val KEY_ELEM_QS_TILES_USE_CUSTOM_DARK = "elem_qs_tiles_use_custom_dark"
+    private const val KEY_ELEM_QS_TILES_CUSTOM_COLOR_LIGHT = "elem_qs_tiles_custom_color_light"
+    private const val KEY_ELEM_QS_TILES_CUSTOM_COLOR_DARK = "elem_qs_tiles_custom_color_dark"
+
+    private const val KEY_ELEM_INACTIVE_TILES_USE_CUSTOM_LIGHT = "elem_inactive_tiles_use_custom_light"
+    private const val KEY_ELEM_INACTIVE_TILES_USE_CUSTOM_DARK = "elem_inactive_tiles_use_custom_dark"
+    private const val KEY_ELEM_INACTIVE_TILES_CUSTOM_COLOR_LIGHT = "elem_inactive_tiles_custom_color_light"
+    private const val KEY_ELEM_INACTIVE_TILES_CUSTOM_COLOR_DARK = "elem_inactive_tiles_custom_color_dark"
+
+    private const val KEY_ELEM_SLIDERS_USE_CUSTOM_LIGHT = "elem_sliders_use_custom_light"
+    private const val KEY_ELEM_SLIDERS_USE_CUSTOM_DARK = "elem_sliders_use_custom_dark"
+    private const val KEY_ELEM_SLIDERS_CUSTOM_COLOR_LIGHT = "elem_sliders_custom_color_light"
+    private const val KEY_ELEM_SLIDERS_CUSTOM_COLOR_DARK = "elem_sliders_custom_color_dark"
+
+    private const val KEY_ELEM_MISC_ELEMENTS_USE_CUSTOM_LIGHT = "elem_misc_elements_use_custom_light"
+    private const val KEY_ELEM_MISC_ELEMENTS_USE_CUSTOM_DARK = "elem_misc_elements_use_custom_dark"
+    private const val KEY_ELEM_MISC_ELEMENTS_CUSTOM_COLOR_LIGHT = "elem_misc_elements_custom_color_light"
+    private const val KEY_ELEM_MISC_ELEMENTS_CUSTOM_COLOR_DARK = "elem_misc_elements_custom_color_dark"
+
+    private const val KEY_ELEM_CLEAR_ALL_USE_CUSTOM_LIGHT = "elem_clear_all_use_custom_light"
+    private const val KEY_ELEM_CLEAR_ALL_USE_CUSTOM_DARK = "elem_clear_all_use_custom_dark"
+    private const val KEY_ELEM_CLEAR_ALL_CUSTOM_COLOR_LIGHT = "elem_clear_all_custom_color_light"
+    private const val KEY_ELEM_CLEAR_ALL_CUSTOM_COLOR_DARK = "elem_clear_all_custom_color_dark"
     private const val KEY_QS_BACKGROUND_COLOR = "qs_background_color"
     private const val KEY_QS_PANEL_BACKGROUND_COLOR = "qs_panel_background_color"
     private const val KEY_QS_BACKGROUND_CORNER = "qs_background_corner"
@@ -801,6 +843,88 @@ object PanelPreferences {
     val clearAllSatDark: StateFlow<Float> = _clearAllSatDark.asStateFlow()
     private val _clearAllValDark = MutableStateFlow(1f)
     val clearAllValDark: StateFlow<Float> = _clearAllValDark.asStateFlow()
+
+    // Light Mode Custom Color StateFlows
+    private val _surfaceBgUseCustomLight = MutableStateFlow(false)
+    val surfaceBgUseCustomLight: StateFlow<Boolean> = _surfaceBgUseCustomLight.asStateFlow()
+    private val _surfaceBgCustomColorLight = MutableStateFlow(0xFFECECEC.toInt())
+    val surfaceBgCustomColorLight: StateFlow<Int> = _surfaceBgCustomColorLight.asStateFlow()
+
+    private val _panelContainerUseCustomLight = MutableStateFlow(false)
+    val panelContainerUseCustomLight: StateFlow<Boolean> = _panelContainerUseCustomLight.asStateFlow()
+    private val _panelContainerCustomColorLight = MutableStateFlow(0xFF673AB7.toInt())
+    val panelContainerCustomColorLight: StateFlow<Int> = _panelContainerCustomColorLight.asStateFlow()
+
+    private val _headerGradientUseCustomLight = MutableStateFlow(false)
+    val headerGradientUseCustomLight: StateFlow<Boolean> = _headerGradientUseCustomLight.asStateFlow()
+    private val _headerGradientCustomColorLight = MutableStateFlow(0xFF673AB7.toInt())
+    val headerGradientCustomColorLight: StateFlow<Int> = _headerGradientCustomColorLight.asStateFlow()
+
+    private val _qsTilesUseCustomLight = MutableStateFlow(false)
+    val qsTilesUseCustomLight: StateFlow<Boolean> = _qsTilesUseCustomLight.asStateFlow()
+    private val _qsTilesCustomColorLight = MutableStateFlow(0xFF673AB7.toInt())
+    val qsTilesCustomColorLight: StateFlow<Int> = _qsTilesCustomColorLight.asStateFlow()
+
+    private val _inactiveTilesUseCustomLight = MutableStateFlow(false)
+    val inactiveTilesUseCustomLight: StateFlow<Boolean> = _inactiveTilesUseCustomLight.asStateFlow()
+    private val _inactiveTilesCustomColorLight = MutableStateFlow(0xFFE0E0E0.toInt())
+    val inactiveTilesCustomColorLight: StateFlow<Int> = _inactiveTilesCustomColorLight.asStateFlow()
+
+    private val _slidersUseCustomLight = MutableStateFlow(false)
+    val slidersUseCustomLight: StateFlow<Boolean> = _slidersUseCustomLight.asStateFlow()
+    private val _slidersCustomColorLight = MutableStateFlow(0xFF673AB7.toInt())
+    val slidersCustomColorLight: StateFlow<Int> = _slidersCustomColorLight.asStateFlow()
+
+    private val _miscElementsUseCustomLight = MutableStateFlow(false)
+    val miscElementsUseCustomLight: StateFlow<Boolean> = _miscElementsUseCustomLight.asStateFlow()
+    private val _miscElementsCustomColorLight = MutableStateFlow(0xFF673AB7.toInt())
+    val miscElementsCustomColorLight: StateFlow<Int> = _miscElementsCustomColorLight.asStateFlow()
+
+    private val _clearAllUseCustomLight = MutableStateFlow(false)
+    val clearAllUseCustomLight: StateFlow<Boolean> = _clearAllUseCustomLight.asStateFlow()
+    private val _clearAllCustomColorLight = MutableStateFlow(0xFF673AB7.toInt())
+    val clearAllCustomColorLight: StateFlow<Int> = _clearAllCustomColorLight.asStateFlow()
+
+    // Dark Mode Custom Color StateFlows
+    private val _surfaceBgUseCustomDark = MutableStateFlow(false)
+    val surfaceBgUseCustomDark: StateFlow<Boolean> = _surfaceBgUseCustomDark.asStateFlow()
+    private val _surfaceBgCustomColorDark = MutableStateFlow(0xFF121212.toInt())
+    val surfaceBgCustomColorDark: StateFlow<Int> = _surfaceBgCustomColorDark.asStateFlow()
+
+    private val _panelContainerUseCustomDark = MutableStateFlow(false)
+    val panelContainerUseCustomDark: StateFlow<Boolean> = _panelContainerUseCustomDark.asStateFlow()
+    private val _panelContainerCustomColorDark = MutableStateFlow(0xFF673AB7.toInt())
+    val panelContainerCustomColorDark: StateFlow<Int> = _panelContainerCustomColorDark.asStateFlow()
+
+    private val _headerGradientUseCustomDark = MutableStateFlow(false)
+    val headerGradientUseCustomDark: StateFlow<Boolean> = _headerGradientUseCustomDark.asStateFlow()
+    private val _headerGradientCustomColorDark = MutableStateFlow(0xFF673AB7.toInt())
+    val headerGradientCustomColorDark: StateFlow<Int> = _headerGradientCustomColorDark.asStateFlow()
+
+    private val _qsTilesUseCustomDark = MutableStateFlow(false)
+    val qsTilesUseCustomDark: StateFlow<Boolean> = _qsTilesUseCustomDark.asStateFlow()
+    private val _qsTilesCustomColorDark = MutableStateFlow(0xFF673AB7.toInt())
+    val qsTilesCustomColorDark: StateFlow<Int> = _qsTilesCustomColorDark.asStateFlow()
+
+    private val _inactiveTilesUseCustomDark = MutableStateFlow(false)
+    val inactiveTilesUseCustomDark: StateFlow<Boolean> = _inactiveTilesUseCustomDark.asStateFlow()
+    private val _inactiveTilesCustomColorDark = MutableStateFlow(0xFF404040.toInt())
+    val inactiveTilesCustomColorDark: StateFlow<Int> = _inactiveTilesCustomColorDark.asStateFlow()
+
+    private val _slidersUseCustomDark = MutableStateFlow(false)
+    val slidersUseCustomDark: StateFlow<Boolean> = _slidersUseCustomDark.asStateFlow()
+    private val _slidersCustomColorDark = MutableStateFlow(0xFF673AB7.toInt())
+    val slidersCustomColorDark: StateFlow<Int> = _slidersCustomColorDark.asStateFlow()
+
+    private val _miscElementsUseCustomDark = MutableStateFlow(false)
+    val miscElementsUseCustomDark: StateFlow<Boolean> = _miscElementsUseCustomDark.asStateFlow()
+    private val _miscElementsCustomColorDark = MutableStateFlow(0xFF673AB7.toInt())
+    val miscElementsCustomColorDark: StateFlow<Int> = _miscElementsCustomColorDark.asStateFlow()
+
+    private val _clearAllUseCustomDark = MutableStateFlow(false)
+    val clearAllUseCustomDark: StateFlow<Boolean> = _clearAllUseCustomDark.asStateFlow()
+    private val _clearAllCustomColorDark = MutableStateFlow(0xFF673AB7.toInt())
+    val clearAllCustomColorDark: StateFlow<Int> = _clearAllCustomColorDark.asStateFlow()
 
     private val _showQsTileGradient = MutableStateFlow(false)
     val showQsTileGradient: StateFlow<Boolean> = _showQsTileGradient.asStateFlow()
@@ -1190,6 +1314,9 @@ object PanelPreferences {
     private val _mediaNotificationStyle = MutableStateFlow(MediaNotificationStyle.ANDROID_10)
     val mediaNotificationStyle: StateFlow<MediaNotificationStyle> = _mediaNotificationStyle.asStateFlow()
 
+    private val _useMediaArtworkColors = MutableStateFlow(true)
+    val useMediaArtworkColors: StateFlow<Boolean> = _useMediaArtworkColors.asStateFlow()
+
     fun init(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val themeSaved = prefs.getString(KEY_THEME_MODE, ThemeMode.SYSTEM.id)
@@ -1331,6 +1458,7 @@ object PanelPreferences {
         _showMediaInNotificationContainer.value = prefs.getBoolean(KEY_SHOW_MEDIA_IN_NOTIFICATION_CONTAINER, false)
         val savedMediaNotifStyle = prefs.getString(KEY_MEDIA_NOTIFICATION_STYLE, null)
         _mediaNotificationStyle.value = MediaNotificationStyle.fromId(savedMediaNotifStyle)
+        _useMediaArtworkColors.value = prefs.getBoolean(KEY_USE_MEDIA_ARTWORK_COLORS, true)
         _enableCustomVolumePanel.value = prefs.getBoolean(KEY_ENABLE_CUSTOM_VOLUME_PANEL, true)
         _enableSystemHeadsUp.value = prefs.getBoolean(KEY_ENABLE_SYSTEM_HEADS_UP, true)
         _enableHeadsUpOverlay.value = prefs.getBoolean(KEY_ENABLE_HEADS_UP_OVERLAY, true)
@@ -1531,6 +1659,46 @@ object PanelPreferences {
         _clearAllHueDark.value = prefs.getFloat(KEY_ELEM_CLEAR_ALL_HUE_DARK, defClearAllHue)
         _clearAllSatDark.value = prefs.getFloat(KEY_ELEM_CLEAR_ALL_SAT_DARK, defClearAllSat)
         _clearAllValDark.value = prefs.getFloat(KEY_ELEM_CLEAR_ALL_VAL_DARK, defClearAllVal)
+
+        _surfaceBgUseCustomLight.value = prefs.getBoolean(KEY_ELEM_SURFACE_BG_USE_CUSTOM_LIGHT, false)
+        _surfaceBgUseCustomDark.value = prefs.getBoolean(KEY_ELEM_SURFACE_BG_USE_CUSTOM_DARK, false)
+        _surfaceBgCustomColorLight.value = prefs.getInt(KEY_ELEM_SURFACE_BG_CUSTOM_COLOR_LIGHT, 0xFFECECEC.toInt())
+        _surfaceBgCustomColorDark.value = prefs.getInt(KEY_ELEM_SURFACE_BG_CUSTOM_COLOR_DARK, 0xFF121212.toInt())
+
+        _panelContainerUseCustomLight.value = prefs.getBoolean(KEY_ELEM_PANEL_CONTAINER_USE_CUSTOM_LIGHT, false)
+        _panelContainerUseCustomDark.value = prefs.getBoolean(KEY_ELEM_PANEL_CONTAINER_USE_CUSTOM_DARK, false)
+        _panelContainerCustomColorLight.value = prefs.getInt(KEY_ELEM_PANEL_CONTAINER_CUSTOM_COLOR_LIGHT, 0xFF673AB7.toInt())
+        _panelContainerCustomColorDark.value = prefs.getInt(KEY_ELEM_PANEL_CONTAINER_CUSTOM_COLOR_DARK, 0xFF673AB7.toInt())
+
+        _headerGradientUseCustomLight.value = prefs.getBoolean(KEY_ELEM_HEADER_GRADIENT_USE_CUSTOM_LIGHT, false)
+        _headerGradientUseCustomDark.value = prefs.getBoolean(KEY_ELEM_HEADER_GRADIENT_USE_CUSTOM_DARK, false)
+        _headerGradientCustomColorLight.value = prefs.getInt(KEY_ELEM_HEADER_GRADIENT_CUSTOM_COLOR_LIGHT, 0xFF673AB7.toInt())
+        _headerGradientCustomColorDark.value = prefs.getInt(KEY_ELEM_HEADER_GRADIENT_CUSTOM_COLOR_DARK, 0xFF673AB7.toInt())
+
+        _qsTilesUseCustomLight.value = prefs.getBoolean(KEY_ELEM_QS_TILES_USE_CUSTOM_LIGHT, false)
+        _qsTilesUseCustomDark.value = prefs.getBoolean(KEY_ELEM_QS_TILES_USE_CUSTOM_DARK, false)
+        _qsTilesCustomColorLight.value = prefs.getInt(KEY_ELEM_QS_TILES_CUSTOM_COLOR_LIGHT, 0xFF673AB7.toInt())
+        _qsTilesCustomColorDark.value = prefs.getInt(KEY_ELEM_QS_TILES_CUSTOM_COLOR_DARK, 0xFF673AB7.toInt())
+
+        _inactiveTilesUseCustomLight.value = prefs.getBoolean(KEY_ELEM_INACTIVE_TILES_USE_CUSTOM_LIGHT, false)
+        _inactiveTilesUseCustomDark.value = prefs.getBoolean(KEY_ELEM_INACTIVE_TILES_USE_CUSTOM_DARK, false)
+        _inactiveTilesCustomColorLight.value = prefs.getInt(KEY_ELEM_INACTIVE_TILES_CUSTOM_COLOR_LIGHT, 0xFFE0E0E0.toInt())
+        _inactiveTilesCustomColorDark.value = prefs.getInt(KEY_ELEM_INACTIVE_TILES_CUSTOM_COLOR_DARK, 0xFF404040.toInt())
+
+        _slidersUseCustomLight.value = prefs.getBoolean(KEY_ELEM_SLIDERS_USE_CUSTOM_LIGHT, false)
+        _slidersUseCustomDark.value = prefs.getBoolean(KEY_ELEM_SLIDERS_USE_CUSTOM_DARK, false)
+        _slidersCustomColorLight.value = prefs.getInt(KEY_ELEM_SLIDERS_CUSTOM_COLOR_LIGHT, 0xFF673AB7.toInt())
+        _slidersCustomColorDark.value = prefs.getInt(KEY_ELEM_SLIDERS_CUSTOM_COLOR_DARK, 0xFF673AB7.toInt())
+
+        _miscElementsUseCustomLight.value = prefs.getBoolean(KEY_ELEM_MISC_ELEMENTS_USE_CUSTOM_LIGHT, false)
+        _miscElementsUseCustomDark.value = prefs.getBoolean(KEY_ELEM_MISC_ELEMENTS_USE_CUSTOM_DARK, false)
+        _miscElementsCustomColorLight.value = prefs.getInt(KEY_ELEM_MISC_ELEMENTS_CUSTOM_COLOR_LIGHT, 0xFF673AB7.toInt())
+        _miscElementsCustomColorDark.value = prefs.getInt(KEY_ELEM_MISC_ELEMENTS_CUSTOM_COLOR_DARK, 0xFF673AB7.toInt())
+
+        _clearAllUseCustomLight.value = prefs.getBoolean(KEY_ELEM_CLEAR_ALL_USE_CUSTOM_LIGHT, false)
+        _clearAllUseCustomDark.value = prefs.getBoolean(KEY_ELEM_CLEAR_ALL_USE_CUSTOM_DARK, false)
+        _clearAllCustomColorLight.value = prefs.getInt(KEY_ELEM_CLEAR_ALL_CUSTOM_COLOR_LIGHT, 0xFF673AB7.toInt())
+        _clearAllCustomColorDark.value = prefs.getInt(KEY_ELEM_CLEAR_ALL_CUSTOM_COLOR_DARK, 0xFF673AB7.toInt())
 
         _disableMonetNotifText.value = prefs.getBoolean(KEY_DISABLE_MONET_NOTIF_TEXT, false)
         _showQsTileGradient.value = prefs.getBoolean(KEY_SHOW_QS_TILE_GRADIENT, false)
@@ -2091,6 +2259,14 @@ object PanelPreferences {
             .putString(KEY_MEDIA_NOTIFICATION_STYLE, style.id)
             .putString(getStyleKey(KEY_MEDIA_NOTIFICATION_STYLE), style.id)
             .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
+    }
+
+    fun setUseMediaArtworkColors(context: Context, useArtwork: Boolean) {
+        _useMediaArtworkColors.value = useArtwork
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean(KEY_USE_MEDIA_ARTWORK_COLORS, useArtwork)
             .apply()
     }
 
@@ -3315,6 +3491,118 @@ object PanelPreferences {
     fun getClearAllSat(isDark: Boolean): StateFlow<Float> = if (isDark) clearAllSatDark else clearAllSatLight
     fun getClearAllVal(isDark: Boolean): StateFlow<Float> = if (isDark) clearAllValDark else clearAllValLight
 
+    // Surface Background Custom Color
+    fun getSurfaceBgUseCustom(isDark: Boolean): StateFlow<Boolean> = if (isDark) surfaceBgUseCustomDark else surfaceBgUseCustomLight
+    fun getSurfaceBgCustomColor(isDark: Boolean): StateFlow<Int> = if (isDark) surfaceBgCustomColorDark else surfaceBgCustomColorLight
+    fun setSurfaceBgUseCustom(context: Context, isDark: Boolean, useCustom: Boolean) {
+        if (isDark) _surfaceBgUseCustomDark.value = useCustom else _surfaceBgUseCustomLight.value = useCustom
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(if (isDark) KEY_ELEM_SURFACE_BG_USE_CUSTOM_DARK else KEY_ELEM_SURFACE_BG_USE_CUSTOM_LIGHT, useCustom).apply()
+    }
+    fun setSurfaceBgCustomColor(context: Context, isDark: Boolean, color: Int) {
+        if (isDark) _surfaceBgCustomColorDark.value = color else _surfaceBgCustomColorLight.value = color
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(if (isDark) KEY_ELEM_SURFACE_BG_CUSTOM_COLOR_DARK else KEY_ELEM_SURFACE_BG_CUSTOM_COLOR_LIGHT, color).apply()
+    }
+
+    // Panel Containers Custom Color
+    fun getPanelContainerUseCustom(isDark: Boolean): StateFlow<Boolean> = if (isDark) panelContainerUseCustomDark else panelContainerUseCustomLight
+    fun getPanelContainerCustomColor(isDark: Boolean): StateFlow<Int> = if (isDark) panelContainerCustomColorDark else panelContainerCustomColorLight
+    fun setPanelContainerUseCustom(context: Context, isDark: Boolean, useCustom: Boolean) {
+        if (isDark) _panelContainerUseCustomDark.value = useCustom else _panelContainerUseCustomLight.value = useCustom
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(if (isDark) KEY_ELEM_PANEL_CONTAINER_USE_CUSTOM_DARK else KEY_ELEM_PANEL_CONTAINER_USE_CUSTOM_LIGHT, useCustom).apply()
+    }
+    fun setPanelContainerCustomColor(context: Context, isDark: Boolean, color: Int) {
+        if (isDark) _panelContainerCustomColorDark.value = color else _panelContainerCustomColorLight.value = color
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(if (isDark) KEY_ELEM_PANEL_CONTAINER_CUSTOM_COLOR_DARK else KEY_ELEM_PANEL_CONTAINER_CUSTOM_COLOR_LIGHT, color).apply()
+    }
+
+    // Header Gradient Custom Color
+    fun getHeaderGradientUseCustom(isDark: Boolean): StateFlow<Boolean> = if (isDark) headerGradientUseCustomDark else headerGradientUseCustomLight
+    fun getHeaderGradientCustomColor(isDark: Boolean): StateFlow<Int> = if (isDark) headerGradientCustomColorDark else headerGradientCustomColorLight
+    fun setHeaderGradientUseCustom(context: Context, isDark: Boolean, useCustom: Boolean) {
+        if (isDark) _headerGradientUseCustomDark.value = useCustom else _headerGradientUseCustomLight.value = useCustom
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(if (isDark) KEY_ELEM_HEADER_GRADIENT_USE_CUSTOM_DARK else KEY_ELEM_HEADER_GRADIENT_USE_CUSTOM_LIGHT, useCustom).apply()
+    }
+    fun setHeaderGradientCustomColor(context: Context, isDark: Boolean, color: Int) {
+        if (isDark) _headerGradientCustomColorDark.value = color else _headerGradientCustomColorLight.value = color
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(if (isDark) KEY_ELEM_HEADER_GRADIENT_CUSTOM_COLOR_DARK else KEY_ELEM_HEADER_GRADIENT_CUSTOM_COLOR_LIGHT, color).apply()
+    }
+
+    // Active QS Tiles Custom Color
+    fun getQsTilesUseCustom(isDark: Boolean): StateFlow<Boolean> = if (isDark) qsTilesUseCustomDark else qsTilesUseCustomLight
+    fun getQsTilesCustomColor(isDark: Boolean): StateFlow<Int> = if (isDark) qsTilesCustomColorDark else qsTilesCustomColorLight
+    fun setQsTilesUseCustom(context: Context, isDark: Boolean, useCustom: Boolean) {
+        if (isDark) _qsTilesUseCustomDark.value = useCustom else _qsTilesUseCustomLight.value = useCustom
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(if (isDark) KEY_ELEM_QS_TILES_USE_CUSTOM_DARK else KEY_ELEM_QS_TILES_USE_CUSTOM_LIGHT, useCustom).apply()
+    }
+    fun setQsTilesCustomColor(context: Context, isDark: Boolean, color: Int) {
+        if (isDark) _qsTilesCustomColorDark.value = color else _qsTilesCustomColorLight.value = color
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(if (isDark) KEY_ELEM_QS_TILES_CUSTOM_COLOR_DARK else KEY_ELEM_QS_TILES_CUSTOM_COLOR_LIGHT, color).apply()
+    }
+
+    // Inactive QS Tiles Custom Color
+    fun getInactiveTilesUseCustom(isDark: Boolean): StateFlow<Boolean> = if (isDark) inactiveTilesUseCustomDark else inactiveTilesUseCustomLight
+    fun getInactiveTilesCustomColor(isDark: Boolean): StateFlow<Int> = if (isDark) inactiveTilesCustomColorDark else inactiveTilesCustomColorLight
+    fun setInactiveTilesUseCustom(context: Context, isDark: Boolean, useCustom: Boolean) {
+        if (isDark) _inactiveTilesUseCustomDark.value = useCustom else _inactiveTilesUseCustomLight.value = useCustom
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(if (isDark) KEY_ELEM_INACTIVE_TILES_USE_CUSTOM_DARK else KEY_ELEM_INACTIVE_TILES_USE_CUSTOM_LIGHT, useCustom).apply()
+    }
+    fun setInactiveTilesCustomColor(context: Context, isDark: Boolean, color: Int) {
+        if (isDark) _inactiveTilesCustomColorDark.value = color else _inactiveTilesCustomColorLight.value = color
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(if (isDark) KEY_ELEM_INACTIVE_TILES_CUSTOM_COLOR_DARK else KEY_ELEM_INACTIVE_TILES_CUSTOM_COLOR_LIGHT, color).apply()
+    }
+
+    // Sliders Custom Color
+    fun getSlidersUseCustom(isDark: Boolean): StateFlow<Boolean> = if (isDark) slidersUseCustomDark else slidersUseCustomLight
+    fun getSlidersCustomColor(isDark: Boolean): StateFlow<Int> = if (isDark) slidersCustomColorDark else slidersCustomColorLight
+    fun setSlidersUseCustom(context: Context, isDark: Boolean, useCustom: Boolean) {
+        if (isDark) _slidersUseCustomDark.value = useCustom else _slidersUseCustomLight.value = useCustom
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(if (isDark) KEY_ELEM_SLIDERS_USE_CUSTOM_DARK else KEY_ELEM_SLIDERS_USE_CUSTOM_LIGHT, useCustom).apply()
+    }
+    fun setSlidersCustomColor(context: Context, isDark: Boolean, color: Int) {
+        if (isDark) _slidersCustomColorDark.value = color else _slidersCustomColorLight.value = color
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(if (isDark) KEY_ELEM_SLIDERS_CUSTOM_COLOR_DARK else KEY_ELEM_SLIDERS_CUSTOM_COLOR_LIGHT, color).apply()
+    }
+
+    // Misc Elements Custom Color
+    fun getMiscElementsUseCustom(isDark: Boolean): StateFlow<Boolean> = if (isDark) miscElementsUseCustomDark else miscElementsUseCustomLight
+    fun getMiscElementsCustomColor(isDark: Boolean): StateFlow<Int> = if (isDark) miscElementsCustomColorDark else miscElementsCustomColorLight
+    fun setMiscElementsUseCustom(context: Context, isDark: Boolean, useCustom: Boolean) {
+        if (isDark) _miscElementsUseCustomDark.value = useCustom else _miscElementsUseCustomLight.value = useCustom
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(if (isDark) KEY_ELEM_MISC_ELEMENTS_USE_CUSTOM_DARK else KEY_ELEM_MISC_ELEMENTS_USE_CUSTOM_LIGHT, useCustom).apply()
+    }
+    fun setMiscElementsCustomColor(context: Context, isDark: Boolean, color: Int) {
+        if (isDark) _miscElementsCustomColorDark.value = color else _miscElementsCustomColorLight.value = color
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(if (isDark) KEY_ELEM_MISC_ELEMENTS_CUSTOM_COLOR_DARK else KEY_ELEM_MISC_ELEMENTS_CUSTOM_COLOR_LIGHT, color).apply()
+    }
+
+    // Clear All Custom Color
+    fun getClearAllUseCustom(isDark: Boolean): StateFlow<Boolean> = if (isDark) clearAllUseCustomDark else clearAllUseCustomLight
+    fun getClearAllCustomColor(isDark: Boolean): StateFlow<Int> = if (isDark) clearAllCustomColorDark else clearAllCustomColorLight
+    fun setClearAllUseCustom(context: Context, isDark: Boolean, useCustom: Boolean) {
+        if (isDark) _clearAllUseCustomDark.value = useCustom else _clearAllUseCustomLight.value = useCustom
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(if (isDark) KEY_ELEM_CLEAR_ALL_USE_CUSTOM_DARK else KEY_ELEM_CLEAR_ALL_USE_CUSTOM_LIGHT, useCustom).apply()
+    }
+    fun setClearAllCustomColor(context: Context, isDark: Boolean, color: Int) {
+        if (isDark) _clearAllCustomColorDark.value = color else _clearAllCustomColorLight.value = color
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(if (isDark) KEY_ELEM_CLEAR_ALL_CUSTOM_COLOR_DARK else KEY_ELEM_CLEAR_ALL_CUSTOM_COLOR_LIGHT, color).apply()
+    }
+
     fun syncElementColors(context: Context, fromDark: Boolean) {
         val toDark = !fromDark
         setSurfaceBgColorTertiary(context, toDark, getSurfaceBgColorTertiary(fromDark).value)
@@ -3335,6 +3623,23 @@ object PanelPreferences {
         setSlidersHsb(context, toDark, getSlidersHue(fromDark).value, getSlidersSat(fromDark).value, getSlidersVal(fromDark).value)
         setMiscElementsHsb(context, toDark, getMiscElementsHue(fromDark).value, getMiscElementsSat(fromDark).value, getMiscElementsVal(fromDark).value)
         setClearAllHsb(context, toDark, getClearAllHue(fromDark).value, getClearAllSat(fromDark).value, getClearAllVal(fromDark).value)
+
+        setSurfaceBgUseCustom(context, toDark, getSurfaceBgUseCustom(fromDark).value)
+        setSurfaceBgCustomColor(context, toDark, getSurfaceBgCustomColor(fromDark).value)
+        setPanelContainerUseCustom(context, toDark, getPanelContainerUseCustom(fromDark).value)
+        setPanelContainerCustomColor(context, toDark, getPanelContainerCustomColor(fromDark).value)
+        setHeaderGradientUseCustom(context, toDark, getHeaderGradientUseCustom(fromDark).value)
+        setHeaderGradientCustomColor(context, toDark, getHeaderGradientCustomColor(fromDark).value)
+        setQsTilesUseCustom(context, toDark, getQsTilesUseCustom(fromDark).value)
+        setQsTilesCustomColor(context, toDark, getQsTilesCustomColor(fromDark).value)
+        setInactiveTilesUseCustom(context, toDark, getInactiveTilesUseCustom(fromDark).value)
+        setInactiveTilesCustomColor(context, toDark, getInactiveTilesCustomColor(fromDark).value)
+        setSlidersUseCustom(context, toDark, getSlidersUseCustom(fromDark).value)
+        setSlidersCustomColor(context, toDark, getSlidersCustomColor(fromDark).value)
+        setMiscElementsUseCustom(context, toDark, getMiscElementsUseCustom(fromDark).value)
+        setMiscElementsCustomColor(context, toDark, getMiscElementsCustomColor(fromDark).value)
+        setClearAllUseCustom(context, toDark, getClearAllUseCustom(fromDark).value)
+        setClearAllCustomColor(context, toDark, getClearAllCustomColor(fromDark).value)
     }
 
     fun setShowQsTileGradient(context: Context, enabled: Boolean) {
