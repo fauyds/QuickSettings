@@ -162,8 +162,14 @@ class QuickSettingsOverlayService : Service() {
         externalTileScanner = ExternalTileScanner(this)
         tileRegistry = TileRegistry(this, repo, nativeTileManager, externalTileScanner, serviceScope)
 
-        // Initialize Immersive Mode Detector via Shizuku / Root shell listeners
-        immersiveModeDetector = com.example.system.ImmersiveModeDetector(privilegeEngine, serviceScope)
+        // Initialize Immersive Mode Detector (Shizuku-only; paused when AccessibilityService handles it)
+        immersiveModeDetector = com.example.system.ImmersiveModeDetector(
+            privilegeEngine = privilegeEngine,
+            scope = serviceScope,
+            shouldPauseMonitoring = {
+                QuickPanelAccessibilityService.isRunning && PanelPreferences.overrideSystemQs.value
+            }
+        )
         immersiveModeDetector?.startMonitoring { isImmersive ->
             updateTriggerVisibility(isImmersive)
         }

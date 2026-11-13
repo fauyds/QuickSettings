@@ -185,16 +185,21 @@ class TriggerContainerLayout @JvmOverloads constructor(
                         recordTopSwipeDown()
                         if (QuickPanelAccessibilityService.isRunning) {
                             QuickPanelAccessibilityService.instance?.let { service ->
-                                if (!service.isPanelShowing) service.showOverlayPanel(com.example.ui.overlay.QsExpansionStage.QQS)
+                                if (!service.isPanelShowing) {
+                                    QuickPanelAccessibilityService.collapseStockNotificationShade()
+                                    service.showOverlayPanel(com.example.ui.overlay.QsExpansionStage.QQS)
+                                }
                                 service.updatePullDownOffset(diffY)
                             }
                         } else {
                             QuickSettingsOverlayService.instance?.let { service ->
-                                if (!service.isPanelShowing) service.showOverlayPanel(com.example.ui.overlay.QsExpansionStage.QQS)
+                                if (!service.isPanelShowing) {
+                                    QuickPanelAccessibilityService.collapseStockNotificationShade()
+                                    service.showOverlayPanel(com.example.ui.overlay.QsExpansionStage.QQS)
+                                }
                                 service.updatePullDownOffset(diffY)
                             }
                         }
-                        QuickPanelAccessibilityService.collapseStockNotificationShade()
                         return true
                     }
                 }

@@ -177,8 +177,6 @@ class NativeTileManager(
     private var lastAclConnectedDevice: BluetoothDevice? = null
     @Volatile
     private var wifiNetworkCallback: ConnectivityManager.NetworkCallback? = null
-    @Volatile
-    private var permissionsAutoGrantAttempted: Boolean = false
 
     init {
         instance = this
@@ -199,7 +197,22 @@ class NativeTileManager(
 
         private val activeInstances = CopyOnWriteArraySet<WeakReference<NativeTileManager>>()
 
+        @Volatile
+        private var permissionsAutoGrantAttempted: Boolean = false
+        @Volatile
+        private var lastShellWifiLookupMs: Long = 0L
+        @Volatile
+        private var cachedShellWifiSsid: String? = null
+        @Volatile
+        private var lastShellBtLookupMs: Long = 0L
+        @Volatile
+        private var cachedShellBtDeviceName: String? = null
+        private val shellQueryLock = Any()
+
         fun notifyAllInstancesPrivilegeOrPermissionsUpdated() {
+            permissionsAutoGrantAttempted = false
+            lastShellWifiLookupMs = 0L
+            lastShellBtLookupMs = 0L
             activeInstances.removeAll { it.get() == null }
             for (ref in activeInstances) {
                 ref.get()?.onPrivilegeOrPermissionsUpdatedInternal()
@@ -296,7 +309,6 @@ class NativeTileManager(
     }
 
     private fun onPrivilegeOrPermissionsUpdatedInternal() {
-        permissionsAutoGrantAttempted = false
         scope.launch(Dispatchers.IO) {
             ensureConnectivityPermissionsGranted()
             handler.post {
@@ -320,22 +332,33 @@ class NativeTileManager(
     private fun ensureConnectivityPermissionsGranted(): Boolean {
         if (hasConnectivityPermissions()) return true
         if (permissionsAutoGrantAttempted) return false
-        if (!privilegeEngine.isRootGranted() && !privilegeEngine.isShizukuGranted()) return false
-        permissionsAutoGrantAttempted = true
-        val pkg = context.packageName
-        try {
+        if (!privilegeEngine.isShizukuGranted() &&
+            !(privilegeEngine.isRootGranted() && privilegeEngine.currentMode.value == PrivilegeMode.ROOT)
+        ) {
+            return false
+        }
+        synchronized(shellQueryLock) {
+            if (permissionsAutoGrantAttempted) return hasConnectivityPermissions()
+            permissionsAutoGrantAttempted = true
+            val pkg = context.packageName
+            val grants = mutableListOf<String>()
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                privilegeEngine.executeShellWithOutput("pm grant $pkg android.permission.ACCESS_COARSE_LOCATION")
+                grants.add("pm grant $pkg android.permission.ACCESS_COARSE_LOCATION")
             }
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                privilegeEngine.executeShellWithOutput("pm grant $pkg android.permission.ACCESS_FINE_LOCATION")
+                grants.add("pm grant $pkg android.permission.ACCESS_FINE_LOCATION")
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
                 ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED
             ) {
-                privilegeEngine.executeShellWithOutput("pm grant $pkg android.permission.BLUETOOTH_CONNECT")
+                grants.add("pm grant $pkg android.permission.BLUETOOTH_CONNECT")
             }
-        } catch (_: Throwable) {}
+            if (grants.isNotEmpty()) {
+                try {
+                    privilegeEngine.executeShellWithOutput(grants.joinToString("; "))
+                } catch (_: Throwable) {}
+            }
+        }
         return hasConnectivityPermissions()
     }
 
@@ -504,15 +527,29 @@ class NativeTileManager(
             cleanSsid(extra)?.let { return it }
         } catch (_: Throwable) {}
 
-        // Tier 3: Privileged shell fallback (works even when device GPS/Location toggle is OFF)
-        if (isOffMainThread && (privilegeEngine.isRootGranted() || privilegeEngine.isShizukuGranted())) {
-            try {
-                val cmdWifiOut = privilegeEngine.executeShellWithOutput("cmd wifi status")
-                parseWifiSsidFromShellOutput(cmdWifiOut)?.let { return it }
-
-                val dumpsysOut = privilegeEngine.executeShellWithOutput("dumpsys wifi | grep -m 8 'SSID:'")
-                parseWifiSsidFromShellOutput(dumpsysOut)?.let { return it }
-            } catch (_: Throwable) {}
+        // Tier 3: Privileged shell fallback (works even when device GPS/Location toggle is OFF), throttled across instances
+        val canUseShellForWifi = privilegeEngine.isShizukuGranted() ||
+            (privilegeEngine.isRootGranted() && privilegeEngine.currentMode.value == PrivilegeMode.ROOT)
+        if (isOffMainThread && canUseShellForWifi) {
+            val now = System.currentTimeMillis()
+            if (now - lastShellWifiLookupMs < 15_000L) {
+                return cachedShellWifiSsid
+            }
+            synchronized(shellQueryLock) {
+                val nowLocked = System.currentTimeMillis()
+                if (nowLocked - lastShellWifiLookupMs < 15_000L) {
+                    return cachedShellWifiSsid
+                }
+                lastShellWifiLookupMs = nowLocked
+                try {
+                    val combinedOut = privilegeEngine.executeShellWithOutput(
+                        "cmd wifi status 2>/dev/null; dumpsys wifi | grep -m 8 'SSID:'"
+                    )
+                    val parsed = parseWifiSsidFromShellOutput(combinedOut)
+                    cachedShellWifiSsid = parsed
+                    if (parsed != null) return parsed
+                } catch (_: Throwable) {}
+            }
         }
 
         return null
@@ -625,12 +662,36 @@ class NativeTileManager(
             }
         }
 
-        // Tier 4: Privileged shell fallback (`dumpsys bluetooth_manager`)
-        if (isOffMainThread && (privilegeEngine.isRootGranted() || privilegeEngine.isShizukuGranted())) {
-            try {
-                val btDump = privilegeEngine.executeShellWithOutput("dumpsys bluetooth_manager")
-                parseConnectedBluetoothFromShellOutput(btDump)?.let { return it }
-            } catch (_: Throwable) {}
+        // Tier 4: Privileged shell fallback (`dumpsys bluetooth_manager`), skipped if bondedDevices is known empty and throttled
+        var hasKnownZeroBondedDevices = false
+        try {
+            val bonded = adapter.bondedDevices
+            if (bonded != null && bonded.isEmpty()) {
+                hasKnownZeroBondedDevices = true
+            }
+        } catch (_: SecurityException) {
+        } catch (_: Throwable) {}
+
+        val canUseShellForBt = privilegeEngine.isShizukuGranted() ||
+            (privilegeEngine.isRootGranted() && privilegeEngine.currentMode.value == PrivilegeMode.ROOT)
+        if (!hasKnownZeroBondedDevices && isOffMainThread && canUseShellForBt) {
+            val now = System.currentTimeMillis()
+            if (now - lastShellBtLookupMs < 15_000L) {
+                return cachedShellBtDeviceName
+            }
+            synchronized(shellQueryLock) {
+                val nowLocked = System.currentTimeMillis()
+                if (nowLocked - lastShellBtLookupMs < 15_000L) {
+                    return cachedShellBtDeviceName
+                }
+                lastShellBtLookupMs = nowLocked
+                try {
+                    val btDump = privilegeEngine.executeShellWithOutput("dumpsys bluetooth_manager")
+                    val parsed = parseConnectedBluetoothFromShellOutput(btDump)
+                    cachedShellBtDeviceName = parsed
+                    if (parsed != null) return parsed
+                } catch (_: Throwable) {}
+            }
         }
 
         return null
@@ -649,6 +710,22 @@ class NativeTileManager(
                 refreshAllStates()
             }
         }
+
+    private fun refreshVolumeStates() {
+        audioManager?.let { am ->
+            val maxMedia = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+            _mediaVolume.value = am.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat() / maxMedia
+
+            val maxRing = am.getStreamMaxVolume(AudioManager.STREAM_RING).coerceAtLeast(1)
+            _ringVolume.value = am.getStreamVolume(AudioManager.STREAM_RING).toFloat() / maxRing
+
+            val maxAlarm = am.getStreamMaxVolume(AudioManager.STREAM_ALARM).coerceAtLeast(1)
+            _alarmVolume.value = am.getStreamVolume(AudioManager.STREAM_ALARM).toFloat() / maxAlarm
+
+            val maxNotif = am.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION).coerceAtLeast(1)
+            _notificationVolume.value = am.getStreamVolume(AudioManager.STREAM_NOTIFICATION).toFloat() / maxNotif
+        }
+    }
 
     /**
      * Automatic Real-Time State Mirroring:
@@ -1032,6 +1109,7 @@ class NativeTileManager(
                             _isWifiConnected.value = false
                             _wifiSsid.value = null
                             cachedCallbackWifiSsid = null
+                            cachedShellWifiSsid = null
                         } else {
                             val on = wifiManager?.isWifiEnabled == true
                             _isWifiEnabled.value = on
@@ -1039,6 +1117,7 @@ class NativeTileManager(
                                 _isWifiConnected.value = false
                                 _wifiSsid.value = null
                                 cachedCallbackWifiSsid = null
+                                cachedShellWifiSsid = null
                             } else {
                                 scope.launch(Dispatchers.IO) {
                                     val isConn = checkWifiConnected()
@@ -1101,11 +1180,13 @@ class NativeTileManager(
                             if (lastAclConnectedDevice?.address == extraDevice.address) {
                                 lastAclConnectedDevice = null
                             }
+                            cachedShellBtDeviceName = null
                         }
                         val on = try { bluetoothManager?.adapter?.isEnabled == true } catch (_: Throwable) { false }
                         _isBluetoothEnabled.value = on
                         if (!on) {
                             lastAclConnectedDevice = null
+                            cachedShellBtDeviceName = null
                             _bluetoothDeviceName.value = null
                         } else {
                             initBluetoothProfileProxies()
@@ -1158,7 +1239,7 @@ class NativeTileManager(
                     }
                     "android.media.VOLUME_CHANGED_ACTION",
                     "android.media.RINGER_MODE_CHANGED" -> {
-                        refreshAllStates()
+                        refreshVolumeStates()
                     }
                     "android.net.wifi.WIFI_AP_STATE_CHANGED" -> {
                         val apState = intent.getIntExtra("wifi_state", 11)
@@ -1271,6 +1352,7 @@ class NativeTileManager(
 
     private fun handleWifiNetworkLost() {
         cachedCallbackWifiSsid = null
+        cachedShellWifiSsid = null
         val enabled = wifiManager?.isWifiEnabled == true
         _isWifiEnabled.value = enabled
         if (!enabled) {

@@ -22,6 +22,7 @@ import android.Manifest
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 
 enum class ShizukuStatusState(val label: String) {
     RUNNING_GRANTED("Shizuku Running / Permission Granted"),
@@ -197,9 +198,15 @@ class PrivilegeEngine(private val context: Context) {
     fun testRootAccess(): Boolean {
         return try {
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
-            val stdout = process.inputStream.bufferedReader().readText().trim()
-            val exitCode = process.waitFor()
-            exitCode == 0 && (stdout.contains("uid=0") || stdout.contains("root"))
+            val stdout = process.inputStream.bufferedReader().use { it.readText().trim() }
+            try { process.errorStream.close() } catch (_: Exception) {}
+            try { process.outputStream.close() } catch (_: Exception) {}
+            val finished = process.waitFor(5, TimeUnit.SECONDS)
+            if (!finished) {
+                process.destroyForcibly()
+                return false
+            }
+            process.exitValue() == 0 && (stdout.contains("uid=0") || stdout.contains("root"))
         } catch (e: Exception) {
             false
         }
@@ -506,17 +513,15 @@ class PrivilegeEngine(private val context: Context) {
     private fun runRootCommand(command: String): Boolean {
         return try {
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", command))
-            val exitCode = process.waitFor()
-            if (exitCode == 0) return true
-
-            // Fallback to su stream writer
-            val suProcess = Runtime.getRuntime().exec("su")
-            val os = suProcess.outputStream.bufferedWriter()
-            os.write(command + "\n")
-            os.write("exit\n")
-            os.flush()
-            val suExitCode = suProcess.waitFor()
-            suExitCode == 0
+            try { process.inputStream.close() } catch (_: Exception) {}
+            try { process.errorStream.close() } catch (_: Exception) {}
+            try { process.outputStream.close() } catch (_: Exception) {}
+            val finished = process.waitFor(5, TimeUnit.SECONDS)
+            if (!finished) {
+                process.destroyForcibly()
+                return false
+            }
+            process.exitValue() == 0
         } catch (e: Exception) {
             Log.w("PrivilegeEngine", "Root command failed gracefully: ${e.message}")
             false
@@ -631,18 +636,6 @@ class PrivilegeEngine(private val context: Context) {
      * or null if neither Root nor Shizuku is granted or command produces no output.
      */
     fun executeShellWithOutput(command: String): String? {
-        if (isRootGranted()) {
-            try {
-                val proc = Runtime.getRuntime().exec(arrayOf("su", "-c", command))
-                val stdout = proc.inputStream.bufferedReader().readText().trim()
-                proc.errorStream.bufferedReader().readText()
-                val exit = proc.waitFor()
-                if (exit == 0 && stdout.isNotBlank()) {
-                    return stdout
-                }
-            } catch (_: Exception) {}
-        }
-
         if (isShizukuGranted()) {
             try {
                 val newProcessMethod = try {
@@ -658,12 +651,32 @@ class PrivilegeEngine(private val context: Context) {
                 if (newProcessMethod != null) {
                     newProcessMethod.isAccessible = true
                     val proc = newProcessMethod.invoke(null, arrayOf("sh", "-c", command), null, null) as java.lang.Process
-                    val stdout = proc.inputStream.bufferedReader().readText().trim()
-                    proc.errorStream.bufferedReader().readText()
-                    val exit = proc.waitFor()
-                    if (exit == 0 && stdout.isNotBlank()) {
+                    val stdout = proc.inputStream.bufferedReader().use { it.readText().trim() }
+                    try { proc.errorStream.close() } catch (_: Exception) {}
+                    try { proc.outputStream.close() } catch (_: Exception) {}
+                    val finished = proc.waitFor(4, TimeUnit.SECONDS)
+                    if (!finished) {
+                        proc.destroyForcibly()
+                    } else if (proc.exitValue() == 0 && stdout.isNotBlank()) {
                         return stdout
                     }
+                }
+            } catch (_: Exception) {}
+        }
+
+        if (isRootGranted() && _currentMode.value == PrivilegeMode.ROOT) {
+            try {
+                val proc = Runtime.getRuntime().exec(arrayOf("su", "-c", command))
+                val stdout = proc.inputStream.bufferedReader().use { it.readText().trim() }
+                try { proc.errorStream.close() } catch (_: Exception) {}
+                try { proc.outputStream.close() } catch (_: Exception) {}
+                val finished = proc.waitFor(4, TimeUnit.SECONDS)
+                if (!finished) {
+                    proc.destroyForcibly()
+                    return null
+                }
+                if (proc.exitValue() == 0 && stdout.isNotBlank()) {
+                    return stdout
                 }
             } catch (_: Exception) {}
         }

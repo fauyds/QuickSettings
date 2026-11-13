@@ -94,9 +94,14 @@ class QuickPanelAccessibilityService : AccessibilityService() {
             return instance?.performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS) ?: false
         }
 
+        @Volatile
+        private var lastPrivilegedShadeCollapseTime = 0L
+
         fun collapseStockNotificationShade(): Boolean {
             var result = false
             val useAutoClosing = PanelPreferences.autoSystemPanelClosing.value
+            val now = System.currentTimeMillis()
+            val allowPrivilegedCollapse = (now - lastPrivilegedShadeCollapseTime) >= 600L
 
             instance?.let { service ->
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -129,48 +134,52 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                         } catch (_: Exception) {}
                     }
                 }
+            }
 
-                if (service.privilegeEngine.isShizukuGranted()) {
-                    service.serviceScope.launch(Dispatchers.IO) {
-                        service.privilegeEngine.executeShizukuShell("cmd statusbar collapse; service call statusbar 2")
+            QuickSettingsOverlayService.instance?.let { overlayService ->
+                if (instance == null) {
+                    try {
+                        @Suppress("DEPRECATION")
+                        val closeIntent = Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
+                        overlayService.sendBroadcast(closeIntent)
+                    } catch (e: Exception) {
+                        // Ignore
                     }
-                } else if (useAutoClosing && service.privilegeEngine.isRootAvailable.value) {
-                    service.serviceScope.launch(Dispatchers.IO) {
-                        service.privilegeEngine.executeCommand("cmd statusbar collapse || service call statusbar 2")
+
+                    if (useAutoClosing) {
+                        try {
+                            val sbm = overlayService.getSystemService("statusbar")
+                            val collapseMethod = sbm?.javaClass?.getMethod("collapsePanels")
+                            collapseMethod?.invoke(sbm)
+                        } catch (_: Exception) {
+                            try {
+                                val sbm = overlayService.getSystemService("statusbar")
+                                val collapseMethod = sbm?.javaClass?.getMethod("collapse")
+                                collapseMethod?.invoke(sbm)
+                            } catch (_: Exception) {}
+                        }
                     }
                 }
             }
 
-            QuickSettingsOverlayService.instance?.let { overlayService ->
-                try {
-                    @Suppress("DEPRECATION")
-                    val closeIntent = Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
-                    overlayService.sendBroadcast(closeIntent)
-                } catch (e: Exception) {
-                    // Ignore
-                }
-
-                if (useAutoClosing) {
-                    try {
-                        val sbm = overlayService.getSystemService("statusbar")
-                        val collapseMethod = sbm?.javaClass?.getMethod("collapsePanels")
-                        collapseMethod?.invoke(sbm)
-                    } catch (_: Exception) {
-                        try {
-                            val sbm = overlayService.getSystemService("statusbar")
-                            val collapseMethod = sbm?.javaClass?.getMethod("collapse")
-                            collapseMethod?.invoke(sbm)
-                        } catch (_: Exception) {}
-                    }
-                }
-
-                if (overlayService.privilegeEngine.isShizukuGranted()) {
-                    overlayService.serviceScope.launch(Dispatchers.IO) {
-                        overlayService.privilegeEngine.executeShizukuShell("cmd statusbar collapse; service call statusbar 2")
-                    }
-                } else if (useAutoClosing && overlayService.privilegeEngine.isRootAvailable.value) {
-                    overlayService.serviceScope.launch(Dispatchers.IO) {
-                        overlayService.privilegeEngine.executeCommand("cmd statusbar collapse || service call statusbar 2")
+            if (allowPrivilegedCollapse && !result) {
+                val activeService = instance
+                val overlayService = QuickSettingsOverlayService.instance
+                val engine = activeService?.privilegeEngine ?: overlayService?.privilegeEngine
+                val scope = activeService?.serviceScope ?: overlayService?.serviceScope
+                if (engine != null && scope != null) {
+                    if (engine.isShizukuGranted()) {
+                        lastPrivilegedShadeCollapseTime = now
+                        scope.launch(Dispatchers.IO) {
+                            engine.executeShizukuShell("cmd statusbar collapse; service call statusbar 2")
+                        }
+                    } else if (useAutoClosing && engine.isRootAvailable.value &&
+                        engine.currentMode.value == com.example.model.PrivilegeMode.ROOT
+                    ) {
+                        lastPrivilegedShadeCollapseTime = now
+                        scope.launch(Dispatchers.IO) {
+                            engine.executeCommand("cmd statusbar collapse || service call statusbar 2")
+                        }
                     }
                 }
             }
@@ -546,7 +555,11 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         }
 
         if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
-            immersiveModeDetector?.checkNow()
+            val nowCheck = System.currentTimeMillis()
+            if (nowCheck - lastDetectorCheckTime >= 400L) {
+                lastDetectorCheckTime = nowCheck
+                immersiveModeDetector?.checkNow()
+            }
             val immersive = isImmersiveModeActive()
             updateTriggerVisibility(immersive)
         }
