@@ -1,6 +1,7 @@
 package com.example.ui.customizer
 
 import android.graphics.Color as AndroidColor
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,8 +19,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -88,8 +92,8 @@ fun TwoTabColorPicker(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(vertical = 2.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Tab Selector Row
         TabRow(
@@ -131,7 +135,7 @@ fun TwoTabColorPicker(
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OptInFlowGrid(
                     colors = PRESET_COLORS,
@@ -145,13 +149,13 @@ fun TwoTabColorPicker(
         if (activeTab == ColorPickerTab.CUSTOM) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 // Top Wide Color Preview Banner (No "+" icon)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(64.dp)
+                        .height(52.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(Color(selectedColor))
                         .clickable {
@@ -328,8 +332,8 @@ private fun OptInFlowGrid(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+            .padding(vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         val rows = colors.chunked(6)
         rows.forEach { rowColors ->
@@ -395,6 +399,7 @@ private fun SwatchCircle(
 /**
  * Custom Slider Row with Gradient Track and smaller label and numeric input box.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CustomHsvSliderRow(
     label: String,
@@ -406,10 +411,11 @@ private fun CustomHsvSliderRow(
     onValueTextEntered: (String) -> Unit
 ) {
     var textValue by remember(displayValue) { mutableStateOf(displayValue.toString()) }
+    val thumbColor = MaterialTheme.colorScheme.primary
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -457,34 +463,87 @@ private fun CustomHsvSliderRow(
             }
         }
 
-        // Custom Slider over Gradient Track
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(32.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            // Gradient Track Bar
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(14.dp)
-                    .clip(RoundedCornerShape(7.dp))
-                    .background(trackBrush)
-            )
+        // Thick Custom Slider over Segmented Gradient Track
+        Slider(
+            value = value.coerceIn(valueRange.start, valueRange.endInclusive),
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            modifier = Modifier.fillMaxWidth(),
+            thumb = {
+                Spacer(modifier = Modifier.size(width = 3.dp, height = 38.dp))
+            },
+            track = { sliderState ->
+                val span = (sliderState.valueRange.endInclusive - sliderState.valueRange.start)
+                    .coerceAtLeast(0.0001f)
+                val fraction = ((sliderState.value - sliderState.valueRange.start) / span)
+                    .coerceIn(0f, 1f)
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(38.dp)
+                ) {
+                    val outerR = 8.dp.toPx()
+                    val innerR = 4.dp.toPx()
+                    val trackHeightPx = 28.dp.toPx()
+                    val trackTop = (size.height - trackHeightPx) / 2f
+                    val trackBottom = trackTop + trackHeightPx
 
-            // Slider
-            Slider(
-                value = value.coerceIn(valueRange.start, valueRange.endInclusive),
-                onValueChange = onValueChange,
-                valueRange = valueRange,
-                colors = SliderDefaults.colors(
-                    thumbColor = Color(0xFFBD7E20),
-                    activeTrackColor = Color.Transparent,
-                    inactiveTrackColor = Color.Transparent
-                ),
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
+                    val thumbHalfPx = 1.5.dp.toPx()
+                    val gapHalfPx = 4.5.dp.toPx()
+                    val centerX = size.width * fraction
+
+                    val leftEndX = (centerX - gapHalfPx).coerceAtLeast(0f)
+                    if (leftEndX > 2.dp.toPx()) {
+                        val leftPath = Path().apply {
+                            addRoundRect(
+                                RoundRect(
+                                    left = 0f,
+                                    top = trackTop,
+                                    right = leftEndX,
+                                    bottom = trackBottom,
+                                    topLeftCornerRadius = CornerRadius(outerR, outerR),
+                                    bottomLeftCornerRadius = CornerRadius(outerR, outerR),
+                                    topRightCornerRadius = CornerRadius(innerR, innerR),
+                                    bottomRightCornerRadius = CornerRadius(innerR, innerR)
+                                )
+                            )
+                        }
+                        drawPath(leftPath, brush = trackBrush)
+                    }
+
+                    val rightStartX = (centerX + gapHalfPx).coerceAtMost(size.width)
+                    if (size.width - rightStartX > 2.dp.toPx()) {
+                        val rightPath = Path().apply {
+                            addRoundRect(
+                                RoundRect(
+                                    left = rightStartX,
+                                    top = trackTop,
+                                    right = size.width,
+                                    bottom = trackBottom,
+                                    topLeftCornerRadius = CornerRadius(innerR, innerR),
+                                    bottomLeftCornerRadius = CornerRadius(innerR, innerR),
+                                    topRightCornerRadius = CornerRadius(outerR, outerR),
+                                    bottomRightCornerRadius = CornerRadius(outerR, outerR)
+                                )
+                            )
+                        }
+                        drawPath(rightPath, brush = trackBrush)
+                    }
+
+                    val handlePath = Path().apply {
+                        addRoundRect(
+                            RoundRect(
+                                left = centerX - thumbHalfPx,
+                                top = 0f,
+                                right = centerX + thumbHalfPx,
+                                bottom = size.height,
+                                cornerRadius = CornerRadius(thumbHalfPx, thumbHalfPx)
+                            )
+                        )
+                    }
+                    drawPath(handlePath, color = thumbColor)
+                }
+            }
+        )
     }
 }

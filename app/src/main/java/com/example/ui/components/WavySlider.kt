@@ -17,9 +17,14 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.RoundRect
 import com.example.data.ProgressBarStyle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -515,19 +520,35 @@ fun QsProgressSlider(
     val fallbackInactiveTrackThickness by com.example.data.PanelPreferences.sliderInactiveTrackThickness.collectAsState()
     val fallbackCornerRadius by com.example.data.PanelPreferences.sliderCornerRadius.collectAsState()
 
+    val m3TrackHeightPref by com.example.data.PanelPreferences.m3TrackHeight.collectAsState()
+    val m3InactiveTrackHeightPref by com.example.data.PanelPreferences.m3InactiveTrackHeight.collectAsState()
+    val m3OuterCornerRadiusPref by com.example.data.PanelPreferences.m3OuterCornerRadius.collectAsState()
+    val m3InnerCornerRadiusPref by com.example.data.PanelPreferences.m3InnerCornerRadius.collectAsState()
+    val m3ThumbWidthPref by com.example.data.PanelPreferences.m3ThumbWidth.collectAsState()
+    val m3ThumbHeightPref by com.example.data.PanelPreferences.m3ThumbHeight.collectAsState()
+    val m3ThumbGapPref by com.example.data.PanelPreferences.m3ThumbGap.collectAsState()
+    val m3ShowStopIndicatorPref by com.example.data.PanelPreferences.m3ShowStopIndicator.collectAsState()
+
     when (resolvedStyle) {
         ProgressBarStyle.DEFAULT -> {
-            Slider(
-                value = value.coerceIn(valueRange.start, valueRange.endInclusive),
+            M3CustomSlider(
+                value = value,
                 onValueChange = onValueChange,
                 onValueChangeFinished = onValueChangeFinished,
                 enabled = enabled,
                 valueRange = valueRange,
-                colors = SliderDefaults.colors(
-                    thumbColor = thumbColor,
-                    activeTrackColor = activeColor,
-                    inactiveTrackColor = inactiveColor
-                ),
+                activeColor = activeColor,
+                activeBrush = activeBrush,
+                inactiveColor = inactiveColor,
+                thumbColor = thumbColor,
+                trackHeight = m3TrackHeightPref.dp,
+                inactiveTrackHeight = m3InactiveTrackHeightPref.dp,
+                outerCornerRadius = m3OuterCornerRadiusPref.dp,
+                innerCornerRadius = m3InnerCornerRadiusPref.dp,
+                thumbWidth = m3ThumbWidthPref.dp,
+                thumbHeight = m3ThumbHeightPref.dp,
+                thumbGap = m3ThumbGapPref.dp,
+                showStopIndicator = m3ShowStopIndicatorPref,
                 modifier = modifier
             )
         }
@@ -607,6 +628,132 @@ fun QsProgressSlider(
             )
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun M3CustomSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
+    onValueChangeFinished: (() -> Unit)? = null,
+    activeColor: Color = MaterialTheme.colorScheme.primary,
+    activeBrush: Brush? = null,
+    inactiveColor: Color = MaterialTheme.colorScheme.surfaceVariant,
+    thumbColor: Color = activeColor,
+    trackHeight: Dp = 16.dp,
+    inactiveTrackHeight: Dp = 16.dp,
+    outerCornerRadius: Dp = 8.dp,
+    innerCornerRadius: Dp = 2.dp,
+    thumbWidth: Dp = 4.dp,
+    thumbHeight: Dp = 34.dp,
+    thumbGap: Dp = 4.dp,
+    showStopIndicator: Boolean = true
+) {
+    val visualHeight = maxOf(thumbHeight, maxOf(trackHeight, inactiveTrackHeight)).coerceAtLeast(16.dp)
+    Slider(
+        value = value.coerceIn(valueRange.start, valueRange.endInclusive),
+        onValueChange = onValueChange,
+        onValueChangeFinished = onValueChangeFinished,
+        enabled = enabled,
+        valueRange = valueRange,
+        modifier = modifier,
+        thumb = {
+            Spacer(modifier = Modifier.size(width = thumbWidth, height = thumbHeight))
+        },
+        track = { sliderState ->
+            val span = (sliderState.valueRange.endInclusive - sliderState.valueRange.start)
+                .coerceAtLeast(0.0001f)
+            val fraction = ((sliderState.value - sliderState.valueRange.start) / span)
+                .coerceIn(0f, 1f)
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(visualHeight)
+            ) {
+                val activeH = trackHeight.toPx().coerceIn(2f, size.height)
+                val inactiveH = inactiveTrackHeight.toPx().coerceIn(2f, size.height)
+                val activeTop = (size.height - activeH) / 2f
+                val activeBottom = activeTop + activeH
+                val inactiveTop = (size.height - inactiveH) / 2f
+                val inactiveBottom = inactiveTop + inactiveH
+
+                val outerR = outerCornerRadius.toPx()
+                val innerR = innerCornerRadius.toPx()
+                val thumbHalfPx = thumbWidth.toPx() / 2f
+                val gapHalfPx = thumbHalfPx + thumbGap.toPx()
+                val centerX = size.width * fraction
+
+                val activeEndX = (centerX - gapHalfPx).coerceAtLeast(0f)
+                if (activeEndX > 1.5.dp.toPx()) {
+                    val activePath = Path().apply {
+                        addRoundRect(
+                            RoundRect(
+                                left = 0f,
+                                top = activeTop,
+                                right = activeEndX,
+                                bottom = activeBottom,
+                                topLeftCornerRadius = CornerRadius(outerR, outerR),
+                                bottomLeftCornerRadius = CornerRadius(outerR, outerR),
+                                topRightCornerRadius = CornerRadius(innerR, innerR),
+                                bottomRightCornerRadius = CornerRadius(innerR, innerR)
+                            )
+                        )
+                    }
+                    if (activeBrush != null) {
+                        drawPath(activePath, brush = activeBrush)
+                    } else {
+                        drawPath(activePath, color = activeColor)
+                    }
+                }
+
+                val inactiveStartX = (centerX + gapHalfPx).coerceAtMost(size.width)
+                if (size.width - inactiveStartX > 1.5.dp.toPx()) {
+                    val inactivePath = Path().apply {
+                        addRoundRect(
+                            RoundRect(
+                                left = inactiveStartX,
+                                top = inactiveTop,
+                                right = size.width,
+                                bottom = inactiveBottom,
+                                topLeftCornerRadius = CornerRadius(innerR, innerR),
+                                bottomLeftCornerRadius = CornerRadius(innerR, innerR),
+                                topRightCornerRadius = CornerRadius(outerR, outerR),
+                                bottomRightCornerRadius = CornerRadius(outerR, outerR)
+                            )
+                        )
+                    }
+                    drawPath(inactivePath, color = inactiveColor)
+
+                    if (showStopIndicator && (size.width - inactiveStartX) > 10.dp.toPx()) {
+                        val dotInset = (inactiveH / 2f).coerceIn(3.dp.toPx(), 7.dp.toPx())
+                        drawCircle(
+                            color = activeColor.copy(alpha = 0.7f),
+                            radius = 2.dp.toPx(),
+                            center = Offset(size.width - dotInset, size.height / 2f)
+                        )
+                    }
+                }
+
+                val handleH = thumbHeight.toPx().coerceIn(4f, size.height)
+                val handleTop = (size.height - handleH) / 2f
+                val handlePath = Path().apply {
+                    addRoundRect(
+                        RoundRect(
+                            left = centerX - thumbHalfPx,
+                            top = handleTop,
+                            right = centerX + thumbHalfPx,
+                            bottom = handleTop + handleH,
+                            cornerRadius = CornerRadius(thumbHalfPx, thumbHalfPx)
+                        )
+                    )
+                }
+                drawPath(handlePath, color = thumbColor)
+            }
+        }
+    )
 }
 
 

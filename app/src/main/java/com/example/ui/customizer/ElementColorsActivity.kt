@@ -9,6 +9,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -31,7 +32,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -141,6 +145,7 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
+                expandedHeight = 52.dp,
                 title = {
                     Text(
                         text = "Per-Element Accent Colors",
@@ -172,8 +177,8 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             val unselectedCardBg = com.example.ui.theme.getSettingsCardBackgroundColor(systemInDark)
 
@@ -276,8 +281,8 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                 shape = CustomizeCardShapes.SingleCard
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -476,7 +481,7 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -547,7 +552,7 @@ private fun ExpandableElementColorCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { isExpanded = !isExpanded }
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -623,8 +628,8 @@ private fun ExpandableElementColorCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(expandedBg)
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         // Toggle: Custom Color vs Monet Accent
                         Row(
@@ -666,7 +671,7 @@ private fun ExpandableElementColorCard(
                             // Monet Accent & Saturation/Hue/Brightness Sliders
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -720,11 +725,11 @@ private fun ExpandableElementColorCard(
                                             color = MaterialTheme.colorScheme.primary
                                         )
                                     }
-                                    Slider(
+                                    ThickElementSlider(
                                         value = hue,
                                         onValueChange = { onHsbChange(it, sat, valFactor) },
                                         valueRange = -180f..180f,
-                                        steps = 360,
+                                        steps = 359,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
@@ -749,11 +754,11 @@ private fun ExpandableElementColorCard(
                                             color = MaterialTheme.colorScheme.primary
                                         )
                                     }
-                                    Slider(
+                                    ThickElementSlider(
                                         value = sat,
                                         onValueChange = { onHsbChange(hue, it, valFactor) },
                                         valueRange = 0f..2.0f,
-                                        steps = 40,
+                                        steps = 39,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
@@ -778,11 +783,11 @@ private fun ExpandableElementColorCard(
                                             color = MaterialTheme.colorScheme.primary
                                         )
                                     }
-                                    Slider(
+                                    ThickElementSlider(
                                         value = valFactor,
                                         onValueChange = { onHsbChange(hue, sat, it) },
                                         valueRange = 0.5f..1.5f,
-                                        steps = 20,
+                                        steps = 19,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
@@ -873,7 +878,7 @@ private fun ExpandableInactiveTilesColorCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { isExpanded = !isExpanded }
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -953,8 +958,8 @@ private fun ExpandableInactiveTilesColorCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(expandedBg)
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         // Custom Color Toggle
                         Row(
@@ -995,7 +1000,7 @@ private fun ExpandableInactiveTilesColorCard(
                         } else {
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -1071,11 +1076,11 @@ private fun ExpandableInactiveTilesColorCard(
                                             color = MaterialTheme.colorScheme.primary
                                         )
                                     }
-                                    Slider(
+                                    ThickElementSlider(
                                         value = hue,
                                         onValueChange = { onHsbChange(it, sat, valFactor) },
                                         valueRange = -180f..180f,
-                                        steps = 360,
+                                        steps = 359,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
@@ -1100,11 +1105,11 @@ private fun ExpandableInactiveTilesColorCard(
                                             color = MaterialTheme.colorScheme.primary
                                         )
                                     }
-                                    Slider(
+                                    ThickElementSlider(
                                         value = sat,
                                         onValueChange = { onHsbChange(hue, it, valFactor) },
                                         valueRange = 0f..2.0f,
-                                        steps = 40,
+                                        steps = 39,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
@@ -1129,11 +1134,11 @@ private fun ExpandableInactiveTilesColorCard(
                                             color = MaterialTheme.colorScheme.primary
                                         )
                                     }
-                                    Slider(
+                                    ThickElementSlider(
                                         value = valFactor,
                                         onValueChange = { onHsbChange(hue, sat, it) },
                                         valueRange = 0.5f..1.5f,
-                                        steps = 20,
+                                        steps = 19,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
@@ -1163,4 +1168,99 @@ private fun ExpandableInactiveTilesColorCard(
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ThickElementSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    steps: Int,
+    modifier: Modifier = Modifier
+) {
+    val activeColor = MaterialTheme.colorScheme.primary
+    val inactiveColor = MaterialTheme.colorScheme.surfaceVariant
+    Slider(
+        value = value.coerceIn(valueRange.start, valueRange.endInclusive),
+        onValueChange = onValueChange,
+        valueRange = valueRange,
+        steps = steps,
+        modifier = modifier,
+        thumb = {
+            Spacer(modifier = Modifier.size(width = 3.dp, height = 38.dp))
+        },
+        track = { sliderState ->
+            val span = (sliderState.valueRange.endInclusive - sliderState.valueRange.start)
+                .coerceAtLeast(0.0001f)
+            val fraction = ((sliderState.value - sliderState.valueRange.start) / span)
+                .coerceIn(0f, 1f)
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(38.dp)
+            ) {
+                val outerR = 8.dp.toPx()
+                val innerR = 4.dp.toPx()
+                val trackHeightPx = 28.dp.toPx()
+                val trackTop = (size.height - trackHeightPx) / 2f
+                val trackBottom = trackTop + trackHeightPx
+
+                val thumbHalfPx = 1.5.dp.toPx()
+                val gapHalfPx = 4.5.dp.toPx()
+                val centerX = size.width * fraction
+
+                val activeEndX = (centerX - gapHalfPx).coerceAtLeast(0f)
+                if (activeEndX > 2.dp.toPx()) {
+                    val activePath = Path().apply {
+                        addRoundRect(
+                            RoundRect(
+                                left = 0f,
+                                top = trackTop,
+                                right = activeEndX,
+                                bottom = trackBottom,
+                                topLeftCornerRadius = CornerRadius(outerR, outerR),
+                                bottomLeftCornerRadius = CornerRadius(outerR, outerR),
+                                topRightCornerRadius = CornerRadius(innerR, innerR),
+                                bottomRightCornerRadius = CornerRadius(innerR, innerR)
+                            )
+                        )
+                    }
+                    drawPath(activePath, color = activeColor)
+                }
+
+                val inactiveStartX = (centerX + gapHalfPx).coerceAtMost(size.width)
+                if (size.width - inactiveStartX > 2.dp.toPx()) {
+                    val inactivePath = Path().apply {
+                        addRoundRect(
+                            RoundRect(
+                                left = inactiveStartX,
+                                top = trackTop,
+                                right = size.width,
+                                bottom = trackBottom,
+                                topLeftCornerRadius = CornerRadius(innerR, innerR),
+                                bottomLeftCornerRadius = CornerRadius(innerR, innerR),
+                                topRightCornerRadius = CornerRadius(outerR, outerR),
+                                bottomRightCornerRadius = CornerRadius(outerR, outerR)
+                            )
+                        )
+                    }
+                    drawPath(inactivePath, color = inactiveColor)
+                }
+
+                val handlePath = Path().apply {
+                    addRoundRect(
+                        RoundRect(
+                            left = centerX - thumbHalfPx,
+                            top = 0f,
+                            right = centerX + thumbHalfPx,
+                            bottom = size.height,
+                            cornerRadius = CornerRadius(thumbHalfPx, thumbHalfPx)
+                        )
+                    )
+                }
+                drawPath(handlePath, color = activeColor)
+            }
+        }
+    )
 }

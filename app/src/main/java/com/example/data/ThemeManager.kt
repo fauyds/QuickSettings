@@ -229,6 +229,8 @@ object ThemeManager {
                             "wavy_wavelength", "wavy_thumb_radius", "slider_inactive_track_thickness", "slider_corner_radius",
                             "a12_inactive_thickness", "a12_corner_radius", "wavy_inactive_thickness", "wavy_corner_radius",
                             "straight_thickness", "straight_inactive_thickness", "straight_corner_radius", "straight_thumb_radius",
+                            "m3_track_height", "m3_inactive_track_height", "m3_outer_corner_radius", "m3_inner_corner_radius",
+                            "m3_thumb_width", "m3_thumb_height", "m3_thumb_gap",
                             "panel_outer_corner", "panel_inner_corner"
                         )
                         val isFloatKey = key in floatKeys || key.contains("_hue") || key.contains("_sat") || key.contains("_val") || key.contains("_opacity") || key.contains("_height") || key.contains("_offset")

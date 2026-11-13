@@ -2211,6 +2211,15 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         val straightCornerRadius by PanelPreferences.straightCornerRadius.collectAsState()
         val straightThumbRadius by PanelPreferences.straightThumbRadius.collectAsState()
 
+        val m3TrackHeight by PanelPreferences.m3TrackHeight.collectAsState()
+        val m3InactiveTrackHeight by PanelPreferences.m3InactiveTrackHeight.collectAsState()
+        val m3OuterCornerRadius by PanelPreferences.m3OuterCornerRadius.collectAsState()
+        val m3InnerCornerRadius by PanelPreferences.m3InnerCornerRadius.collectAsState()
+        val m3ThumbWidth by PanelPreferences.m3ThumbWidth.collectAsState()
+        val m3ThumbHeight by PanelPreferences.m3ThumbHeight.collectAsState()
+        val m3ThumbGap by PanelPreferences.m3ThumbGap.collectAsState()
+        val m3ShowStopIndicator by PanelPreferences.m3ShowStopIndicator.collectAsState()
+
         val currentProgressBarStyle = when (selectedSliderTarget) {
             QsSliderTarget.BRIGHTNESS -> if (sliderSyncAll) globalProgressBarStyle else brightnessSliderStyle
             QsSliderTarget.VOLUME -> if (sliderSyncAll) globalProgressBarStyle else volumeSliderStyle
@@ -2606,7 +2615,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
                 // Wave & Slider Customization Parameters
                 AnimatedVisibility(
-                    visible = (currentProgressBarStyle != ProgressBarStyle.DEFAULT),
+                    visible = true,
                     enter = expandVertically() + fadeIn(),
                     exit = shrinkVertically() + fadeOut()
                 ) {
@@ -2620,15 +2629,271 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
                         Text(
                             text = when (currentProgressBarStyle) {
+                                ProgressBarStyle.DEFAULT -> "M3 Slider Parameters"
                                 ProgressBarStyle.ANDROID_12 -> "Android 12 Slider Parameters"
                                 ProgressBarStyle.WAVY -> "Wave & Slider Parameters"
                                 ProgressBarStyle.STRAIGHT -> "Straight Slider Parameters"
-                                else -> "Slider Parameters"
                             },
                             fontSize = 13.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
+
+                        if (currentProgressBarStyle == ProgressBarStyle.DEFAULT) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Active Track Thickness",
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${String.format("%.1f", m3TrackHeight)} dp",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Slider(
+                                    value = m3TrackHeight.coerceIn(4.0f, 32.0f),
+                                    onValueChange = { PanelPreferences.setM3TrackHeight(context, it) },
+                                    valueRange = 4.0f..32.0f,
+                                    steps = 27,
+                                    modifier = Modifier.fillMaxWidth().testTag("m3_track_height_slider"),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                            }
+
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Inactive Track Thickness",
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${String.format("%.1f", m3InactiveTrackHeight)} dp",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Slider(
+                                    value = m3InactiveTrackHeight.coerceIn(4.0f, 32.0f),
+                                    onValueChange = { PanelPreferences.setM3InactiveTrackHeight(context, it) },
+                                    valueRange = 4.0f..32.0f,
+                                    steps = 27,
+                                    modifier = Modifier.fillMaxWidth().testTag("m3_inactive_track_height_slider"),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                            }
+
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Outer Corner Radius",
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${m3OuterCornerRadius.toInt()} dp",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Slider(
+                                    value = m3OuterCornerRadius.coerceIn(0.0f, 16.0f),
+                                    onValueChange = { PanelPreferences.setM3OuterCornerRadius(context, it) },
+                                    valueRange = 0.0f..16.0f,
+                                    steps = 15,
+                                    modifier = Modifier.fillMaxWidth().testTag("m3_outer_corner_radius_slider"),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                            }
+
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Inner Corner Radius",
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${m3InnerCornerRadius.toInt()} dp",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Slider(
+                                    value = m3InnerCornerRadius.coerceIn(0.0f, 16.0f),
+                                    onValueChange = { PanelPreferences.setM3InnerCornerRadius(context, it) },
+                                    valueRange = 0.0f..16.0f,
+                                    steps = 15,
+                                    modifier = Modifier.fillMaxWidth().testTag("m3_inner_corner_radius_slider"),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                            }
+
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Drag Handle Width",
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${String.format("%.1f", m3ThumbWidth)} dp",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Slider(
+                                    value = m3ThumbWidth.coerceIn(2.0f, 12.0f),
+                                    onValueChange = { PanelPreferences.setM3ThumbWidth(context, it) },
+                                    valueRange = 2.0f..12.0f,
+                                    steps = 19,
+                                    modifier = Modifier.fillMaxWidth().testTag("m3_thumb_width_slider"),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                            }
+
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Drag Handle Height",
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${String.format("%.1f", m3ThumbHeight)} dp",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Slider(
+                                    value = m3ThumbHeight.coerceIn(14.0f, 40.0f),
+                                    onValueChange = { PanelPreferences.setM3ThumbHeight(context, it) },
+                                    valueRange = 14.0f..40.0f,
+                                    steps = 25,
+                                    modifier = Modifier.fillMaxWidth().testTag("m3_thumb_height_slider"),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                            }
+
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Handle-Track Gap",
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${String.format("%.1f", m3ThumbGap)} dp",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Slider(
+                                    value = m3ThumbGap.coerceIn(0.0f, 12.0f),
+                                    onValueChange = { PanelPreferences.setM3ThumbGap(context, it) },
+                                    valueRange = 0.0f..12.0f,
+                                    steps = 23,
+                                    modifier = Modifier.fillMaxWidth().testTag("m3_thumb_gap_slider"),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 2.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(
+                                    modifier = Modifier.weight(1f).padding(end = 12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
+                                    Text(
+                                        text = "Show End Stop Indicator",
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Display a subtle dot at the far end of the inactive track.",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Switch(
+                                    checked = m3ShowStopIndicator,
+                                    onCheckedChange = { PanelPreferences.setM3ShowStopIndicator(context, it) },
+                                    modifier = Modifier.testTag("m3_show_stop_indicator_toggle")
+                                )
+                            }
+                        }
 
                         if (currentProgressBarStyle == ProgressBarStyle.ANDROID_12) {
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {

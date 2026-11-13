@@ -569,6 +569,14 @@ object PanelPreferences {
     private const val KEY_STRAIGHT_INACTIVE_THICKNESS = "straight_inactive_thickness"
     private const val KEY_STRAIGHT_CORNER_RADIUS = "straight_corner_radius"
     private const val KEY_STRAIGHT_THUMB_RADIUS = "straight_thumb_radius"
+    private const val KEY_M3_TRACK_HEIGHT = "m3_track_height"
+    private const val KEY_M3_INACTIVE_TRACK_HEIGHT = "m3_inactive_track_height"
+    private const val KEY_M3_OUTER_CORNER_RADIUS = "m3_outer_corner_radius"
+    private const val KEY_M3_INNER_CORNER_RADIUS = "m3_inner_corner_radius"
+    private const val KEY_M3_THUMB_WIDTH = "m3_thumb_width"
+    private const val KEY_M3_THUMB_HEIGHT = "m3_thumb_height"
+    private const val KEY_M3_THUMB_GAP = "m3_thumb_gap"
+    private const val KEY_M3_SHOW_STOP_INDICATOR = "m3_show_stop_indicator"
     private const val KEY_PANEL_GLOBAL_CORNER_ENABLED = "panel_global_corner_enabled"
     private const val KEY_PANEL_OUTER_CORNER = "panel_outer_corner"
     private const val KEY_PANEL_INNER_CORNER = "panel_inner_corner"
@@ -994,6 +1002,30 @@ object PanelPreferences {
 
     private val _straightThumbRadius = MutableStateFlow(6.0f)
     val straightThumbRadius: StateFlow<Float> = _straightThumbRadius.asStateFlow()
+
+    private val _m3TrackHeight = MutableStateFlow(16.0f)
+    val m3TrackHeight: StateFlow<Float> = _m3TrackHeight.asStateFlow()
+
+    private val _m3InactiveTrackHeight = MutableStateFlow(16.0f)
+    val m3InactiveTrackHeight: StateFlow<Float> = _m3InactiveTrackHeight.asStateFlow()
+
+    private val _m3OuterCornerRadius = MutableStateFlow(8.0f)
+    val m3OuterCornerRadius: StateFlow<Float> = _m3OuterCornerRadius.asStateFlow()
+
+    private val _m3InnerCornerRadius = MutableStateFlow(2.0f)
+    val m3InnerCornerRadius: StateFlow<Float> = _m3InnerCornerRadius.asStateFlow()
+
+    private val _m3ThumbWidth = MutableStateFlow(4.0f)
+    val m3ThumbWidth: StateFlow<Float> = _m3ThumbWidth.asStateFlow()
+
+    private val _m3ThumbHeight = MutableStateFlow(34.0f)
+    val m3ThumbHeight: StateFlow<Float> = _m3ThumbHeight.asStateFlow()
+
+    private val _m3ThumbGap = MutableStateFlow(4.0f)
+    val m3ThumbGap: StateFlow<Float> = _m3ThumbGap.asStateFlow()
+
+    private val _m3ShowStopIndicator = MutableStateFlow(true)
+    val m3ShowStopIndicator: StateFlow<Boolean> = _m3ShowStopIndicator.asStateFlow()
 
     private val _usePrimeCoreAffinity = MutableStateFlow(false)
     val usePrimeCoreAffinity: StateFlow<Boolean> = _usePrimeCoreAffinity.asStateFlow()
@@ -1732,6 +1764,14 @@ object PanelPreferences {
         _straightInactiveTrackThickness.value = prefs.getFloat(KEY_STRAIGHT_INACTIVE_THICKNESS, 4.0f)
         _straightCornerRadius.value = prefs.getFloat(KEY_STRAIGHT_CORNER_RADIUS, 4.0f)
         _straightThumbRadius.value = prefs.getFloat(KEY_STRAIGHT_THUMB_RADIUS, 6.0f)
+        _m3TrackHeight.value = prefs.getFloat(KEY_M3_TRACK_HEIGHT, 16.0f)
+        _m3InactiveTrackHeight.value = prefs.getFloat(KEY_M3_INACTIVE_TRACK_HEIGHT, 16.0f)
+        _m3OuterCornerRadius.value = prefs.getFloat(KEY_M3_OUTER_CORNER_RADIUS, 8.0f)
+        _m3InnerCornerRadius.value = prefs.getFloat(KEY_M3_INNER_CORNER_RADIUS, 2.0f)
+        _m3ThumbWidth.value = prefs.getFloat(KEY_M3_THUMB_WIDTH, 4.0f)
+        _m3ThumbHeight.value = prefs.getFloat(KEY_M3_THUMB_HEIGHT, 34.0f)
+        _m3ThumbGap.value = prefs.getFloat(KEY_M3_THUMB_GAP, 4.0f)
+        _m3ShowStopIndicator.value = prefs.getBoolean(KEY_M3_SHOW_STOP_INDICATOR, true)
         _panelGlobalCornerEnabled.value = prefs.getBoolean(KEY_PANEL_GLOBAL_CORNER_ENABLED, false)
         _enableLegacyTileShapes.value = prefs.getBoolean(KEY_ENABLE_LEGACY_TILE_SHAPES, false)
         _panelOuterCorner.value = prefs.getFloat(KEY_PANEL_OUTER_CORNER, 20.0f)
@@ -3819,6 +3859,54 @@ object PanelPreferences {
             .apply()
     }
 
+    fun setM3TrackHeight(context: Context, value: Float) {
+        _m3TrackHeight.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_M3_TRACK_HEIGHT, value).apply()
+    }
+
+    fun setM3InactiveTrackHeight(context: Context, value: Float) {
+        _m3InactiveTrackHeight.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_M3_INACTIVE_TRACK_HEIGHT, value).apply()
+    }
+
+    fun setM3OuterCornerRadius(context: Context, value: Float) {
+        _m3OuterCornerRadius.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_M3_OUTER_CORNER_RADIUS, value).apply()
+    }
+
+    fun setM3InnerCornerRadius(context: Context, value: Float) {
+        _m3InnerCornerRadius.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_M3_INNER_CORNER_RADIUS, value).apply()
+    }
+
+    fun setM3ThumbWidth(context: Context, value: Float) {
+        _m3ThumbWidth.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_M3_THUMB_WIDTH, value).apply()
+    }
+
+    fun setM3ThumbHeight(context: Context, value: Float) {
+        _m3ThumbHeight.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_M3_THUMB_HEIGHT, value).apply()
+    }
+
+    fun setM3ThumbGap(context: Context, value: Float) {
+        _m3ThumbGap.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_M3_THUMB_GAP, value).apply()
+    }
+
+    fun setM3ShowStopIndicator(context: Context, enabled: Boolean) {
+        _m3ShowStopIndicator.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_M3_SHOW_STOP_INDICATOR, enabled).apply()
+    }
+
     fun resetWavyParamsToDefault(context: Context) {
         _wavyThickness.value = 4.0f
         _wavyWobbliness.value = 3.5f
@@ -3835,6 +3923,14 @@ object PanelPreferences {
         _straightInactiveTrackThickness.value = 4.0f
         _straightCornerRadius.value = 4.0f
         _straightThumbRadius.value = 6.0f
+        _m3TrackHeight.value = 16.0f
+        _m3InactiveTrackHeight.value = 16.0f
+        _m3OuterCornerRadius.value = 8.0f
+        _m3InnerCornerRadius.value = 2.0f
+        _m3ThumbWidth.value = 4.0f
+        _m3ThumbHeight.value = 34.0f
+        _m3ThumbGap.value = 4.0f
+        _m3ShowStopIndicator.value = true
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
             .putFloat(KEY_WAVY_THICKNESS, 4.0f)
@@ -3852,6 +3948,14 @@ object PanelPreferences {
             .putFloat(KEY_STRAIGHT_INACTIVE_THICKNESS, 4.0f)
             .putFloat(KEY_STRAIGHT_CORNER_RADIUS, 4.0f)
             .putFloat(KEY_STRAIGHT_THUMB_RADIUS, 6.0f)
+            .putFloat(KEY_M3_TRACK_HEIGHT, 16.0f)
+            .putFloat(KEY_M3_INACTIVE_TRACK_HEIGHT, 16.0f)
+            .putFloat(KEY_M3_OUTER_CORNER_RADIUS, 8.0f)
+            .putFloat(KEY_M3_INNER_CORNER_RADIUS, 2.0f)
+            .putFloat(KEY_M3_THUMB_WIDTH, 4.0f)
+            .putFloat(KEY_M3_THUMB_HEIGHT, 34.0f)
+            .putFloat(KEY_M3_THUMB_GAP, 4.0f)
+            .putBoolean(KEY_M3_SHOW_STOP_INDICATOR, true)
             .apply()
     }
 
