@@ -5,6 +5,7 @@ import android.app.DownloadManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.media.RingtoneManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -259,6 +260,7 @@ object ComplicationDataHub {
     private var localTimerRemainingMs: Long = 300_000L
     private var localTimerEndElapsedMs: Long = 0L
     private var localTimerRunning: Boolean = false
+    private var localTimerFinishedAlerted: Boolean = false
 
     // Local Stopwatch state
     private var localSwAccumulatedMs: Long = 0L
@@ -710,6 +712,25 @@ object ComplicationDataHub {
         val rem = if (localTimerRunning) {
             val left = (localTimerEndElapsedMs - nowElapsed).coerceAtLeast(0L)
             if (left == 0L) {
+                if (localTimerRunning && !localTimerFinishedAlerted) {
+                    localTimerFinishedAlerted = true
+                    try {
+                        val ctx = appContext
+                        if (ctx != null) {
+                            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                            val ringtone = RingtoneManager.getRingtone(ctx, uri)
+                            ringtone?.play()
+                            val vibrator = ctx.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                vibrator?.vibrate(android.os.VibrationEffect.createWaveform(longArrayOf(0, 400, 200, 400), -1))
+                            } else {
+                                @Suppress("DEPRECATION")
+                                vibrator?.vibrate(longArrayOf(0, 400, 200, 400), -1)
+                            }
+                        }
+                    } catch (_: Throwable) {}
+                }
                 localTimerRunning = false
                 localTimerRemainingMs = 0L
             }
@@ -801,6 +822,7 @@ object ComplicationDataHub {
             if (localTimerRemainingMs <= 0L) {
                 localTimerRemainingMs = localTimerTotalMs
             }
+            localTimerFinishedAlerted = false
             localTimerEndElapsedMs = SystemClock.elapsedRealtime() + localTimerRemainingMs
             localTimerRunning = true
         }
@@ -816,6 +838,7 @@ object ComplicationDataHub {
             } catch (_: Throwable) {}
         }
         localTimerRunning = false
+        localTimerFinishedAlerted = false
         localTimerRemainingMs = localTimerTotalMs
         refreshTelemetryNow()
     }
@@ -825,6 +848,7 @@ object ComplicationDataHub {
         localTimerTotalMs = clamped
         localTimerRemainingMs = clamped
         localTimerRunning = false
+        localTimerFinishedAlerted = false
         appContext?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)?.edit()
             ?.putLong(KEY_TIMER_DURATION_MS, clamped)
             ?.apply()

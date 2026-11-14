@@ -901,6 +901,80 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     }
                 }
 
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                // Complication Tile Shape
+                val currentComplicationShapeId by PanelPreferences.complicationTileShapeId.collectAsState()
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = "Complication Tile Shape",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Choose the shape for complication widgets (battery, brightness, storage, etc.)",
+                            fontSize = 12.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        allShapes.forEach { shape ->
+                            val selected = (currentComplicationShapeId == shape.id)
+                            val chipShape = SegmentedButtonShapes.getShape(
+                                item = shape,
+                                items = allShapes,
+                                selectedItem = allShapes.firstOrNull { it.id == currentComplicationShapeId }
+                            )
+                            val composeShape = remember(shape.id) {
+                                QsShapeManager.getComposeShape(shape.id)
+                            }
+                            FilterChip(
+                                selected = selected,
+                                onClick = { PanelPreferences.setComplicationTileShapeId(context, shape.id) },
+                                shape = chipShape,
+                                border = null,
+                                label = {
+                                    Text(
+                                        text = shape.label,
+                                        fontSize = 12.sp,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                },
+                                leadingIcon = {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(16.dp)
+                                            .clip(composeShape)
+                                            .background(
+                                                if (selected) MaterialTheme.colorScheme.onPrimary
+                                                else MaterialTheme.colorScheme.primary
+                                            )
+                                    )
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+                                    containerColor = MaterialTheme.colorScheme.background,
+                                    labelColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                modifier = Modifier.testTag("complication_tile_shape_${shape.id}")
+                            )
+                        }
+                    }
+                }
+
                 // Custom Imported Shapes Management
                 val customShapes = allShapes.filter { it.isCustom }
                 if (customShapes.isNotEmpty()) {

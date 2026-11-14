@@ -317,7 +317,9 @@ class TileRegistry(
         PanelPreferences.complicationSublinePlacement,
         ComplicationDataHub.snapshot,
         MediaSessionManagerHelper.mediaState,
-        nativeTileManager.bluetoothBatteryLevel
+        nativeTileManager.bluetoothBatteryLevel,
+        PanelPreferences.minBrightness,
+        PanelPreferences.maxBrightness
     ) { args ->
         @Suppress("UNCHECKED_CAST")
         val entities = args[0] as List<TileEntity>
@@ -360,6 +362,8 @@ class TileRegistry(
         val compSnap = args[32] as ComplicationSnapshot
         val activeMedia = args[33] as? MediaState
         val btBatteryLevel = args[34] as? Int
+        val minB = args[35] as Int
+        val maxB = args[36] as Int
         val storageStats = ComplicationTileController.readInternalStorageFraction()
 
         val externalMap = externalTiles.associateBy { it.id }
@@ -464,7 +468,9 @@ class TileRegistry(
                     }
                     "comp_storage" -> Triple(TileState.INACTIVE, Icons.Default.Storage, "${storageStats.second} used")
                     "comp_brightness" -> {
-                        val pct = ((brightnessVal / 255f).coerceIn(0f, 1f) * 100f).toInt()
+                        val clampedB = brightnessVal.toFloat().coerceIn(minB.toFloat(), maxB.toFloat())
+                        val range = (maxB - minB).coerceAtLeast(1)
+                        val pct = (((clampedB - minB) / range) * 100).toInt().coerceIn(0, 100)
                         val icon = when {
                             pct >= 70 -> Icons.Default.BrightnessHigh
                             pct >= 35 -> Icons.Default.BrightnessMedium
@@ -574,8 +580,10 @@ class TileRegistry(
                         )
                     }
                     "comp_brightness" -> {
-                        val brightFrac = (brightnessVal / 255f).coerceIn(0f, 1f)
-                        val brightPct = (brightFrac * 100f).toInt()
+                        val clampedB = brightnessVal.toFloat().coerceIn(minB.toFloat(), maxB.toFloat())
+                        val range = (maxB - minB).coerceAtLeast(1)
+                        val brightPct = (((clampedB - minB) / range) * 100).toInt().coerceIn(0, 100)
+                        val brightFrac = (clampedB - minB) / range
                         ComplicationTileModel(
                             id = entity.tileId,
                             title = entity.label,

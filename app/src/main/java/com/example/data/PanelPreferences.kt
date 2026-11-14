@@ -277,6 +277,7 @@ object PanelPreferences {
     private const val KEY_TILE_SHAPE = "tile_shape"
     private const val KEY_ENABLED_TILE_SHAPE = "enabled_tile_shape"
     private const val KEY_DISABLED_TILE_SHAPE = "disabled_tile_shape"
+    private const val KEY_COMPLICATION_TILE_SHAPE = "complication_tile_shape"
     private const val KEY_ACTIVE_SQUARE_SHAPE = "active_square_shape"
     private const val KEY_TILE_OUTLINE_ENABLED = "tile_outline_enabled"
     private const val KEY_HIDE_QQS_DRAG_HANDLE = "hide_qqs_drag_handle"
@@ -1232,6 +1233,12 @@ object PanelPreferences {
     private val _disabledTileShapeId = MutableStateFlow("circle")
     val disabledTileShapeId: StateFlow<String> = _disabledTileShapeId.asStateFlow()
 
+    private val _complicationTileShapeId = MutableStateFlow("circle")
+    val complicationTileShapeId: StateFlow<String> = _complicationTileShapeId.asStateFlow()
+
+    private val _complicationTileShape = MutableStateFlow(TileShape.CIRCLE)
+    val complicationTileShape: StateFlow<TileShape> = _complicationTileShape.asStateFlow()
+
     private val _enabledTileShape = MutableStateFlow(TileShape.CIRCLE)
     val enabledTileShape: StateFlow<TileShape> = _enabledTileShape.asStateFlow()
 
@@ -1430,6 +1437,9 @@ object PanelPreferences {
             _disabledTileShapeId.value = "circle"
             _disabledTileShape.value = TileShape.CIRCLE
         }
+        val savedComplicationShape = prefs.getString(KEY_COMPLICATION_TILE_SHAPE, null) ?: "circle"
+        _complicationTileShapeId.value = savedComplicationShape
+        _complicationTileShape.value = TileShape.fromId(savedComplicationShape)
         _tileOutlineEnabled.value = prefs.getBoolean(KEY_TILE_OUTLINE_ENABLED, false)
         _hideQqsDragHandle.value = prefs.getBoolean(KEY_HIDE_QQS_DRAG_HANDLE, false)
         _hideQqsEmptyNotifLabels.value = prefs.getBoolean(KEY_HIDE_QQS_EMPTY_NOTIF_LABELS, false)
@@ -1889,6 +1899,7 @@ object PanelPreferences {
             putFloat(getStyleKey(KEY_QS_BACKGROUND_CORNER, style), _qsBackgroundCorner.value)
             putString(getStyleKey(KEY_ENABLED_TILE_SHAPE, style), _enabledTileShapeId.value)
             putString(getStyleKey(KEY_DISABLED_TILE_SHAPE, style), _disabledTileShapeId.value)
+            putString(getStyleKey(KEY_COMPLICATION_TILE_SHAPE, style), _complicationTileShapeId.value)
             putBoolean(getStyleKey(KEY_TILE_OUTLINE_ENABLED, style), _tileOutlineEnabled.value)
             putBoolean(getStyleKey(KEY_ENABLE_LEGACY_TILE_SHAPES, style), _enableLegacyTileShapes.value)
             putBoolean(getStyleKey(KEY_SHOW_MONET_SURFACE_BACKGROUND, style), _showMonetSurfaceBackground.value)
@@ -2108,6 +2119,11 @@ object PanelPreferences {
         val targetHideBrightnessIcon = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_HIDE_BRIGHTNESS_ICON, style), false) else false
         val targetShowBrightnessPlusMinus = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SHOW_BRIGHTNESS_PLUS_MINUS, style), false) else false
         val targetShowBrightnessControlsBg = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SHOW_BRIGHTNESS_CONTROLS_BACKGROUND, style), false) else false
+        val targetComplicationShapeId = if (isInitialized && prefs.contains(getStyleKey(KEY_COMPLICATION_TILE_SHAPE, style))) {
+            prefs.getString(getStyleKey(KEY_COMPLICATION_TILE_SHAPE, style), "circle") ?: "circle"
+        } else {
+            prefs.getString(KEY_COMPLICATION_TILE_SHAPE, "circle") ?: "circle"
+        }
 
         // Update StateFlows
         _gridLayout.value = targetGridLayout
@@ -2133,6 +2149,8 @@ object PanelPreferences {
         _activeSquareShape.value = (_enabledTileShape.value == TileShape.SQUIRCLE || _enabledTileShape.value == TileShape.SQUARE)
         _disabledTileShapeId.value = targetDisabledShapeId
         _disabledTileShape.value = TileShape.fromId(targetDisabledShapeId)
+        _complicationTileShapeId.value = targetComplicationShapeId
+        _complicationTileShape.value = TileShape.fromId(targetComplicationShapeId)
         _tileOutlineEnabled.value = targetTileOutline
         _enableLegacyTileShapes.value = targetLegacyShapes
         _showMonetSurfaceBackground.value = targetShowMonetSurfaceBg
@@ -2194,6 +2212,7 @@ object PanelPreferences {
             putFloat(KEY_QS_BACKGROUND_CORNER, targetQsBgCorner)
             putString(KEY_ENABLED_TILE_SHAPE, targetEnabledShapeId)
             putString(KEY_DISABLED_TILE_SHAPE, targetDisabledShapeId)
+            putString(KEY_COMPLICATION_TILE_SHAPE, targetComplicationShapeId)
             putBoolean(KEY_TILE_OUTLINE_ENABLED, targetTileOutline)
             putBoolean(KEY_ENABLE_LEGACY_TILE_SHAPES, targetLegacyShapes)
             putBoolean(KEY_SHOW_MONET_SURFACE_BACKGROUND, targetShowMonetSurfaceBg)
@@ -2605,6 +2624,18 @@ object PanelPreferences {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
             .putString(KEY_DISABLED_TILE_SHAPE, shapeId)
+            .apply()
+    }
+
+    fun setComplicationTileShapeId(context: Context, shapeId: String) {
+        _complicationTileShapeId.value = shapeId
+        val shape = TileShape.fromId(shapeId)
+        _complicationTileShape.value = shape
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString(KEY_COMPLICATION_TILE_SHAPE, shapeId)
+            .putBoolean(getStyleKey(KEY_COMPLICATION_TILE_SHAPE), true)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 

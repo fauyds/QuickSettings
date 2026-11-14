@@ -44,6 +44,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionContext
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -80,6 +81,7 @@ import com.example.model.ComplicationAction
 import com.example.model.ComplicationLayoutMode
 import com.example.model.ComplicationSublinePlacement
 import com.example.model.ComplicationTileModel
+import com.example.data.PanelPreferences
 import com.example.ui.theme.LocalIsDarkTheme
 import com.example.ui.theme.QuickPanelTheme
 
@@ -523,6 +525,9 @@ fun ComplicationTileView(
             verticalArrangement = Arrangement.Center
         ) {
             // Circular Complication Ring Container (enforces >= 48dp touch area on header items cleanly)
+            val complicationShapeId by PanelPreferences.complicationTileShapeId.collectAsState()
+            val complicationShape = com.example.ui.shape.QsShapeManager.getComposeShape(complicationShapeId)
+
             val ringBoxModifier = if (!showRingBackground && !showProgressArc && ringSize < 40.dp) {
                 Modifier
                     .height(ringSize)
@@ -530,7 +535,7 @@ fun ComplicationTileView(
             } else {
                 Modifier
                     .size(ringSize)
-                    .clip(CircleShape)
+                    .clip(complicationShape)
                     .background(ringFillColor)
             }
             Box(
