@@ -34,6 +34,7 @@ import android.widget.ImageButton
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.graphics.ColorUtils
 import androidx.palette.graphics.Palette
+import com.example.data.NotificationCategoryManager
 import com.example.data.PanelPreferences
 import com.example.data.MediaNotificationStyle
 import com.example.model.MediaState
@@ -41,6 +42,25 @@ import com.example.service.MediaSessionManagerHelper
 import com.example.ui.overlay.extractAndroidQNotificationColors
 import com.example.ui.overlay.trimTopBottomBlackLines
 import com.example.ui.view.WavyProgressView
+
+sealed class ShadeListRow {
+    data class CategoryHeaderRow(
+        val categoryId: String,
+        val title: String,
+        val iconRes: Int,
+        val count: Int,
+        val isExpanded: Boolean,
+        val isUncategorized: Boolean,
+        val childNotifications: List<NotificationItem>
+    ) : ShadeListRow()
+
+    data class NotificationRow(
+        val item: NotificationItem,
+        val isGrouped: Boolean,
+        val isFirstInGroup: Boolean,
+        val isLastInGroup: Boolean
+    ) : ShadeListRow()
+}
 
 class NotificationDiffCallback : DiffUtil.ItemCallback<NotificationItem>() {
     override fun areItemsTheSame(oldItem: NotificationItem, newItem: NotificationItem): Boolean {
@@ -56,7 +76,8 @@ class NotificationAdapter(
     private val onNotificationClick: (NotificationItem) -> Unit,
     private val onNotificationDismiss: (NotificationItem) -> Unit,
     private val onActionClick: (NotificationActionModel) -> Unit,
-    var onClearAll: (() -> Unit)? = null
+    var onClearAll: (() -> Unit)? = null,
+    var onCategoryToggled: (() -> Unit)? = null
 ) : ListAdapter<NotificationItem, RecyclerView.ViewHolder>(NotificationDiffCallback()) {
 
     var isDark: Boolean = true
@@ -68,7 +89,58 @@ class NotificationAdapter(
     var isMediaCardShown: Boolean = false
     var mediaSessions: List<MediaState> = emptyList()
 
+    private var rawNotifications: List<NotificationItem> = emptyList()
+    private var displayRows: List<ShadeListRow> = emptyList()
     private val expandedStateMap = mutableMapOf<String, Boolean>()
+
+    fun submitNotifications(list: List<NotificationItem>) {
+        rawNotifications = list
+        rebuildDisplayRows()
+        submitList(list)
+    }
+
+    fun rebuildDisplayRows() {
+        val sections = NotificationCategoryManager.buildGroupedSections(rawNotifications)
+        displayRows = if (sections.isNotEmpty()) {
+            buildList {
+                sections.forEach { section ->
+                    add(
+                        ShadeListRow.CategoryHeaderRow(
+                            categoryId = section.categoryId,
+                            title = section.title,
+                            iconRes = section.icon.drawableRes,
+                            count = section.notifications.size,
+                            isExpanded = section.isExpanded,
+                            isUncategorized = section.isUncategorized,
+                            childNotifications = section.notifications
+                        )
+                    )
+                    if (section.isExpanded) {
+                        val children = section.notifications
+                        children.forEachIndexed { idx, notif ->
+                            add(
+                                ShadeListRow.NotificationRow(
+                                    item = notif,
+                                    isGrouped = true,
+                                    isFirstInGroup = (idx == 0),
+                                    isLastInGroup = (idx == children.lastIndex)
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        } else {
+            rawNotifications.mapIndexed { idx, notif ->
+                ShadeListRow.NotificationRow(
+                    item = notif,
+                    isGrouped = false,
+                    isFirstInGroup = (idx == 0),
+                    isLastInGroup = (idx == rawNotifications.lastIndex)
+                )
+            }
+        }
+    }
 
     fun isItemExpanded(item: NotificationItem): Boolean {
         return expandedStateMap[item.key] ?: false
@@ -76,22 +148,19 @@ class NotificationAdapter(
 
     /**
      * Safely retrieves the [NotificationItem] at the given adapter position,
-     * strictly accounting for any number of active media player cards positioned at the top.
+     * strictly accounting for media player cards and category headers.
      */
     fun getNotificationItem(position: Int): NotificationItem? {
         if (position == RecyclerView.NO_POSITION) return null
-        val notifIndex = position - mediaSessions.size
-        if (notifIndex in 0 until currentList.size) {
-            return currentList[notifIndex]
-        }
-        return null
+        val rowIndex = position - mediaSessions.size
+        return (displayRows.getOrNull(rowIndex) as? ShadeListRow.NotificationRow)?.item
     }
 
     /**
      * Safely retrieves the [NotificationItem] by its unique notification key ID.
      */
     fun getNotificationItemByKey(key: String): NotificationItem? {
-        return currentList.firstOrNull { it.key == key }
+        return rawNotifications.firstOrNull { it.key == key }
     }
 
     companion object {
@@ -99,6 +168,7 @@ class NotificationAdapter(
         private const val TYPE_NOTIFICATION = 1
         private const val TYPE_FOOTER = 2
         private const val TYPE_MEDIA_PLAYER_COMPACT = 3
+        private const val TYPE_CATEGORY_HEADER = 4
     }
 
     private var attachedRecyclerView: RecyclerView? = null
@@ -119,21 +189,22 @@ class NotificationAdapter(
     ) {
         super.onCurrentListChanged(previousList, currentList)
         attachedRecyclerView?.post {
+            rebuildDisplayRows()
             notifyDataSetChanged()
         }
     }
 
     override fun getItemCount(): Int {
         val mediaCount = mediaSessions.size
-        val notifCount = currentList.size
+        val rowCount = displayRows.size
         val isKitKatStyle = attachedRecyclerView?.context?.let { PanelPreferences.isAndroidKitKatStyle(it) } ?: false
-        val footerCount = if (showFooter && notifCount > 0 && !isKitKatStyle) 1 else 0
-        return mediaCount + notifCount + footerCount
+        val footerCount = if (showFooter && rawNotifications.isNotEmpty() && !isKitKatStyle) 1 else 0
+        return mediaCount + rowCount + footerCount
     }
 
     override fun getItemViewType(position: Int): Int {
         val mediaCount = mediaSessions.size
-        val notifCount = currentList.size
+        val rowCount = displayRows.size
         return when {
             position < mediaCount -> {
                 if (PanelPreferences.mediaNotificationStyle.value == MediaNotificationStyle.COMPACT) {
@@ -142,7 +213,12 @@ class NotificationAdapter(
                     TYPE_MEDIA_PLAYER
                 }
             }
-            position < mediaCount + notifCount -> TYPE_NOTIFICATION
+            position < mediaCount + rowCount -> {
+                when (displayRows[position - mediaCount]) {
+                    is ShadeListRow.CategoryHeaderRow -> TYPE_CATEGORY_HEADER
+                    is ShadeListRow.NotificationRow -> TYPE_NOTIFICATION
+                }
+            }
             else -> TYPE_FOOTER
         }
     }
@@ -157,6 +233,10 @@ class NotificationAdapter(
                 val view = LayoutInflater.from(parent.context).inflate(R.layout.item_media_player_android_q, parent, false)
                 MediaPlayerViewHolder(view)
             }
+            TYPE_CATEGORY_HEADER -> {
+                val view = LayoutInflater.from(parent.context).inflate(R.layout.item_notification_category_header, parent, false)
+                CategoryHeaderViewHolder(view)
+            }
             TYPE_FOOTER -> {
                 val view = LayoutInflater.from(parent.context).inflate(R.layout.item_notification_footer, parent, false)
                 FooterViewHolder(view)
@@ -169,19 +249,162 @@ class NotificationAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        val totalCount = mediaSessions.size + currentList.size
+        val totalCount = mediaSessions.size + displayRows.size
         if (holder is MediaPlayerViewHolder) {
             val mediaState = mediaSessions.getOrNull(position) ?: return
             holder.bind(mediaState, position, totalCount)
         } else if (holder is CompactMediaPlayerViewHolder) {
             val mediaState = mediaSessions.getOrNull(position) ?: return
             holder.bind(mediaState, position, totalCount)
+        } else if (holder is CategoryHeaderViewHolder) {
+            val row = displayRows.getOrNull(position - mediaSessions.size) as? ShadeListRow.CategoryHeaderRow ?: return
+            holder.bind(row)
         } else if (holder is NotificationViewHolder) {
-            val notifIndex = position - mediaSessions.size
-            val item = currentList.getOrNull(notifIndex) ?: return
-            holder.bind(item, position, totalCount)
+            val row = displayRows.getOrNull(position - mediaSessions.size) as? ShadeListRow.NotificationRow ?: return
+            holder.bind(row, position, totalCount)
         } else if (holder is FooterViewHolder) {
             holder.bind()
+        }
+    }
+
+    inner class CategoryHeaderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val flRoot: FrameLayout = itemView.findViewById(R.id.fl_cat_header_root)
+        private val flIconBg: FrameLayout = itemView.findViewById(R.id.fl_cat_icon_bg)
+        private val ivIcon: ImageView = itemView.findViewById(R.id.iv_cat_icon)
+        private val tvTitle: TextView = itemView.findViewById(R.id.tv_cat_title)
+        private val tvCount: TextView = itemView.findViewById(R.id.tv_cat_count)
+        private val ivExpand: ImageView = itemView.findViewById(R.id.iv_cat_expand)
+
+        fun bind(row: ShadeListRow.CategoryHeaderRow) {
+            val context = itemView.context
+            val density = context.resources.displayMetrics.density
+            val isOreoStyle = PanelPreferences.isAndroidOreoStyle(context)
+            val isKitKatStyle = PanelPreferences.isAndroidKitKatStyle(context)
+            val disableMonet = disableMonetNotifText
+
+            val primaryColor = customPrimaryColor ?: MonetThemeHelper.getPrimaryAccent(context, isDark)
+            val textPrimary = if (disableMonet) {
+                if (isDark) Color.WHITE else Color.BLACK
+            } else {
+                MonetThemeHelper.getTextPrimary(context, isDark)
+            }
+            val textSecondary = if (disableMonet) {
+                if (isDark) Color.parseColor("#CCCCCC") else Color.parseColor("#555555")
+            } else {
+                MonetThemeHelper.getTextSecondary(context, isDark)
+            }
+
+            val panelGlobalCornerEnabled = PanelPreferences.panelGlobalCornerEnabled.value
+            val panelOuterCorner = PanelPreferences.panelOuterCorner.value
+            val panelInnerCorner = PanelPreferences.panelInnerCorner.value
+            val outerCornerPx = panelOuterCorner * density
+            val innerCornerPx = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner) * density
+
+            val radii = when {
+                isOreoStyle -> FloatArray(8) { 0f }
+                row.isExpanded -> floatArrayOf(
+                    outerCornerPx, outerCornerPx,
+                    outerCornerPx, outerCornerPx,
+                    innerCornerPx, innerCornerPx,
+                    innerCornerPx, innerCornerPx
+                )
+                else -> FloatArray(8) { outerCornerPx }
+            }
+
+            val cardBg = if (isOreoStyle) {
+                if (isDark) Color.parseColor("#282828") else Color.parseColor("#F5F5F5")
+            } else {
+                customCardBackgroundColor ?: MonetThemeHelper.getCardBackground(context, isDark)
+            }
+
+            val contentDrawable = if (isOreoStyle) {
+                val strokeColor = if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#33000000")
+                val strokePx = (1 * density).toInt().coerceAtLeast(1)
+                val baseDrawable = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    setColor(cardBg)
+                }
+                val strokeDrawable = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    setStroke(strokePx, strokeColor)
+                    setColor(Color.TRANSPARENT)
+                }
+                android.graphics.drawable.LayerDrawable(arrayOf(baseDrawable, strokeDrawable)).apply {
+                    setLayerInset(1, -strokePx, 0, -strokePx, 0)
+                }
+            } else {
+                MonetThemeHelper.createMonetCardDrawable(context, isDark, radii, customBgColor = cardBg)
+            }
+
+            val enablePanelShadows = PanelPreferences.enablePanelShadows.value
+            val shadowElevation = PanelPreferences.panelShadowElevation.value
+            val panelShadowAlpha = PanelPreferences.panelShadowAlpha.value
+            val panelShadowOffsetY = PanelPreferences.panelShadowOffsetY.value
+
+            CustomShadowHelper.applyCustomShadowBackground(
+                view = flRoot,
+                contentDrawable = contentDrawable,
+                radii = radii,
+                elevation = if (enablePanelShadows && !isOreoStyle && !isKitKatStyle) shadowElevation else 0f,
+                isDark = isDark,
+                customAlpha = panelShadowAlpha,
+                customOffsetY = panelShadowOffsetY
+            )
+            flRoot.elevation = 0f
+            flRoot.translationY = 0f
+
+            val lp = flRoot.layoutParams as? ViewGroup.MarginLayoutParams
+            if (lp != null) {
+                val targetBottomMargin = if (isOreoStyle) 0 else (4f * density).toInt()
+                if (lp.bottomMargin != targetBottomMargin) {
+                    lp.bottomMargin = targetBottomMargin
+                    flRoot.layoutParams = lp
+                }
+            }
+
+            // Icon circle badge
+            val badgeBgColor = if (row.isUncategorized) {
+                ColorUtils.setAlphaComponent(textSecondary, 36)
+            } else {
+                ColorUtils.setAlphaComponent(primaryColor, 42)
+            }
+            flIconBg.background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(badgeBgColor)
+            }
+            ivIcon.setImageResource(row.iconRes)
+            ivIcon.setColorFilter(if (row.isUncategorized) textSecondary else primaryColor)
+
+            tvTitle.text = row.title
+            tvTitle.setTextColor(textPrimary)
+
+            tvCount.text = row.count.toString()
+            tvCount.setTextColor(if (row.isUncategorized) textSecondary else primaryColor)
+            tvCount.background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 999f * density
+                setColor(
+                    if (row.isUncategorized) ColorUtils.setAlphaComponent(textSecondary, 30)
+                    else ColorUtils.setAlphaComponent(primaryColor, 36)
+                )
+            }
+
+            ivExpand.setImageResource(
+                if (row.isExpanded) R.drawable.ic_notif_chevron_up else R.drawable.ic_notif_chevron_down
+            )
+            ivExpand.setColorFilter(textSecondary)
+            ivExpand.contentDescription = if (row.isExpanded) "Collapse ${row.title}" else "Expand ${row.title}"
+
+            flRoot.setOnClickListener {
+                NotificationCategoryManager.toggleCategoryExpanded(
+                    context = context,
+                    categoryId = row.categoryId,
+                    defaultExpanded = true
+                )
+                rebuildDisplayRows()
+                notifyDataSetChanged()
+                onCategoryToggled?.invoke()
+            }
         }
     }
 
@@ -933,7 +1156,8 @@ class NotificationAdapter(
         private val pbProgress: ProgressBar = itemView.findViewById(R.id.pb_notif_progress)
         private val llActions: LinearLayout = itemView.findViewById(R.id.ll_notif_actions)
 
-        fun bind(item: NotificationItem, position: Int, totalNotifCount: Int) {
+        fun bind(row: ShadeListRow.NotificationRow, position: Int, totalNotifCount: Int) {
+            val item = row.item
             this.notificationItem = item
             val context = itemView.context
             val density = context.resources.displayMetrics.density
@@ -1015,6 +1239,15 @@ class NotificationAdapter(
 
             val radii = if (isOreoStyle) {
                 FloatArray(8) { 0f }
+            } else if (row.isGrouped) {
+                val topRadius = innerCornerPx
+                val bottomRadius = if (row.isLastInGroup) outerCornerPx else innerCornerPx
+                floatArrayOf(
+                    topRadius, topRadius,
+                    topRadius, topRadius,
+                    bottomRadius, bottomRadius,
+                    bottomRadius, bottomRadius
+                )
             } else {
                 when {
                     totalNotifCount <= 1 -> {
@@ -1302,6 +1535,24 @@ class NotificationAdapter(
             }
             popup.menu.add(0, 3, 2, "Notification settings")
 
+            val categories = NotificationCategoryManager.categories.value
+            val catIdMap = mutableMapOf<Int, String?>()
+            if (categories.isNotEmpty()) {
+                val subMenu = popup.menu.addSubMenu(0, 100, 3, "Assign to category")
+                val currentCat = NotificationCategoryManager.findCategoryForPackage(item.packageName)
+                var nextItemId = 1000
+                categories.forEach { cat ->
+                    val id = nextItemId++
+                    catIdMap[id] = cat.id
+                    val prefix = if (currentCat?.id == cat.id) "✓ " else ""
+                    subMenu.add(1, id, id, "$prefix${cat.name}")
+                }
+                val uncatId = nextItemId
+                catIdMap[uncatId] = null
+                val uncatPrefix = if (currentCat == null) "✓ " else ""
+                subMenu.add(1, uncatId, uncatId, "${uncatPrefix}Other (Uncategorized)")
+            }
+
             popup.setOnMenuItemClickListener { menuItem ->
                 when (menuItem.itemId) {
                     1 -> {
@@ -1324,7 +1575,20 @@ class NotificationAdapter(
                         } catch (_: Exception) {}
                         true
                     }
-                    else -> false
+                    else -> {
+                        if (catIdMap.containsKey(menuItem.itemId)) {
+                            NotificationCategoryManager.assignPackageToCategory(
+                                context = context,
+                                packageName = item.packageName,
+                                targetCategoryId = catIdMap[menuItem.itemId]
+                            )
+                            rebuildDisplayRows()
+                            notifyDataSetChanged()
+                            true
+                        } else {
+                            false
+                        }
+                    }
                 }
             }
             popup.show()

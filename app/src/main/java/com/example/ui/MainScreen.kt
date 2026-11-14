@@ -38,6 +38,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Dashboard
@@ -314,6 +315,11 @@ fun MainScreen(viewModel: MainViewModel) {
                     com.example.ui.customizer.HiddenNotificationManagerScreen()
                 }
 
+                11 -> {
+                    // TAB 11: Notification Categories Manager Screen
+                    com.example.ui.customizer.NotificationCategoriesScreen()
+                }
+
                 9 -> {
                     // TAB 9: App Status Screen (with recently edited TopTriggerStripBar element)
                     val isInitialSetupCompleted by com.example.data.PanelPreferences.initialSetupCompleted.collectAsStateWithLifecycle()
@@ -390,6 +396,7 @@ private fun SettingsBottomNavigationBar(
         Triple("Privileges", Icons.Default.Security, 4),
         Triple("Customize", Icons.Default.Layers, 5),
         Triple("Notif Hub", Icons.Default.Notifications, 8),
+        Triple("Categories", Icons.Default.Category, 11),
         Triple("About", Icons.Default.Info, 10)
     )
     val visibleNavItems = remember {

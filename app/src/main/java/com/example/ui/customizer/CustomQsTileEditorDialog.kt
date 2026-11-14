@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -73,6 +74,7 @@ import com.example.model.CommandExecutionMode
 import com.example.model.LongPressActionType
 import com.example.model.TileActionOverrideType
 import com.example.model.TileCommandConfig
+import com.example.ui.theme.SegmentedButtonShapes
 import com.example.ui.tile.GoogleIconEntry
 import com.example.ui.tile.GoogleIconLibrary
 
@@ -104,7 +106,18 @@ fun CustomQsTileEditorDialog(
 
     // Long press
     var longPressType by remember { mutableStateOf(initialConfig?.longPressActionType ?: LongPressActionType.DEFAULT) }
-    var longPressCmd by remember { mutableStateOf(initialConfig?.longPressCommand ?: "") }
+    var longPressAppPkg by remember {
+        mutableStateOf(if (initialConfig?.longPressActionType == LongPressActionType.APP_LAUNCH) initialConfig.longPressCommand else "")
+    }
+    var longPressUrl by remember {
+        mutableStateOf(if (initialConfig?.longPressActionType == LongPressActionType.URL_DEEP_LINK) initialConfig.longPressCommand else "")
+    }
+    var longPressShellCmd by remember {
+        mutableStateOf(if (initialConfig?.longPressActionType == LongPressActionType.SYSTEM_COMMAND) initialConfig.longPressCommand else "")
+    }
+    var longPressIntentAction by remember {
+        mutableStateOf(if (initialConfig?.longPressActionType == LongPressActionType.DIRECT_INTENT) initialConfig.longPressCommand else "")
+    }
 
     // Action chain
     var actionChainSteps by remember { mutableStateOf(initialConfig?.actionChainSteps ?: emptyList()) }
@@ -543,16 +556,52 @@ fun CustomQsTileEditorDialog(
                                 }
                             }
 
-                            if (longPressType != LongPressActionType.DEFAULT) {
-                                OutlinedTextField(
-                                    value = longPressCmd,
-                                    onValueChange = { longPressCmd = it },
-                                    label = { Text("Long Press Target / Command") },
-                                    placeholder = { Text("e.g. https://settings.com or cmd statusbar") },
-                                    singleLine = true,
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.fillMaxWidth().testTag("field_long_press_cmd")
-                                )
+                            when (longPressType) {
+                                LongPressActionType.APP_LAUNCH -> {
+                                    OutlinedTextField(
+                                        value = longPressAppPkg,
+                                        onValueChange = { longPressAppPkg = it },
+                                        label = { Text("Long Press Application Package Name") },
+                                        placeholder = { Text("e.g. com.spotify.music or com.android.chrome") },
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.fillMaxWidth().testTag("field_long_press_cmd")
+                                    )
+                                }
+                                LongPressActionType.URL_DEEP_LINK -> {
+                                    OutlinedTextField(
+                                        value = longPressUrl,
+                                        onValueChange = { longPressUrl = it },
+                                        label = { Text("Long Press URL / Deep Link") },
+                                        placeholder = { Text("e.g. https://google.com or spotify://") },
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.fillMaxWidth().testTag("field_long_press_cmd")
+                                    )
+                                }
+                                LongPressActionType.SYSTEM_COMMAND -> {
+                                    OutlinedTextField(
+                                        value = longPressShellCmd,
+                                        onValueChange = { longPressShellCmd = it },
+                                        label = { Text("Long Press Shell Command") },
+                                        placeholder = { Text("e.g. svc wifi enable or cmd statusbar") },
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.fillMaxWidth().testTag("field_long_press_cmd")
+                                    )
+                                }
+                                LongPressActionType.DIRECT_INTENT -> {
+                                    OutlinedTextField(
+                                        value = longPressIntentAction,
+                                        onValueChange = { longPressIntentAction = it },
+                                        label = { Text("Long Press Intent Action") },
+                                        placeholder = { Text("e.g. android.settings.SETTINGS") },
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.fillMaxWidth().testTag("field_long_press_cmd")
+                                    )
+                                }
+                                LongPressActionType.DEFAULT -> {}
                             }
                         }
                     }
@@ -579,20 +628,36 @@ fun CustomQsTileEditorDialog(
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                CommandExecutionMode.entries.forEach { mode ->
+                                val allModes = CommandExecutionMode.entries
+                                allModes.forEach { mode ->
                                     val isSel = executionMode == mode
+                                    val modeShape = SegmentedButtonShapes.getShape(
+                                        item = mode,
+                                        items = allModes,
+                                        selectedItem = executionMode,
+                                        innerCorner = 4.dp
+                                    )
                                     Button(
                                         onClick = { executionMode = mode },
-                                        shape = RoundedCornerShape(12.dp),
+                                        shape = modeShape,
+                                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = if (isSel) colorScheme.primary else colorScheme.surfaceContainerHigh,
                                             contentColor = if (isSel) colorScheme.onPrimary else colorScheme.onSurfaceVariant
                                         ),
-                                        modifier = Modifier.weight(1f).height(38.dp)
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(40.dp)
+                                            .testTag("btn_exec_mode_${mode.id}")
                                     ) {
-                                        Text(mode.displayName, fontSize = 11.sp)
+                                        Text(
+                                            text = mode.displayName,
+                                            fontSize = 11.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
                                     }
                                 }
                             }
@@ -652,7 +717,13 @@ fun CustomQsTileEditorDialog(
                                 subtitleOff = subtitleOff,
                                 isStateToggle = isStateToggle,
                                 longPressActionType = longPressType,
-                                longPressCommand = longPressCmd,
+                                longPressCommand = when (longPressType) {
+                                    LongPressActionType.APP_LAUNCH -> longPressAppPkg
+                                    LongPressActionType.URL_DEEP_LINK -> longPressUrl
+                                    LongPressActionType.SYSTEM_COMMAND -> longPressShellCmd
+                                    LongPressActionType.DIRECT_INTENT -> longPressIntentAction
+                                    LongPressActionType.DEFAULT -> ""
+                                },
                                 actionChainSteps = actionChainSteps,
                                 closePanelOnPress = closePanel,
                                 forceStateChangeAnyway = forceState,

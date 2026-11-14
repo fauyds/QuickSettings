@@ -53,6 +53,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -77,6 +78,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -271,11 +273,7 @@ fun TileCommandsScreen(
 
                         customTileConfigs.forEach { (id, cfg) ->
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isDark) Color(0xFF383838) else Color(0xFFF0F0F0))
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -305,48 +303,46 @@ fun TileCommandsScreen(
                                             text = cfg.labelOn.ifBlank { id },
                                             fontSize = 13.5.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = colorScheme.onSurface
+                                            color = colorScheme.onSurface,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                         Text(
                                             text = "${cfg.overrideType.displayName} • ${cfg.iconName}",
                                             fontSize = 11.sp,
-                                            color = colorScheme.onSurfaceVariant
+                                            color = colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
                                 }
 
-                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    FilledTonalButton(
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(
                                         onClick = { editingConfig = cfg },
-                                        shape = CircleShape,
-                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                        modifier = Modifier
-                                            .height(32.dp)
-                                            .testTag("btn_edit_custom_tile_$id")
+                                        modifier = Modifier.testTag("btn_edit_custom_tile_$id")
                                     ) {
-                                        Icon(androidx.compose.material.icons.Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(14.dp))
-                                        Spacer(modifier = Modifier.width(3.dp))
-                                        Text("Edit", fontSize = 11.sp)
+                                        Icon(
+                                            imageVector = androidx.compose.material.icons.Icons.Default.Edit,
+                                            contentDescription = "Edit",
+                                            tint = colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(20.dp)
+                                        )
                                     }
 
-                                    FilledTonalButton(
+                                    IconButton(
                                         onClick = {
                                             TileCommandRepository.deleteCustomTile(context, tileRepo, id, coroutineScope)
                                             Toast.makeText(context, "Deleted custom tile", Toast.LENGTH_SHORT).show()
                                         },
-                                        shape = CircleShape,
-                                        colors = ButtonDefaults.filledTonalButtonColors(
-                                            containerColor = colorScheme.errorContainer,
-                                            contentColor = colorScheme.onErrorContainer
-                                        ),
-                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                        modifier = Modifier
-                                            .height(32.dp)
-                                            .testTag("btn_delete_custom_tile_$id")
+                                        modifier = Modifier.testTag("btn_delete_custom_tile_$id")
                                     ) {
-                                        Icon(androidx.compose.material.icons.Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(14.dp))
-                                        Spacer(modifier = Modifier.width(3.dp))
-                                        Text("Delete", fontSize = 11.sp)
+                                        Icon(
+                                            imageVector = androidx.compose.material.icons.Icons.Default.Delete,
+                                            contentDescription = "Delete",
+                                            tint = colorScheme.error,
+                                            modifier = Modifier.size(20.dp)
+                                        )
                                     }
                                 }
                             }

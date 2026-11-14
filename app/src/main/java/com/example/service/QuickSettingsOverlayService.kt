@@ -148,6 +148,7 @@ class QuickSettingsOverlayService : Service() {
         instance = this
         isRunning = true
         PanelPreferences.init(this)
+        com.example.data.NotificationCategoryManager.init(this)
         MediaSessionManagerHelper.init(this)
         com.example.system.SystemThemeObserver.init(this)
         windowManager = getSystemService(Context.WINDOW_SERVICE) as? WindowManager

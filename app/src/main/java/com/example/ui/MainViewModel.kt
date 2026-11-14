@@ -123,6 +123,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         PanelPreferences.init(application)
         privilegeEngine.syncWithPreferences()
         com.example.data.NotificationBlacklistManager.init(application)
+        com.example.data.NotificationCategoryManager.init(application)
         _showInitialSetup.value = !PanelPreferences.initialSetupCompleted.value
         refreshServiceState()
     }

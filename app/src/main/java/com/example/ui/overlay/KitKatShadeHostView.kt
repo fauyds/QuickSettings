@@ -166,6 +166,9 @@ class KitKatShadeHostView @JvmOverloads constructor(
     private var lastShowHeaderGradient: Boolean? = null
     private var lastPermissionGranted: Boolean? = null
     private var lastOuterCorner: Float? = null
+    private var lastCategorySortingEnabled: Boolean? = null
+    private var lastCategories: List<com.example.model.NotificationCategory> = emptyList()
+    private var lastCategoryExpandedStates: Map<String, Boolean> = emptyMap()
 
     // Touch tracking for universal dismiss
     private var touchDownY: Float = 0f
@@ -723,9 +726,17 @@ class KitKatShadeHostView @JvmOverloads constructor(
                 this.lastShowHeaderGradient != showHeaderGradient ||
                 this.lastOuterCorner != outerCorner
         val tilesChanged = this.lastTiles != tiles
+        val currentSortingEnabled = com.example.data.NotificationCategoryManager.isSortingEnabled.value
+        val currentCategories = com.example.data.NotificationCategoryManager.categories.value
+        val currentExpandedStates = com.example.data.NotificationCategoryManager.expandedStates.value
+        val categoriesChanged = this.lastCategorySortingEnabled != currentSortingEnabled ||
+                this.lastCategories != currentCategories ||
+                this.lastCategoryExpandedStates != currentExpandedStates
+
         val notifsChanged = this.lastNotifications != notifications ||
                 this.lastPermissionGranted != isNotificationPermissionGranted ||
-                this.lastMediaSessions != mediaSessions
+                this.lastMediaSessions != mediaSessions ||
+                categoriesChanged
         val carrierChanged = this.lastCarrierName != carrierName
 
         if (!themeChanged && !tilesChanged && !notifsChanged && !carrierChanged) {
@@ -741,6 +752,9 @@ class KitKatShadeHostView @JvmOverloads constructor(
         this.lastShowHeaderGradient = showHeaderGradient
         this.lastPermissionGranted = isNotificationPermissionGranted
         this.lastOuterCorner = outerCorner
+        this.lastCategorySortingEnabled = currentSortingEnabled
+        this.lastCategories = currentCategories
+        this.lastCategoryExpandedStates = currentExpandedStates
 
         this.isDark = isDark
         this.isDarkState.value = isDark

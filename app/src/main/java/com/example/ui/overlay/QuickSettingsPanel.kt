@@ -6174,6 +6174,11 @@ fun NotificationsCard(
         parent as? android.view.View ?: hostView
     }
 
+    // Observe Notification Category Sorting preferences for live updates in shade
+    val categorySortingEnabled by com.example.data.NotificationCategoryManager.isSortingEnabled.collectAsState()
+    val customCategories by com.example.data.NotificationCategoryManager.categories.collectAsState()
+    val categoryExpandedStates by com.example.data.NotificationCategoryManager.expandedStates.collectAsState()
+
     val showMediaInNotifContainer by PanelPreferences.showMediaInNotificationContainer.collectAsState()
     val mediaSessionsList by com.example.service.MediaSessionManagerHelper.sessionsList.collectAsState()
     val forceShowMediaPreview by PanelPreferences.forceShowMediaPreview.collectAsState()
@@ -6215,6 +6220,8 @@ fun NotificationsCard(
                 }
             },
             update = { view ->
+                // Read category state flows inside update block so Compose re-invokes updateData when categories change
+                val _catSync = Triple(categorySortingEnabled, customCategories, categoryExpandedStates)
                 view.clipChildren = false
                 view.clipToPadding = false
                 view.onNotificationClick = onNotificationClick

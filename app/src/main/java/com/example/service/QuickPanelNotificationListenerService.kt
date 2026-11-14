@@ -331,6 +331,7 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
         instance = this
         Log.d(TAG, "Notification listener connected")
         NotificationBlacklistManager.init(this)
+        com.example.data.NotificationCategoryManager.init(this)
         MediaSessionManagerHelper.init(this)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

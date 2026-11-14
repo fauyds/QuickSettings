@@ -18,6 +18,7 @@ import com.example.model.MediaState
 import com.example.model.NotificationActionModel
 import com.example.model.NotificationItem
 import com.example.ui.overlay.QsExpansionStage
+import com.example.data.NotificationCategoryManager
 import com.example.data.PanelPreferences
 
 class NotificationListView @JvmOverloads constructor(
@@ -94,6 +95,7 @@ class NotificationListView @JvmOverloads constructor(
     }
 
     init {
+        NotificationCategoryManager.init(context)
         setBackgroundColor(android.graphics.Color.TRANSPARENT)
         val root = LayoutInflater.from(context).inflate(R.layout.layout_notification_list, this, true)
 
@@ -743,7 +745,7 @@ class NotificationListView @JvmOverloads constructor(
                 adapter?.showFooter = hasClearable
             }
 
-            adapter?.submitList(notifications.toList())
+            adapter?.submitNotifications(notifications.toList())
             adapter?.notifyDataSetChanged()
         }
         if (PanelPreferences.isAndroidOreoStyle(context) || PanelPreferences.isAndroidMarshmallowStyle(context) || PanelPreferences.isAndroidKitKatStyle(context)) {

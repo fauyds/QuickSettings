@@ -471,6 +471,7 @@ class QuickPanelAccessibilityService : AccessibilityService() {
 
         // Initialize tile & system managers
         PanelPreferences.init(this)
+        com.example.data.NotificationCategoryManager.init(this)
         val db = QuickPanelDatabase.getInstance(this)
         val repo = TileRepository(db.tileDao())
         privilegeEngine = PrivilegeEngine(this)
