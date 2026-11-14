@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
  * - Non-selected buttons: 8dp corners for both outer and inner corners.
  */
 object SegmentedButtonShapes {
-    val InnerCorner: Dp = 5.dp
+    val InnerCorner: Dp = 4.dp
     val OuterCorner: Dp = 50.dp
 
     fun getShape(

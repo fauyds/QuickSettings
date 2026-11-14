@@ -108,6 +108,8 @@ class ComplicationTile @JvmOverloads constructor(
     var onActionListener: ((ComplicationAction) -> Unit)? = null
     var onSettingsListener: ((String) -> Unit)? = null
 
+    private var isComposing = false
+
     init {
         clipChildren = false
         clipToPadding = false
@@ -116,7 +118,14 @@ class ComplicationTile @JvmOverloads constructor(
         composeView.setViewCompositionStrategy(
             ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool
         )
-        setupComposeContent()
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (!isComposing) {
+            isComposing = true
+            setupComposeContent()
+        }
     }
 
     private fun setupComposeContent() {
@@ -396,7 +405,7 @@ fun ComplicationTileView(
         }
     }
 
-    BoxWithConstraints(
+    Box(
         modifier = modifier
             .semantics(mergeDescendants = true) {
                 contentDescription = model.contentDescription
@@ -407,17 +416,13 @@ fun ComplicationTileView(
         val isCompactHeader = when (model.layoutMode) {
             ComplicationLayoutMode.HEADER_ROW -> true
             ComplicationLayoutMode.GRID_TILE -> false
-            ComplicationLayoutMode.ADAPTIVE -> {
-                (maxHeight.value.isFinite() && maxHeight < 72.dp) ||
-                    (maxWidth.value.isFinite() && maxWidth < 64.dp)
-            }
+            ComplicationLayoutMode.ADAPTIVE -> false
         }
 
         val ringSize: Dp = customRingSize ?: if (isCompactHeader) {
             if (model.sublinePlacement == ComplicationSublinePlacement.INSIDE_RING) 46.dp else 40.dp
         } else {
-            val available = if (maxWidth.value.isFinite()) maxWidth else 88.dp
-            (available * 0.68f).coerceIn(54.dp, 68.dp)
+            56.dp
         }
 
         val strokeWidthDp: Dp = if (ringSize <= 48.dp) 3.dp else 4.dp

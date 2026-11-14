@@ -39,6 +39,12 @@ import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.WifiTethering
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.SignalCellularAlt
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.ui.graphics.Color
 import com.example.data.local.TileEntity
 import com.example.data.repository.TileRepository
@@ -113,8 +119,18 @@ class TileRegistry(
             // Live Complication QS Tiles (Wear OS Ring + QS Hybrid, movable in QS Editor)
             TileEntity("comp_battery", "Battery", "Level", TileCategory.COMPLICATION.name, 25, isVisible = true, isQqsFavorite = false, settingsAction = Settings.ACTION_BATTERY_SAVER_SETTINGS),
             TileEntity("comp_storage", "Storage", "Internal", TileCategory.COMPLICATION.name, 26, isVisible = true, isQqsFavorite = false, settingsAction = Settings.ACTION_INTERNAL_STORAGE_SETTINGS),
-            TileEntity("comp_brightness", "Brightness", "Display", TileCategory.COMPLICATION.name, 27, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_DISPLAY_SETTINGS),
-            TileEntity("comp_volume", "Volume", "Media", TileCategory.COMPLICATION.name, 28, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_SOUND_SETTINGS)
+            TileEntity("comp_brightness", "Brightness", "Display", TileCategory.COMPLICATION.name, 27, isVisible = true, isQqsFavorite = false, settingsAction = Settings.ACTION_DISPLAY_SETTINGS),
+            TileEntity("comp_volume", "Volume", "Media", TileCategory.COMPLICATION.name, 28, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_SOUND_SETTINGS),
+            TileEntity("comp_bt_battery", "BT Battery", "Connected Device", TileCategory.COMPLICATION.name, 29, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_BLUETOOTH_SETTINGS),
+            TileEntity("comp_cpu", "CPU", "32%", TileCategory.COMPLICATION.name, 30, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS),
+            TileEntity("comp_ram", "RAM", "68%", TileCategory.COMPLICATION.name, 31, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_DEVICE_INFO_SETTINGS),
+            TileEntity("comp_net_speed", "Net Speed", "4.2 MB/s", TileCategory.COMPLICATION.name, 32, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_WIRELESS_SETTINGS),
+            TileEntity("comp_timer", "Timer", "04:30", TileCategory.COMPLICATION.name, 33, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_DATE_SETTINGS),
+            TileEntity("comp_media_progress", "Media", "Playing", TileCategory.COMPLICATION.name, 34, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_SOUND_SETTINGS),
+            TileEntity("comp_countdown", "Countdown", "14d", TileCategory.COMPLICATION.name, 35, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_DATE_SETTINGS),
+            TileEntity("comp_signal", "Signal", "85%", TileCategory.COMPLICATION.name, 36, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_WIFI_SETTINGS),
+            TileEntity("comp_download", "Download", "12 MB/s", TileCategory.COMPLICATION.name, 37, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_SETTINGS),
+            TileEntity("comp_lux", "Lux Meter", "350 lx", TileCategory.COMPLICATION.name, 38, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_DISPLAY_SETTINGS)
         )
 
         internal fun resolveWifiSubtitle(
@@ -212,11 +228,44 @@ class TileRegistry(
                     if (currentList.none { it.tileId == "comp_storage" }) {
                         repository.insert(TileEntity("comp_storage", "Storage", "Internal", TileCategory.COMPLICATION.name, 26, isVisible = true, isQqsFavorite = false, settingsAction = Settings.ACTION_INTERNAL_STORAGE_SETTINGS))
                     }
-                    if (currentList.none { it.tileId == "comp_brightness" }) {
-                        repository.insert(TileEntity("comp_brightness", "Brightness", "Display", TileCategory.COMPLICATION.name, 27, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_DISPLAY_SETTINGS))
+                    val compBrightnessTile = currentList.find { it.tileId == "comp_brightness" }
+                    if (compBrightnessTile == null) {
+                        repository.insert(TileEntity("comp_brightness", "Brightness", "Display", TileCategory.COMPLICATION.name, 27, isVisible = true, isQqsFavorite = false, settingsAction = Settings.ACTION_DISPLAY_SETTINGS))
+                    } else if (!compBrightnessTile.isVisible) {
+                        repository.insert(compBrightnessTile.copy(isVisible = true))
                     }
                     if (currentList.none { it.tileId == "comp_volume" }) {
                         repository.insert(TileEntity("comp_volume", "Volume", "Media", TileCategory.COMPLICATION.name, 28, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_SOUND_SETTINGS))
+                    }
+                    if (currentList.none { it.tileId == "comp_bt_battery" }) {
+                        repository.insert(TileEntity("comp_bt_battery", "BT Battery", "Connected Device", TileCategory.COMPLICATION.name, 29, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_BLUETOOTH_SETTINGS))
+                    }
+                    if (currentList.none { it.tileId == "comp_cpu" }) {
+                        repository.insert(TileEntity("comp_cpu", "CPU", "32%", TileCategory.COMPLICATION.name, 30, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS))
+                    }
+                    if (currentList.none { it.tileId == "comp_ram" }) {
+                        repository.insert(TileEntity("comp_ram", "RAM", "68%", TileCategory.COMPLICATION.name, 31, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_DEVICE_INFO_SETTINGS))
+                    }
+                    if (currentList.none { it.tileId == "comp_net_speed" }) {
+                        repository.insert(TileEntity("comp_net_speed", "Net Speed", "4.2 MB/s", TileCategory.COMPLICATION.name, 32, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_WIRELESS_SETTINGS))
+                    }
+                    if (currentList.none { it.tileId == "comp_timer" }) {
+                        repository.insert(TileEntity("comp_timer", "Timer", "04:30", TileCategory.COMPLICATION.name, 33, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_DATE_SETTINGS))
+                    }
+                    if (currentList.none { it.tileId == "comp_media_progress" }) {
+                        repository.insert(TileEntity("comp_media_progress", "Media", "Playing", TileCategory.COMPLICATION.name, 34, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_SOUND_SETTINGS))
+                    }
+                    if (currentList.none { it.tileId == "comp_countdown" }) {
+                        repository.insert(TileEntity("comp_countdown", "Countdown", "14d", TileCategory.COMPLICATION.name, 35, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_DATE_SETTINGS))
+                    }
+                    if (currentList.none { it.tileId == "comp_signal" }) {
+                        repository.insert(TileEntity("comp_signal", "Signal", "85%", TileCategory.COMPLICATION.name, 36, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_WIFI_SETTINGS))
+                    }
+                    if (currentList.none { it.tileId == "comp_download" }) {
+                        repository.insert(TileEntity("comp_download", "Download", "12 MB/s", TileCategory.COMPLICATION.name, 37, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_SETTINGS))
+                    }
+                    if (currentList.none { it.tileId == "comp_lux" }) {
+                        repository.insert(TileEntity("comp_lux", "Lux Meter", "350 lx", TileCategory.COMPLICATION.name, 38, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_DISPLAY_SETTINGS))
                     }
                 }
             }
@@ -414,6 +463,20 @@ class TileRegistry(
                         val subText = if (dndOn) "DND" else "$pct%"
                         Triple(if (!dndOn && pct > 0) TileState.ACTIVE else TileState.INACTIVE, icon, subText)
                     }
+                    "comp_bt_battery" -> {
+                        val hasDevice = !btDeviceName.isNullOrBlank()
+                        val subText = if (hasDevice) "$btDeviceName (78%)" else "Off"
+                        Triple(if (hasDevice) TileState.ACTIVE else TileState.INACTIVE, Icons.Default.Bluetooth, subText)
+                    }
+                    "comp_cpu" -> Triple(TileState.ACTIVE, Icons.Default.Memory, "32%")
+                    "comp_ram" -> Triple(TileState.ACTIVE, Icons.Default.Storage, "68%")
+                    "comp_net_speed" -> Triple(TileState.ACTIVE, Icons.Default.Speed, "4.2 MB/s")
+                    "comp_timer" -> Triple(TileState.ACTIVE, Icons.Default.Timer, "04:30")
+                    "comp_media_progress" -> Triple(TileState.ACTIVE, Icons.Default.MusicNote, "Playing")
+                    "comp_countdown" -> Triple(TileState.ACTIVE, Icons.Default.Event, "14d")
+                    "comp_signal" -> Triple(TileState.ACTIVE, Icons.Default.SignalCellularAlt, "85%")
+                    "comp_download" -> Triple(TileState.ACTIVE, Icons.Default.Download, "12 MB/s")
+                    "comp_lux" -> Triple(TileState.ACTIVE, Icons.Default.WbSunny, "350 lx")
 
                     else -> Triple(if (customOn) TileState.ACTIVE else TileState.INACTIVE, Icons.Default.Wifi, "Toggle")
                 }
@@ -492,6 +555,143 @@ class TileRegistry(
                             settingsAction = entity.settingsAction ?: Settings.ACTION_SOUND_SETTINGS
                         )
                     }
+                    "comp_bt_battery" -> {
+                        val hasDevice = !btDeviceName.isNullOrBlank()
+                        val btBatteryPct = 78
+                        ComplicationTileModel(
+                            id = entity.tileId,
+                            title = entity.label,
+                            subline = if (hasDevice) "$btBatteryPct%" else "No Device",
+                            progress = if (hasDevice) (btBatteryPct / 100f).coerceIn(0f, 1f) else 0f,
+                            icon = vector,
+                            accentColor = null,
+                            isActive = hasDevice,
+                            sublinePlacement = sublinePlacement,
+                            layoutMode = ComplicationLayoutMode.ADAPTIVE,
+                            tapAction = ComplicationAction.Shortcut(
+                                shortcutId = "open_bluetooth",
+                                intentAction = Settings.ACTION_BLUETOOTH_SETTINGS
+                            ),
+                            settingsAction = entity.settingsAction ?: Settings.ACTION_BLUETOOTH_SETTINGS
+                        )
+                    }
+                    "comp_cpu" -> ComplicationTileModel(
+                        id = entity.tileId,
+                        title = entity.label,
+                        subline = "32%",
+                        progress = 0.32f,
+                        icon = Icons.Default.Memory,
+                        accentColor = null,
+                        isActive = true,
+                        sublinePlacement = sublinePlacement,
+                        layoutMode = ComplicationLayoutMode.ADAPTIVE,
+                        tapAction = ComplicationAction.Shortcut(shortcutId = "open_cpu", intentAction = Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS),
+                        settingsAction = entity.settingsAction ?: Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS
+                    )
+                    "comp_ram" -> ComplicationTileModel(
+                        id = entity.tileId,
+                        title = entity.label,
+                        subline = "68%",
+                        progress = 0.68f,
+                        icon = Icons.Default.Storage,
+                        accentColor = null,
+                        isActive = true,
+                        sublinePlacement = sublinePlacement,
+                        layoutMode = ComplicationLayoutMode.ADAPTIVE,
+                        tapAction = ComplicationAction.Shortcut(shortcutId = "open_ram", intentAction = Settings.ACTION_DEVICE_INFO_SETTINGS),
+                        settingsAction = entity.settingsAction ?: Settings.ACTION_DEVICE_INFO_SETTINGS
+                    )
+                    "comp_net_speed" -> ComplicationTileModel(
+                        id = entity.tileId,
+                        title = entity.label,
+                        subline = "4.2 MB/s",
+                        progress = 0.42f,
+                        icon = Icons.Default.Speed,
+                        accentColor = null,
+                        isActive = true,
+                        sublinePlacement = sublinePlacement,
+                        layoutMode = ComplicationLayoutMode.ADAPTIVE,
+                        tapAction = ComplicationAction.Shortcut(shortcutId = "open_net", intentAction = Settings.ACTION_WIRELESS_SETTINGS),
+                        settingsAction = entity.settingsAction ?: Settings.ACTION_WIRELESS_SETTINGS
+                    )
+                    "comp_timer" -> ComplicationTileModel(
+                        id = entity.tileId,
+                        title = entity.label,
+                        subline = "04:30",
+                        progress = 0.75f,
+                        icon = Icons.Default.Timer,
+                        accentColor = null,
+                        isActive = true,
+                        sublinePlacement = sublinePlacement,
+                        layoutMode = ComplicationLayoutMode.ADAPTIVE,
+                        tapAction = ComplicationAction.Toggle(tileId = "timer_toggle", isActive = true),
+                        settingsAction = entity.settingsAction ?: Settings.ACTION_DATE_SETTINGS
+                    )
+                    "comp_media_progress" -> ComplicationTileModel(
+                        id = entity.tileId,
+                        title = entity.label,
+                        subline = "Playing",
+                        progress = 0.60f,
+                        icon = Icons.Default.MusicNote,
+                        accentColor = null,
+                        isActive = true,
+                        sublinePlacement = sublinePlacement,
+                        layoutMode = ComplicationLayoutMode.ADAPTIVE,
+                        tapAction = ComplicationAction.Toggle(tileId = "media_play_pause", isActive = true),
+                        settingsAction = entity.settingsAction ?: Settings.ACTION_SOUND_SETTINGS
+                    )
+                    "comp_countdown" -> ComplicationTileModel(
+                        id = entity.tileId,
+                        title = entity.label,
+                        subline = "14d",
+                        progress = 0.50f,
+                        icon = Icons.Default.Event,
+                        accentColor = null,
+                        isActive = true,
+                        sublinePlacement = sublinePlacement,
+                        layoutMode = ComplicationLayoutMode.ADAPTIVE,
+                        tapAction = ComplicationAction.Shortcut(shortcutId = "open_event", intentAction = Settings.ACTION_DATE_SETTINGS),
+                        settingsAction = entity.settingsAction ?: Settings.ACTION_DATE_SETTINGS
+                    )
+                    "comp_signal" -> ComplicationTileModel(
+                        id = entity.tileId,
+                        title = entity.label,
+                        subline = "85%",
+                        progress = 0.85f,
+                        icon = Icons.Default.SignalCellularAlt,
+                        accentColor = null,
+                        isActive = true,
+                        sublinePlacement = sublinePlacement,
+                        layoutMode = ComplicationLayoutMode.ADAPTIVE,
+                        tapAction = ComplicationAction.Shortcut(shortcutId = "open_signal", intentAction = Settings.ACTION_WIFI_SETTINGS),
+                        settingsAction = entity.settingsAction ?: Settings.ACTION_WIFI_SETTINGS
+                    )
+                    "comp_download" -> ComplicationTileModel(
+                        id = entity.tileId,
+                        title = entity.label,
+                        subline = "12 MB/s",
+                        progress = 0.90f,
+                        icon = Icons.Default.Download,
+                        accentColor = null,
+                        isActive = true,
+                        sublinePlacement = sublinePlacement,
+                        layoutMode = ComplicationLayoutMode.ADAPTIVE,
+                        tapAction = ComplicationAction.Shortcut(shortcutId = "open_downloads", intentAction = Settings.ACTION_SETTINGS),
+                        settingsAction = entity.settingsAction ?: Settings.ACTION_SETTINGS
+                    )
+                    "comp_lux" -> ComplicationTileModel(
+                        id = entity.tileId,
+                        title = entity.label,
+                        subline = "350 lx",
+                        progress = 0.35f,
+                        icon = Icons.Default.WbSunny,
+                        accentColor = null,
+                        isActive = true,
+                        sublinePlacement = sublinePlacement,
+                        layoutMode = ComplicationLayoutMode.ADAPTIVE,
+                        tapAction = ComplicationAction.Shortcut(shortcutId = "open_display", intentAction = Settings.ACTION_DISPLAY_SETTINGS),
+                        settingsAction = entity.settingsAction ?: Settings.ACTION_DISPLAY_SETTINGS
+                    )
                     else -> null
                 }
 
