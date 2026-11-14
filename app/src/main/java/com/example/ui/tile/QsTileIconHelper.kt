@@ -5,8 +5,11 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.BatterySaver
 import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.BrightnessMedium
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CellTower
 import androidx.compose.material.icons.filled.DarkMode
@@ -76,6 +79,10 @@ object QsTileIconHelper {
             "screenrecord" -> Icons.Default.Videocam
             "settings" -> Icons.Default.Settings
             "customize" -> Icons.Default.Layers
+            "comp_battery" -> Icons.Default.BatteryFull
+            "comp_storage" -> Icons.Default.Storage
+            "comp_brightness" -> Icons.Default.BrightnessMedium
+            "comp_volume" -> Icons.Default.VolumeUp
             else -> {
                 val config = com.example.data.TileCommandRepository.getConfig(tile.id)
                 if (config.iconName.isNotBlank()) GoogleIconLibrary.findIconByName(config.iconName) else Icons.Default.Settings
@@ -119,6 +126,10 @@ object QsTileIconHelper {
             "screenrecord" -> R.drawable.ic_qs_videocam
             "settings" -> R.drawable.ic_qs_settings
             "customize" -> R.drawable.ic_qs_customize
+            "comp_battery" -> R.drawable.ic_qs_battery
+            "comp_storage" -> R.drawable.ic_qs_memory
+            "comp_brightness" -> R.drawable.ic_qs_visibility
+            "comp_volume" -> R.drawable.ic_qs_volume
             else -> R.drawable.ic_qs_wifi
         }
     }

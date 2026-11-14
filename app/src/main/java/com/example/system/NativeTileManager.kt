@@ -29,6 +29,7 @@ import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.nfc.NfcAdapter
 import android.telephony.TelephonyManager
+import android.os.BatteryManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -156,6 +157,13 @@ class NativeTileManager(
 
     private val _notificationVolume = MutableStateFlow(0.5f)
     val notificationVolume: StateFlow<Float> = _notificationVolume.asStateFlow()
+
+    // Battery state
+    private val _batteryPercentage = MutableStateFlow(100)
+    val batteryPercentage: StateFlow<Int> = _batteryPercentage.asStateFlow()
+
+    private val _isBatteryCharging = MutableStateFlow(false)
+    val isBatteryCharging: StateFlow<Boolean> = _isBatteryCharging.asStateFlow()
 
     // Services
     private val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
@@ -723,8 +731,34 @@ class NativeTileManager(
             _alarmVolume.value = am.getStreamVolume(AudioManager.STREAM_ALARM).toFloat() / maxAlarm
 
             val maxNotif = am.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION).coerceAtLeast(1)
-            _notificationVolume.value = am.getStreamVolume(AudioManager.STREAM_NOTIFICATION).toFloat() / maxNotif
+            _notificationVolume.value = am.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION).let {
+                am.getStreamVolume(AudioManager.STREAM_NOTIFICATION).toFloat() / it.coerceAtLeast(1)
+            }
         }
+    }
+
+    private fun refreshBatteryState() {
+        try {
+            val batteryStatus = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            if (batteryStatus != null) {
+                val level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                val scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+                if (level >= 0 && scale > 0) {
+                    _batteryPercentage.value = (level * 100 / scale).coerceIn(0, 100)
+                }
+                val status = batteryStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+                _isBatteryCharging.value =
+                    status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                        status == BatteryManager.BATTERY_STATUS_FULL
+            } else {
+                val bm = context.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
+                val cap = bm?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: -1
+                if (cap in 0..100) {
+                    _batteryPercentage.value = cap
+                }
+                _isBatteryCharging.value = bm?.isCharging == true
+            }
+        } catch (_: Throwable) {}
     }
 
     /**
@@ -814,6 +848,7 @@ class NativeTileManager(
                 _alarmVolume.value = curAlarm
                 _notificationVolume.value = curNotif
             }
+            refreshBatteryState()
         }
     }
 
@@ -1090,6 +1125,7 @@ class NativeTileManager(
             addAction("android.net.wifi.WIFI_AP_STATE_CHANGED")
             addAction("android.net.conn.TETHER_STATE_CHANGED")
             addAction("android.intent.action.ANY_DATA_STATE")
+            addAction(Intent.ACTION_BATTERY_CHANGED)
         }
         context.registerReceiver(object : BroadcastReceiver() {
             override fun onReceive(c: Context?, intent: Intent?) {
@@ -1248,6 +1284,17 @@ class NativeTileManager(
                     }
                     "android.intent.action.ANY_DATA_STATE" -> {
                         _isCellularEnabled.value = isMobileDataActive(context)
+                    }
+                    Intent.ACTION_BATTERY_CHANGED -> {
+                        val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                        val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+                        if (level >= 0 && scale > 0) {
+                            _batteryPercentage.value = (level * 100 / scale).coerceIn(0, 100)
+                        }
+                        val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+                        _isBatteryCharging.value =
+                            status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                                status == BatteryManager.BATTERY_STATUS_FULL
                     }
                     else -> {
                         refreshAllStates()

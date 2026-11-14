@@ -22,5 +22,6 @@ data class QsTileModel(
     val settingsAction: String? = null,
     val orderIndex: Int = 0,
     val isVisible: Boolean = true,
-    val isQqsFavorite: Boolean = false
+    val isQqsFavorite: Boolean = false,
+    val complicationSpec: ComplicationTileModel? = null
 )

@@ -7,8 +7,13 @@ import android.net.Uri
 import android.provider.Settings
 import com.example.model.LongPressActionType
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BatteryChargingFull
+import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.BatterySaver
 import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.BrightnessHigh
+import androidx.compose.material.icons.filled.BrightnessLow
+import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CellTower
 import androidx.compose.material.icons.filled.DarkMode
@@ -26,12 +31,15 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.WifiTethering
+import androidx.compose.ui.graphics.Color
 import com.example.data.local.TileEntity
 import com.example.data.repository.TileRepository
 import com.example.data.PanelPreferences
@@ -40,11 +48,16 @@ import android.media.AudioManager
 import android.util.Log
 import android.view.KeyEvent
 import com.example.model.CommandExecutionMode
+import com.example.model.ComplicationAction
+import com.example.model.ComplicationLayoutMode
+import com.example.model.ComplicationSublinePlacement
+import com.example.model.ComplicationTileModel
 import com.example.model.TileActionOverrideType
 import com.example.model.TileCommandConfig
 import com.example.model.QsTileModel
 import com.example.model.TileCategory
 import com.example.model.TileState
+import com.example.ui.tile.ComplicationTileController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -95,7 +108,13 @@ class TileRegistry(
             TileEntity("screenshot", "Screenshot", "Capture", TileCategory.HARDWARE.name, 20, isVisible = false, isQqsFavorite = false),
             TileEntity("screenrecord", "Screen Record", "Recorder", TileCategory.HARDWARE.name, 21, isVisible = true, isQqsFavorite = false),
             TileEntity("settings", "Settings", "System", TileCategory.SYSTEM.name, 23, isVisible = true, isQqsFavorite = false, settingsAction = Settings.ACTION_SETTINGS),
-            TileEntity("customize", "Customize", "Quick Panel", TileCategory.SYSTEM.name, 24, isVisible = true, isQqsFavorite = false)
+            TileEntity("customize", "Customize", "Quick Panel", TileCategory.SYSTEM.name, 24, isVisible = true, isQqsFavorite = false),
+
+            // Live Complication QS Tiles (Wear OS Ring + QS Hybrid, movable in QS Editor)
+            TileEntity("comp_battery", "Battery", "Level", TileCategory.COMPLICATION.name, 25, isVisible = true, isQqsFavorite = false, settingsAction = Settings.ACTION_BATTERY_SAVER_SETTINGS),
+            TileEntity("comp_storage", "Storage", "Internal", TileCategory.COMPLICATION.name, 26, isVisible = true, isQqsFavorite = false, settingsAction = Settings.ACTION_INTERNAL_STORAGE_SETTINGS),
+            TileEntity("comp_brightness", "Brightness", "Display", TileCategory.COMPLICATION.name, 27, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_DISPLAY_SETTINGS),
+            TileEntity("comp_volume", "Volume", "Media", TileCategory.COMPLICATION.name, 28, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_SOUND_SETTINGS)
         )
 
         internal fun resolveWifiSubtitle(
@@ -187,6 +206,18 @@ class TileRegistry(
                     if (customizeTile == null) {
                         repository.insert(TileEntity("customize", "Customize", "Quick Panel", TileCategory.SYSTEM.name, 24, isVisible = true, isQqsFavorite = false))
                     }
+                    if (currentList.none { it.tileId == "comp_battery" }) {
+                        repository.insert(TileEntity("comp_battery", "Battery", "Level", TileCategory.COMPLICATION.name, 25, isVisible = true, isQqsFavorite = false, settingsAction = Settings.ACTION_BATTERY_SAVER_SETTINGS))
+                    }
+                    if (currentList.none { it.tileId == "comp_storage" }) {
+                        repository.insert(TileEntity("comp_storage", "Storage", "Internal", TileCategory.COMPLICATION.name, 26, isVisible = true, isQqsFavorite = false, settingsAction = Settings.ACTION_INTERNAL_STORAGE_SETTINGS))
+                    }
+                    if (currentList.none { it.tileId == "comp_brightness" }) {
+                        repository.insert(TileEntity("comp_brightness", "Brightness", "Display", TileCategory.COMPLICATION.name, 27, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_DISPLAY_SETTINGS))
+                    }
+                    if (currentList.none { it.tileId == "comp_volume" }) {
+                        repository.insert(TileEntity("comp_volume", "Volume", "Media", TileCategory.COMPLICATION.name, 28, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_SOUND_SETTINGS))
+                    }
                 }
             }
         }
@@ -220,7 +251,12 @@ class TileRegistry(
         forcedStates,
         customTileActiveStates,
         nativeTileManager.isWifiConnected,
-        PanelPreferences.panelStyle
+        PanelPreferences.panelStyle,
+        nativeTileManager.batteryPercentage,
+        nativeTileManager.isBatteryCharging,
+        nativeTileManager.brightness,
+        nativeTileManager.mediaVolume,
+        PanelPreferences.complicationSublinePlacement
     ) { args ->
         @Suppress("UNCHECKED_CAST")
         val entities = args[0] as List<TileEntity>
@@ -255,6 +291,12 @@ class TileRegistry(
         val customTileStates = args[24] as Map<String, Boolean>
         val wifiConnected = args[25] as Boolean
         val panelStyle = args[26] as com.example.data.QsPanelStyle
+        val batteryPct = args[27] as Int
+        val batteryCharging = args[28] as Boolean
+        val brightnessVal = args[29] as Int
+        val mediaVol = args[30] as Float
+        val sublinePlacement = args[31] as ComplicationSublinePlacement
+        val storageStats = ComplicationTileController.readInternalStorageFraction()
 
         val externalMap = externalTiles.associateBy { it.id }
 
@@ -343,8 +385,114 @@ class TileRegistry(
                     "screenrecord" -> Triple(if (screenRecordOn) TileState.ACTIVE else TileState.INACTIVE, Icons.Default.Videocam, if (screenRecordOn) "Recording..." else "Record")
                     "settings" -> Triple(TileState.INACTIVE, Icons.Default.Settings, "System")
                     "customize" -> Triple(TileState.INACTIVE, Icons.Default.Layers, "Quick Panel")
+                    "comp_battery" -> {
+                        val icon = when {
+                            batteryCharging -> Icons.Default.BatteryChargingFull
+                            batterySaverOn -> Icons.Default.BatterySaver
+                            else -> Icons.Default.BatteryFull
+                        }
+                        val subText = when {
+                            batteryCharging -> "Charging"
+                            batterySaverOn -> "Saver On"
+                            else -> "$batteryPct%"
+                        }
+                        Triple(if (batteryCharging || batterySaverOn) TileState.ACTIVE else TileState.INACTIVE, icon, subText)
+                    }
+                    "comp_storage" -> Triple(TileState.INACTIVE, Icons.Default.Storage, "${storageStats.second} used")
+                    "comp_brightness" -> {
+                        val pct = ((brightnessVal / 255f).coerceIn(0f, 1f) * 100f).toInt()
+                        val icon = when {
+                            pct >= 70 -> Icons.Default.BrightnessHigh
+                            pct >= 35 -> Icons.Default.BrightnessMedium
+                            else -> Icons.Default.BrightnessLow
+                        }
+                        Triple(if (pct >= 50) TileState.ACTIVE else TileState.INACTIVE, icon, "$pct%")
+                    }
+                    "comp_volume" -> {
+                        val pct = (mediaVol.coerceIn(0f, 1f) * 100f).toInt()
+                        val icon = if (dndOn || pct == 0) Icons.Default.VolumeOff else Icons.Default.VolumeUp
+                        val subText = if (dndOn) "DND" else "$pct%"
+                        Triple(if (!dndOn && pct > 0) TileState.ACTIVE else TileState.INACTIVE, icon, subText)
+                    }
 
                     else -> Triple(if (customOn) TileState.ACTIVE else TileState.INACTIVE, Icons.Default.Wifi, "Toggle")
+                }
+
+                val complicationSpec: ComplicationTileModel? = when (entity.tileId) {
+                    "comp_battery" -> {
+                        ComplicationTileModel(
+                            id = entity.tileId,
+                            title = entity.label,
+                            subline = "$batteryPct%",
+                            progress = (batteryPct / 100f).coerceIn(0f, 1f),
+                            icon = vector,
+                            accentColor = null,
+                            isActive = batteryCharging || batterySaverOn,
+                            sublinePlacement = sublinePlacement,
+                            layoutMode = ComplicationLayoutMode.ADAPTIVE,
+                            tapAction = ComplicationAction.Toggle(
+                                tileId = "battery_saver",
+                                isActive = batterySaverOn
+                            ),
+                            settingsAction = entity.settingsAction ?: Settings.ACTION_BATTERY_SAVER_SETTINGS
+                        )
+                    }
+                    "comp_storage" -> {
+                        ComplicationTileModel(
+                            id = entity.tileId,
+                            title = entity.label,
+                            subline = storageStats.second,
+                            progress = storageStats.first,
+                            icon = Icons.Default.Storage,
+                            accentColor = null,
+                            isActive = false,
+                            sublinePlacement = sublinePlacement,
+                            layoutMode = ComplicationLayoutMode.ADAPTIVE,
+                            tapAction = ComplicationAction.Shortcut(
+                                shortcutId = "open_storage",
+                                intentAction = Settings.ACTION_INTERNAL_STORAGE_SETTINGS
+                            ),
+                            settingsAction = entity.settingsAction ?: Settings.ACTION_INTERNAL_STORAGE_SETTINGS
+                        )
+                    }
+                    "comp_brightness" -> {
+                        val brightFrac = (brightnessVal / 255f).coerceIn(0f, 1f)
+                        val brightPct = (brightFrac * 100f).toInt()
+                        ComplicationTileModel(
+                            id = entity.tileId,
+                            title = entity.label,
+                            subline = "$brightPct%",
+                            progress = brightFrac,
+                            icon = vector,
+                            accentColor = null,
+                            isActive = brightPct >= 50,
+                            sublinePlacement = sublinePlacement,
+                            layoutMode = ComplicationLayoutMode.ADAPTIVE,
+                            tapAction = ComplicationAction.Shortcut(shortcutId = "cycle_brightness"),
+                            settingsAction = entity.settingsAction ?: Settings.ACTION_DISPLAY_SETTINGS
+                        )
+                    }
+                    "comp_volume" -> {
+                        val volFrac = mediaVol.coerceIn(0f, 1f)
+                        val volPct = (volFrac * 100f).toInt()
+                        ComplicationTileModel(
+                            id = entity.tileId,
+                            title = entity.label,
+                            subline = if (dndOn) "DND" else "$volPct%",
+                            progress = volFrac,
+                            icon = vector,
+                            accentColor = null,
+                            isActive = !dndOn && volPct > 0,
+                            sublinePlacement = sublinePlacement,
+                            layoutMode = ComplicationLayoutMode.ADAPTIVE,
+                            tapAction = ComplicationAction.Toggle(
+                                tileId = "volume_mute",
+                                isActive = !dndOn && volPct > 0
+                            ),
+                            settingsAction = entity.settingsAction ?: Settings.ACTION_SOUND_SETTINGS
+                        )
+                    }
+                    else -> null
                 }
 
                 val isCustomActive = customTileStates[entity.tileId] ?: forced[entity.tileId]
@@ -373,7 +521,8 @@ class TileRegistry(
                     orderIndex = entity.orderIndex,
                     isVisible = entity.isVisible,
                     isQqsFavorite = entity.isQqsFavorite,
-                    settingsAction = entity.settingsAction
+                    settingsAction = entity.settingsAction,
+                    complicationSpec = complicationSpec
                 )
             }
         }
@@ -451,8 +600,13 @@ class TileRegistry(
         // 2. Route action execution through non-blocking Coroutines (Dispatchers.IO)
         scope.launch(Dispatchers.IO) {
             try {
+                val spec = tile.complicationSpec
                 if (config.isOverrideEnabled) {
                     executeOverriddenTileAction(tile, config)
+                } else if (spec != null) {
+                    withContext(Dispatchers.Main) {
+                        ComplicationTileController.executeAction(context, spec.tapAction)
+                    }
                 } else if (tile.id == "sound_profile" || tile.id == "sound_mode" || tile.id == "volume") {
                     withContext(Dispatchers.Main) {
                         com.example.service.VolumePanelOverlay.show(context)

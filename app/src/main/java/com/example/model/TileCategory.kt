@@ -6,7 +6,8 @@ enum class TileCategory(val title: String) {
     AUDIO_DISPLAY("Sound & Screen"),
     SYSTEM("System & Modes"),
     EXTERNAL("Third-Party Tiles"),
-    THIRD_PARTY("Third-Party Tiles");
+    THIRD_PARTY("Third-Party Tiles"),
+    COMPLICATION("Complications");
 
     companion object {
         fun fromString(name: String?): TileCategory {

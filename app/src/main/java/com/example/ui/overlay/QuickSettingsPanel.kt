@@ -1472,11 +1472,24 @@ fun KitKatEditTileCard(
                 .padding(horizontal = 4.dp, vertical = 6.dp)
         ) {
             val isThirdParty = tile.isExternal || tile.category == TileCategory.THIRD_PARTY || tile.category == TileCategory.EXTERNAL || tile.id.contains("/")
+            val compSpec = tile.complicationSpec
             Box(
                 modifier = Modifier.size(44.dp),
                 contentAlignment = Alignment.Center
             ) {
-                if (enableLegacyTileShapes) {
+                if (compSpec != null) {
+                    com.example.ui.tile.ComplicationTileView(
+                        model = compSpec.copy(
+                            layoutMode = com.example.model.ComplicationLayoutMode.HEADER_ROW,
+                            sublinePlacement = com.example.model.ComplicationSublinePlacement.INSIDE_RING
+                        ),
+                        showGridCardContainer = false,
+                        isInteractive = false,
+                        showTitle = false,
+                        showBelowSubline = false,
+                        customRingSize = 44.dp
+                    )
+                } else if (enableLegacyTileShapes) {
                     val tileShape = com.example.ui.shape.QsShapeManager.getComposeShape(chosenShapeId)
                     val inactiveBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
                     Box(
@@ -3030,8 +3043,21 @@ fun MarshmallowEditTileCard(
                 .padding(horizontal = 4.dp, vertical = 6.dp)
         ) {
             val isThirdParty = tile.isExternal || tile.category == TileCategory.THIRD_PARTY || tile.category == TileCategory.EXTERNAL || tile.id.contains("/")
+            val compSpec = tile.complicationSpec
             val iconTint = if (isActive) monetAccent else Color(MonetThemeHelper.getTextSecondary(context, isDark))
-            if (isThirdParty) {
+            if (compSpec != null) {
+                com.example.ui.tile.ComplicationTileView(
+                    model = compSpec.copy(
+                        layoutMode = com.example.model.ComplicationLayoutMode.HEADER_ROW,
+                        sublinePlacement = com.example.model.ComplicationSublinePlacement.INSIDE_RING
+                    ),
+                    showGridCardContainer = false,
+                    isInteractive = false,
+                    showTitle = false,
+                    showBelowSubline = false,
+                    customRingSize = 42.dp
+                )
+            } else if (isThirdParty) {
                 val pkg = tile.packageName ?: if (tile.id.contains("/")) tile.id.substringBefore('/') else null
                 val cls = tile.serviceClassName ?: if (tile.id.contains("/")) tile.id.substringAfter('/') else null
                 ExternalTileIcon(
@@ -7007,6 +7033,8 @@ fun CircularQsTile(
         )
     }
 
+    val compSpec = tile.complicationSpec
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = if (isCompactColumns && hideLabels) Arrangement.Center else Arrangement.Top,
@@ -7037,65 +7065,86 @@ fun CircularQsTile(
             )
             .testTag("tile_${tile.id}")
     ) {
-        Box(
-            modifier = Modifier
-                .size(circleSize)
-                .then(
-                    if (renderShapeBg && tileOutlineEnabled) {
-                        if (isActive && showQsTileGradient) {
-                            Modifier.border(1.2.dp, tileGradientBrush, tileShape)
-                        } else {
-                            Modifier.border(1.2.dp, outlineColor, tileShape)
-                        }
-                    } else {
-                        Modifier
-                    }
-                )
-                .then(if (renderShapeBg) Modifier.clip(tileShape) else Modifier)
-                .then(
-                    if (renderShapeBg) {
-                        if (isActive && showQsTileGradient && !tileOutlineEnabled) {
-                            Modifier.background(tileGradientBrush)
-                        } else {
-                            Modifier.background(backgroundColor)
-                        }
-                    } else {
-                        Modifier
-                    }
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            val isThirdParty = tile.isExternal || tile.category == TileCategory.THIRD_PARTY || tile.category == TileCategory.EXTERNAL || tile.id.contains("/")
-            if (isThirdParty) {
-                val pkg = tile.packageName ?: if (tile.id.contains("/")) tile.id.substringBefore('/') else null
-                val cls = tile.serviceClassName ?: if (tile.id.contains("/")) tile.id.substringAfter('/') else null
-                ExternalTileIcon(
-                    packageName = pkg,
-                    serviceClassName = cls,
-                    tintColor = iconColor,
-                    contentDescription = tile.label,
-                    fallbackDrawable = tile.externalDrawable,
-                    modifier = Modifier.size(iconSize)
-                )
+        if (compSpec != null) {
+            val effectiveRingSize = if (!isExpanded && compSpec.sublinePlacement == com.example.model.ComplicationSublinePlacement.BELOW_RING) {
+                (circleSize - 8.dp).coerceAtLeast(36.dp)
             } else {
-                tile.iconVector?.let { vector ->
-                    Icon(
-                        imageVector = vector,
+                circleSize
+            }
+            val effectiveLayoutMode = if (isExpanded) {
+                com.example.model.ComplicationLayoutMode.GRID_TILE
+            } else {
+                com.example.model.ComplicationLayoutMode.HEADER_ROW
+            }
+            com.example.ui.tile.ComplicationTileView(
+                model = compSpec.copy(layoutMode = effectiveLayoutMode),
+                showGridCardContainer = false,
+                isInteractive = false,
+                showTitle = false,
+                showBelowSubline = isExpanded || compSpec.sublinePlacement == com.example.model.ComplicationSublinePlacement.BELOW_RING,
+                customRingSize = effectiveRingSize
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(circleSize)
+                    .then(
+                        if (renderShapeBg && tileOutlineEnabled) {
+                            if (isActive && showQsTileGradient) {
+                                Modifier.border(1.2.dp, tileGradientBrush, tileShape)
+                            } else {
+                                Modifier.border(1.2.dp, outlineColor, tileShape)
+                            }
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .then(if (renderShapeBg) Modifier.clip(tileShape) else Modifier)
+                    .then(
+                        if (renderShapeBg) {
+                            if (isActive && showQsTileGradient && !tileOutlineEnabled) {
+                                Modifier.background(tileGradientBrush)
+                            } else {
+                                Modifier.background(backgroundColor)
+                            }
+                        } else {
+                            Modifier
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                val isThirdParty = tile.isExternal || tile.category == TileCategory.THIRD_PARTY || tile.category == TileCategory.EXTERNAL || tile.id.contains("/")
+                if (isThirdParty) {
+                    val pkg = tile.packageName ?: if (tile.id.contains("/")) tile.id.substringBefore('/') else null
+                    val cls = tile.serviceClassName ?: if (tile.id.contains("/")) tile.id.substringAfter('/') else null
+                    ExternalTileIcon(
+                        packageName = pkg,
+                        serviceClassName = cls,
+                        tintColor = iconColor,
+                        contentDescription = tile.label,
+                        fallbackDrawable = tile.externalDrawable,
+                        modifier = Modifier.size(iconSize)
+                    )
+                } else {
+                    tile.iconVector?.let { vector ->
+                        Icon(
+                            imageVector = vector,
+                            contentDescription = tile.label,
+                            tint = iconColor,
+                            modifier = Modifier.size(iconSize)
+                        )
+                    } ?: Icon(
+                        imageVector = Icons.Default.Settings,
                         contentDescription = tile.label,
                         tint = iconColor,
                         modifier = Modifier.size(iconSize)
                     )
-                } ?: Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = tile.label,
-                    tint = iconColor,
-                    modifier = Modifier.size(iconSize)
-                )
+                }
             }
         }
 
         if (labelAlpha > 0.02f) {
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(if (compSpec != null && compSpec.sublinePlacement == com.example.model.ComplicationSublinePlacement.BELOW_RING) 2.dp else 4.dp))
 
             val qsTileLabelFontSize by PanelPreferences.qsTileLabelFontSize.collectAsState()
             val qsTileSubtitleFontSize by PanelPreferences.qsTileSubtitleFontSize.collectAsState()
@@ -7117,23 +7166,28 @@ fun CircularQsTile(
                 overflow = TextOverflow.Ellipsis
             )
 
-            val isMarshmallowStyle = PanelPreferences.isAndroidMarshmallowStyle(context)
-            val subtitleOffset = if (isMarshmallowStyle) 1.dp else (-1.5).dp
+            val skipDuplicateSubline = compSpec != null &&
+                compSpec.sublinePlacement == com.example.model.ComplicationSublinePlacement.BELOW_RING &&
+                tile.subtitle == compSpec.subline
+            if (!skipDuplicateSubline) {
+                val isMarshmallowStyle = PanelPreferences.isAndroidMarshmallowStyle(context)
+                val subtitleOffset = if (isMarshmallowStyle) 1.dp else (-1.5).dp
 
-            Text(
-                text = tile.subtitle,
-                fontSize = qsTileSubtitleFontSize.sp,
-                color = tileSubtitleColor,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.offset(y = subtitleOffset),
-                style = androidx.compose.ui.text.TextStyle(
-                    platformStyle = androidx.compose.ui.text.PlatformTextStyle(
-                        includeFontPadding = false
+                Text(
+                    text = tile.subtitle,
+                    fontSize = qsTileSubtitleFontSize.sp,
+                    color = tileSubtitleColor,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.offset(y = subtitleOffset),
+                    style = androidx.compose.ui.text.TextStyle(
+                        platformStyle = androidx.compose.ui.text.PlatformTextStyle(
+                            includeFontPadding = false
+                        )
                     )
                 )
-            )
+            }
         }
     }
 }
@@ -7671,7 +7725,20 @@ private fun MarshmallowTileItem(
             )
             .padding(vertical = if (isTopTile) 4.dp else 6.dp)
     ) {
-        if (enableLegacyTileShapes) {
+        val compSpec = tile.complicationSpec
+        if (compSpec != null) {
+            com.example.ui.tile.ComplicationTileView(
+                model = compSpec.copy(
+                    layoutMode = com.example.model.ComplicationLayoutMode.HEADER_ROW,
+                    sublinePlacement = com.example.model.ComplicationSublinePlacement.INSIDE_RING
+                ),
+                showGridCardContainer = false,
+                isInteractive = false,
+                showTitle = false,
+                showBelowSubline = false,
+                customRingSize = 46.dp
+            )
+        } else if (enableLegacyTileShapes) {
             Box(
                 modifier = Modifier
                     .size(46.dp)

@@ -1108,15 +1108,28 @@ class KitKatShadeHostView @JvmOverloads constructor(
                     if (isActive) androidx.compose.ui.graphics.Color(tileAccent) else androidx.compose.ui.graphics.Color(inactiveIconColor)
                 }
 
-                // 1. Jetpack Compose Tile Icon (with shape background when legacy shapes enabled)
+                // 1. Jetpack Compose Tile Icon (Complication ring or shape background when legacy shapes enabled)
                 holder.composeIcon.setContent {
+                    val compSpec = tile.complicationSpec
                     val tileShape = com.example.ui.shape.QsShapeManager.getComposeShape(chosenShapeId)
                     val inactiveBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (enableLegacyTileShapes) {
+                        if (compSpec != null) {
+                            com.example.ui.tile.ComplicationTileView(
+                                model = compSpec.copy(
+                                    layoutMode = com.example.model.ComplicationLayoutMode.HEADER_ROW,
+                                    sublinePlacement = com.example.model.ComplicationSublinePlacement.INSIDE_RING
+                                ),
+                                showGridCardContainer = false,
+                                isInteractive = false,
+                                showTitle = false,
+                                showBelowSubline = false,
+                                customRingSize = 44.dp
+                            )
+                        } else if (enableLegacyTileShapes) {
                             Box(
                                 modifier = Modifier
                                     .size(44.dp)

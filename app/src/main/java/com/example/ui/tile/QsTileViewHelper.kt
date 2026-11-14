@@ -14,6 +14,8 @@ import android.widget.TextView
 import com.example.R
 import com.example.data.PanelPreferences
 import com.example.data.TileShape
+import com.example.model.ComplicationLayoutMode
+import com.example.model.ComplicationSublinePlacement
 import com.example.model.QsTileModel
 import com.example.model.TileState
 import androidx.compose.ui.graphics.toArgb
@@ -41,6 +43,7 @@ object QsTileViewHelper {
 
         val flIconBg: FrameLayout = view.findViewById(R.id.fl_tile_icon_bg)
         val ivIcon: ImageView = view.findViewById(R.id.iv_tile_icon)
+        val complicationView: ComplicationTile? = view.findViewById(R.id.complication_tile_view)
         val ivBadge: ImageView = view.findViewById(R.id.iv_tile_badge)
         val tvLabel: TextView = view.findViewById(R.id.tv_tile_label)
         val tvSubtitle: TextView = view.findViewById(R.id.tv_tile_subtitle)
@@ -126,42 +129,67 @@ object QsTileViewHelper {
 
         val rippleColor = if (isDark) Color.parseColor("#44FFFFFF") else Color.parseColor("#33000000")
 
-        if (isBareIconStyle) {
-            flIconBg.background = RippleDrawable(ColorStateList.valueOf(rippleColor), null, null)
+        val spec = tile.complicationSpec
+        if (spec != null && complicationView != null) {
+            ivIcon.visibility = View.GONE
+            flIconBg.background = null
+            complicationView.visibility = View.VISIBLE
+            complicationView.setDarkTheme(isDark)
+            complicationView.setShowGridCardContainer(false)
+            complicationView.setShowTitle(false)
+            complicationView.setShowBelowSubline(false)
+            complicationView.setInteractive(false)
+            complicationView.bind(
+                spec.copy(
+                    layoutMode = if (showSubtitle) ComplicationLayoutMode.GRID_TILE else ComplicationLayoutMode.HEADER_ROW,
+                    sublinePlacement = if (!showSubtitle && spec.sublinePlacement == ComplicationSublinePlacement.BELOW_RING) {
+                        ComplicationSublinePlacement.INSIDE_RING
+                    } else {
+                        spec.sublinePlacement
+                    }
+                )
+            )
         } else {
-            val shapeDrawable = if (showQsTileGradient && isActive && !isOutlineEnabled) {
-                com.example.ui.shape.QsShapeManager.createGradientDrawable(
-                    chosenShapeId,
-                    primaryAccent,
-                    tertiaryAccent
-                )
-            } else {
-                com.example.ui.shape.QsShapeManager.createDrawable(
-                    chosenShapeId,
-                    if (isOutlineEnabled) Color.TRANSPARENT else bgColor
-                )
-            }
-            if (isOutlineEnabled) {
-                val outlineColor = when (tile.state) {
-                    TileState.ACTIVE -> primaryAccent
-                    TileState.INACTIVE -> if (isDark) Color.argb(255, 38, 43, 48) else Color.WHITE
-                    TileState.UNAVAILABLE -> if (isDark) Color.argb((255 * 0.4f).toInt(), 38, 43, 48) else Color.argb((255 * 0.5f).toInt(), 255, 255, 255)
-                }
-                shapeDrawable.setColor(Color.TRANSPARENT)
-                shapeDrawable.strokeWidth = 1.2f * density
-                shapeDrawable.strokeColor = outlineColor
-                if (showQsTileGradient && isActive) {
-                    shapeDrawable.gradientColors = intArrayOf(primaryAccent, tertiaryAccent)
-                }
-            }
-            val maskDrawable = com.example.ui.shape.QsShapeManager.createDrawable(chosenShapeId, Color.WHITE)
-            flIconBg.background = RippleDrawable(ColorStateList.valueOf(rippleColor), shapeDrawable, maskDrawable)
-        }
+            complicationView?.visibility = View.GONE
+            ivIcon.visibility = View.VISIBLE
 
-        // 3. Tile Icon
-        val drawable = QsTileIconHelper.getTileDrawable(context, tile)
-        ivIcon.setImageDrawable(drawable)
-        ivIcon.setColorFilter(fgColor)
+            if (isBareIconStyle) {
+                flIconBg.background = RippleDrawable(ColorStateList.valueOf(rippleColor), null, null)
+            } else {
+                val shapeDrawable = if (showQsTileGradient && isActive && !isOutlineEnabled) {
+                    com.example.ui.shape.QsShapeManager.createGradientDrawable(
+                        chosenShapeId,
+                        primaryAccent,
+                        tertiaryAccent
+                    )
+                } else {
+                    com.example.ui.shape.QsShapeManager.createDrawable(
+                        chosenShapeId,
+                        if (isOutlineEnabled) Color.TRANSPARENT else bgColor
+                    )
+                }
+                if (isOutlineEnabled) {
+                    val outlineColor = when (tile.state) {
+                        TileState.ACTIVE -> primaryAccent
+                        TileState.INACTIVE -> if (isDark) Color.argb(255, 38, 43, 48) else Color.WHITE
+                        TileState.UNAVAILABLE -> if (isDark) Color.argb((255 * 0.4f).toInt(), 38, 43, 48) else Color.argb((255 * 0.5f).toInt(), 255, 255, 255)
+                    }
+                    shapeDrawable.setColor(Color.TRANSPARENT)
+                    shapeDrawable.strokeWidth = 1.2f * density
+                    shapeDrawable.strokeColor = outlineColor
+                    if (showQsTileGradient && isActive) {
+                        shapeDrawable.gradientColors = intArrayOf(primaryAccent, tertiaryAccent)
+                    }
+                }
+                val maskDrawable = com.example.ui.shape.QsShapeManager.createDrawable(chosenShapeId, Color.WHITE)
+                flIconBg.background = RippleDrawable(ColorStateList.valueOf(rippleColor), shapeDrawable, maskDrawable)
+            }
+
+            // 3. Tile Icon
+            val drawable = QsTileIconHelper.getTileDrawable(context, tile)
+            ivIcon.setImageDrawable(drawable)
+            ivIcon.setColorFilter(fgColor)
+        }
 
         // 4. Texts and Clipping Prevention
         (view as? android.view.ViewGroup)?.let { vg ->

@@ -1937,6 +1937,269 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     }
     }
 
+    // Complication QS Tiles Card (Wear OS Complication + QS Hybrid integrated inside QS Tiles)
+    val headerComplicationTilesCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        val complicationSublinePlacement by PanelPreferences.complicationSublinePlacement.collectAsState()
+        var previewInGridMode by rememberSaveable { mutableStateOf(false) }
+        var simulatedStepsProgress by rememberSaveable { mutableFloatStateOf(0.75f) }
+        var simulatedWeatherProgress by rememberSaveable { mutableFloatStateOf(0.62f) }
+        var expandedConfig by rememberSaveable { mutableStateOf(true) }
+
+        PinnableCardWrapper("header_complication_tiles_card", CustomizeCategory.QS_DESIGN, "Complication QS Tiles") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("header_complication_tiles_card")
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { expandedConfig = !expandedConfig },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text(
+                                    text = "Complication QS Tiles",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                )
+                                Text(
+                                    text = "Live circular Wear OS progress rings movable inside the QS grid & editor",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                )
+                            }
+                        }
+
+                        Icon(
+                            imageVector = if (expandedConfig) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = if (expandedConfig) "Collapse" else "Expand",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = expandedConfig,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = "Battery, Storage, Brightness, and Volume complication tiles can be added, removed, or reordered directly in the Quick Settings Editor.",
+                                fontSize = 11.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                            )
+
+                            // Subline placement selector (Inside Ring vs Below Ring)
+                            Text(
+                                text = "SUBLINE PLACEMENT",
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.8.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+
+                            val placements = com.example.model.ComplicationSublinePlacement.entries
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                placements.forEachIndexed { idx, placement ->
+                                    val isSelected = complicationSublinePlacement == placement
+                                    val segShape = SegmentedButtonShapes.getShape(idx, placements.size, isSelected)
+                                    val segBg = if (isSelected) MaterialTheme.colorScheme.primary else com.example.ui.theme.getSettingsScreenBackgroundColor(com.example.ui.theme.LocalIsDarkTheme.current)
+                                    val segFg = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(segShape)
+                                            .background(segBg)
+                                            .clickable {
+                                                PanelPreferences.setComplicationSublinePlacement(context, placement)
+                                            }
+                                            .padding(vertical = 10.dp)
+                                            .testTag("seg_complication_${placement.id}"),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = placement.label,
+                                            fontSize = 12.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = segFg
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Adaptive preview mode switcher (Header Row vs Grid Tile)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "LIVE PREVIEW (TAP TO ACTIVATE • HOLD FOR SETTINGS)",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 0.6.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                FilterChip(
+                                    selected = previewInGridMode,
+                                    onClick = { previewInGridMode = !previewInGridMode },
+                                    label = {
+                                        Text(
+                                            text = if (previewInGridMode) "Grid Layout" else "Header Row",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    },
+                                    shape = RoundedCornerShape(50),
+                                    modifier = Modifier.testTag("chip_complication_preview_mode")
+                                )
+                            }
+
+                            val previewBg = com.example.ui.theme.getSettingsScreenBackgroundColor(com.example.ui.theme.LocalIsDarkTheme.current)
+                            val liveItems = com.example.ui.tile.rememberLiveComplicationTiles(
+                                sublinePlacement = complicationSublinePlacement,
+                                layoutMode = if (previewInGridMode) com.example.model.ComplicationLayoutMode.GRID_TILE else com.example.model.ComplicationLayoutMode.HEADER_ROW
+                            )
+                            val stepK = (simulatedStepsProgress * 16f).toInt().coerceAtLeast(1)
+                            val tempDeg = (12 + simulatedWeatherProgress * 22f).toInt()
+                            val showcaseItems = remember(liveItems, simulatedStepsProgress, simulatedWeatherProgress, previewInGridMode, complicationSublinePlacement) {
+                                if (!previewInGridMode) {
+                                    liveItems
+                                } else {
+                                    listOf(
+                                        liveItems[0],
+                                        com.example.model.ComplicationTileModel(
+                                            id = "preview_steps",
+                                            title = "Step Goal",
+                                            subline = "${stepK}k",
+                                            progress = simulatedStepsProgress,
+                                            icon = Icons.Default.AutoAwesome,
+                                            accentColor = Color(0xFF00BFA5),
+                                            isActive = simulatedStepsProgress >= 0.8f,
+                                            sublinePlacement = complicationSublinePlacement,
+                                            layoutMode = com.example.model.ComplicationLayoutMode.GRID_TILE,
+                                            tapAction = com.example.model.ComplicationAction.Shortcut(
+                                                shortcutId = "step_boost",
+                                                onInvoke = {
+                                                    simulatedStepsProgress = if (simulatedStepsProgress >= 0.95f) 0.25f else (simulatedStepsProgress + 0.2f).coerceAtMost(1f)
+                                                }
+                                            ),
+                                            settingsAction = android.provider.Settings.ACTION_SETTINGS
+                                        ),
+                                        com.example.model.ComplicationTileModel(
+                                            id = "preview_weather",
+                                            title = "Weather",
+                                            subline = "${tempDeg}°",
+                                            progress = simulatedWeatherProgress,
+                                            icon = Icons.Default.BrightnessMedium,
+                                            accentColor = Color(0xFFFF7043),
+                                            isActive = true,
+                                            sublinePlacement = complicationSublinePlacement,
+                                            layoutMode = com.example.model.ComplicationLayoutMode.GRID_TILE,
+                                            tapAction = com.example.model.ComplicationAction.Shortcut(
+                                                shortcutId = "weather_cycle",
+                                                onInvoke = {
+                                                    simulatedWeatherProgress = if (simulatedWeatherProgress >= 0.92f) 0.2f else (simulatedWeatherProgress + 0.18f).coerceAtMost(1f)
+                                                }
+                                            ),
+                                            settingsAction = android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS
+                                        ),
+                                        liveItems[1]
+                                    )
+                                }
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(previewBg)
+                                    .padding(10.dp)
+                            ) {
+                                if (!previewInGridMode) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceEvenly,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        showcaseItems.forEach { item ->
+                                            com.example.ui.tile.ComplicationTileView(
+                                                model = item,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        showcaseItems.chunked(2).forEach { pair ->
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                pair.forEach { item ->
+                                                    com.example.ui.tile.ComplicationTileView(
+                                                        model = item,
+                                                        showGridCardContainer = true,
+                                                        modifier = Modifier.weight(1f)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // --- 4. BRIGHTNESS & SLIDERS CARDS ---
 
     // Move Brightness to Bottom Card
@@ -4192,6 +4455,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         "custom_header_image_card" to customHeaderImageCard,
         "custom_header_monet_gradient_card" to customHeaderMonetGradientCard,
         "element_colors_preference_card" to elementColorsPreferenceCard,
+        "header_complication_tiles_card" to headerComplicationTilesCard,
         "move_brightness_bottom_card" to moveBrightnessBottomCard,
         "brightness_in_qqs_card" to brightnessInQqsCard,
         "brightness_gradient_card" to brightnessGradientCard,
@@ -4313,6 +4577,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         if (!hiddenDesignIds.contains("custom_header_image_card") && !pinnedIds.contains("custom_header_image_card")) unpinnedHeader.add(customHeaderImageCard)
         if (!hiddenDesignIds.contains("custom_header_monet_gradient_card") && !pinnedIds.contains("custom_header_monet_gradient_card")) unpinnedHeader.add(customHeaderMonetGradientCard)
         if (!hiddenDesignIds.contains("element_colors_preference_card") && !pinnedIds.contains("element_colors_preference_card")) unpinnedHeader.add(elementColorsPreferenceCard)
+        if (!hiddenDesignIds.contains("header_complication_tiles_card") && !pinnedIds.contains("header_complication_tiles_card")) unpinnedHeader.add(headerComplicationTilesCard)
 
         if (unpinnedHeader.isNotEmpty()) {
             CollapsibleSubheaderSection(

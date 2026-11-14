@@ -29,6 +29,13 @@
             android:contentDescription="@null"
             android:scaleType="fitCenter" />
 
+        <com.example.ui.tile.ComplicationTile
+            android:id="@+id/complication_tile_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:visibility="gone" />
+
         <!-- Remove / Add Action Badge for Edit Mode -->
         <ImageView
             android:id="@+id/iv_tile_badge"

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="ComplicationTile">
+        <attr name="ctTitle" format="string" />
+        <attr name="ctSubline" format="string" />
+        <attr name="ctProgress" format="float" />
+        <attr name="ctAccentColor" format="color" />
+        <attr name="ctTrackColor" format="color" />
+        <attr name="ctIcon" format="reference" />
+        <attr name="ctIsActive" format="boolean" />
+        <attr name="ctSublinePlacement" format="enum">
+            <enum name="inside_ring" value="0" />
+            <enum name="below_ring" value="1" />
+        </attr>
+        <attr name="ctLayoutMode" format="enum">
+            <enum name="adaptive" value="0" />
+            <enum name="header_row" value="1" />
+            <enum name="grid_tile" value="2" />
+        </attr>
+        <attr name="ctActionType" format="enum">
+            <enum name="toggle" value="0" />
+            <enum name="launch" value="1" />
+            <enum name="shortcut" value="2" />
+        </attr>
+        <attr name="ctActionTarget" format="string" />
+        <attr name="ctSettingsAction" format="string" />
+    </declare-styleable>
+</resources>
