@@ -1256,6 +1256,7 @@ fun KitKatBrightnessSliderBox(
     val hideBrightnessPercentage by PanelPreferences.hideBrightnessPercentage.collectAsState()
     val hideBrightnessIcon by PanelPreferences.hideBrightnessIcon.collectAsState()
     val showBrightnessPlusMinus by PanelPreferences.showBrightnessPlusMinus.collectAsState()
+    val showBrightnessControlsBackground by PanelPreferences.showBrightnessControlsBackground.collectAsState()
     val showBrightnessGradient by PanelPreferences.showBrightnessGradient.collectAsState()
     val minBrightness by PanelPreferences.minBrightness.collectAsState()
     val maxBrightness by PanelPreferences.maxBrightness.collectAsState()
@@ -1268,8 +1269,22 @@ fun KitKatBrightnessSliderBox(
         Brush.horizontalGradient(listOf(sliderAccentColor, tertiaryThemeColor))
     }
     val inactiveTrackColor = getInactiveTilesElementColor(isDarkTheme)
+    val controlBgColor = if (isDarkTheme) {
+        androidx.compose.ui.graphics.Color.White.copy(alpha = 0.12f)
+    } else {
+        androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.08f)
+    }
+    val clampedBrightness = brightness.coerceIn(minBrightness, maxBrightness)
+    val isAtMin = clampedBrightness <= minBrightness
+    val isAtMax = clampedBrightness >= maxBrightness
 
     val view = androidx.compose.ui.platform.LocalView.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val nativeTileManager = com.example.system.NativeTileManager.instance
+    val autoBrightnessFlow = remember(nativeTileManager) {
+        nativeTileManager?.isAutoBrightnessEnabled ?: kotlinx.coroutines.flow.MutableStateFlow(false)
+    }
+    val isAutoBrightness by autoBrightnessFlow.collectAsState()
 
     Box(
         modifier = Modifier
@@ -1289,37 +1304,33 @@ fun KitKatBrightnessSliderBox(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             if (!hideBrightnessIcon) {
-                Icon(
-                    imageVector = if (brightness > (minBrightness + maxBrightness) / 2)
-                        Icons.Default.BrightnessMedium
-                    else
-                        Icons.Default.BrightnessLow,
-                    contentDescription = "Brightness",
-                    tint = sliderAccentColor,
-                    modifier = Modifier
-                        .padding(horizontal = 4.dp)
-                        .size(22.dp)
+                BrightnessSliderIcon(
+                    isHighBrightness = clampedBrightness > (minBrightness + maxBrightness) / 2,
+                    showBackground = showBrightnessControlsBackground,
+                    bgColor = controlBgColor,
+                    accentColor = sliderAccentColor,
+                    controlSize = 32.dp,
+                    isAutoBrightness = isAutoBrightness,
+                    onClick = { toggleAutoBrightnessSetting(context) }
                 )
             }
 
             if (showBrightnessPlusMinus) {
-                IconButton(
-                    onClick = { onBrightnessChange((brightness - 15).coerceAtLeast(minBrightness)) },
-                    modifier = Modifier
-                        .size(32.dp)
-                        .testTag("brightness_minus_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Remove,
-                        contentDescription = "Decrease brightness",
-                        tint = sliderAccentColor,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
+                BrightnessStepButton(
+                    icon = Icons.Default.Remove,
+                    contentDescription = "Decrease brightness",
+                    showBackground = showBrightnessControlsBackground,
+                    isAtLimit = isAtMin,
+                    bgColor = controlBgColor,
+                    accentColor = sliderAccentColor,
+                    controlSize = 32.dp,
+                    testTag = "brightness_minus_button",
+                    onClick = { onBrightnessChange((brightness - 15).coerceAtLeast(minBrightness)) }
+                )
             }
 
             QsProgressSlider(
-                value = brightness.toFloat().coerceIn(minBrightness.toFloat(), maxBrightness.toFloat()),
+                value = clampedBrightness.toFloat(),
                 onValueChange = { onBrightnessChange(it.toInt()) },
                 valueRange = minBrightness.toFloat()..maxBrightness.toFloat(),
                 sliderTarget = QsSliderTarget.BRIGHTNESS,
@@ -1334,32 +1345,30 @@ fun KitKatBrightnessSliderBox(
             )
 
             if (showBrightnessPlusMinus) {
-                IconButton(
-                    onClick = { onBrightnessChange((brightness + 15).coerceAtMost(maxBrightness)) },
-                    modifier = Modifier
-                        .size(32.dp)
-                        .testTag("brightness_plus_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Increase brightness",
-                        tint = sliderAccentColor,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
+                BrightnessStepButton(
+                    icon = Icons.Default.Add,
+                    contentDescription = "Increase brightness",
+                    showBackground = showBrightnessControlsBackground,
+                    isAtLimit = isAtMax,
+                    bgColor = controlBgColor,
+                    accentColor = sliderAccentColor,
+                    controlSize = 32.dp,
+                    testTag = "brightness_plus_button",
+                    onClick = { onBrightnessChange((brightness + 15).coerceAtMost(maxBrightness)) }
+                )
             }
 
             if (!hideBrightnessPercentage) {
                 val percentageColor = if (isDarkTheme) androidx.compose.ui.graphics.Color.White else androidx.compose.ui.graphics.Color(0xFF333333)
-                val clampedB = brightness.coerceIn(minBrightness, maxBrightness)
                 val range = (maxBrightness - minBrightness).coerceAtLeast(1)
-                val pct = (((clampedB - minBrightness).toFloat() / range) * 100).toInt().coerceIn(0, 100)
+                val pct = (((clampedBrightness - minBrightness).toFloat() / range) * 100).toInt().coerceIn(0, 100)
 
-                Text(
-                    text = "$pct%",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = percentageColor
+                BrightnessPercentageBadge(
+                    percentage = pct,
+                    showBackground = showBrightnessControlsBackground,
+                    bgColor = controlBgColor,
+                    textColor = percentageColor,
+                    heightDp = 32.dp
                 )
             }
         }

@@ -333,6 +333,7 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
         NotificationBlacklistManager.init(this)
         com.example.data.NotificationCategoryManager.init(this)
         MediaSessionManagerHelper.init(this)
+        com.example.system.ComplicationDataHub.init(this)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
@@ -841,6 +842,7 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                 val sbns = activeNotifications ?: return@launch
                 val pm = packageManager
                 val list = mutableListOf<NotificationItem>()
+                extractComplicationSignalsFromNotifications(sbns, pm)
 
                 for (sbn in sbns) {
                     val n = sbn.notification ?: continue
@@ -1021,6 +1023,194 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
             } catch (e: Exception) {
                 Log.e(TAG, "Error parsing active notifications: ${e.message}")
             }
+        }
+    }
+
+    private fun extractComplicationSignalsFromNotifications(
+        sbns: Array<StatusBarNotification>,
+        pm: PackageManager
+    ) {
+        var foundTimer: com.example.system.ExternalClockTicker? = null
+        var foundStopwatch: com.example.system.ExternalClockTicker? = null
+        val foundDownloads = mutableListOf<com.example.system.ActiveDownloadEntry>()
+
+        for (sbn in sbns) {
+            val n = sbn.notification ?: continue
+            if (isMediaNotification(sbn, n)) continue
+            val extras = n.extras ?: continue
+
+            val pkg = sbn.packageName ?: ""
+            val channelId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) n.channelId ?: "" else ""
+            val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
+                ?: extras.getCharSequence(Notification.EXTRA_TITLE_BIG)?.toString()
+                ?: ""
+            val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
+                ?: extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
+                ?: ""
+            val subText = extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString() ?: ""
+            val combinedMeta = "$pkg $channelId $title $text $subText".lowercase()
+
+            val usesChronometer = extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER, false)
+            val isCountDown = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN, false)
+            } else {
+                false
+            }
+
+            val isClockPkg = pkg.contains("deskclock", ignoreCase = true) ||
+                pkg.contains("clock", ignoreCase = true) ||
+                pkg.contains("timer", ignoreCase = true) ||
+                pkg.contains("stopwatch", ignoreCase = true)
+
+            val isStopwatchHint = n.category == Notification.CATEGORY_STOPWATCH ||
+                combinedMeta.contains("stopwatch") ||
+                combinedMeta.contains("секундомер")
+            val isTimerHint = isCountDown ||
+                combinedMeta.contains("timer") ||
+                combinedMeta.contains("таймер") ||
+                combinedMeta.contains("countdown")
+
+            val looksLikeClockTicker = (isClockPkg && (usesChronometer || isTimerHint || isStopwatchHint || parseClockTimeMs("$title $text") != null)) ||
+                (usesChronometer && (isTimerHint || isStopwatchHint))
+
+            if (looksLikeClockTicker) {
+                val appName = try {
+                    pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+                } catch (_: Exception) {
+                    "Clock"
+                }
+
+                var togglePending: PendingIntent? = null
+                var resetPending: PendingIntent? = null
+                var lapPending: PendingIntent? = null
+                var plusOnePending: PendingIntent? = null
+                n.actions?.forEach { act ->
+                    val actTitle = act.title?.toString()?.lowercase() ?: ""
+                    when {
+                        actTitle.contains("pause") || actTitle.contains("resume") ||
+                            actTitle.contains("start") || actTitle.contains("пауза") -> {
+                            if (togglePending == null) togglePending = act.actionIntent
+                        }
+                        actTitle.contains("reset") || actTitle.contains("stop") ||
+                            actTitle.contains("delete") || actTitle.contains("cancel") ||
+                            actTitle.contains("сброс") -> {
+                            if (resetPending == null) resetPending = act.actionIntent
+                        }
+                        actTitle.contains("lap") || actTitle.contains("круг") -> {
+                            if (lapPending == null) lapPending = act.actionIntent
+                        }
+                        actTitle.contains("+1") || actTitle.contains("add 1") -> {
+                            if (plusOnePending == null) plusOnePending = act.actionIntent
+                        }
+                    }
+                }
+
+                val parsedMs = parseClockTimeMs("$title $text")
+                val ticker = com.example.system.ExternalClockTicker(
+                    key = sbn.key ?: "${pkg}_${sbn.id}",
+                    packageName = pkg,
+                    appName = appName,
+                    title = title,
+                    text = text,
+                    isTimer = isTimerHint && !isStopwatchHint,
+                    isRunning = usesChronometer && !combinedMeta.contains("paused") && !combinedMeta.contains("пауза"),
+                    isCountDown = isCountDown || (isTimerHint && !isStopwatchHint),
+                    baseWhenEpochMs = n.`when`,
+                    parsedDisplayMs = parsedMs,
+                    toggleAction = togglePending,
+                    resetAction = resetPending,
+                    lapAction = lapPending,
+                    plusOneMinAction = plusOnePending,
+                    contentIntent = n.contentIntent
+                )
+
+                if (ticker.isTimer) {
+                    if (foundTimer == null || ticker.isRunning) foundTimer = ticker
+                } else if (isStopwatchHint || (usesChronometer && !isCountDown)) {
+                    if (foundStopwatch == null || ticker.isRunning) foundStopwatch = ticker
+                }
+                continue
+            }
+
+            // Detect active download / progress notifications
+            val progress = extras.getInt(Notification.EXTRA_PROGRESS, -1)
+            val progressMax = extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0)
+            val isIndet = extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE, false)
+            val hasProgressBar = progressMax > 0 || isIndet
+            val looksLikeDownload = hasProgressBar && (
+                pkg.contains("download", ignoreCase = true) ||
+                    pkg.contains("chrome", ignoreCase = true) ||
+                    pkg.contains("opera", ignoreCase = true) ||
+                    pkg.contains("firefox", ignoreCase = true) ||
+                    pkg.contains("vending", ignoreCase = true) ||
+                    combinedMeta.contains("download") ||
+                    combinedMeta.contains("downloading") ||
+                    combinedMeta.contains("mb/s") ||
+                    combinedMeta.contains("kb/s") ||
+                    combinedMeta.contains("install") ||
+                    n.category == Notification.CATEGORY_PROGRESS
+                )
+
+            if (looksLikeDownload) {
+                val frac = if (progressMax > 0 && progress >= 0) {
+                    (progress.toFloat() / progressMax.toFloat()).coerceIn(0f, 1f)
+                } else {
+                    -1f
+                }
+                val parsedSpeed = parseSpeedBytesPerSec("$text $subText $title")
+                val appLabel = try {
+                    pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+                } catch (_: Exception) {
+                    "Download"
+                }
+                foundDownloads.add(
+                    com.example.system.ActiveDownloadEntry(
+                        id = sbn.key ?: "${pkg}_${sbn.id}",
+                        title = title.ifBlank { appLabel },
+                        subtitle = text.ifBlank { subText.ifBlank { appLabel } },
+                        progressFraction = frac.coerceAtLeast(0f),
+                        isIndeterminate = isIndet || progressMax <= 0,
+                        speedBytesPerSec = parsedSpeed,
+                        speedText = if (parsedSpeed > 0L) com.example.system.ComplicationDataHub.formatCompactSpeed(parsedSpeed) else "",
+                        contentIntent = n.contentIntent,
+                        isFromDownloadManager = false
+                    )
+                )
+            }
+        }
+
+        com.example.system.ComplicationDataHub.updateExternalClockTickers(foundTimer, foundStopwatch)
+        com.example.system.ComplicationDataHub.updateNotificationDownloads(foundDownloads)
+    }
+
+    private fun parseClockTimeMs(raw: String): Long? {
+        if (raw.isBlank()) return null
+        val hms = Regex("""(\d{1,2}):(\d{2}):(\d{2})""").find(raw)
+        if (hms != null) {
+            val h = hms.groupValues[1].toLongOrNull() ?: 0L
+            val m = hms.groupValues[2].toLongOrNull() ?: 0L
+            val s = hms.groupValues[3].toLongOrNull() ?: 0L
+            return ((h * 3600L) + (m * 60L) + s) * 1000L
+        }
+        val ms = Regex("""(\d{1,3}):(\d{2})""").find(raw)
+        if (ms != null) {
+            val m = ms.groupValues[1].toLongOrNull() ?: 0L
+            val s = ms.groupValues[2].toLongOrNull() ?: 0L
+            return ((m * 60L) + s) * 1000L
+        }
+        return null
+    }
+
+    private fun parseSpeedBytesPerSec(raw: String): Long {
+        if (raw.isBlank()) return 0L
+        val m = Regex("""(\d+(?:\.\d+)?)\s*([KMG]?B)/s""", RegexOption.IGNORE_CASE).find(raw) ?: return 0L
+        val num = m.groupValues[1].toDoubleOrNull() ?: return 0L
+        val unit = m.groupValues[2].uppercase()
+        return when (unit) {
+            "GB" -> (num * 1024.0 * 1024.0 * 1024.0).toLong()
+            "MB" -> (num * 1024.0 * 1024.0).toLong()
+            "KB" -> (num * 1024.0).toLong()
+            else -> num.toLong()
         }
     }
 

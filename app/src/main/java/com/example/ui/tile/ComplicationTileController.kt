@@ -1,5 +1,6 @@
 package com.example.ui.tile
 
+import android.app.DownloadManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -28,14 +29,18 @@ import com.example.model.ComplicationAction
 import com.example.model.ComplicationLayoutMode
 import com.example.model.ComplicationSublinePlacement
 import com.example.model.ComplicationTileModel
+import com.example.service.MediaSessionManagerHelper
 import com.example.service.QuickPanelAccessibilityService
+import com.example.service.QuickSettingsOverlayService
+import com.example.system.ComplicationDataHub
+import com.example.system.ComplicationMicroWindowType
 import com.example.system.NativeTileManager
 import com.example.ui.overlay.rememberQqsBatteryState
 
 /**
  * Dispatches standard ComplicationTile interactions:
  * - Short tap -> executes sealed [ComplicationAction] (Toggle, LaunchApp, Shortcut)
- * - Long press -> opens system/tile Settings screen
+ * - Long press -> opens system/tile Settings screen or micro window
  */
 object ComplicationTileController {
 
@@ -71,6 +76,33 @@ object ComplicationTileController {
                     "hotspot" -> manager?.toggleHotspot()
                     "nfc" -> manager?.toggleNfc()
                     "dark_mode" -> manager?.toggleDarkMode()
+                    "timer_toggle" -> ComplicationDataHub.toggleTimer(context)
+                    "stopwatch_toggle" -> ComplicationDataHub.toggleStopwatch()
+                    "media_play_pause" -> {
+                        if (MediaSessionManagerHelper.mediaState.value != null) {
+                            MediaSessionManagerHelper.playPause()
+                        } else {
+                            ComplicationDataHub.openMicroWindow(ComplicationMicroWindowType.MEDIA_PROGRESS)
+                        }
+                    }
+                    "auto_brightness_toggle" -> {
+                        if (Settings.System.canWrite(context)) {
+                            val current = Settings.System.getInt(
+                                context.contentResolver,
+                                Settings.System.SCREEN_BRIGHTNESS_MODE,
+                                Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
+                            )
+                            val next = if (current == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC) {
+                                Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
+                            } else {
+                                Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC
+                            }
+                            Settings.System.putInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS_MODE, next)
+                            ComplicationDataHub.refreshTelemetryNow()
+                        } else {
+                            ComplicationDataHub.openMicroWindow(ComplicationMicroWindowType.LUX_METER)
+                        }
+                    }
                     else -> {
                         Toast.makeText(context, "Toggled ${action.tileId}", Toast.LENGTH_SHORT).show()
                     }
@@ -92,6 +124,7 @@ object ComplicationTileController {
                         context.startActivity(intent)
                         if (collapsePanelOnLaunch) {
                             QuickPanelAccessibilityService.hideCustomPanel()
+                            QuickSettingsOverlayService.instance?.hideOverlayPanelSmoothly()
                         }
                     } catch (_: Throwable) {
                         Toast.makeText(context, "Unable to open ${action.packageName}", Toast.LENGTH_SHORT).show()
@@ -105,6 +138,28 @@ object ComplicationTileController {
                 if (action.onInvoke != null) {
                     action.onInvoke.invoke()
                     return
+                }
+                if (action.shortcutId.startsWith("micro:")) {
+                    val typeName = action.shortcutId.removePrefix("micro:")
+                    val microType = runCatching { ComplicationMicroWindowType.valueOf(typeName) }.getOrNull()
+                    if (microType != null) {
+                        ComplicationDataHub.openMicroWindow(microType)
+                        return
+                    }
+                }
+                if (action.shortcutId == "open_downloads") {
+                    try {
+                        val intent = Intent(DownloadManager.ACTION_VIEW_DOWNLOADS).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(intent)
+                        if (collapsePanelOnLaunch) {
+                            QuickPanelAccessibilityService.hideCustomPanel()
+                            QuickSettingsOverlayService.instance?.hideOverlayPanelSmoothly()
+                        }
+                        return
+                    } catch (_: Throwable) {
+                    }
                 }
                 if (action.shortcutId == "cycle_brightness") {
                     val manager = NativeTileManager.instance
@@ -132,6 +187,7 @@ object ComplicationTileController {
                         context.startActivity(intent)
                         if (collapsePanelOnLaunch) {
                             QuickPanelAccessibilityService.hideCustomPanel()
+                            QuickSettingsOverlayService.instance?.hideOverlayPanelSmoothly()
                         }
                     }
                 } catch (_: Throwable) {
@@ -156,6 +212,7 @@ object ComplicationTileController {
                 context.startActivity(intent)
                 if (collapsePanel) {
                     QuickPanelAccessibilityService.hideCustomPanel()
+                    QuickSettingsOverlayService.instance?.hideOverlayPanelSmoothly()
                 }
                 return
             } catch (_: Throwable) {

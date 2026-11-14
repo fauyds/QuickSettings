@@ -708,7 +708,7 @@ class QuickSettingsOverlayService : Service() {
                                         }
                                     },
                                     onTileLongClick = {
-                                        if (it.id != "screenrecord") {
+                                        if (it.id != "screenrecord" && !com.example.system.ComplicationDataHub.opensMicroWindowOnLongClick(it.id)) {
                                             hideOverlayPanelSmoothly()
                                         }
                                         tileRegistry.handleTileLongClick(it)
@@ -795,6 +795,7 @@ class QuickSettingsOverlayService : Service() {
         isPanelShowing = false
         expansionStage.value = QsExpansionStage.COLLAPSED
         dismissAnimatedCallback = null
+        com.example.system.ComplicationDataHub.closeMicroWindow()
     }
 
     fun isImmersiveModeActive(): Boolean {

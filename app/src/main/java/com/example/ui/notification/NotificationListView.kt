@@ -1,5 +1,7 @@
 package com.example.ui.notification
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.content.Context
 import android.util.AttributeSet
 import android.view.LayoutInflater
@@ -7,9 +9,11 @@ import android.view.MotionEvent
 import android.view.VelocityTracker
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.PathInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -67,6 +71,8 @@ class NotificationListView @JvmOverloads constructor(
     private var dragAnchorY = 0f
     private var dragActionType = DRAG_NONE
     private var velocityTracker: VelocityTracker? = null
+    private var lastVisualSignature: Int? = null
+    private val categoryItemAnimator = CategoryExpandItemAnimator()
 
     companion object {
         private const val DRAG_NONE = 0
@@ -146,12 +152,7 @@ class NotificationListView @JvmOverloads constructor(
 
         setupGestureInterception()
 
-        rvNotifications.itemAnimator = androidx.recyclerview.widget.DefaultItemAnimator().apply {
-            addDuration = 180
-            removeDuration = 180
-            moveDuration = 180
-            changeDuration = 180
-        }
+        rvNotifications.itemAnimator = categoryItemAnimator
 
         btnEnablePermission.setOnClickListener {
             onRequestPermission?.invoke()
@@ -448,7 +449,9 @@ class NotificationListView @JvmOverloads constructor(
             onNotificationDismiss = { onNotificationDismiss?.invoke(it) },
             onActionClick = { onActionClick?.invoke(it) },
             onClearAll = { animateAndClearAll() }
-        )
+        ).also {
+            it.categoryItemAnimator = categoryItemAnimator
+        }
         adapter?.onRequestClearAnimation = { animateAndClearAll() }
         rvNotifications.adapter = adapter
     }
@@ -745,8 +748,30 @@ class NotificationListView @JvmOverloads constructor(
                 adapter?.showFooter = hasClearable
             }
 
-            adapter?.submitNotifications(notifications.toList())
-            adapter?.notifyDataSetChanged()
+            val visualSignature = listOf(
+                isDark,
+                primaryAccent,
+                panelCardBackgroundColor,
+                disableNotifMonet,
+                showMonetSurface,
+                PanelPreferences.panelStyle.value,
+                PanelPreferences.panelGlobalCornerEnabled.value,
+                PanelPreferences.panelOuterCorner.value,
+                PanelPreferences.panelInnerCorner.value,
+                PanelPreferences.enablePanelShadows.value,
+                PanelPreferences.panelShadowElevation.value,
+                PanelPreferences.mediaNotificationStyle.value,
+                PanelPreferences.disableClearAllBackground.value,
+                PanelPreferences.useClearAllFab.value,
+                PanelPreferences.disableClearAllLabel.value,
+                PanelPreferences.clearAllFabShapeId.value,
+                PanelPreferences.clearAllFabIcon.value,
+                PanelPreferences.clearAllFabSize.value
+            ).hashCode()
+            val visualChanged = lastVisualSignature != null && lastVisualSignature != visualSignature
+            lastVisualSignature = visualSignature
+
+            adapter?.submitNotifications(notifications.toList(), forceVisualRefresh = visualChanged)
         }
         if (PanelPreferences.isAndroidOreoStyle(context) || PanelPreferences.isAndroidMarshmallowStyle(context) || PanelPreferences.isAndroidKitKatStyle(context)) {
             llHeader.visibility = View.GONE
@@ -812,5 +837,196 @@ class NotificationListView @JvmOverloads constructor(
         } else {
             onClearAll?.invoke()
         }
+    }
+}
+
+class CategoryExpandItemAnimator : DefaultItemAnimator() {
+
+    var pendingExpandingChildIndexByKey: Map<String, Int> = emptyMap()
+    var pendingCollapsingKeys: Set<String> = emptySet()
+
+    private val pendingCustomAdds = mutableListOf<Pair<RecyclerView.ViewHolder, Int>>()
+    private val runningCustomAdds = mutableListOf<RecyclerView.ViewHolder>()
+    private val pendingCustomRemoves = mutableListOf<RecyclerView.ViewHolder>()
+    private val runningCustomRemoves = mutableListOf<RecyclerView.ViewHolder>()
+
+    private val standardInterpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
+    private val exitInterpolator = PathInterpolator(0.4f, 0f, 1f, 1f)
+
+    init {
+        addDuration = 250L
+        removeDuration = 190L
+        moveDuration = 250L
+        changeDuration = 220L
+        supportsChangeAnimations = true
+    }
+
+    override fun animateAdd(holder: RecyclerView.ViewHolder): Boolean {
+        val key = (holder as? NotificationAdapter.NotificationViewHolder)?.notificationItem?.key
+        val childIndex = if (key != null) pendingExpandingChildIndexByKey[key] else null
+        if (childIndex != null) {
+            endAnimation(holder)
+            val density = holder.itemView.resources.displayMetrics.density
+            holder.itemView.alpha = 0f
+            holder.itemView.translationY = -22f * density
+            holder.itemView.scaleX = 0.96f
+            holder.itemView.scaleY = 0.90f
+            pendingCustomAdds.add(holder to childIndex)
+            return true
+        }
+        return super.animateAdd(holder)
+    }
+
+    override fun animateRemove(holder: RecyclerView.ViewHolder): Boolean {
+        val key = (holder as? NotificationAdapter.NotificationViewHolder)?.notificationItem?.key
+        if (key != null && key in pendingCollapsingKeys) {
+            endAnimation(holder)
+            pendingCustomRemoves.add(holder)
+            return true
+        }
+        return super.animateRemove(holder)
+    }
+
+    override fun runPendingAnimations() {
+        super.runPendingAnimations()
+
+        if (pendingCustomRemoves.isNotEmpty()) {
+            val removes = pendingCustomRemoves.toList()
+            pendingCustomRemoves.clear()
+            for (holder in removes) {
+                animateCategoryCollapseImpl(holder)
+            }
+        }
+
+        if (pendingCustomAdds.isNotEmpty()) {
+            val adds = pendingCustomAdds.toList()
+            pendingCustomAdds.clear()
+            for ((holder, childIndex) in adds) {
+                animateCategoryExpandImpl(holder, childIndex)
+            }
+        }
+
+        pendingExpandingChildIndexByKey = emptyMap()
+        pendingCollapsingKeys = emptySet()
+    }
+
+    private fun animateCategoryExpandImpl(holder: RecyclerView.ViewHolder, childIndex: Int) {
+        val view = holder.itemView
+        runningCustomAdds.add(holder)
+        view.pivotX = if (view.width > 0) view.width * 0.5f else 0f
+        view.pivotY = 0f
+        val animation = view.animate()
+        dispatchAddStarting(holder)
+        animation
+            .alpha(1f)
+            .translationY(0f)
+            .scaleX(1f)
+            .scaleY(1f)
+            .setStartDelay((childIndex * 32L).coerceAtMost(128L))
+            .setDuration(260L)
+            .setInterpolator(standardInterpolator)
+            .setListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationCancel(animator: Animator) {
+                    resetViewTransforms(view)
+                }
+
+                override fun onAnimationEnd(animator: Animator) {
+                    animation.setListener(null)
+                    animation.startDelay = 0L
+                    resetViewTransforms(view)
+                    runningCustomAdds.remove(holder)
+                    dispatchAddFinished(holder)
+                    if (!isRunning) dispatchAnimationsFinished()
+                }
+            })
+            .start()
+    }
+
+    private fun animateCategoryCollapseImpl(holder: RecyclerView.ViewHolder) {
+        val view = holder.itemView
+        val density = view.resources.displayMetrics.density
+        runningCustomRemoves.add(holder)
+        view.pivotX = if (view.width > 0) view.width * 0.5f else 0f
+        view.pivotY = 0f
+        val animation = view.animate()
+        dispatchRemoveStarting(holder)
+        animation
+            .alpha(0f)
+            .translationY(-14f * density)
+            .scaleY(0.92f)
+            .setStartDelay(0L)
+            .setDuration(180L)
+            .setInterpolator(exitInterpolator)
+            .setListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationCancel(animator: Animator) {
+                    resetViewTransforms(view)
+                }
+
+                override fun onAnimationEnd(animator: Animator) {
+                    animation.setListener(null)
+                    resetViewTransforms(view)
+                    runningCustomRemoves.remove(holder)
+                    dispatchRemoveFinished(holder)
+                    if (!isRunning) dispatchAnimationsFinished()
+                }
+            })
+            .start()
+    }
+
+    private fun resetViewTransforms(view: View) {
+        view.alpha = 1f
+        view.translationY = 0f
+        view.scaleX = 1f
+        view.scaleY = 1f
+    }
+
+    override fun endAnimation(item: RecyclerView.ViewHolder) {
+        val view = item.itemView
+        view.animate().cancel()
+        if (pendingCustomAdds.removeAll { it.first == item }) {
+            resetViewTransforms(view)
+            dispatchAddFinished(item)
+        }
+        if (pendingCustomRemoves.remove(item)) {
+            resetViewTransforms(view)
+            dispatchRemoveFinished(item)
+        }
+        if (runningCustomAdds.remove(item)) {
+            resetViewTransforms(view)
+            dispatchAddFinished(item)
+        }
+        if (runningCustomRemoves.remove(item)) {
+            resetViewTransforms(view)
+            dispatchRemoveFinished(item)
+        }
+        super.endAnimation(item)
+    }
+
+    override fun endAnimations() {
+        for (i in pendingCustomAdds.indices.reversed()) {
+            val holder = pendingCustomAdds.removeAt(i).first
+            resetViewTransforms(holder.itemView)
+            dispatchAddFinished(holder)
+        }
+        for (i in pendingCustomRemoves.indices.reversed()) {
+            val holder = pendingCustomRemoves.removeAt(i)
+            resetViewTransforms(holder.itemView)
+            dispatchRemoveFinished(holder)
+        }
+        for (holder in runningCustomAdds.toList()) {
+            holder.itemView.animate().cancel()
+        }
+        for (holder in runningCustomRemoves.toList()) {
+            holder.itemView.animate().cancel()
+        }
+        super.endAnimations()
+    }
+
+    override fun isRunning(): Boolean {
+        return pendingCustomAdds.isNotEmpty() ||
+            pendingCustomRemoves.isNotEmpty() ||
+            runningCustomAdds.isNotEmpty() ||
+            runningCustomRemoves.isNotEmpty() ||
+            super.isRunning()
     }
 }

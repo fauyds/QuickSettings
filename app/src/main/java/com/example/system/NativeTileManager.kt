@@ -84,6 +84,9 @@ class NativeTileManager(
     private val _bluetoothDeviceName = MutableStateFlow<String?>(null)
     val bluetoothDeviceName: StateFlow<String?> = _bluetoothDeviceName.asStateFlow()
 
+    private val _bluetoothBatteryLevel = MutableStateFlow<Int?>(null)
+    val bluetoothBatteryLevel: StateFlow<Int?> = _bluetoothBatteryLevel.asStateFlow()
+
     private val _isCellularEnabled = MutableStateFlow(false)
     val isCellularEnabled: StateFlow<Boolean> = _isCellularEnabled.asStateFlow()
 
@@ -144,6 +147,9 @@ class NativeTileManager(
     // Brightness state (0..255)
     private val _brightness = MutableStateFlow(128)
     val brightness: StateFlow<Int> = _brightness.asStateFlow()
+
+    private val _isAutoBrightnessEnabled = MutableStateFlow(false)
+    val isAutoBrightnessEnabled: StateFlow<Boolean> = _isAutoBrightnessEnabled.asStateFlow()
 
     // Volume states
     private val _mediaVolume = MutableStateFlow(0.5f)
@@ -582,6 +588,55 @@ class NativeTileManager(
         }
     }
 
+    private fun readDeviceBatteryLevel(device: BluetoothDevice): Int? {
+        return try {
+            val method = device.javaClass.getMethod("getBatteryLevel")
+            val level = method.invoke(device) as? Int
+            level?.takeIf { it in 0..100 }
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    fun resolveConnectedBluetoothBatteryLevel(): Int? {
+        val adapter = try { bluetoothManager?.adapter } catch (_: Throwable) { null } ?: return null
+        val enabled = try { adapter.isEnabled } catch (_: Throwable) { false }
+        if (!enabled) return null
+
+        for (proxy in bluetoothProfiles.values) {
+            try {
+                val devices = proxy.connectedDevices
+                if (!devices.isNullOrEmpty()) {
+                    for (dev in devices) {
+                        readDeviceBatteryLevel(dev)?.let { return it }
+                    }
+                }
+            } catch (_: SecurityException) {
+            } catch (_: Throwable) {}
+        }
+
+        try {
+            val bonded = adapter.bondedDevices
+            if (!bonded.isNullOrEmpty()) {
+                for (device in bonded) {
+                    try {
+                        val isConnectedMethod = device.javaClass.getMethod("isConnected")
+                        if (isConnectedMethod.invoke(device) == true) {
+                            readDeviceBatteryLevel(device)?.let { return it }
+                        }
+                    } catch (_: Throwable) {}
+                }
+            }
+        } catch (_: SecurityException) {
+        } catch (_: Throwable) {}
+
+        lastAclConnectedDevice?.let { aclDev ->
+            readDeviceBatteryLevel(aclDev)?.let { return it }
+        }
+
+        return null
+    }
+
     fun resolveConnectedBluetoothDevice(): String? {
         val isOffMainThread = Looper.myLooper() != Looper.getMainLooper()
         if (isOffMainThread && !hasConnectivityPermissions()) {
@@ -789,6 +844,15 @@ class NativeTileManager(
                     Settings.Global.getInt(contentResolver, "low_power", 0) == 1
             val nfc = nfcAdapter?.isEnabled == true
             val currentBrightness = Settings.System.getInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, 128)
+            val autoBrightness = try {
+                Settings.System.getInt(
+                    contentResolver,
+                    Settings.System.SCREEN_BRIGHTNESS_MODE,
+                    Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
+                ) == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC
+            } catch (_: Exception) {
+                false
+            }
             val darkTheme = if (System.currentTimeMillis() >= ignoreDarkModeObserverUntil) checkDarkThemeState() else _isDarkThemeEnabled.value
             val aod = Settings.Secure.getInt(contentResolver, "doze_always_on", 0) == 1
             val ambient = Settings.Secure.getInt(contentResolver, "doze_enabled", 0) == 1
@@ -819,12 +883,14 @@ class NativeTileManager(
             val wifiConnected = if (wifi) checkWifiConnected() else false
             val resolvedWifiSsid = if (wifiConnected) resolveWifiSsid() else null
             val resolvedBtName = if (bt) resolveConnectedBluetoothDevice() else null
+            val resolvedBtBat = if (bt && !resolvedBtName.isNullOrBlank()) resolveConnectedBluetoothBatteryLevel() else null
 
             _isWifiEnabled.value = wifi
             _isWifiConnected.value = wifiConnected
             _wifiSsid.value = resolvedWifiSsid
             _isBluetoothEnabled.value = bt
             _bluetoothDeviceName.value = resolvedBtName
+            _bluetoothBatteryLevel.value = resolvedBtBat
             _isCellularEnabled.value = mobile
             _isHotspotEnabled.value = hotspot
             _isAutoRotateEnabled.value = autoRotate
@@ -834,6 +900,7 @@ class NativeTileManager(
             _isBatterySaverEnabled.value = powerSave
             _isNfcEnabled.value = nfc
             _brightness.value = currentBrightness
+            _isAutoBrightnessEnabled.value = autoBrightness
             if (System.currentTimeMillis() >= ignoreDarkModeObserverUntil) {
                 _isDarkThemeEnabled.value = darkTheme
             }
@@ -873,6 +940,26 @@ class NativeTileManager(
                 override fun onChange(selfChange: Boolean) {
                     val bright = Settings.System.getInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, 128)
                     _brightness.value = bright
+                }
+            }
+        )
+
+        // Observer for Auto-Brightness Mode
+        contentResolver.registerContentObserver(
+            Settings.System.getUriFor(Settings.System.SCREEN_BRIGHTNESS_MODE),
+            true,
+            object : ContentObserver(handler) {
+                override fun onChange(selfChange: Boolean) {
+                    val auto = try {
+                        Settings.System.getInt(
+                            contentResolver,
+                            Settings.System.SCREEN_BRIGHTNESS_MODE,
+                            Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
+                        ) == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC
+                    } catch (_: Exception) {
+                        false
+                    }
+                    _isAutoBrightnessEnabled.value = auto
                 }
             }
         )
@@ -1087,7 +1174,9 @@ class NativeTileManager(
                     scope.launch(Dispatchers.IO) {
                         val btOn = try { bluetoothManager?.adapter?.isEnabled == true } catch (_: Throwable) { false }
                         _isBluetoothEnabled.value = btOn
-                        _bluetoothDeviceName.value = if (btOn) resolveConnectedBluetoothDevice() else null
+                        val name = if (btOn) resolveConnectedBluetoothDevice() else null
+                        _bluetoothDeviceName.value = name
+                        _bluetoothBatteryLevel.value = if (btOn && !name.isNullOrBlank()) resolveConnectedBluetoothBatteryLevel() else null
                     }
                 }
 
@@ -1095,7 +1184,9 @@ class NativeTileManager(
                     scope.launch(Dispatchers.IO) {
                         val btOn = try { bluetoothManager?.adapter?.isEnabled == true } catch (_: Throwable) { false }
                         _isBluetoothEnabled.value = btOn
-                        _bluetoothDeviceName.value = if (btOn) resolveConnectedBluetoothDevice() else null
+                        val name = if (btOn) resolveConnectedBluetoothDevice() else null
+                        _bluetoothDeviceName.value = name
+                        _bluetoothBatteryLevel.value = if (btOn && !name.isNullOrBlank()) resolveConnectedBluetoothBatteryLevel() else null
                     }
                 }
             }, handler)
@@ -1112,6 +1203,7 @@ class NativeTileManager(
             addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
             addAction(BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED)
             addAction(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED)
+            addAction("android.bluetooth.device.action.BATTERY_LEVEL_CHANGED")
             addAction(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED)
             addAction(NotificationManager.ACTION_NOTIFICATION_POLICY_CHANGED)
             addAction(LocationManager.PROVIDERS_CHANGED_ACTION)
@@ -1224,14 +1316,29 @@ class NativeTileManager(
                             lastAclConnectedDevice = null
                             cachedShellBtDeviceName = null
                             _bluetoothDeviceName.value = null
+                            _bluetoothBatteryLevel.value = null
                         } else {
                             initBluetoothProfileProxies()
                             scope.launch(Dispatchers.IO) {
-                                _bluetoothDeviceName.value = resolveConnectedBluetoothDevice()
+                                val name = resolveConnectedBluetoothDevice()
+                                _bluetoothDeviceName.value = name
+                                _bluetoothBatteryLevel.value = if (!name.isNullOrBlank()) resolveConnectedBluetoothBatteryLevel() else null
                                 delay(800)
                                 if (_isBluetoothEnabled.value) {
-                                    _bluetoothDeviceName.value = resolveConnectedBluetoothDevice()
+                                    val updatedName = resolveConnectedBluetoothDevice()
+                                    _bluetoothDeviceName.value = updatedName
+                                    _bluetoothBatteryLevel.value = if (!updatedName.isNullOrBlank()) resolveConnectedBluetoothBatteryLevel() else null
                                 }
+                            }
+                        }
+                    }
+                    "android.bluetooth.device.action.BATTERY_LEVEL_CHANGED" -> {
+                        val level = intent.getIntExtra("android.bluetooth.device.extra.BATTERY_LEVEL", -1)
+                        if (level in 0..100) {
+                            _bluetoothBatteryLevel.value = level
+                        } else {
+                            scope.launch(Dispatchers.IO) {
+                                _bluetoothBatteryLevel.value = resolveConnectedBluetoothBatteryLevel()
                             }
                         }
                     }
@@ -2048,6 +2155,43 @@ class NativeTileManager(
                 privilegeEngine.executeCommand("settings put system screen_brightness $clamped")
             }
         }
+    }
+
+    fun toggleAutoBrightness(): Boolean {
+        val current = try {
+            Settings.System.getInt(
+                contentResolver,
+                Settings.System.SCREEN_BRIGHTNESS_MODE,
+                Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
+            ) == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC
+        } catch (_: Exception) {
+            _isAutoBrightnessEnabled.value
+        }
+        val nextAuto = !current
+        val nextMode = if (nextAuto) {
+            Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC
+        } else {
+            Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
+        }
+        if (privilegeEngine.hasWriteSettingsPermission()) {
+            return try {
+                Settings.System.putInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS_MODE, nextMode)
+                _isAutoBrightnessEnabled.value = nextAuto
+                com.example.system.ComplicationDataHub.refreshTelemetryNow()
+                true
+            } catch (e: Exception) {
+                Log.w("NativeTileManager", "Toggle auto-brightness failed: ${e.message}")
+                false
+            }
+        } else if (privilegeEngine.currentMode.value != PrivilegeMode.STANDARD) {
+            _isAutoBrightnessEnabled.value = nextAuto
+            scope.launch {
+                privilegeEngine.executeCommand("settings put system screen_brightness_mode $nextMode")
+                com.example.system.ComplicationDataHub.refreshTelemetryNow()
+            }
+            return true
+        }
+        return false
     }
 
     fun setStreamVolume(streamType: Int, fraction: Float) {

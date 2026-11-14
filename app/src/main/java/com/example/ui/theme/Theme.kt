@@ -132,6 +132,34 @@ internal val ExpressiveLightColorScheme = lightColorScheme(
     outlineVariant = Color(0xFFC0D2D0)
 )
 
+data class ExpressiveColors(
+    val appBackground: Color,
+    val cardSurface: Color,
+    val nestedElementSurface: Color,
+    val buttonPrimary: Color,
+    val buttonTertiarySubtle: Color,
+    val selectorSelected: Color,
+    val selectorUnselected: Color
+)
+
+val LocalExpressiveColors = staticCompositionLocalOf {
+    ExpressiveColors(
+        appBackground = Color(0xFF262626),
+        cardSurface = Color(0xFF404040),
+        nestedElementSurface = Color(0xFF262626),
+        buttonPrimary = DarkMonetPrimary,
+        buttonTertiarySubtle = MonetTertiaryContainer.copy(alpha = 0.85f),
+        selectorSelected = DarkMonetPrimary,
+        selectorUnselected = Color(0xFF404040)
+    )
+}
+
+object ExpressiveTheme {
+    val colors: ExpressiveColors
+        @Composable
+        get() = LocalExpressiveColors.current
+}
+
 @Composable
 fun QuickPanelTheme(
     darkTheme: Boolean? = null,
@@ -181,12 +209,25 @@ fun QuickPanelTheme(
         else -> ExpressiveLightColorScheme
     }
 
+    val appBg = if (isDark) Color(0xFF262626) else Color(0xFFCCCCCC)
+    val cardSurf = if (isDark) Color(0xFF404040) else Color(0xFFFFFFFF)
+    val expressiveColors = ExpressiveColors(
+        appBackground = appBg,
+        cardSurface = cardSurf,
+        nestedElementSurface = appBg,
+        buttonPrimary = colorScheme.primary,
+        buttonTertiarySubtle = colorScheme.tertiaryContainer.copy(alpha = 0.85f),
+        selectorSelected = colorScheme.primary,
+        selectorUnselected = cardSurf
+    )
+
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography
     ) {
         CompositionLocalProvider(
             LocalIsDarkTheme provides isDark,
+            LocalExpressiveColors provides expressiveColors,
             LocalIndication provides NoOpIndication,
             @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
             androidx.compose.material3.LocalRippleConfiguration provides null

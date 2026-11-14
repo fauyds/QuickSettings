@@ -227,21 +227,23 @@ fun NotificationCategoriesScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                    if (categories.isNotEmpty()) {
+                        Spacer(modifier = Modifier.width(8.dp))
 
-                    Button(
-                        onClick = { showCreateDialog = true },
-                        shape = CircleShape,
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-                        modifier = Modifier.testTag("btn_add_category")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("New", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Button(
+                            onClick = { showCreateDialog = true },
+                            shape = CircleShape,
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                            modifier = Modifier.testTag("btn_add_category")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("New", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
 

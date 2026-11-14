@@ -89,6 +89,8 @@ object QsTileViewHelper {
 
         val isOutlineEnabled = PanelPreferences.tileOutlineEnabled.value
         val isClassicStyle = PanelPreferences.isClassicStyle(context)
+        val enableLegacyTileShapes = PanelPreferences.enableLegacyTileShapes.value
+        val isOreoOrMarshmallow = PanelPreferences.isAndroidOreoStyle(context) || PanelPreferences.isAndroidMarshmallowStyle(context)
         val isBareIconStyle = isClassicStyle
 
         val fgColor = if (isBareIconStyle) {
@@ -131,6 +133,7 @@ object QsTileViewHelper {
 
         val spec = tile.complicationSpec
         if (spec != null && complicationView != null) {
+            val useLegacyBareTile = isOreoOrMarshmallow && !enableLegacyTileShapes
             ivIcon.visibility = View.GONE
             flIconBg.background = null
             complicationView.visibility = View.VISIBLE
@@ -138,11 +141,13 @@ object QsTileViewHelper {
             complicationView.setShowGridCardContainer(false)
             complicationView.setShowTitle(false)
             complicationView.setShowBelowSubline(false)
+            complicationView.setShowRingBackground(!useLegacyBareTile)
+            complicationView.setShowInsideSubline(true)
             complicationView.setInteractive(false)
             complicationView.bind(
                 spec.copy(
                     layoutMode = if (showSubtitle) ComplicationLayoutMode.GRID_TILE else ComplicationLayoutMode.HEADER_ROW,
-                    sublinePlacement = if (!showSubtitle && spec.sublinePlacement == ComplicationSublinePlacement.BELOW_RING) {
+                    sublinePlacement = if ((useLegacyBareTile || !showSubtitle) && spec.sublinePlacement == ComplicationSublinePlacement.BELOW_RING) {
                         ComplicationSublinePlacement.INSIDE_RING
                     } else {
                         spec.sublinePlacement

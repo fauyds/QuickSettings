@@ -114,6 +114,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     val hideBrightnessPercentage by PanelPreferences.hideBrightnessPercentage.collectAsState()
     val hideBrightnessIcon by PanelPreferences.hideBrightnessIcon.collectAsState()
     val showBrightnessPlusMinus by PanelPreferences.showBrightnessPlusMinus.collectAsState()
+    val showBrightnessControlsBackground by PanelPreferences.showBrightnessControlsBackground.collectAsState()
     val disableClearAllBackground by PanelPreferences.disableClearAllBackground.collectAsState()
     val clearAllFabOffsetX by PanelPreferences.clearAllFabOffsetX.collectAsState()
     val clearAllFabOffsetY by PanelPreferences.clearAllFabOffsetY.collectAsState()
@@ -1467,6 +1468,75 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     }
 }
 
+    val showBrightnessControlsBackgroundCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("show_brightness_controls_background_card", CustomizeCategory.QS_TWEAKS) {
+            SettingsCard(
+                shape = shape
+            ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.BrightnessMedium,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(1.dp)
+                    ) {
+                        Text(
+                            text = "Brightness Controls Background",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = 17.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Place the brightness icon, -/+ buttons, and percentage inside pill backgrounds.",
+                            fontSize = 12.sp,
+                            lineHeight = 15.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Switch(
+                    checked = showBrightnessControlsBackground,
+                    onCheckedChange = { PanelPreferences.setShowBrightnessControlsBackground(context, it) },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                    ),
+                    modifier = Modifier.testTag("show_brightness_controls_background_toggle")
+                )
+            }
+        }
+    }
+}
+
     val disableClearAllBgCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("disable_clear_all_bg_card", CustomizeCategory.QS_TWEAKS) {
             SettingsCard(
@@ -2148,6 +2218,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         if (!hiddenInOreoTweakIds.contains("hide_brightness_percentage_card") && pinnedIds.contains("hide_brightness_percentage_card")) pinnedCards.add(hideBrightnessPercentageCard)
         if (!hiddenInOreoTweakIds.contains("hide_brightness_icon_card") && pinnedIds.contains("hide_brightness_icon_card")) pinnedCards.add(hideBrightnessIconCard)
         if (!hiddenInOreoTweakIds.contains("show_brightness_plus_minus_card") && pinnedIds.contains("show_brightness_plus_minus_card")) pinnedCards.add(showBrightnessPlusMinusCard)
+        if (!hiddenInOreoTweakIds.contains("show_brightness_controls_background_card") && pinnedIds.contains("show_brightness_controls_background_card")) pinnedCards.add(showBrightnessControlsBackgroundCard)
         if (!hiddenInOreoTweakIds.contains("enable_panel_shadows_card") && pinnedIds.contains("enable_panel_shadows_card")) pinnedCards.add(enablePanelShadowsCard)
         if (!hiddenInOreoTweakIds.contains("disable_clear_all_bg_card") && pinnedIds.contains("disable_clear_all_bg_card")) pinnedCards.add(disableClearAllBgCard)
         if (!hiddenInOreoTweakIds.contains("clear_all_fab_offset_card") && pinnedIds.contains("clear_all_fab_offset_card")) pinnedCards.add(clearAllFabOffsetsCard)
@@ -2208,6 +2279,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         if (!pinnedIds.contains("hide_brightness_percentage_card")) unpinnedBrightnessControls.add(hideBrightnessPercentageCard)
         if (!pinnedIds.contains("hide_brightness_icon_card")) unpinnedBrightnessControls.add(hideBrightnessIconCard)
         if (!pinnedIds.contains("show_brightness_plus_minus_card")) unpinnedBrightnessControls.add(showBrightnessPlusMinusCard)
+        if (!pinnedIds.contains("show_brightness_controls_background_card")) unpinnedBrightnessControls.add(showBrightnessControlsBackgroundCard)
 
         if (unpinnedBrightnessControls.isNotEmpty()) {
             CollapsibleSubheaderSection(

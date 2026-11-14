@@ -38,6 +38,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -116,6 +117,7 @@ data class QsOverlaySurfaceConfig(
     val hideBrightnessPercentage: Boolean = false,
     val hideBrightnessIcon: Boolean = false,
     val showBrightnessPlusMinus: Boolean = false,
+    val showBrightnessControlsBackground: Boolean = false,
     val minBrightness: Int = 1,
     val maxBrightness: Int = 2047
 ) {
@@ -153,6 +155,7 @@ data class QsOverlaySurfaceConfig(
             val hideBrightnessPercentage by PanelPreferences.hideBrightnessPercentage.collectAsState()
             val hideBrightnessIcon by PanelPreferences.hideBrightnessIcon.collectAsState()
             val showBrightnessPlusMinus by PanelPreferences.showBrightnessPlusMinus.collectAsState()
+            val showBrightnessControlsBackground by PanelPreferences.showBrightnessControlsBackground.collectAsState()
             val minBrightness by PanelPreferences.minBrightness.collectAsState()
             val maxBrightness by PanelPreferences.maxBrightness.collectAsState()
 
@@ -244,6 +247,7 @@ data class QsOverlaySurfaceConfig(
                 hideBrightnessPercentage = hideBrightnessPercentage,
                 hideBrightnessIcon = hideBrightnessIcon,
                 showBrightnessPlusMinus = showBrightnessPlusMinus,
+                showBrightnessControlsBackground = showBrightnessControlsBackground,
                 minBrightness = minBrightness,
                 maxBrightness = maxBrightness
             )
@@ -270,6 +274,7 @@ data class QsOverlaySurfaceConfig(
                     showQsTileGradient = json.optBoolean("show_qs_tile_gradient", false),
                     progressBarStyle = ProgressBarStyle.entries.firstOrNull { it.id == progressStyleStr } ?: ProgressBarStyle.DEFAULT,
                     brightnessSliderStyle = ProgressBarStyle.entries.firstOrNull { it.id == brightnessStyleStr } ?: ProgressBarStyle.DEFAULT,
+                    showBrightnessControlsBackground = json.optBoolean("show_brightness_controls_background", false),
                     minBrightness = json.optInt("min_brightness", 1),
                     maxBrightness = json.optInt("max_brightness", 2047),
                     sliderSyncAll = json.optBoolean("slider_sync_all", true),
@@ -418,6 +423,7 @@ fun QsOverlaySurface(
     val innerCorner = (if (config.panelGlobalCornerEnabled) config.panelOuterCorner else config.panelInnerCorner).dp.coerceIn(6.dp, 24.dp)
 
     var localBrightness by remember { mutableFloatStateOf(brightnessValue) }
+    var previewAutoBrightness by remember { mutableStateOf(false) }
 
     // Main Quick Settings Panel Surface Container
     Box(
@@ -602,6 +608,12 @@ fun QsOverlaySurface(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             // Brightness Slider row inside container
+                            val cardPillBg = if (isPanelDark) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.07f)
+                            val previewCurrentB = (if (onBrightnessChange != null) brightnessValue else localBrightness).coerceIn(config.minBrightness.toFloat(), config.maxBrightness.toFloat())
+                            val previewIsAtMin = previewCurrentB <= config.minBrightness.toFloat() + 0.5f
+                            val previewIsAtMax = previewCurrentB >= config.maxBrightness.toFloat() - 0.5f
+                            val previewStep = ((config.maxBrightness - config.minBrightness) * 0.05f).coerceAtLeast(1f)
+
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -610,27 +622,37 @@ fun QsOverlaySurface(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 if (!config.hideBrightnessIcon) {
-                                    Icon(
-                                        imageVector = Icons.Default.BrightnessMedium,
-                                        contentDescription = null,
-                                        tint = sliderAccentColor,
-                                        modifier = Modifier
-                                            .padding(horizontal = 4.dp)
-                                            .size(22.dp)
+                                    BrightnessSliderIcon(
+                                        isHighBrightness = previewCurrentB > (config.minBrightness + config.maxBrightness) / 2f,
+                                        showBackground = config.showBrightnessControlsBackground,
+                                        bgColor = cardPillBg,
+                                        accentColor = sliderAccentColor,
+                                        controlSize = 28.dp,
+                                        isAutoBrightness = previewAutoBrightness,
+                                        onClick = { previewAutoBrightness = !previewAutoBrightness }
                                     )
                                 }
 
                                 if (config.showBrightnessPlusMinus) {
-                                    Icon(
-                                        imageVector = Icons.Default.Remove,
-                                        contentDescription = null,
-                                        tint = sliderAccentColor,
-                                        modifier = Modifier.size(16.dp)
+                                    BrightnessStepButton(
+                                        icon = Icons.Default.Remove,
+                                        contentDescription = "Decrease brightness",
+                                        showBackground = config.showBrightnessControlsBackground,
+                                        isAtLimit = previewIsAtMin,
+                                        bgColor = cardPillBg,
+                                        accentColor = sliderAccentColor,
+                                        controlSize = 28.dp,
+                                        testTag = "${testTagPrefix}_brightness_minus",
+                                        onClick = {
+                                            val updated = (previewCurrentB - previewStep).coerceAtLeast(config.minBrightness.toFloat())
+                                            localBrightness = updated
+                                            onBrightnessChange?.invoke(updated)
+                                        }
                                     )
                                 }
 
                                 QsProgressSlider(
-                                    value = (if (onBrightnessChange != null) brightnessValue else localBrightness).coerceIn(config.minBrightness.toFloat(), config.maxBrightness.toFloat()),
+                                    value = previewCurrentB,
                                     onValueChange = {
                                         localBrightness = it
                                         onBrightnessChange?.invoke(it)
@@ -646,23 +668,32 @@ fun QsOverlaySurface(
                                 )
 
                                 if (config.showBrightnessPlusMinus) {
-                                    Icon(
-                                        imageVector = Icons.Default.Add,
-                                        contentDescription = null,
-                                        tint = sliderAccentColor,
-                                        modifier = Modifier.size(16.dp)
+                                    BrightnessStepButton(
+                                        icon = Icons.Default.Add,
+                                        contentDescription = "Increase brightness",
+                                        showBackground = config.showBrightnessControlsBackground,
+                                        isAtLimit = previewIsAtMax,
+                                        bgColor = cardPillBg,
+                                        accentColor = sliderAccentColor,
+                                        controlSize = 28.dp,
+                                        testTag = "${testTagPrefix}_brightness_plus",
+                                        onClick = {
+                                            val updated = (previewCurrentB + previewStep).coerceAtMost(config.maxBrightness.toFloat())
+                                            localBrightness = updated
+                                            onBrightnessChange?.invoke(updated)
+                                        }
                                     )
                                 }
 
                                 if (!config.hideBrightnessPercentage) {
-                                    val currentB = (if (onBrightnessChange != null) brightnessValue else localBrightness).coerceIn(config.minBrightness.toFloat(), config.maxBrightness.toFloat())
                                     val range = (config.maxBrightness - config.minBrightness).coerceAtLeast(1)
-                                    val pct = (((currentB - config.minBrightness) / range) * 100).toInt().coerceIn(0, 100)
-                                    Text(
-                                        text = "$pct%",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isPanelDark) Color.White else Color(0xFF333333)
+                                    val pct = (((previewCurrentB - config.minBrightness) / range) * 100).toInt().coerceIn(0, 100)
+                                    BrightnessPercentageBadge(
+                                        percentage = pct,
+                                        showBackground = config.showBrightnessControlsBackground,
+                                        bgColor = cardPillBg,
+                                        textColor = if (isPanelDark) Color.White else Color(0xFF333333),
+                                        heightDp = 28.dp
                                     )
                                 }
                             }
@@ -715,6 +746,11 @@ fun QsOverlaySurface(
                     }
                 } else {
                     // Standard separate slider and tiles container for other sections
+                    val previewCurrentB = (if (onBrightnessChange != null) brightnessValue else localBrightness).coerceIn(config.minBrightness.toFloat(), config.maxBrightness.toFloat())
+                    val previewIsAtMin = previewCurrentB <= config.minBrightness.toFloat() + 0.5f
+                    val previewIsAtMax = previewCurrentB >= config.maxBrightness.toFloat() - 0.5f
+                    val previewStep = ((config.maxBrightness - config.minBrightness) * 0.05f).coerceAtLeast(1f)
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -723,27 +759,37 @@ fun QsOverlaySurface(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         if (!config.hideBrightnessIcon) {
-                            Icon(
-                                imageVector = Icons.Default.BrightnessMedium,
-                                contentDescription = null,
-                                tint = sliderAccentColor,
-                                modifier = Modifier
-                                    .padding(horizontal = 4.dp)
-                                    .size(22.dp)
+                            BrightnessSliderIcon(
+                                isHighBrightness = previewCurrentB > (config.minBrightness + config.maxBrightness) / 2f,
+                                showBackground = config.showBrightnessControlsBackground,
+                                bgColor = sliderInactiveColor,
+                                accentColor = sliderAccentColor,
+                                controlSize = 28.dp,
+                                isAutoBrightness = previewAutoBrightness,
+                                onClick = { previewAutoBrightness = !previewAutoBrightness }
                             )
                         }
 
                         if (config.showBrightnessPlusMinus) {
-                            Icon(
-                                imageVector = Icons.Default.Remove,
-                                contentDescription = null,
-                                tint = sliderAccentColor,
-                                modifier = Modifier.size(16.dp)
+                            BrightnessStepButton(
+                                icon = Icons.Default.Remove,
+                                contentDescription = "Decrease brightness",
+                                showBackground = config.showBrightnessControlsBackground,
+                                isAtLimit = previewIsAtMin,
+                                bgColor = sliderInactiveColor,
+                                accentColor = sliderAccentColor,
+                                controlSize = 28.dp,
+                                testTag = "${testTagPrefix}_brightness_minus",
+                                onClick = {
+                                    val updated = (previewCurrentB - previewStep).coerceAtLeast(config.minBrightness.toFloat())
+                                    localBrightness = updated
+                                    onBrightnessChange?.invoke(updated)
+                                }
                             )
                         }
 
                         QsProgressSlider(
-                            value = (if (onBrightnessChange != null) brightnessValue else localBrightness).coerceIn(config.minBrightness.toFloat(), config.maxBrightness.toFloat()),
+                            value = previewCurrentB,
                             onValueChange = {
                                 localBrightness = it
                                 onBrightnessChange?.invoke(it)
@@ -759,23 +805,32 @@ fun QsOverlaySurface(
                         )
 
                         if (config.showBrightnessPlusMinus) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                tint = sliderAccentColor,
-                                modifier = Modifier.size(16.dp)
+                            BrightnessStepButton(
+                                icon = Icons.Default.Add,
+                                contentDescription = "Increase brightness",
+                                showBackground = config.showBrightnessControlsBackground,
+                                isAtLimit = previewIsAtMax,
+                                bgColor = sliderInactiveColor,
+                                accentColor = sliderAccentColor,
+                                controlSize = 28.dp,
+                                testTag = "${testTagPrefix}_brightness_plus",
+                                onClick = {
+                                    val updated = (previewCurrentB + previewStep).coerceAtMost(config.maxBrightness.toFloat())
+                                    localBrightness = updated
+                                    onBrightnessChange?.invoke(updated)
+                                }
                             )
                         }
 
                         if (!config.hideBrightnessPercentage) {
-                            val currentB = (if (onBrightnessChange != null) brightnessValue else localBrightness).coerceIn(config.minBrightness.toFloat(), config.maxBrightness.toFloat())
                             val range = (config.maxBrightness - config.minBrightness).coerceAtLeast(1)
-                            val pct = (((currentB - config.minBrightness) / range) * 100).toInt().coerceIn(0, 100)
-                            Text(
-                                text = "$pct%",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isPanelDark) Color.White else Color(0xFF333333)
+                            val pct = (((previewCurrentB - config.minBrightness) / range) * 100).toInt().coerceIn(0, 100)
+                            BrightnessPercentageBadge(
+                                percentage = pct,
+                                showBackground = config.showBrightnessControlsBackground,
+                                bgColor = sliderInactiveColor,
+                                textColor = if (isPanelDark) Color.White else Color(0xFF333333),
+                                heightDp = 28.dp
                             )
                         }
                     }

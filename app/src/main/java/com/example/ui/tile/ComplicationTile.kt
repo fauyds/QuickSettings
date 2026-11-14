@@ -104,6 +104,8 @@ class ComplicationTile @JvmOverloads constructor(
     private val isInteractiveState = mutableStateOf(true)
     private val showTitleState = mutableStateOf(true)
     private val showBelowSublineState = mutableStateOf(true)
+    private val showRingBackgroundState = mutableStateOf(true)
+    private val showInsideSublineState = mutableStateOf(true)
 
     var onActionListener: ((ComplicationAction) -> Unit)? = null
     var onSettingsListener: ((String) -> Unit)? = null
@@ -136,6 +138,8 @@ class ComplicationTile @JvmOverloads constructor(
             val interactive = isInteractiveState.value
             val showTitle = showTitleState.value
             val showBelowSubline = showBelowSublineState.value
+            val showRingBackground = showRingBackgroundState.value
+            val showInsideSubline = showInsideSublineState.value
 
             QuickPanelTheme(darkTheme = isDark) {
                 ComplicationTileView(
@@ -144,6 +148,8 @@ class ComplicationTile @JvmOverloads constructor(
                     isInteractive = interactive,
                     showTitle = showTitle,
                     showBelowSubline = showBelowSubline,
+                    showRingBackground = showRingBackground,
+                    showInsideSubline = showInsideSubline,
                     onAction = { action ->
                         val customListener = onActionListener
                         if (customListener != null) {
@@ -221,6 +227,14 @@ class ComplicationTile @JvmOverloads constructor(
 
     fun setShowBelowSubline(show: Boolean) {
         showBelowSublineState.value = show
+    }
+
+    fun setShowRingBackground(show: Boolean) {
+        showRingBackgroundState.value = show
+    }
+
+    fun setShowInsideSubline(show: Boolean) {
+        showInsideSublineState.value = show
     }
 
     companion object {
@@ -332,7 +346,11 @@ fun ComplicationTileView(
     isInteractive: Boolean = true,
     showTitle: Boolean = true,
     showBelowSubline: Boolean = true,
+    showRingBackground: Boolean = true,
+    showProgressArc: Boolean = showRingBackground,
+    showInsideSubline: Boolean = showRingBackground || showProgressArc,
     customRingSize: Dp? = null,
+    customIconSize: Dp? = null,
     onClickOverride: (() -> Unit)? = null,
     onLongClickOverride: (() -> Unit)? = null,
     onAction: ((ComplicationAction) -> Unit)? = null,
@@ -359,7 +377,9 @@ fun ComplicationTileView(
     val inactiveTileColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
 
     val ringFillColor by animateColorAsState(
-        targetValue = if (model.isActive) {
+        targetValue = if (!showRingBackground) {
+            Color.Transparent
+        } else if (model.isActive) {
             animatedAccent
         } else {
             inactiveTileColor
@@ -368,20 +388,40 @@ fun ComplicationTileView(
         label = "complication_fill_${model.id}"
     )
 
-    val trackColor = if (model.isActive) {
+    val trackColor = if (!showRingBackground) {
+        if (model.isActive) {
+            animatedAccent.copy(alpha = 0.22f)
+        } else {
+            if (isDark) Color.White.copy(alpha = 0.14f) else Color.Black.copy(alpha = 0.12f)
+        }
+    } else if (model.isActive) {
         Color.White.copy(alpha = 0.28f)
     } else {
         if (isDark) animatedAccent.copy(alpha = 0.20f) else animatedAccent.copy(alpha = 0.16f)
     }
 
-    val progressArcColor = if (model.isActive) {
+    val progressArcColor = if (!showRingBackground) {
+        animatedAccent
+    } else if (model.isActive) {
         Color.White
     } else {
         animatedAccent
     }
 
-    val iconTint = if (model.isActive) colorScheme.onPrimary else colorScheme.onSurface
-    val sublineColor = if (model.isActive) colorScheme.onPrimary.copy(alpha = 0.92f) else colorScheme.onSurfaceVariant
+    val iconTint = if (!showRingBackground) {
+        if (model.isActive) animatedAccent else (if (isDark) Color(0xFFCCCCCC) else Color(0xFF555555))
+    } else if (model.isActive) {
+        colorScheme.onPrimary
+    } else {
+        colorScheme.onSurface
+    }
+    val sublineColor = if (!showRingBackground) {
+        if (model.isActive) animatedAccent else (if (isDark) Color(0xFFCCCCCC) else colorScheme.onSurfaceVariant)
+    } else if (model.isActive) {
+        colorScheme.onPrimary.copy(alpha = 0.92f)
+    } else {
+        colorScheme.onSurfaceVariant
+    }
 
     val handleTap = {
         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -426,12 +466,17 @@ fun ComplicationTileView(
         }
 
         val strokeWidthDp: Dp = if (ringSize <= 48.dp) 3.dp else 4.dp
-        val iconSize: Dp = when {
-            ringSize <= 48.dp && model.sublinePlacement == ComplicationSublinePlacement.INSIDE_RING ->
-                (ringSize * 0.34f).coerceIn(13.dp, 17.dp)
+        val hasInsideSubline = showInsideSubline &&
+            model.sublinePlacement == ComplicationSublinePlacement.INSIDE_RING &&
+            model.subline.isNotBlank()
+        val iconSize: Dp = customIconSize ?: when {
+            ringSize <= 48.dp && hasInsideSubline ->
+                (ringSize * 0.42f).coerceIn(13.dp, 17.dp)
+            ringSize <= 48.dp && !showRingBackground && !showProgressArc -> ringSize
             ringSize <= 48.dp -> (ringSize * 0.42f).coerceIn(16.dp, 22.dp)
-            model.sublinePlacement == ComplicationSublinePlacement.INSIDE_RING ->
+            hasInsideSubline ->
                 (ringSize * 0.32f).coerceIn(18.dp, 22.dp)
+            !showRingBackground && !showProgressArc -> 26.dp
             else -> (ringSize * 0.40f).coerceIn(22.dp, 28.dp)
         }
 
@@ -478,11 +523,18 @@ fun ComplicationTileView(
             verticalArrangement = Arrangement.Center
         ) {
             // Circular Complication Ring Container (enforces >= 48dp touch area on header items cleanly)
-            Box(
-                modifier = Modifier
+            val ringBoxModifier = if (!showRingBackground && !showProgressArc && ringSize < 40.dp) {
+                Modifier
+                    .height(ringSize)
+                    .widthIn(min = ringSize)
+            } else {
+                Modifier
                     .size(ringSize)
                     .clip(CircleShape)
                     .background(ringFillColor)
+            }
+            Box(
+                modifier = ringBoxModifier
                     .then(
                         if (isInteractive && (isCompactHeader || !showGridCardContainer)) {
                             Modifier.combinedClickable(
@@ -499,42 +551,44 @@ fun ComplicationTileView(
                 contentAlignment = Alignment.Center
             ) {
                 // Smooth circular progress arc drawn via Compose Canvas
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val strokePx = strokeWidthDp.toPx()
-                    val inset = strokePx / 2f + 1.dp.toPx()
-                    val arcSize = Size(
-                        width = (size.width - inset * 2f).coerceAtLeast(1f),
-                        height = (size.height - inset * 2f).coerceAtLeast(1f)
-                    )
-                    val topLeft = Offset(inset, inset)
+                if (showProgressArc) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val strokePx = strokeWidthDp.toPx()
+                        val inset = strokePx / 2f + 1.dp.toPx()
+                        val arcSize = Size(
+                            width = (size.width - inset * 2f).coerceAtLeast(1f),
+                            height = (size.height - inset * 2f).coerceAtLeast(1f)
+                        )
+                        val topLeft = Offset(inset, inset)
 
-                    // Background track ring
-                    drawArc(
-                        color = trackColor,
-                        startAngle = 0f,
-                        sweepAngle = 360f,
-                        useCenter = false,
-                        topLeft = topLeft,
-                        size = arcSize,
-                        style = Stroke(width = strokePx, cap = StrokeCap.Round)
-                    )
-
-                    // Smooth progress arc (0f..1f -> 0°..360° clockwise from 12 o'clock)
-                    if (animatedProgress > 0.005f) {
+                        // Background track ring
                         drawArc(
-                            color = progressArcColor,
-                            startAngle = -90f,
-                            sweepAngle = 360f * animatedProgress,
+                            color = trackColor,
+                            startAngle = 0f,
+                            sweepAngle = 360f,
                             useCenter = false,
                             topLeft = topLeft,
                             size = arcSize,
                             style = Stroke(width = strokePx, cap = StrokeCap.Round)
                         )
+
+                        // Smooth progress arc (0f..1f -> 0°..360° clockwise from 12 o'clock)
+                        if (animatedProgress > 0.005f) {
+                            drawArc(
+                                color = progressArcColor,
+                                startAngle = -90f,
+                                sweepAngle = 360f * animatedProgress,
+                                useCenter = false,
+                                topLeft = topLeft,
+                                size = arcSize,
+                                style = Stroke(width = strokePx, cap = StrokeCap.Round)
+                            )
+                        }
                     }
                 }
 
                 // Center content: Icon + optional Inside-Ring dynamic subline
-                if (model.sublinePlacement == ComplicationSublinePlacement.INSIDE_RING && model.subline.isNotBlank()) {
+                if (hasInsideSubline) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,

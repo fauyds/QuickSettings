@@ -289,6 +289,7 @@ object PanelPreferences {
     private const val KEY_HIDE_BRIGHTNESS_PERCENTAGE = "hide_brightness_percentage"
     private const val KEY_HIDE_BRIGHTNESS_ICON = "hide_brightness_icon"
     private const val KEY_SHOW_BRIGHTNESS_PLUS_MINUS = "show_brightness_plus_minus"
+    private const val KEY_SHOW_BRIGHTNESS_CONTROLS_BACKGROUND = "show_brightness_controls_background"
     private const val KEY_SHOW_BRIGHTNESS_GRADIENT = "show_brightness_gradient"
     private const val KEY_MIN_BRIGHTNESS = "min_brightness"
     private const val KEY_MAX_BRIGHTNESS = "max_brightness"
@@ -1282,6 +1283,9 @@ object PanelPreferences {
     private val _showBrightnessPlusMinus = MutableStateFlow(false)
     val showBrightnessPlusMinus: StateFlow<Boolean> = _showBrightnessPlusMinus.asStateFlow()
 
+    private val _showBrightnessControlsBackground = MutableStateFlow(false)
+    val showBrightnessControlsBackground: StateFlow<Boolean> = _showBrightnessControlsBackground.asStateFlow()
+
     private val _minBrightness = MutableStateFlow(1)
     val minBrightness: StateFlow<Int> = _minBrightness.asStateFlow()
 
@@ -1439,6 +1443,7 @@ object PanelPreferences {
         _hideBrightnessPercentage.value = prefs.getBoolean(KEY_HIDE_BRIGHTNESS_PERCENTAGE, false)
         _hideBrightnessIcon.value = prefs.getBoolean(KEY_HIDE_BRIGHTNESS_ICON, false)
         _showBrightnessPlusMinus.value = prefs.getBoolean(KEY_SHOW_BRIGHTNESS_PLUS_MINUS, false)
+        _showBrightnessControlsBackground.value = prefs.getBoolean(KEY_SHOW_BRIGHTNESS_CONTROLS_BACKGROUND, false)
         _showBrightnessGradient.value = prefs.getBoolean(KEY_SHOW_BRIGHTNESS_GRADIENT, false)
         _minBrightness.value = prefs.getInt(KEY_MIN_BRIGHTNESS, 1)
         _maxBrightness.value = prefs.getInt(KEY_MAX_BRIGHTNESS, 2047)
@@ -1921,6 +1926,7 @@ object PanelPreferences {
             putBoolean(getStyleKey(KEY_HIDE_BRIGHTNESS_PERCENTAGE, style), _hideBrightnessPercentage.value)
             putBoolean(getStyleKey(KEY_HIDE_BRIGHTNESS_ICON, style), _hideBrightnessIcon.value)
             putBoolean(getStyleKey(KEY_SHOW_BRIGHTNESS_PLUS_MINUS, style), _showBrightnessPlusMinus.value)
+            putBoolean(getStyleKey(KEY_SHOW_BRIGHTNESS_CONTROLS_BACKGROUND, style), _showBrightnessControlsBackground.value)
             apply()
         }
     }
@@ -2101,6 +2107,7 @@ object PanelPreferences {
         val targetHideBrightnessPercentage = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_HIDE_BRIGHTNESS_PERCENTAGE, style), false) else false
         val targetHideBrightnessIcon = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_HIDE_BRIGHTNESS_ICON, style), false) else false
         val targetShowBrightnessPlusMinus = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SHOW_BRIGHTNESS_PLUS_MINUS, style), false) else false
+        val targetShowBrightnessControlsBg = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SHOW_BRIGHTNESS_CONTROLS_BACKGROUND, style), false) else false
 
         // Update StateFlows
         _gridLayout.value = targetGridLayout
@@ -2164,6 +2171,7 @@ object PanelPreferences {
         _hideBrightnessPercentage.value = targetHideBrightnessPercentage
         _hideBrightnessIcon.value = targetHideBrightnessIcon
         _showBrightnessPlusMinus.value = targetShowBrightnessPlusMinus
+        _showBrightnessControlsBackground.value = targetShowBrightnessControlsBg
 
         // Write active keys into prefs
         prefs.edit().apply {
@@ -2224,6 +2232,7 @@ object PanelPreferences {
             putBoolean(KEY_HIDE_BRIGHTNESS_PERCENTAGE, targetHideBrightnessPercentage)
             putBoolean(KEY_HIDE_BRIGHTNESS_ICON, targetHideBrightnessIcon)
             putBoolean(KEY_SHOW_BRIGHTNESS_PLUS_MINUS, targetShowBrightnessPlusMinus)
+            putBoolean(KEY_SHOW_BRIGHTNESS_CONTROLS_BACKGROUND, targetShowBrightnessControlsBg)
             if (!isInitialized) {
                 saveStylePreferences(context, style)
             }
@@ -2708,6 +2717,16 @@ object PanelPreferences {
         _showBrightnessPlusMinus.value = value
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_SHOW_BRIGHTNESS_PLUS_MINUS, value).apply()
+    }
+
+    fun setShowBrightnessControlsBackground(context: Context, value: Boolean) {
+        _showBrightnessControlsBackground.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean(KEY_SHOW_BRIGHTNESS_CONTROLS_BACKGROUND, value)
+            .putBoolean(getStyleKey(KEY_SHOW_BRIGHTNESS_CONTROLS_BACKGROUND), value)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
     }
 
     fun setShowBrightnessGradient(context: Context, value: Boolean) {

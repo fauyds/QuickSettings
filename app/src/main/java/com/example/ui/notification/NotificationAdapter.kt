@@ -20,8 +20,8 @@ import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.view.animation.PathInterpolator
 import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.R
 import com.example.model.NotificationActionModel
@@ -62,14 +62,11 @@ sealed class ShadeListRow {
     ) : ShadeListRow()
 }
 
-class NotificationDiffCallback : DiffUtil.ItemCallback<NotificationItem>() {
-    override fun areItemsTheSame(oldItem: NotificationItem, newItem: NotificationItem): Boolean {
-        return oldItem.key == newItem.key
-    }
-
-    override fun areContentsTheSame(oldItem: NotificationItem, newItem: NotificationItem): Boolean {
-        return oldItem == newItem
-    }
+private sealed class AdapterEntry {
+    data class Media(val state: MediaState, val isCompact: Boolean, val slotKey: String) : AdapterEntry()
+    data class CategoryHeader(val row: ShadeListRow.CategoryHeaderRow) : AdapterEntry()
+    data class Notification(val row: ShadeListRow.NotificationRow, val categoryId: String?) : AdapterEntry()
+    data object Footer : AdapterEntry()
 }
 
 class NotificationAdapter(
@@ -78,7 +75,7 @@ class NotificationAdapter(
     private val onActionClick: (NotificationActionModel) -> Unit,
     var onClearAll: (() -> Unit)? = null,
     var onCategoryToggled: (() -> Unit)? = null
-) : ListAdapter<NotificationItem, RecyclerView.ViewHolder>(NotificationDiffCallback()) {
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     var isDark: Boolean = true
     var customPrimaryColor: Int? = null
@@ -88,58 +85,202 @@ class NotificationAdapter(
     var onRequestClearAnimation: (() -> Unit)? = null
     var isMediaCardShown: Boolean = false
     var mediaSessions: List<MediaState> = emptyList()
+    var categoryItemAnimator: CategoryExpandItemAnimator? = null
 
     private var rawNotifications: List<NotificationItem> = emptyList()
     private var displayRows: List<ShadeListRow> = emptyList()
+    private var renderedEntries: List<AdapterEntry> = emptyList()
     private val expandedStateMap = mutableMapOf<String, Boolean>()
 
-    fun submitNotifications(list: List<NotificationItem>) {
+    fun submitNotifications(list: List<NotificationItem>, forceVisualRefresh: Boolean = false) {
         rawNotifications = list
-        rebuildDisplayRows()
-        submitList(list)
+        rebuildAndDispatchDiff(forceVisualRefresh = forceVisualRefresh)
     }
 
     fun rebuildDisplayRows() {
+        rebuildAndDispatchDiff(forceVisualRefresh = false)
+    }
+
+    private fun buildRowsAndEntries(): Pair<List<ShadeListRow>, List<AdapterEntry>> {
         val sections = NotificationCategoryManager.buildGroupedSections(rawNotifications)
-        displayRows = if (sections.isNotEmpty()) {
-            buildList {
-                sections.forEach { section ->
-                    add(
-                        ShadeListRow.CategoryHeaderRow(
-                            categoryId = section.categoryId,
-                            title = section.title,
-                            iconRes = section.icon.drawableRes,
-                            count = section.notifications.size,
-                            isExpanded = section.isExpanded,
-                            isUncategorized = section.isUncategorized,
-                            childNotifications = section.notifications
+        val rows = mutableListOf<ShadeListRow>()
+        val entries = mutableListOf<AdapterEntry>()
+
+        val isCompactMedia = PanelPreferences.mediaNotificationStyle.value == MediaNotificationStyle.COMPACT
+        mediaSessions.forEachIndexed { idx, media ->
+            val slotKey = "${media.packageName}_$idx"
+            entries.add(AdapterEntry.Media(state = media, isCompact = isCompactMedia, slotKey = slotKey))
+        }
+
+        if (sections.isNotEmpty()) {
+            sections.forEach { section ->
+                val headerRow = ShadeListRow.CategoryHeaderRow(
+                    categoryId = section.categoryId,
+                    title = section.title,
+                    iconRes = section.icon.drawableRes,
+                    count = section.notifications.size,
+                    isExpanded = section.isExpanded,
+                    isUncategorized = section.isUncategorized,
+                    childNotifications = section.notifications
+                )
+                rows.add(headerRow)
+                entries.add(AdapterEntry.CategoryHeader(headerRow))
+                if (section.isExpanded) {
+                    val children = section.notifications
+                    children.forEachIndexed { idx, notif ->
+                        val notifRow = ShadeListRow.NotificationRow(
+                            item = notif,
+                            isGrouped = true,
+                            isFirstInGroup = (idx == 0),
+                            isLastInGroup = (idx == children.lastIndex)
                         )
-                    )
-                    if (section.isExpanded) {
-                        val children = section.notifications
-                        children.forEachIndexed { idx, notif ->
-                            add(
-                                ShadeListRow.NotificationRow(
-                                    item = notif,
-                                    isGrouped = true,
-                                    isFirstInGroup = (idx == 0),
-                                    isLastInGroup = (idx == children.lastIndex)
-                                )
-                            )
-                        }
+                        rows.add(notifRow)
+                        entries.add(AdapterEntry.Notification(row = notifRow, categoryId = section.categoryId))
                     }
                 }
             }
         } else {
-            rawNotifications.mapIndexed { idx, notif ->
-                ShadeListRow.NotificationRow(
+            rawNotifications.forEachIndexed { idx, notif ->
+                val notifRow = ShadeListRow.NotificationRow(
                     item = notif,
                     isGrouped = false,
                     isFirstInGroup = (idx == 0),
                     isLastInGroup = (idx == rawNotifications.lastIndex)
                 )
+                rows.add(notifRow)
+                entries.add(AdapterEntry.Notification(row = notifRow, categoryId = null))
             }
         }
+
+        val isKitKatStyle = attachedRecyclerView?.context?.let { PanelPreferences.isAndroidKitKatStyle(it) } ?: false
+        if (showFooter && rawNotifications.isNotEmpty() && !isKitKatStyle) {
+            entries.add(AdapterEntry.Footer)
+        }
+
+        return rows to entries
+    }
+
+    private fun rebuildAndDispatchDiff(
+        toggledCategoryId: String? = null,
+        forceVisualRefresh: Boolean = false
+    ) {
+        val oldEntries = renderedEntries
+        val (newRows, newEntries) = buildRowsAndEntries()
+
+        val oldHeaderStates = oldEntries.filterIsInstance<AdapterEntry.CategoryHeader>()
+            .associate { it.row.categoryId to it.row.isExpanded }
+        val newHeaderStates = newEntries.filterIsInstance<AdapterEntry.CategoryHeader>()
+            .associate { it.row.categoryId to it.row.isExpanded }
+
+        val expandingCatIds = buildSet {
+            newHeaderStates.forEach { (catId, isExpanded) ->
+                if (isExpanded && oldHeaderStates[catId] == false) {
+                    add(catId)
+                }
+            }
+            if (toggledCategoryId != null && newHeaderStates[toggledCategoryId] == true) {
+                add(toggledCategoryId)
+            }
+        }
+        val collapsingCatIds = buildSet {
+            newHeaderStates.forEach { (catId, isExpanded) ->
+                if (!isExpanded && oldHeaderStates[catId] == true) {
+                    add(catId)
+                }
+            }
+            if (toggledCategoryId != null && newHeaderStates[toggledCategoryId] == false) {
+                add(toggledCategoryId)
+            }
+        }
+
+        val oldKeys = oldEntries.filterIsInstance<AdapterEntry.Notification>().map { it.row.item.key }.toSet()
+        val newKeys = newEntries.filterIsInstance<AdapterEntry.Notification>().map { it.row.item.key }.toSet()
+
+        val expandingChildIndexByKey = mutableMapOf<String, Int>()
+        if (expandingCatIds.isNotEmpty()) {
+            val counters = mutableMapOf<String, Int>()
+            newEntries.filterIsInstance<AdapterEntry.Notification>().forEach { entry ->
+                val catId = entry.categoryId
+                if (catId != null && catId in expandingCatIds && entry.row.item.key !in oldKeys) {
+                    val idx = counters[catId] ?: 0
+                    expandingChildIndexByKey[entry.row.item.key] = idx
+                    counters[catId] = idx + 1
+                }
+            }
+        }
+
+        val collapsingKeys = mutableSetOf<String>()
+        if (collapsingCatIds.isNotEmpty()) {
+            oldEntries.filterIsInstance<AdapterEntry.Notification>().forEach { entry ->
+                val catId = entry.categoryId
+                if (catId != null && catId in collapsingCatIds && entry.row.item.key !in newKeys) {
+                    collapsingKeys.add(entry.row.item.key)
+                }
+            }
+        }
+
+        categoryItemAnimator?.let { anim ->
+            anim.pendingExpandingChildIndexByKey = expandingChildIndexByKey
+            anim.pendingCollapsingKeys = collapsingKeys
+        }
+
+        val diffResult = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
+            override fun getOldListSize(): Int = oldEntries.size
+            override fun getNewListSize(): Int = newEntries.size
+
+            override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+                val oldItem = oldEntries[oldItemPosition]
+                val newItem = newEntries[newItemPosition]
+                return when {
+                    oldItem is AdapterEntry.Media && newItem is AdapterEntry.Media ->
+                        oldItem.slotKey == newItem.slotKey && oldItem.isCompact == newItem.isCompact
+                    oldItem is AdapterEntry.CategoryHeader && newItem is AdapterEntry.CategoryHeader ->
+                        oldItem.row.categoryId == newItem.row.categoryId
+                    oldItem is AdapterEntry.Notification && newItem is AdapterEntry.Notification ->
+                        oldItem.row.item.key == newItem.row.item.key
+                    oldItem is AdapterEntry.Footer && newItem is AdapterEntry.Footer -> true
+                    else -> false
+                }
+            }
+
+            override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+                if (forceVisualRefresh) return false
+                val oldItem = oldEntries[oldItemPosition]
+                val newItem = newEntries[newItemPosition]
+                return when {
+                    oldItem is AdapterEntry.Media && newItem is AdapterEntry.Media ->
+                        oldItem.state == newItem.state && oldItem.isCompact == newItem.isCompact
+                    oldItem is AdapterEntry.CategoryHeader && newItem is AdapterEntry.CategoryHeader ->
+                        oldItem.row.title == newItem.row.title &&
+                            oldItem.row.iconRes == newItem.row.iconRes &&
+                            oldItem.row.count == newItem.row.count &&
+                            oldItem.row.isExpanded == newItem.row.isExpanded &&
+                            oldItem.row.isUncategorized == newItem.row.isUncategorized
+                    oldItem is AdapterEntry.Notification && newItem is AdapterEntry.Notification ->
+                        oldItem.row == newItem.row
+                    oldItem is AdapterEntry.Footer && newItem is AdapterEntry.Footer -> true
+                    else -> false
+                }
+            }
+
+            override fun getChangePayload(oldItemPosition: Int, newItemPosition: Int): Any? {
+                val oldItem = oldEntries[oldItemPosition]
+                val newItem = newEntries[newItemPosition]
+                return when {
+                    oldItem is AdapterEntry.CategoryHeader && newItem is AdapterEntry.CategoryHeader ->
+                        if (oldItem.row.isExpanded != newItem.row.isExpanded) PAYLOAD_CATEGORY_EXPAND_CHANGE
+                        else PAYLOAD_IN_PLACE
+                    oldItem is AdapterEntry.Media && newItem is AdapterEntry.Media -> PAYLOAD_IN_PLACE
+                    oldItem is AdapterEntry.Notification && newItem is AdapterEntry.Notification ->
+                        if (forceVisualRefresh || oldItem.row.item == newItem.row.item) PAYLOAD_IN_PLACE else null
+                    else -> null
+                }
+            }
+        })
+
+        displayRows = newRows
+        renderedEntries = newEntries
+        diffResult.dispatchUpdatesTo(this)
     }
 
     fun isItemExpanded(item: NotificationItem): Boolean {
@@ -152,8 +293,7 @@ class NotificationAdapter(
      */
     fun getNotificationItem(position: Int): NotificationItem? {
         if (position == RecyclerView.NO_POSITION) return null
-        val rowIndex = position - mediaSessions.size
-        return (displayRows.getOrNull(rowIndex) as? ShadeListRow.NotificationRow)?.item
+        return (renderedEntries.getOrNull(position) as? AdapterEntry.Notification)?.row?.item
     }
 
     /**
@@ -169,6 +309,8 @@ class NotificationAdapter(
         private const val TYPE_FOOTER = 2
         private const val TYPE_MEDIA_PLAYER_COMPACT = 3
         private const val TYPE_CATEGORY_HEADER = 4
+        private const val PAYLOAD_CATEGORY_EXPAND_CHANGE = "payload_category_expand_change"
+        private const val PAYLOAD_IN_PLACE = "payload_in_place"
     }
 
     private var attachedRecyclerView: RecyclerView? = null
@@ -183,43 +325,14 @@ class NotificationAdapter(
         attachedRecyclerView = null
     }
 
-    override fun onCurrentListChanged(
-        previousList: MutableList<NotificationItem>,
-        currentList: MutableList<NotificationItem>
-    ) {
-        super.onCurrentListChanged(previousList, currentList)
-        attachedRecyclerView?.post {
-            rebuildDisplayRows()
-            notifyDataSetChanged()
-        }
-    }
-
-    override fun getItemCount(): Int {
-        val mediaCount = mediaSessions.size
-        val rowCount = displayRows.size
-        val isKitKatStyle = attachedRecyclerView?.context?.let { PanelPreferences.isAndroidKitKatStyle(it) } ?: false
-        val footerCount = if (showFooter && rawNotifications.isNotEmpty() && !isKitKatStyle) 1 else 0
-        return mediaCount + rowCount + footerCount
-    }
+    override fun getItemCount(): Int = renderedEntries.size
 
     override fun getItemViewType(position: Int): Int {
-        val mediaCount = mediaSessions.size
-        val rowCount = displayRows.size
-        return when {
-            position < mediaCount -> {
-                if (PanelPreferences.mediaNotificationStyle.value == MediaNotificationStyle.COMPACT) {
-                    TYPE_MEDIA_PLAYER_COMPACT
-                } else {
-                    TYPE_MEDIA_PLAYER
-                }
-            }
-            position < mediaCount + rowCount -> {
-                when (displayRows[position - mediaCount]) {
-                    is ShadeListRow.CategoryHeaderRow -> TYPE_CATEGORY_HEADER
-                    is ShadeListRow.NotificationRow -> TYPE_NOTIFICATION
-                }
-            }
-            else -> TYPE_FOOTER
+        return when (val entry = renderedEntries[position]) {
+            is AdapterEntry.Media -> if (entry.isCompact) TYPE_MEDIA_PLAYER_COMPACT else TYPE_MEDIA_PLAYER
+            is AdapterEntry.CategoryHeader -> TYPE_CATEGORY_HEADER
+            is AdapterEntry.Notification -> TYPE_NOTIFICATION
+            is AdapterEntry.Footer -> TYPE_FOOTER
         }
     }
 
@@ -249,20 +362,22 @@ class NotificationAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        val totalCount = mediaSessions.size + displayRows.size
-        if (holder is MediaPlayerViewHolder) {
-            val mediaState = mediaSessions.getOrNull(position) ?: return
-            holder.bind(mediaState, position, totalCount)
-        } else if (holder is CompactMediaPlayerViewHolder) {
-            val mediaState = mediaSessions.getOrNull(position) ?: return
-            holder.bind(mediaState, position, totalCount)
-        } else if (holder is CategoryHeaderViewHolder) {
-            val row = displayRows.getOrNull(position - mediaSessions.size) as? ShadeListRow.CategoryHeaderRow ?: return
-            holder.bind(row)
-        } else if (holder is NotificationViewHolder) {
-            val row = displayRows.getOrNull(position - mediaSessions.size) as? ShadeListRow.NotificationRow ?: return
-            holder.bind(row, position, totalCount)
-        } else if (holder is FooterViewHolder) {
+        onBindViewHolder(holder, position, mutableListOf())
+    }
+
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int, payloads: MutableList<Any>) {
+        val totalCount = renderedEntries.count { it !is AdapterEntry.Footer }
+        val entry = renderedEntries.getOrNull(position) ?: return
+        if (holder is MediaPlayerViewHolder && entry is AdapterEntry.Media) {
+            holder.bind(entry.state, position, totalCount)
+        } else if (holder is CompactMediaPlayerViewHolder && entry is AdapterEntry.Media) {
+            holder.bind(entry.state, position, totalCount)
+        } else if (holder is CategoryHeaderViewHolder && entry is AdapterEntry.CategoryHeader) {
+            val isExpandPayload = payloads.contains(PAYLOAD_CATEGORY_EXPAND_CHANGE)
+            holder.bind(entry.row, animateExpandChange = isExpandPayload)
+        } else if (holder is NotificationViewHolder && entry is AdapterEntry.Notification) {
+            holder.bind(entry.row, position, totalCount)
+        } else if (holder is FooterViewHolder && entry is AdapterEntry.Footer) {
             holder.bind()
         }
     }
@@ -275,7 +390,7 @@ class NotificationAdapter(
         private val tvCount: TextView = itemView.findViewById(R.id.tv_cat_count)
         private val ivExpand: ImageView = itemView.findViewById(R.id.iv_cat_expand)
 
-        fun bind(row: ShadeListRow.CategoryHeaderRow) {
+        fun bind(row: ShadeListRow.CategoryHeaderRow, animateExpandChange: Boolean = false) {
             val context = itemView.context
             val density = context.resources.displayMetrics.density
             val isOreoStyle = PanelPreferences.isAndroidOreoStyle(context)
@@ -389,20 +504,33 @@ class NotificationAdapter(
                 )
             }
 
-            ivExpand.setImageResource(
-                if (row.isExpanded) R.drawable.ic_notif_chevron_up else R.drawable.ic_notif_chevron_down
-            )
+            ivExpand.setImageResource(R.drawable.ic_notif_chevron_down)
             ivExpand.setColorFilter(textSecondary)
             ivExpand.contentDescription = if (row.isExpanded) "Collapse ${row.title}" else "Expand ${row.title}"
+            val targetRotation = if (row.isExpanded) 180f else 0f
+            ivExpand.animate().cancel()
+            if (animateExpandChange) {
+                ivExpand.animate()
+                    .rotation(targetRotation)
+                    .setDuration(240L)
+                    .setInterpolator(PathInterpolator(0.4f, 0f, 0.2f, 1f))
+                    .start()
+            } else {
+                ivExpand.rotation = targetRotation
+            }
 
             flRoot.setOnClickListener {
+                val pos = bindingAdapterPosition
+                val latestRow = (if (pos != RecyclerView.NO_POSITION) {
+                    (renderedEntries.getOrNull(pos) as? AdapterEntry.CategoryHeader)?.row
+                } else null) ?: row
+
                 NotificationCategoryManager.toggleCategoryExpanded(
                     context = context,
-                    categoryId = row.categoryId,
+                    categoryId = latestRow.categoryId,
                     defaultExpanded = true
                 )
-                rebuildDisplayRows()
-                notifyDataSetChanged()
+                rebuildAndDispatchDiff(toggledCategoryId = latestRow.categoryId)
                 onCategoryToggled?.invoke()
             }
         }
@@ -1582,8 +1710,7 @@ class NotificationAdapter(
                                 packageName = item.packageName,
                                 targetCategoryId = catIdMap[menuItem.itemId]
                             )
-                            rebuildDisplayRows()
-                            notifyDataSetChanged()
+                            rebuildAndDispatchDiff()
                             true
                         } else {
                             false

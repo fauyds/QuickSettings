@@ -148,6 +148,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.BrightnessLow
 import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.Remove
@@ -194,7 +195,9 @@ import android.content.res.Configuration
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.runtime.Composable
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -222,6 +225,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -1054,6 +1058,14 @@ fun QuickSettingsPanel(
             if (isNotificationManagerOpen) {
                 com.example.ui.customizer.NotificationManagerBottomSheet(
                     onDismissRequest = { isNotificationManagerOpen = false }
+                )
+            }
+
+            val activeMicroWindow by com.example.system.ComplicationDataHub.activeMicroWindow.collectAsState()
+            activeMicroWindow?.let { microType ->
+                com.example.ui.tile.ComplicationMicroWindowSheet(
+                    type = microType,
+                    onDismissRequest = { com.example.system.ComplicationDataHub.closeMicroWindow() }
                 )
             }
 
@@ -3018,6 +3030,7 @@ fun MarshmallowEditTileCard(
     val context = LocalContext.current
     val isDark = LocalIsDarkTheme.current
     val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
+    val enableLegacyTileShapes by PanelPreferences.enableLegacyTileShapes.collectAsState()
     val monetAccent = com.example.ui.theme.getQsTilesElementColor(isDark)
     val cardBg = if (isActive) {
         Color(MonetThemeHelper.getCardBackground(context, isDark))
@@ -3055,7 +3068,9 @@ fun MarshmallowEditTileCard(
                     isInteractive = false,
                     showTitle = false,
                     showBelowSubline = false,
-                    customRingSize = 42.dp
+                    showRingBackground = enableLegacyTileShapes,
+                    showInsideSubline = true,
+                    customRingSize = if (enableLegacyTileShapes) 42.dp else 28.dp
                 )
             } else if (isThirdParty) {
                 val pkg = tile.packageName ?: if (tile.id.contains("/")) tile.id.substringBefore('/') else null
@@ -6979,8 +6994,9 @@ fun CircularQsTile(
     }
 
     val isAndroidOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
+    val isAndroidMarshmallowStyle by PanelPreferences.isAndroidMarshmallowStyle.collectAsState()
     val enableLegacyTileShapes by PanelPreferences.enableLegacyTileShapes.collectAsState()
-    val renderShapeBg = !isAndroidOreoStyle || enableLegacyTileShapes
+    val renderShapeBg = (!isAndroidOreoStyle && !isAndroidMarshmallowStyle) || enableLegacyTileShapes
 
     val isInactiveTilesCustomized = PanelPreferences.getInactiveTilesColorPrimary(isDark).collectAsState().value ||
         PanelPreferences.getInactiveTilesColorTertiary(isDark).collectAsState().value ||
@@ -7066,7 +7082,7 @@ fun CircularQsTile(
             .testTag("tile_${tile.id}")
     ) {
         if (compSpec != null) {
-            val effectiveRingSize = if (!isExpanded && compSpec.sublinePlacement == com.example.model.ComplicationSublinePlacement.BELOW_RING) {
+            val effectiveRingSize = if (renderShapeBg && !isExpanded && compSpec.sublinePlacement == com.example.model.ComplicationSublinePlacement.BELOW_RING) {
                 (circleSize - 8.dp).coerceAtLeast(36.dp)
             } else {
                 circleSize
@@ -7076,12 +7092,22 @@ fun CircularQsTile(
             } else {
                 com.example.model.ComplicationLayoutMode.HEADER_ROW
             }
+            val effectiveModel = if (!renderShapeBg && compSpec.sublinePlacement == com.example.model.ComplicationSublinePlacement.BELOW_RING) {
+                compSpec.copy(
+                    layoutMode = effectiveLayoutMode,
+                    sublinePlacement = com.example.model.ComplicationSublinePlacement.INSIDE_RING
+                )
+            } else {
+                compSpec.copy(layoutMode = effectiveLayoutMode)
+            }
             com.example.ui.tile.ComplicationTileView(
-                model = compSpec.copy(layoutMode = effectiveLayoutMode),
+                model = effectiveModel,
                 showGridCardContainer = false,
                 isInteractive = false,
                 showTitle = false,
-                showBelowSubline = isExpanded || compSpec.sublinePlacement == com.example.model.ComplicationSublinePlacement.BELOW_RING,
+                showBelowSubline = renderShapeBg && (isExpanded || compSpec.sublinePlacement == com.example.model.ComplicationSublinePlacement.BELOW_RING),
+                showRingBackground = renderShapeBg,
+                showInsideSubline = true,
                 customRingSize = effectiveRingSize
             )
         } else {
@@ -7144,7 +7170,7 @@ fun CircularQsTile(
         }
 
         if (labelAlpha > 0.02f) {
-            Spacer(modifier = Modifier.height(if (compSpec != null && compSpec.sublinePlacement == com.example.model.ComplicationSublinePlacement.BELOW_RING) 2.dp else 4.dp))
+            Spacer(modifier = Modifier.height(if (renderShapeBg && compSpec != null && compSpec.sublinePlacement == com.example.model.ComplicationSublinePlacement.BELOW_RING) 2.dp else 4.dp))
 
             val qsTileLabelFontSize by PanelPreferences.qsTileLabelFontSize.collectAsState()
             val qsTileSubtitleFontSize by PanelPreferences.qsTileSubtitleFontSize.collectAsState()
@@ -7166,7 +7192,8 @@ fun CircularQsTile(
                 overflow = TextOverflow.Ellipsis
             )
 
-            val skipDuplicateSubline = compSpec != null &&
+            val skipDuplicateSubline = renderShapeBg &&
+                compSpec != null &&
                 compSpec.sublinePlacement == com.example.model.ComplicationSublinePlacement.BELOW_RING &&
                 tile.subtitle == compSpec.subline
             if (!skipDuplicateSubline) {
@@ -7264,6 +7291,7 @@ fun BrightnessSliderRow(
     val hideBrightnessPercentage by PanelPreferences.hideBrightnessPercentage.collectAsState()
     val hideBrightnessIcon by PanelPreferences.hideBrightnessIcon.collectAsState()
     val showBrightnessPlusMinus by PanelPreferences.showBrightnessPlusMinus.collectAsState()
+    val showBrightnessControlsBackground by PanelPreferences.showBrightnessControlsBackground.collectAsState()
     val showBrightnessGradient by PanelPreferences.showBrightnessGradient.collectAsState()
     val minBrightness by PanelPreferences.minBrightness.collectAsState()
     val maxBrightness by PanelPreferences.maxBrightness.collectAsState()
@@ -7278,8 +7306,20 @@ fun BrightnessSliderRow(
     val totalVerticalOffset = verticalOffset + styleOffset
 
     val isDark = LocalIsDarkTheme.current
+    val context = LocalContext.current
+    val nativeTileManager = com.example.system.NativeTileManager.instance
+    val autoBrightnessFlow = remember(nativeTileManager) {
+        nativeTileManager?.isAutoBrightnessEnabled ?: kotlinx.coroutines.flow.MutableStateFlow(false)
+    }
+    val isAutoBrightness by autoBrightnessFlow.collectAsState()
     val tertiaryThemeColor = androidx.compose.material3.MaterialTheme.colorScheme.tertiary
     if (sliderAlpha > 0.01f) {
+        val availableHeight = if (!isAtBottom) (sliderHeight - 8.dp).coerceAtLeast(28.dp) else sliderHeight
+        val controlSize = if (availableHeight < 32.dp) availableHeight else 32.dp
+        val clampedBrightness = brightness.coerceIn(minBrightness, maxBrightness)
+        val isAtMin = clampedBrightness <= minBrightness
+        val isAtMax = clampedBrightness >= maxBrightness
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -7295,6 +7335,7 @@ fun BrightnessSliderRow(
                 .offset(y = totalVerticalOffset)
         ) {
             val sliderAccentColor = com.example.ui.theme.getSlidersElementColor(isDark)
+            val inactiveTrackColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
             val brightnessGradientBrush = remember(sliderAccentColor, tertiaryThemeColor) {
                 Brush.horizontalGradient(listOf(sliderAccentColor, tertiaryThemeColor))
             }
@@ -7305,36 +7346,33 @@ fun BrightnessSliderRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (!hideBrightnessIcon) {
-                    Icon(
-                        imageVector = if (brightness > (minBrightness + maxBrightness) / 2) Icons.Default.BrightnessMedium else Icons.Default.BrightnessLow,
-                        contentDescription = "Brightness",
-                        tint = sliderAccentColor,
-                        modifier = Modifier
-                            .padding(horizontal = 4.dp)
-                            .size(22.dp)
+                    BrightnessSliderIcon(
+                        isHighBrightness = clampedBrightness > (minBrightness + maxBrightness) / 2,
+                        showBackground = showBrightnessControlsBackground,
+                        bgColor = inactiveTrackColor,
+                        accentColor = sliderAccentColor,
+                        controlSize = controlSize,
+                        isAutoBrightness = isAutoBrightness,
+                        onClick = { toggleAutoBrightnessSetting(context) }
                     )
                 }
 
                 if (showBrightnessPlusMinus) {
-                    IconButton(
-                        onClick = { onBrightnessChange((brightness - 15).coerceAtLeast(minBrightness)) },
-                        modifier = Modifier
-                            .size(32.dp)
-                            .testTag("brightness_minus_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Remove,
-                            contentDescription = "Decrease brightness",
-                            tint = sliderAccentColor,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                    BrightnessStepButton(
+                        icon = Icons.Default.Remove,
+                        contentDescription = "Decrease brightness",
+                        showBackground = showBrightnessControlsBackground,
+                        isAtLimit = isAtMin,
+                        bgColor = inactiveTrackColor,
+                        accentColor = sliderAccentColor,
+                        controlSize = controlSize,
+                        testTag = "brightness_minus_button",
+                        onClick = { onBrightnessChange((brightness - 15).coerceAtLeast(minBrightness)) }
+                    )
                 }
 
-                val inactiveTrackColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
-
                 QsProgressSlider(
-                    value = brightness.toFloat().coerceIn(minBrightness.toFloat(), maxBrightness.toFloat()),
+                    value = clampedBrightness.toFloat(),
                     onValueChange = { onBrightnessChange(it.toInt()) },
                     valueRange = minBrightness.toFloat()..maxBrightness.toFloat(),
                     sliderTarget = com.example.data.QsSliderTarget.BRIGHTNESS,
@@ -7348,36 +7386,212 @@ fun BrightnessSliderRow(
                 )
 
                 if (showBrightnessPlusMinus) {
-                    IconButton(
-                        onClick = { onBrightnessChange((brightness + 15).coerceAtMost(maxBrightness)) },
-                        modifier = Modifier
-                            .size(32.dp)
-                            .testTag("brightness_plus_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Increase brightness",
-                            tint = sliderAccentColor,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                    BrightnessStepButton(
+                        icon = Icons.Default.Add,
+                        contentDescription = "Increase brightness",
+                        showBackground = showBrightnessControlsBackground,
+                        isAtLimit = isAtMax,
+                        bgColor = inactiveTrackColor,
+                        accentColor = sliderAccentColor,
+                        controlSize = controlSize,
+                        testTag = "brightness_plus_button",
+                        onClick = { onBrightnessChange((brightness + 15).coerceAtMost(maxBrightness)) }
+                    )
                 }
 
                 if (!hideBrightnessPercentage) {
                     val percentageColor = if (isDark) Color.White else Color(0xFF333333)
-                    val clampedB = brightness.coerceIn(minBrightness, maxBrightness)
                     val range = (maxBrightness - minBrightness).coerceAtLeast(1)
-                    val pct = (((clampedB - minBrightness).toFloat() / range) * 100).toInt().coerceIn(0, 100)
+                    val pct = (((clampedBrightness - minBrightness).toFloat() / range) * 100).toInt().coerceIn(0, 100)
 
-                    Text(
-                        text = "$pct%",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = percentageColor
+                    BrightnessPercentageBadge(
+                        percentage = pct,
+                        showBackground = showBrightnessControlsBackground,
+                        bgColor = inactiveTrackColor,
+                        textColor = percentageColor,
+                        heightDp = controlSize
                     )
                 }
             }
         }
+    }
+}
+
+internal fun toggleAutoBrightnessSetting(context: Context) {
+    val manager = com.example.system.NativeTileManager.instance
+    if (manager != null && manager.toggleAutoBrightness()) {
+        return
+    }
+    if (Settings.System.canWrite(context)) {
+        try {
+            val current = Settings.System.getInt(
+                context.contentResolver,
+                Settings.System.SCREEN_BRIGHTNESS_MODE,
+                Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
+            )
+            val next = if (current == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC) {
+                Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
+            } else {
+                Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC
+            }
+            Settings.System.putInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS_MODE, next)
+            com.example.system.ComplicationDataHub.refreshTelemetryNow()
+        } catch (_: Throwable) {}
+    } else {
+        try {
+            val permIntent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS).apply {
+                data = android.net.Uri.parse("package:${context.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(permIntent)
+            com.example.service.QuickPanelAccessibilityService.hideCustomPanel()
+            com.example.service.QuickSettingsOverlayService.instance?.hideOverlayPanelSmoothly()
+        } catch (_: Throwable) {}
+    }
+}
+
+@Composable
+internal fun BrightnessSliderIcon(
+    isHighBrightness: Boolean,
+    showBackground: Boolean,
+    bgColor: Color,
+    accentColor: Color,
+    controlSize: Dp = 32.dp,
+    isAutoBrightness: Boolean = false,
+    onClick: (() -> Unit)? = null
+) {
+    val iconVector = when {
+        isAutoBrightness -> Icons.Default.BrightnessAuto
+        isHighBrightness -> Icons.Default.BrightnessMedium
+        else -> Icons.Default.BrightnessLow
+    }
+    val onAccentColor = if (accentColor.luminance() > 0.5f) Color(0xFF0F172A) else Color.White
+    val containerColor by animateColorAsState(
+        targetValue = when {
+            showBackground && isAutoBrightness -> accentColor
+            showBackground -> bgColor
+            isAutoBrightness -> accentColor.copy(alpha = 0.16f)
+            else -> Color.Transparent
+        },
+        label = "brightness_icon_bg"
+    )
+    val iconTint by animateColorAsState(
+        targetValue = if (showBackground && isAutoBrightness) onAccentColor else accentColor,
+        label = "brightness_icon_tint"
+    )
+    val cornerRadius by animateDpAsState(
+        targetValue = if (isAutoBrightness) 8.dp else (controlSize / 2),
+        label = "brightness_icon_corner"
+    )
+    val description = if (isAutoBrightness) "Auto-brightness on, tap to turn off" else "Auto-brightness off, tap to turn on"
+
+    Box(
+        modifier = Modifier
+            .size(controlSize)
+            .clip(RoundedCornerShape(cornerRadius))
+            .background(containerColor)
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(onClick = onClick)
+                } else {
+                    Modifier
+                }
+            )
+            .testTag("brightness_auto_button"),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = iconVector,
+            contentDescription = description,
+            tint = iconTint,
+            modifier = Modifier.size(if (showBackground) 18.dp else 20.dp)
+        )
+    }
+}
+
+@Composable
+internal fun BrightnessStepButton(
+    icon: ImageVector,
+    contentDescription: String,
+    showBackground: Boolean,
+    isAtLimit: Boolean,
+    bgColor: Color,
+    accentColor: Color,
+    controlSize: Dp = 32.dp,
+    testTag: String,
+    onClick: () -> Unit
+) {
+    if (showBackground) {
+        val cornerRadius by animateDpAsState(
+            targetValue = if (isAtLimit) 8.dp else (controlSize / 2),
+            label = "brightness_step_corner"
+        )
+        Box(
+            modifier = Modifier
+                .size(controlSize)
+                .clip(RoundedCornerShape(cornerRadius))
+                .background(bgColor)
+                .clickable(onClick = onClick)
+                .testTag(testTag),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = accentColor.copy(alpha = if (isAtLimit) 0.45f else 1f),
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    } else {
+        IconButton(
+            onClick = onClick,
+            modifier = Modifier
+                .size(32.dp)
+                .testTag(testTag)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = accentColor,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+@Composable
+internal fun BrightnessPercentageBadge(
+    percentage: Int,
+    showBackground: Boolean,
+    bgColor: Color,
+    textColor: Color,
+    heightDp: Dp = 32.dp
+) {
+    if (showBackground) {
+        Box(
+            modifier = Modifier
+                .height(heightDp)
+                .widthIn(min = 42.dp)
+                .clip(CircleShape)
+                .background(bgColor)
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "$percentage%",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = textColor,
+                maxLines = 1
+            )
+        }
+    } else {
+        Text(
+            text = "$percentage%",
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = textColor
+        )
     }
 }
 
@@ -7736,7 +7950,9 @@ private fun MarshmallowTileItem(
                 isInteractive = false,
                 showTitle = false,
                 showBelowSubline = false,
-                customRingSize = 46.dp
+                showRingBackground = enableLegacyTileShapes,
+                showInsideSubline = true,
+                customRingSize = if (enableLegacyTileShapes) 46.dp else 28.dp
             )
         } else if (enableLegacyTileShapes) {
             Box(
