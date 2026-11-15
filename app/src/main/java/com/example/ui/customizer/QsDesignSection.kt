@@ -4537,6 +4537,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         "panel_corner_styling_card" to panelCornerStylingCard
     )
     val hiddenDesignIds = buildSet {
+        add("header_complication_tiles_card")
         if (isAndroidOreoStyle) {
             val list = mutableListOf(
                 "tile_outline_card",

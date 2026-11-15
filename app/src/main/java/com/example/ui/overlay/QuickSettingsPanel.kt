@@ -6021,6 +6021,7 @@ fun UnifiedQsPanel(
                     .fillMaxWidth()
                     .then(if (isNotificationsVisible) Modifier.weight(1f, fill = true) else Modifier)
                     .then(if (isAndroidMarshmallowStyle && !isFullQs) Modifier.padding(top = 8.dp) else Modifier)
+                    .clipToBounds()
             ) {
                 notificationsContent()
             }
@@ -6242,13 +6243,14 @@ fun NotificationsCard(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .clipToBounds()
             .testTag("notifications_card")
     ) {
         AndroidView(
             factory = { ctx ->
                 com.example.ui.notification.NotificationListView(ctx).apply {
-                    clipChildren = false
-                    clipToPadding = false
+                    clipChildren = true
+                    clipToPadding = true
                     this.onNotificationClick = onNotificationClick
                     this.onNotificationDismiss = onNotificationDismiss
                     this.onActionClick = onActionClick
@@ -6263,8 +6265,8 @@ fun NotificationsCard(
             update = { view ->
                 // Read category state flows inside update block so Compose re-invokes updateData when categories change
                 val _catSync = Triple(categorySortingEnabled, customCategories, categoryExpandedStates)
-                view.clipChildren = false
-                view.clipToPadding = false
+                view.clipChildren = true
+                view.clipToPadding = true
                 view.onNotificationClick = onNotificationClick
                 view.onNotificationDismiss = onNotificationDismiss
                 view.onActionClick = onActionClick
@@ -6283,7 +6285,9 @@ fun NotificationsCard(
                     mediaSessions = activeMediaSessions
                 )
             },
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .clipToBounds()
         )
     }
 }

@@ -128,21 +128,22 @@ class NotificationListView @JvmOverloads constructor(
         btnFloatingClearAllFab = root.findViewById(R.id.btn_floating_clear_all_fab)
         ivFloatingClearAllIcon = root.findViewById(R.id.iv_floating_clear_all_icon)
 
-        // Enable completely free, unconstrained scrolling with native physics
+        // Enable completely free, unconstrained scrolling with native physics,
+        // while strictly clipping scrolled items at the RecyclerView viewport edges.
         rvNotifications.layoutManager = LinearLayoutManager(context, RecyclerView.VERTICAL, false)
         rvNotifications.isNestedScrollingEnabled = false
         rvNotifications.overScrollMode = View.OVER_SCROLL_NEVER
         rvNotifications.clipToPadding = false
-        rvNotifications.clipChildren = false
-        this.clipToPadding = false
-        this.clipChildren = false
+        rvNotifications.clipChildren = true
+        this.clipToPadding = true
+        this.clipChildren = true
         flPermissionCard.clipChildren = false
         flPermissionCard.clipToPadding = false
         flEmptyCard.clipChildren = false
         flEmptyCard.clipToPadding = false
         root.findViewById<ViewGroup>(R.id.ll_notif_list_container)?.apply {
-            clipChildren = false
-            clipToPadding = false
+            clipChildren = true
+            clipToPadding = true
             if (PanelPreferences.isAndroidOreoStyle(context) || PanelPreferences.isAndroidMarshmallowStyle(context) || PanelPreferences.isAndroidKitKatStyle(context)) {
                 setPadding(0, 0, 0, 0)
             }
