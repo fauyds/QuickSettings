@@ -63,15 +63,21 @@ class VectorPathShape(
         layoutDirection: LayoutDirection,
         density: Density
     ): Outline {
-        if (size.width <= 0f || size.height <= 0f) {
-            return Outline.Rectangle(androidx.compose.ui.geometry.Rect(0f, 0f, 0f, 0f))
+        if (size.width <= 0f || size.height <= 0f || basePath.isEmpty) {
+            return Outline.Rectangle(androidx.compose.ui.geometry.Rect(0f, 0f, size.width.coerceAtLeast(0f), size.height.coerceAtLeast(0f)))
         }
-        val outPath = android.graphics.Path()
-        val matrix = Matrix().apply {
-            setScale(size.width / viewportWidth, size.height / viewportHeight)
+        return try {
+            val safeVpW = viewportWidth.takeIf { it.isFinite() && it > 0f } ?: 100f
+            val safeVpH = viewportHeight.takeIf { it.isFinite() && it > 0f } ?: 100f
+            val outPath = android.graphics.Path()
+            val matrix = Matrix().apply {
+                setScale(size.width / safeVpW, size.height / safeVpH)
+            }
+            basePath.transform(matrix, outPath)
+            Outline.Generic(outPath.asComposePath())
+        } catch (_: Throwable) {
+            Outline.Rectangle(androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height))
         }
-        basePath.transform(matrix, outPath)
-        return Outline.Generic(outPath.asComposePath())
     }
 }
 
@@ -127,10 +133,12 @@ class QsPathDrawable(
 
     override fun onBoundsChange(bounds: Rect) {
         super.onBoundsChange(bounds)
-        if (bounds.width() > 0 && bounds.height() > 0) {
+        if (bounds.width() > 0 && bounds.height() > 0 && !basePath.isEmpty) {
             scaledPath.reset()
+            val safeVpW = viewportWidth.takeIf { it.isFinite() && it > 0f } ?: 100f
+            val safeVpH = viewportHeight.takeIf { it.isFinite() && it > 0f } ?: 100f
             val matrix = Matrix()
-            matrix.setScale(bounds.width().toFloat() / viewportWidth, bounds.height().toFloat() / viewportHeight)
+            matrix.setScale(bounds.width().toFloat() / safeVpW, bounds.height().toFloat() / safeVpH)
             basePath.transform(matrix, scaledPath)
             scaledPath.offset(bounds.left.toFloat(), bounds.top.toFloat())
 

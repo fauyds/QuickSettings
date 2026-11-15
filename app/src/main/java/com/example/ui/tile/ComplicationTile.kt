@@ -55,7 +55,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -82,8 +84,14 @@ import com.example.model.ComplicationLayoutMode
 import com.example.model.ComplicationSublinePlacement
 import com.example.model.ComplicationTileModel
 import com.example.data.PanelPreferences
+import com.example.ui.shape.QsShapeItem
+import com.example.ui.shape.QsShapeManager
 import com.example.ui.theme.LocalIsDarkTheme
 import com.example.ui.theme.QuickPanelTheme
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.atan2
+import kotlin.math.floor
 
 /**
  * XML-inflatable Wear OS Complication + Quick Settings Tile hybrid View component.
@@ -524,9 +532,20 @@ fun ComplicationTileView(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Circular Complication Ring Container (enforces >= 48dp touch area on header items cleanly)
+            // Complication Container clipped to selected Complication Shape
             val complicationShapeId by PanelPreferences.complicationTileShapeId.collectAsState()
-            val complicationShape = com.example.ui.shape.QsShapeManager.getComposeShape(complicationShapeId)
+            val allShapes by QsShapeManager.allShapes.collectAsState()
+            val shapeItem = remember(complicationShapeId, allShapes) {
+                QsShapeManager.getShapeItem(complicationShapeId)
+            }
+            val complicationShape = remember(shapeItem.id, shapeItem.pathData) {
+                QsShapeManager.getComposeShape(shapeItem.id)
+            }
+            val normalizedContour = remember(shapeItem.id, shapeItem.pathData, shapeItem.viewportWidth, shapeItem.viewportHeight) {
+                buildNormalizedShapeContour(shapeItem)
+            }
+            val trackComposePath = remember { Path() }
+            val progressComposePath = remember { Path() }
 
             val ringBoxModifier = if (!showRingBackground && !showProgressArc && ringSize < 40.dp) {
                 Modifier
@@ -555,39 +574,113 @@ fun ComplicationTileView(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                // Smooth circular progress arc drawn via Compose Canvas
+                // Smooth shape-matched progress arc drawn via Compose Canvas
                 if (showProgressArc) {
                     Canvas(modifier = Modifier.fillMaxSize()) {
                         val strokePx = strokeWidthDp.toPx()
-                        val inset = strokePx / 2f + 1.dp.toPx()
-                        val arcSize = Size(
-                            width = (size.width - inset * 2f).coerceAtLeast(1f),
-                            height = (size.height - inset * 2f).coerceAtLeast(1f)
-                        )
-                        val topLeft = Offset(inset, inset)
+                        if (!strokePx.isFinite() || strokePx <= 0f) return@Canvas
+                        val extraMargin = if (shapeItem.id == "circle") 1.dp.toPx() else 2.25.dp.toPx()
+                        val inset = strokePx / 2f + extraMargin
+                        val drawW = size.width - inset * 2f
+                        val drawH = size.height - inset * 2f
+                        if (!drawW.isFinite() || !drawH.isFinite() || drawW <= 2f || drawH <= 2f) return@Canvas
 
-                        // Background track ring
-                        drawArc(
-                            color = trackColor,
-                            startAngle = 0f,
-                            sweepAngle = 360f,
-                            useCenter = false,
-                            topLeft = topLeft,
-                            size = arcSize,
-                            style = Stroke(width = strokePx, cap = StrokeCap.Round)
-                        )
+                        val safeProgress = animatedProgress.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f
+                        val contour = normalizedContour
+                        if (shapeItem.id == "circle" || contour == null || contour.pointCount < 4) {
+                            val arcSize = Size(width = drawW, height = drawH)
+                            val topLeft = Offset(inset, inset)
 
-                        // Smooth progress arc (0f..1f -> 0°..360° clockwise from 12 o'clock)
-                        if (animatedProgress > 0.005f) {
                             drawArc(
-                                color = progressArcColor,
-                                startAngle = -90f,
-                                sweepAngle = 360f * animatedProgress,
+                                color = trackColor,
+                                startAngle = 0f,
+                                sweepAngle = 360f,
                                 useCenter = false,
                                 topLeft = topLeft,
                                 size = arcSize,
                                 style = Stroke(width = strokePx, cap = StrokeCap.Round)
                             )
+
+                            if (safeProgress > 0.005f) {
+                                drawArc(
+                                    color = progressArcColor,
+                                    startAngle = -90f,
+                                    sweepAngle = 360f * safeProgress,
+                                    useCenter = false,
+                                    topLeft = topLeft,
+                                    size = arcSize,
+                                    style = Stroke(width = strokePx, cap = StrokeCap.Round)
+                                )
+                            }
+                        } else {
+                            val n = contour.pointCount
+                            trackComposePath.reset()
+                            trackComposePath.moveTo(
+                                inset + contour.xs[0] * drawW,
+                                inset + contour.ys[0] * drawH
+                            )
+                            for (i in 1 until n) {
+                                trackComposePath.lineTo(
+                                    inset + contour.xs[i] * drawW,
+                                    inset + contour.ys[i] * drawH
+                                )
+                            }
+                            trackComposePath.close()
+
+                            val strokeStyle = Stroke(
+                                width = strokePx,
+                                cap = StrokeCap.Round,
+                                join = StrokeJoin.Round
+                            )
+
+                            drawPath(
+                                path = trackComposePath,
+                                color = trackColor,
+                                style = strokeStyle
+                            )
+
+                            if (safeProgress > 0.005f) {
+                                if (safeProgress >= 0.995f) {
+                                    drawPath(
+                                        path = trackComposePath,
+                                        color = progressArcColor,
+                                        style = strokeStyle
+                                    )
+                                } else {
+                                    val exactIndex = safeProgress * n
+                                    val wholeSteps = floor(exactIndex).toInt().coerceIn(0, n - 1)
+                                    val frac = (exactIndex - wholeSteps).coerceIn(0f, 1f)
+
+                                    progressComposePath.reset()
+                                    progressComposePath.moveTo(
+                                        inset + contour.xs[0] * drawW,
+                                        inset + contour.ys[0] * drawH
+                                    )
+                                    for (i in 1..wholeSteps) {
+                                        progressComposePath.lineTo(
+                                            inset + contour.xs[i] * drawW,
+                                            inset + contour.ys[i] * drawH
+                                        )
+                                    }
+                                    if (frac > 0.001f) {
+                                        val nextIdx = (wholeSteps + 1) % n
+                                        val x0 = inset + contour.xs[wholeSteps] * drawW
+                                        val y0 = inset + contour.ys[wholeSteps] * drawH
+                                        val x1 = inset + contour.xs[nextIdx] * drawW
+                                        val y1 = inset + contour.ys[nextIdx] * drawH
+                                        progressComposePath.lineTo(
+                                            x0 + (x1 - x0) * frac,
+                                            y0 + (y1 - y0) * frac
+                                        )
+                                    }
+
+                                    drawPath(
+                                        path = progressComposePath,
+                                        color = progressArcColor,
+                                        style = strokeStyle
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -704,5 +797,155 @@ private fun ComplicationCenterIcon(
                 modifier = Modifier.size(size)
             )
         }
+    }
+}
+
+private class NormalizedShapeContour(
+    val xs: FloatArray,
+    val ys: FloatArray
+) {
+    val pointCount: Int get() = xs.size
+}
+
+/**
+ * Samples the longest valid contour of [shapeItem] into normalized [0..1] coordinates,
+ * enforces clockwise winding in screen coordinates (+y down), and rotates the starting
+ * index to 12 o'clock (top-center). Returns null on any invalid/empty/degenerate shape
+ * so the caller cleanly falls back to a circular arc without crashing.
+ */
+private fun buildNormalizedShapeContour(shapeItem: QsShapeItem): NormalizedShapeContour? {
+    if (shapeItem.id == "circle" || shapeItem.pathData.isBlank()) return null
+    return try {
+        val rawPath = androidx.core.graphics.PathParser.createPathFromPathData(shapeItem.pathData)
+        if (rawPath.isEmpty) return null
+
+        val safeVpW = shapeItem.viewportWidth.takeIf { it.isFinite() && it > 0f } ?: 100f
+        val safeVpH = shapeItem.viewportHeight.takeIf { it.isFinite() && it > 0f } ?: 100f
+
+        val scaledPath = android.graphics.Path()
+        val scaleMatrix = android.graphics.Matrix().apply {
+            setScale(100f / safeVpW, 100f / safeVpH)
+        }
+        rawPath.transform(scaleMatrix, scaledPath)
+        if (scaledPath.isEmpty) return null
+
+        val inspectMeasure = android.graphics.PathMeasure(scaledPath, false)
+        var bestContourIndex = -1
+        var bestLength = 0f
+        var currentIndex = 0
+        do {
+            val len = inspectMeasure.length
+            if (len.isFinite() && len > bestLength) {
+                bestLength = len
+                bestContourIndex = currentIndex
+            }
+            currentIndex++
+        } while (inspectMeasure.nextContour())
+
+        if (bestContourIndex < 0 || !bestLength.isFinite() || bestLength <= 1f) return null
+
+        val measure = android.graphics.PathMeasure(scaledPath, false)
+        repeat(bestContourIndex) {
+            if (!measure.nextContour()) return null
+        }
+        val totalLen = measure.length
+        if (!totalLen.isFinite() || totalLen <= 1f) return null
+
+        val sampleCount = 240
+        val rawXs = FloatArray(sampleCount)
+        val rawYs = FloatArray(sampleCount)
+        val pos = FloatArray(2)
+        var minX = Float.POSITIVE_INFINITY
+        var maxX = Float.NEGATIVE_INFINITY
+        var minY = Float.POSITIVE_INFINITY
+        var maxY = Float.NEGATIVE_INFINITY
+
+        for (i in 0 until sampleCount) {
+            val dist = (i.toFloat() / sampleCount.toFloat()) * totalLen
+            if (!measure.getPosTan(dist, pos, null)) return null
+            val px = pos[0]
+            val py = pos[1]
+            if (!px.isFinite() || !py.isFinite()) return null
+            rawXs[i] = px
+            rawYs[i] = py
+            if (px < minX) minX = px
+            if (px > maxX) maxX = px
+            if (py < minY) minY = py
+            if (py > maxY) maxY = py
+        }
+
+        val spanX = maxX - minX
+        val spanY = maxY - minY
+        if (!spanX.isFinite() || !spanY.isFinite() || spanX <= 0.1f || spanY <= 0.1f) {
+            return null
+        }
+
+        // Normalize into [0..1]: keep exact viewport alignment for standard paths,
+        // and re-fit shifted/oversized custom paths cleanly into the canvas bounds.
+        val outOfBounds = minX < -5f || minY < -5f || maxX > 105f || maxY > 105f
+        val xs = FloatArray(sampleCount)
+        val ys = FloatArray(sampleCount)
+        var normMinX = Float.POSITIVE_INFINITY
+        var normMaxX = Float.NEGATIVE_INFINITY
+        var normMinY = Float.POSITIVE_INFINITY
+        var normMaxY = Float.NEGATIVE_INFINITY
+
+        for (i in 0 until sampleCount) {
+            val nx = if (outOfBounds) ((rawXs[i] - minX) / spanX) else (rawXs[i] / 100f)
+            val ny = if (outOfBounds) ((rawYs[i] - minY) / spanY) else (rawYs[i] / 100f)
+            if (!nx.isFinite() || !ny.isFinite()) return null
+            xs[i] = nx
+            ys[i] = ny
+            if (nx < normMinX) normMinX = nx
+            if (nx > normMaxX) normMaxX = nx
+            if (ny < normMinY) normMinY = ny
+            if (ny > normMaxY) normMaxY = ny
+        }
+
+        // In screen coordinates (+x right, +y down), clockwise has signedArea < 0f.
+        var signedArea = 0f
+        for (i in 0 until sampleCount) {
+            val next = (i + 1) % sampleCount
+            signedArea += (xs[next] - xs[i]) * (ys[next] + ys[i])
+        }
+        if (!signedArea.isFinite()) return null
+        if (signedArea > 0f) {
+            xs.reverse()
+            ys.reverse()
+        }
+
+        // Rotate start index to 12 o'clock (top-center, angle = -PI / 2).
+        val cx = (normMinX + normMaxX) * 0.5f
+        val cy = (normMinY + normMaxY) * 0.5f
+        var startIdx = 0
+        var bestAngleDiff = Double.POSITIVE_INFINITY
+        for (i in 0 until sampleCount) {
+            val dx = (xs[i] - cx).toDouble()
+            val dy = (ys[i] - cy).toDouble()
+            if (dx == 0.0 && dy == 0.0) continue
+            var diff = atan2(dy, dx) - (-PI / 2.0)
+            while (diff > PI) diff -= 2.0 * PI
+            while (diff <= -PI) diff += 2.0 * PI
+            val absDiff = abs(diff)
+            if (absDiff < bestAngleDiff) {
+                bestAngleDiff = absDiff
+                startIdx = i
+            }
+        }
+
+        if (startIdx == 0) {
+            NormalizedShapeContour(xs, ys)
+        } else {
+            val rotatedXs = FloatArray(sampleCount)
+            val rotatedYs = FloatArray(sampleCount)
+            for (i in 0 until sampleCount) {
+                val srcIdx = (startIdx + i) % sampleCount
+                rotatedXs[i] = xs[srcIdx]
+                rotatedYs[i] = ys[srcIdx]
+            }
+            NormalizedShapeContour(rotatedXs, rotatedYs)
+        }
+    } catch (_: Throwable) {
+        null
     }
 }
