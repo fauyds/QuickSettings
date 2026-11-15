@@ -63,7 +63,13 @@ sealed class ShadeListRow {
 }
 
 private sealed class AdapterEntry {
-    data class Media(val state: MediaState, val isCompact: Boolean, val slotKey: String) : AdapterEntry()
+    data class Media(
+        val state: MediaState,
+        val isCompact: Boolean,
+        val slotKey: String,
+        val isFirstInGroup: Boolean,
+        val isLastInGroup: Boolean
+    ) : AdapterEntry()
     data class CategoryHeader(val row: ShadeListRow.CategoryHeaderRow) : AdapterEntry()
     data class Notification(val row: ShadeListRow.NotificationRow, val categoryId: String?) : AdapterEntry()
     data object Footer : AdapterEntry()
@@ -107,9 +113,23 @@ class NotificationAdapter(
         val entries = mutableListOf<AdapterEntry>()
 
         val isCompactMedia = PanelPreferences.mediaNotificationStyle.value == MediaNotificationStyle.COMPACT
+        val hasCategories = sections.isNotEmpty()
+        val mediaGroupLastIndex = if (hasCategories || rawNotifications.isEmpty()) {
+            mediaSessions.lastIndex
+        } else {
+            mediaSessions.size + rawNotifications.lastIndex
+        }
         mediaSessions.forEachIndexed { idx, media ->
             val slotKey = "${media.packageName}_$idx"
-            entries.add(AdapterEntry.Media(state = media, isCompact = isCompactMedia, slotKey = slotKey))
+            entries.add(
+                AdapterEntry.Media(
+                    state = media,
+                    isCompact = isCompactMedia,
+                    slotKey = slotKey,
+                    isFirstInGroup = (idx == 0),
+                    isLastInGroup = (idx == mediaGroupLastIndex)
+                )
+            )
         }
 
         if (sections.isNotEmpty()) {
@@ -144,7 +164,7 @@ class NotificationAdapter(
                 val notifRow = ShadeListRow.NotificationRow(
                     item = notif,
                     isGrouped = false,
-                    isFirstInGroup = (idx == 0),
+                    isFirstInGroup = (idx == 0 && mediaSessions.isEmpty()),
                     isLastInGroup = (idx == rawNotifications.lastIndex)
                 )
                 rows.add(notifRow)
@@ -249,7 +269,10 @@ class NotificationAdapter(
                 val newItem = newEntries[newItemPosition]
                 return when {
                     oldItem is AdapterEntry.Media && newItem is AdapterEntry.Media ->
-                        oldItem.state == newItem.state && oldItem.isCompact == newItem.isCompact
+                        oldItem.state == newItem.state &&
+                            oldItem.isCompact == newItem.isCompact &&
+                            oldItem.isFirstInGroup == newItem.isFirstInGroup &&
+                            oldItem.isLastInGroup == newItem.isLastInGroup
                     oldItem is AdapterEntry.CategoryHeader && newItem is AdapterEntry.CategoryHeader ->
                         oldItem.row.title == newItem.row.title &&
                             oldItem.row.iconRes == newItem.row.iconRes &&
@@ -369,9 +392,9 @@ class NotificationAdapter(
         val totalCount = renderedEntries.count { it !is AdapterEntry.Footer }
         val entry = renderedEntries.getOrNull(position) ?: return
         if (holder is MediaPlayerViewHolder && entry is AdapterEntry.Media) {
-            holder.bind(entry.state, position, totalCount)
+            holder.bind(entry.state, entry.isFirstInGroup, entry.isLastInGroup)
         } else if (holder is CompactMediaPlayerViewHolder && entry is AdapterEntry.Media) {
-            holder.bind(entry.state, position, totalCount)
+            holder.bind(entry.state, entry.isFirstInGroup, entry.isLastInGroup)
         } else if (holder is CategoryHeaderViewHolder && entry is AdapterEntry.CategoryHeader) {
             val isExpandPayload = payloads.contains(PAYLOAD_CATEGORY_EXPAND_CHANGE)
             holder.bind(entry.row, animateExpandChange = isExpandPayload)
@@ -748,7 +771,7 @@ class NotificationAdapter(
 
         private var isSeekBarVisible = true
 
-        fun bind(mediaState: MediaState, position: Int, totalCount: Int) {
+        fun bind(mediaState: MediaState, isFirstInGroup: Boolean, isLastInGroup: Boolean) {
             val context = itemView.context
             val density = context.resources.displayMetrics.density
 
@@ -795,25 +818,17 @@ class NotificationAdapter(
             val outerCornerPx = panelOuterCorner * density
             val innerCornerPx = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner) * density
 
+            val topRadius = if (isFirstInGroup) outerCornerPx else innerCornerPx
+            val bottomRadius = if (isLastInGroup) outerCornerPx else innerCornerPx
             val radii = if (isOreoStyle) {
                 FloatArray(8) { 0f }
             } else {
-                when {
-                    totalCount <= 1 -> FloatArray(8) { outerCornerPx }
-                    position == 0 -> floatArrayOf(
-                        outerCornerPx, outerCornerPx,
-                        outerCornerPx, outerCornerPx,
-                        innerCornerPx, innerCornerPx,
-                        innerCornerPx, innerCornerPx
-                    )
-                    position == totalCount - 1 -> floatArrayOf(
-                        innerCornerPx, innerCornerPx,
-                        innerCornerPx, innerCornerPx,
-                        outerCornerPx, outerCornerPx,
-                        outerCornerPx, outerCornerPx
-                    )
-                    else -> FloatArray(8) { innerCornerPx }
-                }
+                floatArrayOf(
+                    topRadius, topRadius,
+                    topRadius, topRadius,
+                    bottomRadius, bottomRadius,
+                    bottomRadius, bottomRadius
+                )
             }
 
             val contentDrawable = if (isOreoStyle) {
@@ -1098,7 +1113,7 @@ class NotificationAdapter(
         private val btnPlayPause: ImageButton = itemView.findViewById(R.id.btn_compact_media_play_pause)
         private val btnNext: ImageButton = itemView.findViewById(R.id.btn_compact_media_next)
 
-        fun bind(mediaState: MediaState, position: Int, totalCount: Int) {
+        fun bind(mediaState: MediaState, isFirstInGroup: Boolean, isLastInGroup: Boolean) {
             val context = itemView.context
             val density = context.resources.displayMetrics.density
 
@@ -1179,25 +1194,17 @@ class NotificationAdapter(
 
             // 5. Card Background & Dynamic Corner Radii (Corner Radius Slider)
 
+            val topRadius = if (isFirstInGroup) outerCornerPx else innerCornerPx
+            val bottomRadius = if (isLastInGroup) outerCornerPx else innerCornerPx
             val radii = if (isOreoStyle) {
                 FloatArray(8) { 0f }
             } else {
-                when {
-                    totalCount <= 1 -> FloatArray(8) { outerCornerPx }
-                    position == 0 -> floatArrayOf(
-                        outerCornerPx, outerCornerPx,
-                        outerCornerPx, outerCornerPx,
-                        innerCornerPx, innerCornerPx,
-                        innerCornerPx, innerCornerPx
-                    )
-                    position == totalCount - 1 -> floatArrayOf(
-                        innerCornerPx, innerCornerPx,
-                        innerCornerPx, innerCornerPx,
-                        outerCornerPx, outerCornerPx,
-                        outerCornerPx, outerCornerPx
-                    )
-                    else -> FloatArray(8) { innerCornerPx }
-                }
+                floatArrayOf(
+                    topRadius, topRadius,
+                    topRadius, topRadius,
+                    bottomRadius, bottomRadius,
+                    bottomRadius, bottomRadius
+                )
             }
 
             val cardBg = if (isOreoStyle) {

@@ -1437,7 +1437,12 @@ object PanelPreferences {
             _disabledTileShapeId.value = "circle"
             _disabledTileShape.value = TileShape.CIRCLE
         }
-        val savedComplicationShape = prefs.getString(KEY_COMPLICATION_TILE_SHAPE, null) ?: "circle"
+        val savedComplicationShape = try {
+            prefs.getString(KEY_COMPLICATION_TILE_SHAPE, null) ?: "circle"
+        } catch (_: ClassCastException) {
+            prefs.edit().putString(KEY_COMPLICATION_TILE_SHAPE, "circle").apply()
+            "circle"
+        }
         _complicationTileShapeId.value = savedComplicationShape
         _complicationTileShape.value = TileShape.fromId(savedComplicationShape)
         _tileOutlineEnabled.value = prefs.getBoolean(KEY_TILE_OUTLINE_ENABLED, false)
@@ -2119,10 +2124,22 @@ object PanelPreferences {
         val targetHideBrightnessIcon = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_HIDE_BRIGHTNESS_ICON, style), false) else false
         val targetShowBrightnessPlusMinus = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SHOW_BRIGHTNESS_PLUS_MINUS, style), false) else false
         val targetShowBrightnessControlsBg = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SHOW_BRIGHTNESS_CONTROLS_BACKGROUND, style), false) else false
-        val targetComplicationShapeId = if (isInitialized && prefs.contains(getStyleKey(KEY_COMPLICATION_TILE_SHAPE, style))) {
-            prefs.getString(getStyleKey(KEY_COMPLICATION_TILE_SHAPE, style), "circle") ?: "circle"
+        val styleComplicationKey = getStyleKey(KEY_COMPLICATION_TILE_SHAPE, style)
+        val globalComplicationShapeId = try {
+            prefs.getString(KEY_COMPLICATION_TILE_SHAPE, null) ?: "circle"
+        } catch (_: ClassCastException) {
+            prefs.edit().putString(KEY_COMPLICATION_TILE_SHAPE, "circle").apply()
+            "circle"
+        }
+        val targetComplicationShapeId = if (isInitialized && prefs.contains(styleComplicationKey)) {
+            try {
+                prefs.getString(styleComplicationKey, null) ?: globalComplicationShapeId
+            } catch (_: ClassCastException) {
+                prefs.edit().putString(styleComplicationKey, globalComplicationShapeId).apply()
+                globalComplicationShapeId
+            }
         } else {
-            prefs.getString(KEY_COMPLICATION_TILE_SHAPE, "circle") ?: "circle"
+            globalComplicationShapeId
         }
 
         // Update StateFlows
@@ -2634,7 +2651,7 @@ object PanelPreferences {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
             .putString(KEY_COMPLICATION_TILE_SHAPE, shapeId)
-            .putBoolean(getStyleKey(KEY_COMPLICATION_TILE_SHAPE), true)
+            .putString(getStyleKey(KEY_COMPLICATION_TILE_SHAPE), shapeId)
             .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
