@@ -46,6 +46,8 @@ import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.WifiTethering
 import androidx.compose.runtime.DisposableEffect
 import com.example.data.EditButtonPosition
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ripple
 import com.example.data.TileShape
 import com.example.data.ProgressBarStyle
 import com.example.data.BatteryPercentageLocation
@@ -5313,49 +5315,108 @@ fun UnifiedQsPanel(
                                 }
                             }
 
+                            val footerIconBgEnabled by PanelPreferences.footerIconBackground.collectAsState()
+                            val footerOuterSpacingEnabled by PanelPreferences.footerOuterSpacing.collectAsState()
+                            val footerOuterCorner by PanelPreferences.footerOuterCorner.collectAsState()
+                            val footerInnerCorner by PanelPreferences.footerInnerCorner.collectAsState()
+                            val footerSpacing by PanelPreferences.footerSpacing.collectAsState()
+                            val footerBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
+                            val resolvedOreoFooterIconTint = if (footerIconBgEnabled) {
+                                MaterialTheme.colorScheme.onSurface
+                            } else {
+                                footerIconTint
+                            }
+                            val oreoSpacingVal = if (footerIconBgEnabled) {
+                                footerSpacing.dp
+                            } else {
+                                4.dp
+                            }
+
+                            val visibleOreoButtons = mutableListOf<String>()
+                            if (showEditPencilFull) visibleOreoButtons.add("edit")
+                            if (showSettingsIconFull) visibleOreoButtons.add("settings")
+                            visibleOreoButtons.add("collapse")
+
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(oreoSpacingVal),
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.align(Alignment.CenterEnd)
                             ) {
-                                if (showEditPencilFull) {
-                                    IconButton(
-                                        onClick = onToggleEditMode,
-                                        modifier = Modifier.size(32.dp).testTag("oreo_footer_edit_btn")
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Edit,
-                                            contentDescription = "Edit Tiles",
-                                            tint = footerIconTint,
-                                            modifier = Modifier.size(16.dp)
-                                        )
+                                visibleOreoButtons.forEachIndexed { idx, btnType ->
+                                    val isFirst = (idx == 0)
+                                    val isLast = (idx == visibleOreoButtons.size - 1)
+                                    val outerCorner = footerOuterCorner.dp
+                                    val innerCorner = footerInnerCorner.dp
+                                    val btnShape = when {
+                                        isFirst && isLast -> RoundedCornerShape(outerCorner)
+                                        isFirst -> RoundedCornerShape(topStart = outerCorner, bottomStart = outerCorner, topEnd = innerCorner, bottomEnd = innerCorner)
+                                        isLast -> RoundedCornerShape(topStart = innerCorner, bottomStart = innerCorner, topEnd = outerCorner, bottomEnd = outerCorner)
+                                        else -> RoundedCornerShape(innerCorner)
                                     }
-                                }
 
-                                if (showSettingsIconFull) {
-                                    IconButton(
-                                        onClick = onSettingsClick,
-                                        modifier = Modifier.size(32.dp).testTag("oreo_footer_settings_btn")
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Settings,
-                                            contentDescription = "System Settings",
-                                            tint = footerIconTint,
-                                            modifier = Modifier.size(16.dp)
+                                    val btnModifier = Modifier
+                                        .size(32.dp)
+                                        .clip(btnShape)
+                                        .then(
+                                            if (footerIconBgEnabled) Modifier.background(footerBgColor) else Modifier
                                         )
-                                    }
-                                }
 
-                                IconButton(
-                                    onClick = onCollapseToQqs,
-                                    modifier = Modifier.size(32.dp).testTag("oreo_footer_collapse_btn")
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.KeyboardArrowUp,
-                                        contentDescription = "Collapse",
-                                        tint = footerIconTint,
-                                        modifier = Modifier.size(18.dp)
-                                    )
+                                    when (btnType) {
+                                        "edit" -> {
+                                            Box(
+                                                modifier = btnModifier
+                                                    .clickable(
+                                                        interactionSource = remember { MutableInteractionSource() },
+                                                        indication = ripple(bounded = true)
+                                                    ) { onToggleEditMode() }
+                                                    .testTag("oreo_footer_edit_btn"),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Edit,
+                                                    contentDescription = "Edit Tiles",
+                                                    tint = resolvedOreoFooterIconTint,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
+                                        "settings" -> {
+                                            Box(
+                                                modifier = btnModifier
+                                                    .clickable(
+                                                        interactionSource = remember { MutableInteractionSource() },
+                                                        indication = ripple(bounded = true)
+                                                    ) { onSettingsClick() }
+                                                    .testTag("oreo_footer_settings_btn"),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Settings,
+                                                    contentDescription = "System Settings",
+                                                    tint = resolvedOreoFooterIconTint,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
+                                        "collapse" -> {
+                                            Box(
+                                                modifier = btnModifier
+                                                    .clickable(
+                                                        interactionSource = remember { MutableInteractionSource() },
+                                                        indication = ripple(bounded = true)
+                                                    ) { onCollapseToQqs() }
+                                                    .testTag("oreo_footer_collapse_btn"),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.KeyboardArrowUp,
+                                                    contentDescription = "Collapse",
+                                                    tint = resolvedOreoFooterIconTint,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -5837,17 +5898,37 @@ fun UnifiedQsPanel(
                             ) {
                                 val footerTint = if (isDark) Color(0xFFCCCCCC) else Color(0xFF333333)
                                 val editPos by PanelPreferences.editButtonPosition.collectAsState()
-                                IconButton(
-                                    onClick = onCollapseToQqs,
+                                val footerIconBgEnabled by PanelPreferences.footerIconBackground.collectAsState()
+                                val footerOuterSpacingEnabled by PanelPreferences.footerOuterSpacing.collectAsState()
+                                val footerOuterCorner by PanelPreferences.footerOuterCorner.collectAsState()
+                                val footerInnerCorner by PanelPreferences.footerInnerCorner.collectAsState()
+                                val footerSpacing by PanelPreferences.footerSpacing.collectAsState()
+                                val footerBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
+                                val resolvedFooterIconTint = if (footerIconBgEnabled) {
+                                    MaterialTheme.colorScheme.onSurface
+                                } else {
+                                    footerTint
+                                }
+
+                                Box(
                                     modifier = Modifier
                                         .size(32.dp)
                                         .align(Alignment.CenterStart)
-                                        .testTag("collapse_to_qqs_button")
+                                        .clip(RoundedCornerShape(footerOuterCorner.dp))
+                                        .then(
+                                            if (footerIconBgEnabled) Modifier.background(footerBgColor) else Modifier
+                                        )
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = ripple(bounded = true)
+                                        ) { onCollapseToQqs() }
+                                        .testTag("collapse_to_qqs_button"),
+                                    contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.KeyboardArrowUp,
                                         contentDescription = "Collapse",
-                                        tint = footerTint,
+                                        tint = resolvedFooterIconTint,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -5883,65 +5964,113 @@ fun UnifiedQsPanel(
                                     }
                                 }
 
+                                val spacingVal = if (footerIconBgEnabled) {
+                                    footerSpacing.dp
+                                } else {
+                                    4.dp
+                                }
+
+                                val visibleFooterButtons = mutableListOf<String>()
+                                if (editPos == EditButtonPosition.FOOTER || editPos == EditButtonPosition.BOTH) {
+                                    visibleFooterButtons.add("edit")
+                                }
+                                val settingsLocFooter by PanelPreferences.settingsIconLocation.collectAsState()
+                                if (settingsLocFooter == com.example.data.SettingsIconLocation.EXPANDED_QS) {
+                                    visibleFooterButtons.add("settings")
+                                }
+                                visibleFooterButtons.add("power")
+
                                 Row(
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(spacingVal),
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.align(Alignment.CenterEnd)
                                 ) {
-                                    if (editPos == EditButtonPosition.FOOTER || editPos == EditButtonPosition.BOTH) {
-                                        IconButton(
-                                            onClick = onToggleEditMode,
-                                            modifier = Modifier
-                                                .size(32.dp)
-                                                .testTag("footer_edit_tiles_btn")
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Edit,
-                                                contentDescription = "Edit Tiles",
-                                                tint = footerTint,
-                                                modifier = Modifier.size(16.dp)
-                                            )
+                                    visibleFooterButtons.forEachIndexed { idx, btnType ->
+                                        val isFirst = (idx == 0)
+                                        val isLast = (idx == visibleFooterButtons.size - 1)
+                                        val outerCorner = footerOuterCorner.dp
+                                        val innerCorner = footerInnerCorner.dp
+                                        val btnShape = when {
+                                            isFirst && isLast -> RoundedCornerShape(outerCorner)
+                                            isFirst -> RoundedCornerShape(topStart = outerCorner, bottomStart = outerCorner, topEnd = innerCorner, bottomEnd = innerCorner)
+                                            isLast -> RoundedCornerShape(topStart = innerCorner, bottomStart = innerCorner, topEnd = outerCorner, bottomEnd = outerCorner)
+                                            else -> RoundedCornerShape(innerCorner)
                                         }
-                                    }
 
-                                    val settingsLocFooter by PanelPreferences.settingsIconLocation.collectAsState()
-                                    if (settingsLocFooter == com.example.data.SettingsIconLocation.EXPANDED_QS) {
-                                        IconButton(
-                                            onClick = onSettingsClick,
-                                            modifier = Modifier
-                                                .size(32.dp)
-                                                .testTag("footer_settings_button")
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Settings,
-                                                contentDescription = "System Settings",
-                                                tint = footerTint,
-                                                modifier = Modifier.size(16.dp)
+                                        val btnModifier = Modifier
+                                            .size(32.dp)
+                                            .clip(btnShape)
+                                            .then(
+                                                if (footerIconBgEnabled) Modifier.background(footerBgColor) else Modifier
                                             )
-                                        }
-                                    }
 
-                                    IconButton(
-                                        onClick = {
-                                            val opened = QuickPanelAccessibilityService.openPowerDialog()
-                                            if (!opened) {
-                                                coroutineScope.launch(Dispatchers.IO) {
-                                                    try {
-                                                        val engine = com.example.system.NativeTileManager.instance?.privilegeEngine ?: com.example.system.PrivilegeEngine(context)
-                                                        engine.executeCommand("cmd statusbar power-menu || input keyevent --longpress 26")
-                                                    } catch (e: Exception) {}
+                                        when (btnType) {
+                                            "edit" -> {
+                                                Box(
+                                                    modifier = btnModifier
+                                                        .clickable(
+                                                            interactionSource = remember { MutableInteractionSource() },
+                                                            indication = ripple(bounded = true)
+                                                        ) { onToggleEditMode() }
+                                                        .testTag("footer_edit_tiles_btn"),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Edit,
+                                                        contentDescription = "Edit Tiles",
+                                                        tint = resolvedFooterIconTint,
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
                                                 }
                                             }
-                                            onClosePanel()
-                                        },
-                                        modifier = Modifier.size(32.dp).testTag("footer_power_button")
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.PowerSettingsNew,
-                                            contentDescription = "Power Menu",
-                                            tint = footerTint,
-                                            modifier = Modifier.size(16.dp)
-                                        )
+                                            "settings" -> {
+                                                Box(
+                                                    modifier = btnModifier
+                                                        .clickable(
+                                                            interactionSource = remember { MutableInteractionSource() },
+                                                            indication = ripple(bounded = true)
+                                                        ) { onSettingsClick() }
+                                                        .testTag("footer_settings_button"),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Settings,
+                                                        contentDescription = "System Settings",
+                                                        tint = resolvedFooterIconTint,
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                }
+                                            }
+                                            "power" -> {
+                                                Box(
+                                                    modifier = btnModifier
+                                                        .clickable(
+                                                            interactionSource = remember { MutableInteractionSource() },
+                                                            indication = ripple(bounded = true)
+                                                        ) {
+                                                            val opened = QuickPanelAccessibilityService.openPowerDialog()
+                                                            if (!opened) {
+                                                                coroutineScope.launch(Dispatchers.IO) {
+                                                                    try {
+                                                                        val engine = com.example.system.NativeTileManager.instance?.privilegeEngine ?: com.example.system.PrivilegeEngine(context)
+                                                                        engine.executeCommand("cmd statusbar power-menu || input keyevent --longpress 26")
+                                                                    } catch (e: Exception) {}
+                                                                }
+                                                            }
+                                                            onClosePanel()
+                                                        }
+                                                        .testTag("footer_power_button"),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.PowerSettingsNew,
+                                                        contentDescription = "Power Menu",
+                                                        tint = resolvedFooterIconTint,
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }

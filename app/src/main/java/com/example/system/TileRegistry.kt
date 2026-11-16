@@ -49,6 +49,7 @@ import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.ui.graphics.Color
 import com.example.data.local.TileEntity
 import com.example.data.repository.TileRepository
+import com.example.data.ComplicationCommandRepository
 import com.example.data.PanelPreferences
 import com.example.data.TileCommandRepository
 import android.media.AudioManager
@@ -59,6 +60,7 @@ import com.example.model.ComplicationAction
 import com.example.model.ComplicationLayoutMode
 import com.example.model.ComplicationSublinePlacement
 import com.example.model.ComplicationTileModel
+import com.example.model.ComplicationTriggerBehavior
 import com.example.model.MediaState
 import com.example.model.TileActionOverrideType
 import com.example.model.TileCommandConfig
@@ -66,6 +68,8 @@ import com.example.model.QsTileModel
 import com.example.model.TileCategory
 import com.example.model.TileState
 import com.example.service.MediaSessionManagerHelper
+import com.example.service.QuickPanelAccessibilityService
+import com.example.service.QuickSettingsOverlayService
 import com.example.ui.tile.ComplicationTileController
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
@@ -202,6 +206,7 @@ class TileRegistry(
 
     init {
         ComplicationDataHub.init(context)
+        ComplicationCommandRepository.init(context)
         scope.launch {
             // Seed default tiles if database is empty
             repository.allTiles.collect { currentList ->
@@ -489,7 +494,7 @@ class TileRegistry(
                             btOn -> "No Device"
                             else -> "Off"
                         }
-                        Triple(if (hasDevice) TileState.ACTIVE else TileState.INACTIVE, Icons.Default.Bluetooth, subText)
+                        Triple(if (btOn) TileState.ACTIVE else TileState.INACTIVE, Icons.Default.Bluetooth, subText)
                     }
                     "comp_cpu" -> {
                         val cpu = compSnap.cpu
@@ -581,6 +586,7 @@ class TileRegistry(
                         val range = (maxB - minB).coerceAtLeast(1)
                         val brightPct = (((clampedB - minB) / range) * 100).toInt().coerceIn(0, 100)
                         val brightFrac = (clampedB - minB) / range
+                        val isAutoBright = compSnap.lux.isAutoBrightnessEnabled
                         ComplicationTileModel(
                             id = entity.tileId,
                             title = entity.label,
@@ -591,7 +597,10 @@ class TileRegistry(
                             isActive = brightPct >= 50,
                             sublinePlacement = sublinePlacement,
                             layoutMode = ComplicationLayoutMode.ADAPTIVE,
-                            tapAction = ComplicationAction.Shortcut(shortcutId = "cycle_brightness"),
+                            tapAction = ComplicationAction.Toggle(
+                                tileId = "auto_brightness_toggle",
+                                isActive = isAutoBright
+                            ),
                             settingsAction = entity.settingsAction ?: Settings.ACTION_DISPLAY_SETTINGS
                         )
                     }
@@ -625,12 +634,12 @@ class TileRegistry(
                             progress = if (hasDevice) (effectivePct / 100f).coerceIn(0f, 1f) else 0f,
                             icon = vector,
                             accentColor = null,
-                            isActive = hasDevice,
+                            isActive = btOn,
                             sublinePlacement = sublinePlacement,
                             layoutMode = ComplicationLayoutMode.ADAPTIVE,
-                            tapAction = ComplicationAction.Shortcut(
-                                shortcutId = "open_bluetooth",
-                                intentAction = Settings.ACTION_BLUETOOTH_SETTINGS
+                            tapAction = ComplicationAction.Toggle(
+                                tileId = "bluetooth",
+                                isActive = btOn
                             ),
                             settingsAction = entity.settingsAction ?: Settings.ACTION_BLUETOOTH_SETTINGS
                         )
@@ -679,7 +688,10 @@ class TileRegistry(
                             isActive = net.totalBytesPerSec > 2048L,
                             sublinePlacement = sublinePlacement,
                             layoutMode = ComplicationLayoutMode.ADAPTIVE,
-                            tapAction = ComplicationAction.Shortcut(shortcutId = "micro:NETWORK_SPEED"),
+                            tapAction = ComplicationAction.Toggle(
+                                tileId = "wifi_or_cellular",
+                                isActive = wifiOn || cellularOn
+                            ),
                             settingsAction = entity.settingsAction ?: Settings.ACTION_WIRELESS_SETTINGS
                         )
                     }
@@ -733,7 +745,7 @@ class TileRegistry(
                             isActive = isPlaying,
                             sublinePlacement = sublinePlacement,
                             layoutMode = ComplicationLayoutMode.ADAPTIVE,
-                            tapAction = ComplicationAction.Toggle(tileId = "media_play_pause", isActive = isPlaying),
+                            tapAction = ComplicationAction.Shortcut(shortcutId = "open_media_session"),
                             settingsAction = entity.settingsAction ?: Settings.ACTION_SOUND_SETTINGS
                         )
                     }
@@ -765,7 +777,10 @@ class TileRegistry(
                             isActive = sig.isConnected,
                             sublinePlacement = sublinePlacement,
                             layoutMode = ComplicationLayoutMode.ADAPTIVE,
-                            tapAction = ComplicationAction.Shortcut(shortcutId = "micro:SIGNAL_QUALITY"),
+                            tapAction = ComplicationAction.Toggle(
+                                tileId = "wifi_or_cellular",
+                                isActive = sig.isConnected || wifiOn || cellularOn
+                            ),
                             settingsAction = entity.settingsAction ?: Settings.ACTION_WIFI_SETTINGS
                         )
                     }
@@ -781,7 +796,7 @@ class TileRegistry(
                             isActive = dl.isDownloading,
                             sublinePlacement = sublinePlacement,
                             layoutMode = ComplicationLayoutMode.ADAPTIVE,
-                            tapAction = ComplicationAction.Shortcut(shortcutId = "micro:DOWNLOAD_PROGRESS"),
+                            tapAction = ComplicationAction.Shortcut(shortcutId = "open_download_app"),
                             settingsAction = entity.settingsAction ?: Settings.ACTION_SETTINGS
                         )
                     }
@@ -891,6 +906,10 @@ class TileRegistry(
             return
         }
 
+        val compConfig = if (tile.id.startsWith("comp_")) {
+            ComplicationCommandRepository.getConfig(tile.id, context)
+        } else null
+
         val isThirdParty = tile.isExternal || tile.category == TileCategory.THIRD_PARTY || tile.id.contains("/")
 
         val isNativeSystemTile = tile.id in listOf(
@@ -916,7 +935,17 @@ class TileRegistry(
         scope.launch(Dispatchers.IO) {
             try {
                 val spec = tile.complicationSpec
-                if (tile.id == "comp_timer" && ComplicationDataHub.isTimerFinished()) {
+                if (compConfig != null && compConfig.tapBehavior != ComplicationTriggerBehavior.DEFAULT) {
+                    executeComplicationCustomBehavior(
+                        tile = tile,
+                        behavior = compConfig.tapBehavior,
+                        shellCmd = compConfig.tapShellCommand,
+                        shellCmdOff = compConfig.tapShellCommandOff,
+                        intentAction = compConfig.tapIntentAction,
+                        intentPackage = compConfig.tapIntentPackage,
+                        intentComponent = compConfig.tapIntentComponent
+                    )
+                } else if (tile.id == "comp_timer" && ComplicationDataHub.isTimerFinished()) {
                     withContext(Dispatchers.Main) {
                         ComplicationDataHub.dismissFinishedTimer(context)
                     }
@@ -1174,7 +1203,110 @@ class TileRegistry(
         }
     }
 
+    private suspend fun executeComplicationCustomBehavior(
+        tile: QsTileModel,
+        behavior: ComplicationTriggerBehavior,
+        shellCmd: String,
+        shellCmdOff: String,
+        intentAction: String,
+        intentPackage: String,
+        intentComponent: String
+    ) {
+        when (behavior) {
+            ComplicationTriggerBehavior.DEFAULT -> Unit
+            ComplicationTriggerBehavior.COMPLICATION_MENU -> {
+                withContext(Dispatchers.Main) {
+                    ComplicationDataHub.openMicroWindowForTile(tile.id)
+                }
+            }
+            ComplicationTriggerBehavior.STANDARD_COMMAND -> {
+                withContext(Dispatchers.Main) {
+                    val fullComp = if (intentComponent.isNotBlank()) {
+                        intentComponent
+                    } else if (intentAction.contains("/")) {
+                        intentAction
+                    } else {
+                        ""
+                    }
+                    val intent = if (fullComp.contains("/")) {
+                        val p = fullComp.substringBefore('/').trim()
+                        val cRaw = fullComp.substringAfter('/').trim()
+                        val c = if (cRaw.startsWith(".")) "$p$cRaw" else cRaw
+                        val act = if (intentAction.isNotBlank() && !intentAction.contains("/")) intentAction else Intent.ACTION_MAIN
+                        Intent(act).apply {
+                            component = ComponentName(p, c)
+                            if (p.isNotBlank()) setPackage(p)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                    } else if (intentPackage.isNotBlank() && intentComponent.isNotBlank()) {
+                        val c = if (intentComponent.startsWith(".")) "$intentPackage$intentComponent" else intentComponent
+                        Intent(intentAction.ifBlank { Intent.ACTION_MAIN }).apply {
+                            component = ComponentName(intentPackage, c)
+                            setPackage(intentPackage)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                    } else if (intentAction.isBlank() && intentPackage.isNotBlank()) {
+                        context.packageManager.getLaunchIntentForPackage(intentPackage)?.apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        } ?: Intent(Intent.ACTION_MAIN).apply {
+                            setPackage(intentPackage)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                    } else {
+                        Intent(intentAction.ifBlank { Intent.ACTION_MAIN }).apply {
+                            if (intentPackage.isNotBlank()) setPackage(intentPackage)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                    }
+
+                    try {
+                        context.startActivity(intent)
+                        QuickPanelAccessibilityService.hideCustomPanel()
+                        QuickSettingsOverlayService.instance?.hideOverlayPanelSmoothly()
+                    } catch (_: Exception) {
+                        try {
+                            context.sendBroadcast(intent)
+                        } catch (e2: Exception) {
+                            Log.w("TileRegistry", "Standard complication intent failed for ${tile.id}: ${e2.message}")
+                        }
+                    }
+                }
+            }
+            ComplicationTriggerBehavior.SHIZUKU_COMMAND -> {
+                val cmd = if (tile.state == TileState.ACTIVE && shellCmdOff.isNotBlank()) shellCmdOff else shellCmd
+                if (cmd.isNotBlank()) {
+                    nativeTileManager.privilegeEngine.executeCommandWithMode(cmd, CommandExecutionMode.SHIZUKU, null)
+                }
+            }
+            ComplicationTriggerBehavior.ROOT_COMMAND -> {
+                val cmd = if (tile.state == TileState.ACTIVE && shellCmdOff.isNotBlank()) shellCmdOff else shellCmd
+                if (cmd.isNotBlank()) {
+                    nativeTileManager.privilegeEngine.executeCommandWithMode(cmd, CommandExecutionMode.ROOT, null)
+                }
+            }
+        }
+    }
+
     fun handleTileLongClick(tile: QsTileModel) {
+        val compConfig = if (tile.id.startsWith("comp_")) {
+            ComplicationCommandRepository.getConfig(tile.id, context)
+        } else null
+        if (compConfig != null && compConfig.longPressBehavior != ComplicationTriggerBehavior.DEFAULT) {
+            scope.launch(Dispatchers.IO) {
+                executeComplicationCustomBehavior(
+                    tile = tile,
+                    behavior = compConfig.longPressBehavior,
+                    shellCmd = compConfig.longPressShellCommand,
+                    shellCmdOff = "",
+                    intentAction = compConfig.longPressIntentAction,
+                    intentPackage = compConfig.longPressIntentPackage,
+                    intentComponent = compConfig.longPressIntentComponent
+                )
+                queryUnderlyingSystemStatus(tile)
+            }
+            return
+        }
+
         val config = TileCommandRepository.getConfig(tile.id)
         if (config.longPressActionType != LongPressActionType.DEFAULT) {
             when (config.longPressActionType) {

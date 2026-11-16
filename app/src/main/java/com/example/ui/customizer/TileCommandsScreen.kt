@@ -1,5 +1,6 @@
 package com.example.ui.customizer
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -82,13 +83,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.ComplicationCommandRepository
 import com.example.data.TileCommandRepository
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.DoNotDisturb
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.TouchApp
 import com.example.model.CommandExecutionMode
+import com.example.model.ComplicationTriggerBehavior
 import com.example.model.TileCommandConfig
 import com.example.system.PrivilegeEngine
 import com.example.model.PrivilegeMode
@@ -137,6 +142,7 @@ fun TileCommandsScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val configs by TileCommandRepository.tileConfigs.collectAsStateWithLifecycle()
+    val complicationConfigs by ComplicationCommandRepository.configs.collectAsStateWithLifecycle()
 
     var showCreateDialog by remember { mutableStateOf(false) }
     var editingConfig by remember { mutableStateOf<TileCommandConfig?>(null) }
@@ -200,6 +206,93 @@ fun TileCommandsScreen(
             .testTag("tile_commands_screen"),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        // Complication Actions Editor Intent Card
+        item {
+            val customizedComplicationCount = remember(complicationConfigs) {
+                complicationConfigs.values.count {
+                    it.tapBehavior != ComplicationTriggerBehavior.DEFAULT ||
+                        it.longPressBehavior != ComplicationTriggerBehavior.DEFAULT
+                }
+            }
+            SettingsCard(
+                shape = ExpressiveCardShapes.SingleCard,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(ExpressiveCardShapes.SingleCard)
+                    .clickable {
+                        ComplicationCommandRepository.init(context)
+                        context.startActivity(Intent(context, ComplicationCommandsActivity::class.java))
+                    }
+                    .testTag("complication_commands_entry_card")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.TouchApp,
+                                contentDescription = "Complication Actions",
+                                tint = colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = "Complication Actions",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = colorScheme.onSurface
+                            )
+                            Text(
+                                text = if (customizedComplicationCount > 0) {
+                                    "$customizedComplicationCount customized • Single tap & long press commands"
+                                } else {
+                                    "Edit single tap & long press menus or Standard/Root/Shizuku commands."
+                                },
+                                fontSize = 11.5.sp,
+                                lineHeight = 14.sp,
+                                color = colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    FilledTonalButton(
+                        onClick = {
+                            ComplicationCommandRepository.init(context)
+                            context.startActivity(Intent(context, ComplicationCommandsActivity::class.java))
+                        },
+                        shape = CircleShape,
+                        modifier = Modifier.testTag("btn_open_complication_commands")
+                    ) {
+                        Text("Edit", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Open Complication Actions",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
+
         // Custom QS Tiles Manager & Creator Card
         item {
             SettingsCard(

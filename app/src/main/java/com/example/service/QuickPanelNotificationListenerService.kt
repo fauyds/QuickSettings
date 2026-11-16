@@ -1204,6 +1204,7 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                         speedBytesPerSec = parsedSpeed,
                         speedText = if (parsedSpeed > 0L) com.example.system.ComplicationDataHub.formatCompactSpeed(parsedSpeed) else "",
                         contentIntent = n.contentIntent,
+                        packageName = pkg,
                         isFromDownloadManager = false
                     )
                 )

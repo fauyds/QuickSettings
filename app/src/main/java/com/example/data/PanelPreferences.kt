@@ -386,12 +386,92 @@ object PanelPreferences {
 
     private const val KEY_SHOW_HEADER_COMPLICATIONS = "show_header_complications"
     private const val KEY_COMPLICATION_SUBLINE_PLACEMENT = "complication_subline_placement"
+    private const val KEY_FOOTER_ICON_BACKGROUND = "footer_icon_background"
+    private const val KEY_FOOTER_OUTER_SPACING = "footer_outer_spacing"
+    private const val KEY_FOOTER_OUTER_CORNER = "footer_outer_corner"
+    private const val KEY_FOOTER_INNER_CORNER = "footer_inner_corner"
+    private const val KEY_FOOTER_SPACING = "footer_spacing"
 
     private val _showHeaderComplications = MutableStateFlow(true)
     val showHeaderComplications: StateFlow<Boolean> = _showHeaderComplications.asStateFlow()
 
     private val _complicationSublinePlacement = MutableStateFlow(com.example.model.ComplicationSublinePlacement.INSIDE_RING)
     val complicationSublinePlacement: StateFlow<com.example.model.ComplicationSublinePlacement> = _complicationSublinePlacement.asStateFlow()
+
+    private val _footerIconBackground = MutableStateFlow(false)
+    val footerIconBackground: StateFlow<Boolean> = _footerIconBackground.asStateFlow()
+
+    private val _footerOuterSpacing = MutableStateFlow(false)
+    val footerOuterSpacing: StateFlow<Boolean> = _footerOuterSpacing.asStateFlow()
+
+    private val _footerOuterCorner = MutableStateFlow(10.0f)
+    val footerOuterCorner: StateFlow<Float> = _footerOuterCorner.asStateFlow()
+
+    private val _footerInnerCorner = MutableStateFlow(3.0f)
+    val footerInnerCorner: StateFlow<Float> = _footerInnerCorner.asStateFlow()
+
+    private val _footerSpacing = MutableStateFlow(3.0f)
+    val footerSpacing: StateFlow<Float> = _footerSpacing.asStateFlow()
+
+    fun setFooterIconBackground(context: Context, enabled: Boolean) {
+        _footerIconBackground.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_FOOTER_ICON_BACKGROUND, enabled).apply()
+    }
+
+    fun setFooterOuterSpacing(context: Context, enabled: Boolean) {
+        _footerOuterSpacing.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        if (!enabled) {
+            _footerInnerCorner.value = 0f
+            _footerSpacing.value = 0f
+            prefs.edit()
+                .putBoolean(KEY_FOOTER_OUTER_SPACING, false)
+                .putFloat(KEY_FOOTER_INNER_CORNER, 0f)
+                .putFloat(KEY_FOOTER_SPACING, 0f)
+                .apply()
+        } else {
+            if (_footerInnerCorner.value == 0f) _footerInnerCorner.value = 3f
+            if (_footerSpacing.value == 0f) _footerSpacing.value = 3f
+            prefs.edit()
+                .putBoolean(KEY_FOOTER_OUTER_SPACING, true)
+                .putFloat(KEY_FOOTER_INNER_CORNER, _footerInnerCorner.value)
+                .putFloat(KEY_FOOTER_SPACING, _footerSpacing.value)
+                .apply()
+        }
+    }
+
+    fun setFooterOuterCorner(context: Context, value: Float) {
+        _footerOuterCorner.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_FOOTER_OUTER_CORNER, value).apply()
+    }
+
+    fun setFooterInnerCorner(context: Context, value: Float) {
+        _footerInnerCorner.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_FOOTER_INNER_CORNER, value).apply()
+        if (value > 0f && !_footerOuterSpacing.value) {
+            _footerOuterSpacing.value = true
+            prefs.edit().putBoolean(KEY_FOOTER_OUTER_SPACING, true).apply()
+        } else if (value == 0f && _footerSpacing.value == 0f && _footerOuterSpacing.value) {
+            _footerOuterSpacing.value = false
+            prefs.edit().putBoolean(KEY_FOOTER_OUTER_SPACING, false).apply()
+        }
+    }
+
+    fun setFooterSpacing(context: Context, value: Float) {
+        _footerSpacing.value = value
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_FOOTER_SPACING, value).apply()
+        if (value > 0f && !_footerOuterSpacing.value) {
+            _footerOuterSpacing.value = true
+            prefs.edit().putBoolean(KEY_FOOTER_OUTER_SPACING, true).apply()
+        } else if (value == 0f && _footerInnerCorner.value == 0f && _footerOuterSpacing.value) {
+            _footerOuterSpacing.value = false
+            prefs.edit().putBoolean(KEY_FOOTER_OUTER_SPACING, false).apply()
+        }
+    }
 
     // Per-Element Monet Accent Color Preferences (false = Primary, true = Tertiary)
     private const val KEY_ELEM_SURFACE_BG_TERTIARY = "elem_surface_bg_tertiary"
@@ -1481,6 +1561,11 @@ object PanelPreferences {
         _inactiveComplicationTileShapeId.value = savedInactiveComplicationShape
         _inactiveComplicationTileShape.value = TileShape.fromId(savedInactiveComplicationShape)
         _complicationArcThicknessDp.value = prefs.getFloat(KEY_COMPLICATION_ARC_THICKNESS, 4.0f).coerceIn(1.0f, 8.0f)
+        _footerIconBackground.value = prefs.getBoolean(KEY_FOOTER_ICON_BACKGROUND, false)
+        _footerOuterSpacing.value = prefs.getBoolean(KEY_FOOTER_OUTER_SPACING, false)
+        _footerOuterCorner.value = prefs.getFloat(KEY_FOOTER_OUTER_CORNER, 10.0f)
+        _footerInnerCorner.value = prefs.getFloat(KEY_FOOTER_INNER_CORNER, 3.0f)
+        _footerSpacing.value = prefs.getFloat(KEY_FOOTER_SPACING, 3.0f)
         _tileOutlineEnabled.value = prefs.getBoolean(KEY_TILE_OUTLINE_ENABLED, false)
         _tileOutlineThicknessDp.value = prefs.getFloat(KEY_TILE_OUTLINE_THICKNESS, 1.2f).coerceIn(0.5f, 6.0f)
         _complicationOutlineEnabled.value = prefs.getBoolean(KEY_COMPLICATION_OUTLINE_ENABLED, false)

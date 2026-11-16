@@ -191,6 +191,14 @@ class NativeTileManager(
     private var lastAclConnectedDevice: BluetoothDevice? = null
     @Volatile
     private var wifiNetworkCallback: ConnectivityManager.NetworkCallback? = null
+    @Volatile
+    private var lastToggledConnectivity: String = "wifi"
+    @Volatile
+    private var savedMediaVolume: Float = 0.65f
+    @Volatile
+    private var savedRingVolume: Float = 0.65f
+    @Volatile
+    private var savedNotifVolume: Float = 0.65f
 
     init {
         instance = this
@@ -1827,14 +1835,32 @@ class NativeTileManager(
         }
     }
 
+    @Suppress("DEPRECATION")
     fun toggleBluetooth() {
         val target = !_isBluetoothEnabled.value
         _isBluetoothEnabled.value = target
         if (!target) {
             lastAclConnectedDevice = null
             _bluetoothDeviceName.value = null
+            _bluetoothBatteryLevel.value = null
         }
         scope.launch {
+            if (privilegeEngine.currentMode.value == PrivilegeMode.STANDARD && Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                val adapter = bluetoothManager?.adapter
+                val hasBtPerm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+                } else {
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_ADMIN) == PackageManager.PERMISSION_GRANTED
+                }
+                if (adapter != null && hasBtPerm) {
+                    val toggled = try {
+                        if (target) adapter.enable() else adapter.disable()
+                    } catch (_: Throwable) {
+                        false
+                    }
+                    if (toggled) return@launch
+                }
+            }
             val cmd = if (target) "cmd bluetooth_manager enable" else "cmd bluetooth_manager disable"
             val fallback = Intent(Settings.ACTION_BLUETOOTH_SETTINGS)
             privilegeEngine.executeCommand(cmd, fallback)
@@ -1849,6 +1875,73 @@ class NativeTileManager(
             val fallback = Intent(Settings.ACTION_DATA_ROAMING_SETTINGS)
             privilegeEngine.executeCommand(cmd, fallback)
         }
+    }
+
+    fun toggleWifiOrMobileData() {
+        val caps = try {
+            val activeNet = connectivityManager?.activeNetwork
+            if (activeNet != null) connectivityManager?.getNetworkCapabilities(activeNet) else null
+        } catch (_: Throwable) {
+            null
+        }
+        when {
+            caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true || (_isWifiEnabled.value && _isWifiConnected.value) -> {
+                lastToggledConnectivity = "wifi"
+                toggleWifi()
+            }
+            caps?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true || _isCellularEnabled.value -> {
+                lastToggledConnectivity = "cellular"
+                toggleCellular()
+            }
+            _isWifiEnabled.value -> {
+                lastToggledConnectivity = "wifi"
+                toggleWifi()
+            }
+            else -> {
+                if (lastToggledConnectivity == "cellular") {
+                    toggleCellular()
+                } else {
+                    toggleWifi()
+                }
+            }
+        }
+    }
+
+    fun toggleSounds() {
+        val am = audioManager ?: return
+        val isNormalRinger = am.ringerMode == AudioManager.RINGER_MODE_NORMAL
+        val hasMediaSound = _mediaVolume.value > 0.02f
+        val hasRingSound = _ringVolume.value > 0.02f && isNormalRinger
+        val soundCurrentlyOn = hasMediaSound || hasRingSound
+
+        if (soundCurrentlyOn) {
+            if (_mediaVolume.value > 0.02f) savedMediaVolume = _mediaVolume.value
+            if (_ringVolume.value > 0.02f) savedRingVolume = _ringVolume.value
+            if (_notificationVolume.value > 0.02f) savedNotifVolume = _notificationVolume.value
+
+            setStreamVolume(AudioManager.STREAM_MUSIC, 0f)
+            try {
+                if (privilegeEngine.hasNotificationPolicyPermission() ||
+                    am.ringerMode != AudioManager.RINGER_MODE_SILENT
+                ) {
+                    am.ringerMode = AudioManager.RINGER_MODE_VIBRATE
+                }
+            } catch (_: SecurityException) {
+            } catch (_: Throwable) {
+            }
+            try { setStreamVolume(AudioManager.STREAM_RING, 0f) } catch (_: Throwable) {}
+            try { setStreamVolume(AudioManager.STREAM_NOTIFICATION, 0f) } catch (_: Throwable) {}
+        } else {
+            try {
+                am.ringerMode = AudioManager.RINGER_MODE_NORMAL
+            } catch (_: SecurityException) {
+            } catch (_: Throwable) {
+            }
+            setStreamVolume(AudioManager.STREAM_MUSIC, savedMediaVolume.coerceAtLeast(0.5f))
+            try { setStreamVolume(AudioManager.STREAM_RING, savedRingVolume.coerceAtLeast(0.5f)) } catch (_: Throwable) {}
+            try { setStreamVolume(AudioManager.STREAM_NOTIFICATION, savedNotifVolume.coerceAtLeast(0.5f)) } catch (_: Throwable) {}
+        }
+        refreshVolumeStates()
     }
 
     fun toggleTorch() {

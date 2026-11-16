@@ -60,15 +60,16 @@ object ComplicationTileController {
                     "battery_saver", "battery" -> manager?.toggleBatterySaver()
                     "wifi" -> manager?.toggleWifi()
                     "bluetooth" -> manager?.toggleBluetooth()
+                    "wifi_or_cellular" -> manager?.toggleWifiOrMobileData()
                     "cellular", "mobile_data" -> manager?.toggleCellular()
                     "torch", "flashlight" -> manager?.toggleTorch()
                     "autorotate" -> manager?.toggleAutoRotate()
                     "dnd", "sound", "mute" -> manager?.toggleDnd()
                     "volume_mute" -> {
-                        manager?.let { mgr ->
-                            val cur = mgr.mediaVolume.value
-                            val next = if (cur > 0.05f) 0f else 0.65f
-                            mgr.setStreamVolume(AudioManager.STREAM_MUSIC, next)
+                        if (manager != null) {
+                            manager.toggleSounds()
+                        } else {
+                            ComplicationDataHub.openMicroWindow(ComplicationMicroWindowType.VOLUME_SLIDER)
                         }
                     }
                     "airplane" -> manager?.toggleAirplaneMode()
@@ -86,21 +87,35 @@ object ComplicationTileController {
                         }
                     }
                     "auto_brightness_toggle" -> {
-                        if (Settings.System.canWrite(context)) {
-                            val current = Settings.System.getInt(
-                                context.contentResolver,
-                                Settings.System.SCREEN_BRIGHTNESS_MODE,
-                                Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
-                            )
-                            val next = if (current == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC) {
-                                Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
+                        val toggled = NativeTileManager.instance?.toggleAutoBrightness() == true
+                        if (!toggled) {
+                            if (Settings.System.canWrite(context)) {
+                                val current = Settings.System.getInt(
+                                    context.contentResolver,
+                                    Settings.System.SCREEN_BRIGHTNESS_MODE,
+                                    Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
+                                )
+                                val next = if (current == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC) {
+                                    Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
+                                } else {
+                                    Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC
+                                }
+                                Settings.System.putInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS_MODE, next)
+                                ComplicationDataHub.refreshTelemetryNow()
                             } else {
-                                Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC
+                                try {
+                                    val displayIntent = Intent(Settings.ACTION_DISPLAY_SETTINGS).apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    context.startActivity(displayIntent)
+                                    if (collapsePanelOnLaunch) {
+                                        QuickPanelAccessibilityService.hideCustomPanel()
+                                        QuickSettingsOverlayService.instance?.hideOverlayPanelSmoothly()
+                                    }
+                                } catch (_: Throwable) {
+                                    ComplicationDataHub.openMicroWindow(ComplicationMicroWindowType.BRIGHTNESS_SLIDER)
+                                }
                             }
-                            Settings.System.putInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS_MODE, next)
-                            ComplicationDataHub.refreshTelemetryNow()
-                        } else {
-                            ComplicationDataHub.openMicroWindow(ComplicationMicroWindowType.LUX_METER)
                         }
                     }
                     else -> {
@@ -146,6 +161,22 @@ object ComplicationTileController {
                         ComplicationDataHub.openMicroWindow(microType)
                         return
                     }
+                }
+                if (action.shortcutId == "open_download_app") {
+                    ComplicationDataHub.openActiveDownloadApp(context)
+                    return
+                }
+                if (action.shortcutId == "open_media_session") {
+                    val opened = MediaSessionManagerHelper.openCurrentSession(context)
+                    if (opened) {
+                        if (collapsePanelOnLaunch) {
+                            QuickPanelAccessibilityService.hideCustomPanel()
+                            QuickSettingsOverlayService.instance?.hideOverlayPanelSmoothly()
+                        }
+                    } else {
+                        ComplicationDataHub.openMicroWindow(ComplicationMicroWindowType.MEDIA_PROGRESS)
+                    }
+                    return
                 }
                 if (action.shortcutId == "open_downloads") {
                     try {

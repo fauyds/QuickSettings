@@ -726,6 +726,40 @@ object MediaSessionManagerHelper {
         }
     }
 
+    /**
+     * Opens the currently playing media session directly via its sessionActivity PendingIntent,
+     * falling back to launching the session's package if needed. Returns true when an external
+     * activity was launched.
+     */
+    fun openCurrentSession(context: Context): Boolean {
+        val targetIdx = _selectedSessionIndex.value
+        val controller = activeControllers.getOrNull(targetIdx) ?: activeControllers.firstOrNull()
+        val pkg = controller?.packageName ?: _mediaState.value?.packageName
+
+        if (controller?.sessionActivity != null) {
+            try {
+                controller.sessionActivity?.send()
+                return true
+            } catch (e: Exception) {
+                Log.e(TAG, "Error sending sessionActivity in openCurrentSession: ${e.message}")
+            }
+        }
+
+        if (!pkg.isNullOrEmpty()) {
+            try {
+                val launchIntent = context.packageManager.getLaunchIntentForPackage(pkg)
+                if (launchIntent != null) {
+                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+                    context.startActivity(launchIntent)
+                    return true
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error launching session app $pkg: ${e.message}")
+            }
+        }
+        return false
+    }
+
     fun openAudioOutputPicker(context: Context) {
         val targetIdx = _selectedSessionIndex.value
         val activePkg = activeControllers.getOrNull(targetIdx)?.packageName ?: _mediaState.value?.packageName

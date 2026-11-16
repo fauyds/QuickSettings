@@ -65,6 +65,7 @@ class MainActivity : ComponentActivity() {
 
         com.example.data.PanelPreferences.init(this)
         com.example.data.TileCommandRepository.init(this)
+        com.example.data.ComplicationCommandRepository.init(this)
         com.example.service.MediaSessionManagerHelper.init(this)
         com.example.system.SystemThemeObserver.init(this)
 
@@ -120,6 +121,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        com.example.data.ComplicationCommandRepository.init(this)
+        viewModel.privilegeEngine.syncWithPreferences()
         viewModel.refreshServiceState()
         NativeTileManager.notifyAllInstancesPrivilegeOrPermissionsUpdated()
 

@@ -1,5 +1,6 @@
 package com.example.ui.onboarding
 
+import android.content.ComponentName
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -13,11 +14,14 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -56,6 +60,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SignalCellular4Bar
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.Visibility
@@ -79,7 +84,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -103,9 +110,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.ComplicationCommandRepository
+import com.example.data.KnownComplicationDefinition
 import com.example.data.PanelPreferences
 import com.example.data.TileCommandRepository
 import com.example.model.CommandExecutionMode
+import com.example.model.ComplicationCommandConfig
+import com.example.model.ComplicationTriggerBehavior
 import com.example.model.PrivilegeMode
 import com.example.model.TileActionOverrideType
 import com.example.model.TileCommandConfig
@@ -126,8 +137,9 @@ import kotlinx.coroutines.launch
  *    dropdown of working QS tiles with left icon / right name, and status bar detector details)
  * 3. Tile commands setup (Shows all tiles; options to write ON/OFF ADB commands for Root/Shizuku,
  *    or Intent action input box for Non root mode)
- * 4. Visibility tile setup (Toggles for all tiles + Smart Hide)
- * 5. Trigger & Shade Toggles (Stock shade override, replacement delay, invisible trigger, auto closing)
+ * 4. Complication commands setup (Single tap & Long press actions synced with Complication Actions)
+ * 5. Visibility tile setup (Toggles for all tiles + Smart Hide)
+ * 6. Trigger & Shade Toggles (Stock shade override, replacement delay, invisible trigger, auto closing)
  *
  * Design:
  * - Top icon with label at bottom without card.
@@ -142,14 +154,23 @@ fun InitialSetupScreen(
     modifier: Modifier = Modifier
 ) {
     var currentStep by remember { mutableIntStateOf(0) }
-    val totalSteps = 5
+    val totalSteps = 6
+    val context = LocalContext.current
 
     val privilegeEngine = viewModel.privilegeEngine
+    LaunchedEffect(Unit) {
+        TileCommandRepository.init(context)
+        ComplicationCommandRepository.init(context)
+        privilegeEngine.syncWithPreferences()
+    }
+
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 privilegeEngine.refreshPermissions()
+                privilegeEngine.syncWithPreferences()
+                ComplicationCommandRepository.init(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -185,6 +206,7 @@ fun InitialSetupScreen(
             .background(screenBg)
             .statusBarsPadding()
             .navigationBarsPadding()
+            .imePadding()
             .testTag("initial_setup_screen")
     ) {
         // Top app bar with Step Indicator & Skip Setup Button
@@ -243,8 +265,9 @@ fun InitialSetupScreen(
                 )
                 1 -> PrivilegeEngineStep(viewModel = viewModel)
                 2 -> TileCommandsStep(viewModel = viewModel)
-                3 -> TileVisibilityStep(viewModel = viewModel)
-                4 -> TriggerTogglesStep()
+                3 -> ComplicationCommandsStep(viewModel = viewModel)
+                4 -> TileVisibilityStep(viewModel = viewModel)
+                5 -> TriggerTogglesStep()
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -1513,7 +1536,874 @@ private fun SetupTileCommandEditorCard(
 }
 
 /**
- * STEP 4: Visibility tile setup
+ * STEP 4: Complication commands setup
+ * Exact visual parity with TileCommandsStep while exposing Single Tap and Long Press
+ * actions synchronized via ComplicationCommandRepository with ComplicationCommandsActivity.
+ */
+@Composable
+private fun ComplicationCommandsStep(viewModel: MainViewModel) {
+    val privilegeEngine = viewModel.privilegeEngine
+    val engineMode by privilegeEngine.currentMode.collectAsStateWithLifecycle()
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = getSettingsCardBackgroundColor(isDark)
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val configs by ComplicationCommandRepository.configs.collectAsStateWithLifecycle()
+    val complications = ComplicationCommandRepository.knownComplications
+
+    var activeMode by remember(engineMode) { mutableStateOf(engineMode) }
+
+    val customizedCount = remember(configs) {
+        configs.values.count {
+            it.tapBehavior != ComplicationTriggerBehavior.DEFAULT ||
+                it.longPressBehavior != ComplicationTriggerBehavior.DEFAULT
+        }
+    }
+    val areAllTapOverridesEnabled = remember(configs, complications) {
+        complications.all { def ->
+            val cfg = configs[def.id]
+            cfg != null && cfg.tapBehavior != ComplicationTriggerBehavior.DEFAULT
+        }
+    }
+
+    SetupStepHeader(
+        icon = Icons.Default.TouchApp,
+        title = "Complication Commands Setup",
+        subtitle = "Configure complication single tap and long press actions. All changes stay synced with Complication Actions."
+    )
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        // Target Execution Engine Selector Card (matches TileCommandsStep card)
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = cardBg),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("setup_comp_engine_card")
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "TARGET EXECUTION ENGINE",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.1.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = CircleShape
+                    ) {
+                        Text(
+                            text = activeMode.title,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+                }
+
+                Text(
+                    text = if (activeMode == PrivilegeMode.STANDARD)
+                        "Standard mode uses system Intent targets. You can still customize each complication's Single Tap and Long Press mode individually."
+                    else
+                        "${activeMode.title} mode defaults complication overrides to ADB shell ON/OFF commands, synced with Complication Actions.",
+                    fontSize = 12.sp,
+                    lineHeight = 15.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    val modes = PrivilegeMode.entries
+                    modes.forEachIndexed { index, mode ->
+                        val isSelected = activeMode == mode
+                        val shape = if (isSelected) {
+                            CircleShape
+                        } else {
+                            when (index) {
+                                0 -> RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp, topEnd = 8.dp, bottomEnd = 8.dp)
+                                modes.size - 1 -> RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp, topEnd = 24.dp, bottomEnd = 24.dp)
+                                else -> RoundedCornerShape(8.dp)
+                            }
+                        }
+
+                        Button(
+                            onClick = {
+                                activeMode = mode
+                                viewModel.setPrivilegeMode(mode)
+                            },
+                            shape = shape,
+                            border = null,
+                            elevation = null,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
+                                contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                                .testTag("setup_comp_engine_btn_${mode.name.lowercase()}")
+                        ) {
+                            Text(
+                                text = mode.title,
+                                fontSize = 11.5.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Master Enable All Complication Overrides Card (matches TileCommandsStep master toggle card)
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = cardBg),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("setup_enable_all_complications_card")
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Configured Complications",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                        Text(
+                            text = "Enable All Complication Overrides",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = if (customizedCount > 0) {
+                                "$customizedCount of ${complications.size} complications customized"
+                            } else {
+                                "Turn on ${activeMode.title} single-tap overrides for all complications"
+                            },
+                            fontSize = 11.5.sp,
+                            lineHeight = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Switch(
+                    checked = areAllTapOverridesEnabled,
+                    onCheckedChange = { enable ->
+                        if (enable) {
+                            val targetBehavior = when (activeMode) {
+                                PrivilegeMode.ROOT -> ComplicationTriggerBehavior.ROOT_COMMAND
+                                PrivilegeMode.SHIZUKU -> ComplicationTriggerBehavior.SHIZUKU_COMMAND
+                                PrivilegeMode.STANDARD -> ComplicationTriggerBehavior.STANDARD_COMMAND
+                            }
+                            ComplicationCommandRepository.setAllTapBehavior(context, targetBehavior)
+                        } else {
+                            ComplicationCommandRepository.resetAll(context)
+                        }
+                    },
+                    modifier = Modifier.testTag("setup_toggle_all_complications")
+                )
+            }
+        }
+
+        // Per-complication expandable editor cards
+        complications.forEach { def ->
+            val config = configs[def.id] ?: ComplicationCommandRepository.getConfig(def.id, context)
+
+            SetupComplicationCommandEditorCard(
+                definition = def,
+                config = config,
+                activeMode = activeMode,
+                cardBg = cardBg,
+                innerContainerBg = getSettingsScreenBackgroundColor(isDark),
+                onSaveConfig = { updated ->
+                    ComplicationCommandRepository.saveConfig(context, updated)
+                },
+                onResetTap = {
+                    ComplicationCommandRepository.saveConfig(
+                        context,
+                        config.copy(
+                            tapBehavior = ComplicationTriggerBehavior.DEFAULT,
+                            tapShellCommand = def.defaultShellOn,
+                            tapShellCommandOff = def.defaultShellOff,
+                            tapIntentAction = def.defaultIntentAction,
+                            tapIntentPackage = "",
+                            tapIntentComponent = ""
+                        )
+                    )
+                    Toast.makeText(context, "Reset ${def.title} single tap to default", Toast.LENGTH_SHORT).show()
+                },
+                onResetLongPress = {
+                    ComplicationCommandRepository.saveConfig(
+                        context,
+                        config.copy(
+                            longPressBehavior = ComplicationTriggerBehavior.DEFAULT,
+                            longPressShellCommand = def.defaultShellOn,
+                            longPressIntentAction = def.defaultIntentAction,
+                            longPressIntentPackage = "",
+                            longPressIntentComponent = ""
+                        )
+                    )
+                    Toast.makeText(context, "Reset ${def.title} long press to default", Toast.LENGTH_SHORT).show()
+                },
+                onTestShell = { cmd, execMode ->
+                    coroutineScope.launch {
+                        if (cmd.isBlank()) {
+                            Toast.makeText(context, "Enter a command first", Toast.LENGTH_SHORT).show()
+                            return@launch
+                        }
+                        Toast.makeText(context, "Running: $cmd", Toast.LENGTH_SHORT).show()
+                        val ok = privilegeEngine.executeCommandWithMode(cmd, execMode, null)
+                        Toast.makeText(
+                            context,
+                            if (ok) "Command executed successfully!" else "Execution failed or permission missing",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                },
+                onTestIntent = { action, pkg, comp ->
+                    val launched = launchSetupTestIntent(context, action, pkg, comp)
+                    Toast.makeText(
+                        context,
+                        if (launched) "Intent launched successfully!" else "Unable to resolve Intent target",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun SetupComplicationCommandEditorCard(
+    definition: KnownComplicationDefinition,
+    config: ComplicationCommandConfig,
+    activeMode: PrivilegeMode,
+    cardBg: Color,
+    innerContainerBg: Color,
+    onSaveConfig: (ComplicationCommandConfig) -> Unit,
+    onResetTap: () -> Unit,
+    onResetLongPress: () -> Unit,
+    onTestShell: (String, CommandExecutionMode) -> Unit,
+    onTestIntent: (String, String, String) -> Unit
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    var isExpanded by remember { mutableStateOf(false) }
+    val rotationAngle by animateFloatAsState(
+        targetValue = if (isExpanded) 180f else 0f,
+        label = "setup_comp_expand_${definition.id}"
+    )
+
+    val hasCustomAction = config.tapBehavior != ComplicationTriggerBehavior.DEFAULT ||
+        config.longPressBehavior != ComplicationTriggerBehavior.DEFAULT
+
+    Card(
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("setup_comp_cmd_${definition.id}")
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Header Row (mirrors SetupTileCommandEditorCard)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { isExpanded = !isExpanded },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = definition.icon,
+                            contentDescription = definition.title,
+                            tint = colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    Column {
+                        Text(
+                            text = definition.title,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = colorScheme.onSurface
+                        )
+                        Text(
+                            text = if (hasCustomAction) {
+                                "Tap: ${config.tapBehavior.label} • Long: ${config.longPressBehavior.label}"
+                            } else {
+                                definition.defaultTapDescription
+                            },
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = if (hasCustomAction) colorScheme.primary else colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    if (hasCustomAction) {
+                        Surface(
+                            color = colorScheme.primary,
+                            shape = CircleShape
+                        ) {
+                            Text(
+                                text = "CUSTOM",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = colorScheme.onPrimary,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    Switch(
+                        checked = hasCustomAction,
+                        onCheckedChange = { isChecked ->
+                            if (isChecked) {
+                                val targetBehavior = when (activeMode) {
+                                    PrivilegeMode.ROOT -> ComplicationTriggerBehavior.ROOT_COMMAND
+                                    PrivilegeMode.SHIZUKU -> ComplicationTriggerBehavior.SHIZUKU_COMMAND
+                                    PrivilegeMode.STANDARD -> ComplicationTriggerBehavior.STANDARD_COMMAND
+                                }
+                                onSaveConfig(config.copy(tapBehavior = targetBehavior))
+                            } else {
+                                onSaveConfig(
+                                    config.copy(
+                                        tapBehavior = ComplicationTriggerBehavior.DEFAULT,
+                                        longPressBehavior = ComplicationTriggerBehavior.DEFAULT
+                                    )
+                                )
+                            }
+                        },
+                        modifier = Modifier.testTag("setup_comp_switch_override_${definition.id}")
+                    )
+
+                    IconButton(
+                        onClick = { isExpanded = !isExpanded },
+                        modifier = Modifier
+                            .minimumInteractiveComponentSize()
+                            .size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ExpandMore,
+                            contentDescription = if (isExpanded) "Collapse ${definition.title}" else "Expand ${definition.title}",
+                            tint = colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .size(20.dp)
+                                .rotate(rotationAngle)
+                        )
+                    }
+                }
+            }
+
+            // Expanded Single Tap + Long Press Editor
+            AnimatedVisibility(visible = isExpanded) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    SetupComplicationTriggerBlock(
+                        title = "Single Tap Action:",
+                        defaultDescription = definition.defaultTapDescription,
+                        defaultShellOn = definition.defaultShellOn,
+                        defaultShellOff = definition.defaultShellOff,
+                        defaultIntentAction = definition.defaultIntentAction,
+                        selectedBehavior = config.tapBehavior,
+                        onBehaviorChange = { behavior ->
+                            onSaveConfig(config.copy(tapBehavior = behavior))
+                        },
+                        shellCommand = config.tapShellCommand,
+                        onShellCommandChange = {
+                            onSaveConfig(config.copy(tapShellCommand = it))
+                        },
+                        shellCommandOff = config.tapShellCommandOff,
+                        onShellCommandOffChange = {
+                            onSaveConfig(config.copy(tapShellCommandOff = it))
+                        },
+                        showOffShellField = true,
+                        intentAction = config.tapIntentAction,
+                        onIntentActionChange = {
+                            onSaveConfig(config.copy(tapIntentAction = it))
+                        },
+                        intentPackage = config.tapIntentPackage,
+                        onIntentPackageChange = {
+                            onSaveConfig(config.copy(tapIntentPackage = it))
+                        },
+                        intentComponent = config.tapIntentComponent,
+                        onIntentComponentChange = {
+                            onSaveConfig(config.copy(tapIntentComponent = it))
+                        },
+                        onTestShell = onTestShell,
+                        onTestIntent = onTestIntent,
+                        onReset = onResetTap,
+                        innerContainerBg = innerContainerBg,
+                        fieldContainerBg = cardBg,
+                        testTagPrefix = "setup_comp_tap_${definition.id}"
+                    )
+
+                    SetupComplicationTriggerBlock(
+                        title = "Long Press Action:",
+                        defaultDescription = definition.defaultLongPressDescription,
+                        defaultShellOn = definition.defaultShellOn,
+                        defaultShellOff = "",
+                        defaultIntentAction = definition.defaultIntentAction,
+                        selectedBehavior = config.longPressBehavior,
+                        onBehaviorChange = { behavior ->
+                            onSaveConfig(config.copy(longPressBehavior = behavior))
+                        },
+                        shellCommand = config.longPressShellCommand,
+                        onShellCommandChange = {
+                            onSaveConfig(config.copy(longPressShellCommand = it))
+                        },
+                        shellCommandOff = "",
+                        onShellCommandOffChange = {},
+                        showOffShellField = false,
+                        intentAction = config.longPressIntentAction,
+                        onIntentActionChange = {
+                            onSaveConfig(config.copy(longPressIntentAction = it))
+                        },
+                        intentPackage = config.longPressIntentPackage,
+                        onIntentPackageChange = {
+                            onSaveConfig(config.copy(longPressIntentPackage = it))
+                        },
+                        intentComponent = config.longPressIntentComponent,
+                        onIntentComponentChange = {
+                            onSaveConfig(config.copy(longPressIntentComponent = it))
+                        },
+                        onTestShell = onTestShell,
+                        onTestIntent = onTestIntent,
+                        onReset = onResetLongPress,
+                        innerContainerBg = innerContainerBg,
+                        fieldContainerBg = cardBg,
+                        testTagPrefix = "setup_comp_lp_${definition.id}"
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SetupComplicationTriggerBlock(
+    title: String,
+    defaultDescription: String,
+    defaultShellOn: String,
+    defaultShellOff: String,
+    defaultIntentAction: String,
+    selectedBehavior: ComplicationTriggerBehavior,
+    onBehaviorChange: (ComplicationTriggerBehavior) -> Unit,
+    shellCommand: String,
+    onShellCommandChange: (String) -> Unit,
+    shellCommandOff: String,
+    onShellCommandOffChange: (String) -> Unit,
+    showOffShellField: Boolean,
+    intentAction: String,
+    onIntentActionChange: (String) -> Unit,
+    intentPackage: String,
+    onIntentPackageChange: (String) -> Unit,
+    intentComponent: String,
+    onIntentComponentChange: (String) -> Unit,
+    onTestShell: (String, CommandExecutionMode) -> Unit,
+    onTestIntent: (String, String, String) -> Unit,
+    onReset: () -> Unit,
+    innerContainerBg: Color,
+    fieldContainerBg: Color,
+    testTagPrefix: String
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val inputFieldColors = TextFieldDefaults.colors(
+        focusedIndicatorColor = Color.Transparent,
+        unfocusedIndicatorColor = Color.Transparent,
+        disabledIndicatorColor = Color.Transparent,
+        errorIndicatorColor = Color.Transparent,
+        focusedContainerColor = fieldContainerBg,
+        unfocusedContainerColor = fieldContainerBg
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(innerContainerBg)
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = title,
+            fontSize = 11.5.sp,
+            fontWeight = FontWeight.Bold,
+            color = colorScheme.onSurfaceVariant
+        )
+
+        val behaviors = ComplicationTriggerBehavior.entries
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            behaviors.forEachIndexed { index, behavior ->
+                val isSelected = selectedBehavior == behavior
+                val shape = if (isSelected) {
+                    CircleShape
+                } else {
+                    when (index) {
+                        0 -> RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp, topEnd = 6.dp, bottomEnd = 6.dp)
+                        behaviors.size - 1 -> RoundedCornerShape(topStart = 6.dp, bottomStart = 6.dp, topEnd = 24.dp, bottomEnd = 24.dp)
+                        else -> RoundedCornerShape(6.dp)
+                    }
+                }
+                val itemWeight = when (behavior) {
+                    ComplicationTriggerBehavior.STANDARD_COMMAND -> 1.18f
+                    ComplicationTriggerBehavior.SHIZUKU_COMMAND -> 1.05f
+                    ComplicationTriggerBehavior.DEFAULT -> 1.02f
+                    ComplicationTriggerBehavior.COMPLICATION_MENU -> 0.85f
+                    ComplicationTriggerBehavior.ROOT_COMMAND -> 0.82f
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(itemWeight)
+                        .heightIn(min = 48.dp)
+                        .clip(shape)
+                        .background(
+                            if (isSelected) colorScheme.primary
+                            else fieldContainerBg
+                        )
+                        .clickable { onBehaviorChange(behavior) }
+                        .padding(horizontal = 4.dp, vertical = 8.dp)
+                        .testTag("${testTagPrefix}_mode_${behavior.id}"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = behavior.label,
+                        fontSize = 10.5.sp,
+                        maxLines = 1,
+                        softWrap = false,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSelected) colorScheme.onPrimary else colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        when (selectedBehavior) {
+            ComplicationTriggerBehavior.DEFAULT -> {
+                Text(
+                    text = "DEFAULT COMPLICATION ACTION",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colorScheme.primary
+                )
+                Text(
+                    text = defaultDescription,
+                    fontSize = 11.5.sp,
+                    color = colorScheme.onSurfaceVariant
+                )
+            }
+
+            ComplicationTriggerBehavior.COMPLICATION_MENU -> {
+                Text(
+                    text = "COMPLICATION MENU OVERLAY",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colorScheme.primary
+                )
+                Text(
+                    text = "Opens this complication's interactive menu micro-window when triggered.",
+                    fontSize = 11.5.sp,
+                    color = colorScheme.onSurfaceVariant
+                )
+            }
+
+            ComplicationTriggerBehavior.STANDARD_COMMAND -> {
+                Text(
+                    text = "STANDARD INTENT INPUT BOX",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colorScheme.primary
+                )
+
+                TextField(
+                    value = intentAction,
+                    onValueChange = onIntentActionChange,
+                    label = { Text("Intent Action", fontSize = 11.sp) },
+                    placeholder = { Text(defaultIntentAction, fontSize = 11.sp) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = inputFieldColors,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("${testTagPrefix}_intent_action")
+                )
+
+                TextField(
+                    value = intentPackage,
+                    onValueChange = onIntentPackageChange,
+                    label = { Text("Package Name (Optional)", fontSize = 11.sp) },
+                    placeholder = { Text("e.g. com.android.settings", fontSize = 11.sp) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = inputFieldColors,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("${testTagPrefix}_intent_pkg")
+                )
+
+                TextField(
+                    value = intentComponent,
+                    onValueChange = onIntentComponentChange,
+                    label = { Text("Activity / Service Component (Optional)", fontSize = 11.sp) },
+                    placeholder = { Text("e.g. .DisplaySettings", fontSize = 11.sp) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = inputFieldColors,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("${testTagPrefix}_intent_comp")
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = { onTestIntent(intentAction, intentPackage, intentComponent) },
+                        shape = CircleShape,
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 48.dp)
+                            .testTag("${testTagPrefix}_test_intent")
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Test Intent", fontSize = 11.sp)
+                    }
+
+                    OutlinedButton(
+                        onClick = onReset,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .heightIn(min = 48.dp)
+                            .testTag("${testTagPrefix}_reset")
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Reset", fontSize = 11.sp)
+                    }
+                }
+            }
+
+            ComplicationTriggerBehavior.SHIZUKU_COMMAND,
+            ComplicationTriggerBehavior.ROOT_COMMAND -> {
+                val execMode = if (selectedBehavior == ComplicationTriggerBehavior.ROOT_COMMAND) {
+                    CommandExecutionMode.ROOT
+                } else {
+                    CommandExecutionMode.SHIZUKU
+                }
+
+                Text(
+                    text = "${selectedBehavior.label.uppercase()} ADB COMMAND INPUT BOXES",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colorScheme.primary
+                )
+
+                TextField(
+                    value = shellCommand,
+                    onValueChange = onShellCommandChange,
+                    label = {
+                        Text(
+                            if (showOffShellField) "ON ADB Command" else "ADB Command",
+                            fontSize = 11.sp
+                        )
+                    },
+                    placeholder = { Text(defaultShellOn, fontSize = 11.sp) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = inputFieldColors,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("${testTagPrefix}_cmd_on")
+                )
+
+                if (showOffShellField) {
+                    TextField(
+                        value = shellCommandOff,
+                        onValueChange = onShellCommandOffChange,
+                        label = { Text("OFF ADB Command", fontSize = 11.sp) },
+                        placeholder = { Text(defaultShellOff, fontSize = 11.sp) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = inputFieldColors,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("${testTagPrefix}_cmd_off")
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = { onTestShell(shellCommand, execMode) },
+                        shape = CircleShape,
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 48.dp)
+                            .testTag("${testTagPrefix}_test_on")
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(if (showOffShellField) "Test ON" else "Test", fontSize = 11.sp)
+                    }
+
+                    if (showOffShellField) {
+                        Button(
+                            onClick = { onTestShell(shellCommandOff, execMode) },
+                            shape = CircleShape,
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 48.dp)
+                                .testTag("${testTagPrefix}_test_off")
+                        ) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Test OFF", fontSize = 11.sp)
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = onReset,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .heightIn(min = 48.dp)
+                            .testTag("${testTagPrefix}_reset")
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Reset", modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun launchSetupTestIntent(
+    context: android.content.Context,
+    action: String,
+    pkg: String,
+    comp: String
+): Boolean {
+    return try {
+        val fullComp = if (comp.isNotBlank()) comp else if (action.contains("/")) action else ""
+        val intent = if (fullComp.contains("/")) {
+            val p = fullComp.substringBefore('/').trim()
+            val cRaw = fullComp.substringAfter('/').trim()
+            val c = if (cRaw.startsWith(".")) "$p$cRaw" else cRaw
+            val act = if (action.isNotBlank() && !action.contains("/")) action else Intent.ACTION_MAIN
+            Intent(act).apply {
+                component = ComponentName(p, c)
+                if (p.isNotBlank()) setPackage(p)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        } else if (pkg.isNotBlank() && comp.isNotBlank()) {
+            val c = if (comp.startsWith(".")) "$pkg$comp" else comp
+            Intent(action.ifBlank { Intent.ACTION_MAIN }).apply {
+                component = ComponentName(pkg, c)
+                setPackage(pkg)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        } else if (action.isBlank() && pkg.isNotBlank()) {
+            context.packageManager.getLaunchIntentForPackage(pkg)?.apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            } ?: Intent(Intent.ACTION_MAIN).apply {
+                setPackage(pkg)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        } else {
+            Intent(action.ifBlank { Intent.ACTION_MAIN }).apply {
+                if (pkg.isNotBlank()) setPackage(pkg)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        }
+        context.startActivity(intent)
+        true
+    } catch (_: Throwable) {
+        false
+    }
+}
+
+/**
+ * STEP 5: Visibility tile setup
  */
 @Composable
 private fun TileVisibilityStep(viewModel: MainViewModel) {

@@ -55,7 +55,10 @@ enum class ComplicationMicroWindowType {
     DOWNLOAD_PROGRESS,
     LUX_METER,
     BRIGHTNESS_SLIDER,
-    VOLUME_SLIDER
+    VOLUME_SLIDER,
+    BATTERY_INFO,
+    STORAGE_INFO,
+    BLUETOOTH_DEVICE
 }
 
 data class ExternalClockTicker(
@@ -88,6 +91,7 @@ data class ActiveDownloadEntry(
     val speedBytesPerSec: Long,
     val speedText: String,
     val contentIntent: PendingIntent? = null,
+    val packageName: String? = null,
     val isFromDownloadManager: Boolean = false
 )
 
@@ -257,6 +261,10 @@ object ComplicationDataHub {
     private var externalStopwatchTicker: ExternalClockTicker? = null
     @Volatile
     private var notificationDownloads: List<ActiveDownloadEntry> = emptyList()
+    @Volatile
+    private var lastDownloadPackageName: String? = null
+    @Volatile
+    private var lastDownloadContentIntent: PendingIntent? = null
 
     // Local Timer state
     @Volatile
@@ -1329,7 +1337,63 @@ object ComplicationDataHub {
 
     fun updateNotificationDownloads(entries: List<ActiveDownloadEntry>) {
         notificationDownloads = entries
+        entries.firstOrNull { it.contentIntent != null }?.let {
+            lastDownloadContentIntent = it.contentIntent
+        }
+        entries.firstOrNull { !it.packageName.isNullOrBlank() }?.let {
+            lastDownloadPackageName = it.packageName
+        }
         refreshTelemetryNow()
+    }
+
+    /**
+     * Opens the app currently performing a download (via notification contentIntent or package launcher),
+     * falling back to the last seen downloader package/intent, then DownloadManager's Downloads view,
+     * and finally the Download micro window if nothing else is available.
+     */
+    fun openActiveDownloadApp(context: Context): Boolean {
+        val activeEntries = _snapshot.value.downloads.entries + notificationDownloads
+        val activeIntent = activeEntries.firstOrNull { it.contentIntent != null }?.contentIntent
+            ?: lastDownloadContentIntent
+        if (activeIntent != null) {
+            try {
+                activeIntent.send()
+                QuickPanelAccessibilityService.hideCustomPanel()
+                QuickSettingsOverlayService.instance?.hideOverlayPanelSmoothly()
+                return true
+            } catch (_: Throwable) {
+            }
+        }
+
+        val activePkg = activeEntries.firstOrNull { !it.packageName.isNullOrBlank() }?.packageName
+            ?: lastDownloadPackageName
+        if (!activePkg.isNullOrBlank()) {
+            try {
+                val launchIntent = context.packageManager.getLaunchIntentForPackage(activePkg)
+                if (launchIntent != null) {
+                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(launchIntent)
+                    QuickPanelAccessibilityService.hideCustomPanel()
+                    QuickSettingsOverlayService.instance?.hideOverlayPanelSmoothly()
+                    return true
+                }
+            } catch (_: Throwable) {
+            }
+        }
+
+        try {
+            val dmIntent = Intent(DownloadManager.ACTION_VIEW_DOWNLOADS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(dmIntent)
+            QuickPanelAccessibilityService.hideCustomPanel()
+            QuickSettingsOverlayService.instance?.hideOverlayPanelSmoothly()
+            return true
+        } catch (_: Throwable) {
+        }
+
+        openMicroWindow(ComplicationMicroWindowType.DOWNLOAD_PROGRESS)
+        return false
     }
 
     private fun sampleDownloadProgress(ctx: Context, currentRxBps: Long): DownloadProgressState {
@@ -1535,7 +1599,10 @@ object ComplicationDataHub {
             "comp_download",
             "comp_lux",
             "comp_brightness",
-            "comp_volume"
+            "comp_volume",
+            "comp_battery",
+            "comp_storage",
+            "comp_bt_battery"
         )
     }
 
@@ -1553,6 +1620,9 @@ object ComplicationDataHub {
             "comp_lux" -> ComplicationMicroWindowType.LUX_METER
             "comp_brightness" -> ComplicationMicroWindowType.BRIGHTNESS_SLIDER
             "comp_volume" -> ComplicationMicroWindowType.VOLUME_SLIDER
+            "comp_battery" -> ComplicationMicroWindowType.BATTERY_INFO
+            "comp_storage" -> ComplicationMicroWindowType.STORAGE_INFO
+            "comp_bt_battery" -> ComplicationMicroWindowType.BLUETOOTH_DEVICE
             else -> null
         } ?: return false
         _activeMicroWindow.value = type

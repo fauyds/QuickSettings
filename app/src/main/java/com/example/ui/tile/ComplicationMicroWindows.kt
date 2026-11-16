@@ -6,6 +6,7 @@ import android.content.Intent
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Environment
+import android.os.StatFs
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
@@ -41,6 +42,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.AvTimer
+import androidx.compose.material.icons.filled.BatteryChargingFull
+import androidx.compose.material.icons.filled.BatteryFull
+import androidx.compose.material.icons.filled.BatterySaver
+import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.BrightnessHigh
 import androidx.compose.material.icons.filled.BrightnessLow
@@ -179,6 +184,9 @@ fun ComplicationMicroWindowSheet(
         ComplicationMicroWindowType.LUX_METER -> Triple("Ambient Light", snapshot.lux.sensorName, Icons.Default.WbSunny)
         ComplicationMicroWindowType.BRIGHTNESS_SLIDER -> Triple("Display Brightness", "Adjust Screen & Auto Brightness", Icons.Default.BrightnessHigh)
         ComplicationMicroWindowType.VOLUME_SLIDER -> Triple("Sound & Volume", "Adjust Audio Streams", Icons.Default.VolumeUp)
+        ComplicationMicroWindowType.BATTERY_INFO -> Triple("Battery & Power", "Charge Level & Power Saver", Icons.Default.BatteryFull)
+        ComplicationMicroWindowType.STORAGE_INFO -> Triple("Device Storage", "Internal Space Overview", Icons.Default.Storage)
+        ComplicationMicroWindowType.BLUETOOTH_DEVICE -> Triple("Bluetooth Device", "Connection & Battery Status", Icons.Default.Bluetooth)
     }
 
     Box(
@@ -246,6 +254,9 @@ fun ComplicationMicroWindowSheet(
                     ComplicationMicroWindowType.LUX_METER -> LuxMeterMicroContent(snapshot)
                     ComplicationMicroWindowType.BRIGHTNESS_SLIDER -> BrightnessSliderMicroContent(snapshot, context, onDismissRequest)
                     ComplicationMicroWindowType.VOLUME_SLIDER -> VolumeSliderMicroContent(context, onDismissRequest)
+                    ComplicationMicroWindowType.BATTERY_INFO -> BatteryInfoMicroContent(context, onDismissRequest)
+                    ComplicationMicroWindowType.STORAGE_INFO -> StorageInfoMicroContent(context, onDismissRequest)
+                    ComplicationMicroWindowType.BLUETOOTH_DEVICE -> BluetoothDeviceMicroContent(context, onDismissRequest)
                 }
             }
         }
@@ -1536,9 +1547,16 @@ private fun DownloadMicroContent(snapshot: ComplicationSnapshot, context: Contex
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .clickable(enabled = entry.contentIntent != null) {
+                            .clickable(enabled = entry.contentIntent != null || !entry.packageName.isNullOrBlank()) {
                                 try {
-                                    entry.contentIntent?.send()
+                                    if (entry.contentIntent != null) {
+                                        entry.contentIntent.send()
+                                    } else if (!entry.packageName.isNullOrBlank()) {
+                                        context.packageManager.getLaunchIntentForPackage(entry.packageName)?.let {
+                                            it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            context.startActivity(it)
+                                        }
+                                    }
                                     onDismiss()
                                     QuickPanelAccessibilityService.hideCustomPanel()
                                     QuickSettingsOverlayService.instance?.hideOverlayPanelSmoothly()
@@ -2013,3 +2031,215 @@ private fun MicroVolumeStreamRow(
         }
     }
 }
+
+// =============================================================================
+// 12. Battery Info Menu
+// =============================================================================
+
+@Composable
+private fun BatteryInfoMicroContent(
+    context: Context,
+    onDismiss: () -> Unit
+) {
+    val nativeManager = NativeTileManager.instance
+    val pct = nativeManager?.batteryPercentage?.collectAsState()?.value ?: 100
+    val isCharging = nativeManager?.isBatteryCharging?.collectAsState()?.value ?: false
+    val isSaver = nativeManager?.isBatterySaverEnabled?.collectAsState()?.value ?: false
+    val accent = when {
+        isCharging -> Color(0xFF4CAF50)
+        pct <= 20 -> Color(0xFFFF5252)
+        isSaver -> Color(0xFFFF9800)
+        else -> ExpressiveTheme.colors.buttonPrimary
+    }
+
+    MicroCard(shape = MicroCardShapes.Top) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            MicroArcGauge(
+                progress = (pct / 100f).coerceIn(0f, 1f),
+                primaryText = "$pct%",
+                secondaryText = when {
+                    isCharging -> "Charging"
+                    isSaver -> "Saver On"
+                    else -> "Battery"
+                },
+                arcColor = accent,
+                sizeDp = 104
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                MicroStatBox(
+                    label = "Power Status",
+                    value = if (isCharging) "Plugged In / Charging" else "On Battery",
+                    modifier = Modifier.fillMaxWidth()
+                )
+                MicroStatBox(
+                    label = "Battery Saver",
+                    value = if (isSaver) "Active" else "Off",
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+
+    MicroCard(shape = MicroCardShapes.Bottom) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SubtlePillButton(
+                text = if (isSaver) "Saver Off" else "Saver On",
+                icon = if (isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatterySaver,
+                modifier = Modifier.weight(1f),
+                onClick = { nativeManager?.toggleBatterySaver() }
+            )
+            PrimaryPillButton(
+                text = "Battery Settings",
+                icon = Icons.Default.Settings,
+                modifier = Modifier.weight(1.2f),
+                onClick = { launchSystemActionAndCollapse(context, Settings.ACTION_BATTERY_SAVER_SETTINGS, onDismiss) }
+            )
+        }
+    }
+}
+
+// =============================================================================
+// 13. Storage Info Menu
+// =============================================================================
+
+@Composable
+private fun StorageInfoMicroContent(
+    context: Context,
+    onDismiss: () -> Unit
+) {
+    val storageStats = remember {
+        try {
+            val stat = StatFs(Environment.getDataDirectory().path)
+            val totalBytes = stat.totalBytes.toDouble().coerceAtLeast(1.0)
+            val availBytes = stat.availableBytes.toDouble().coerceIn(0.0, totalBytes)
+            val usedBytes = (totalBytes - availBytes).coerceAtLeast(0.0)
+            val gbDiv = 1024.0 * 1024.0 * 1024.0
+            val frac = (usedBytes / totalBytes).toFloat().coerceIn(0f, 1f)
+            Triple(frac, usedBytes / gbDiv, totalBytes / gbDiv)
+        } catch (_: Throwable) {
+            Triple(0.5f, 64.0, 128.0)
+        }
+    }
+    val usedPct = (storageStats.first * 100f).toInt().coerceIn(0, 100)
+    val freeGb = (storageStats.third - storageStats.second).coerceAtLeast(0.0)
+
+    MicroCard(shape = MicroCardShapes.Top) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            MicroArcGauge(
+                progress = storageStats.first,
+                primaryText = "$usedPct%",
+                secondaryText = "Used",
+                arcColor = ExpressiveTheme.colors.buttonPrimary,
+                sizeDp = 104
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                MicroStatBox(
+                    label = "Used Space",
+                    value = String.format(Locale.US, "%.1f GB / %.1f GB", storageStats.second, storageStats.third),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                MicroStatBox(
+                    label = "Available Space",
+                    value = String.format(Locale.US, "%.1f GB free", freeGb),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+
+    MicroCard(shape = MicroCardShapes.Bottom) {
+        PrimaryPillButton(
+            text = "Open Storage Settings",
+            icon = Icons.Default.Storage,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = { launchSystemActionAndCollapse(context, Settings.ACTION_INTERNAL_STORAGE_SETTINGS, onDismiss) }
+        )
+    }
+}
+
+// =============================================================================
+// 14. Bluetooth Device Menu
+// =============================================================================
+
+@Composable
+private fun BluetoothDeviceMicroContent(
+    context: Context,
+    onDismiss: () -> Unit
+) {
+    val nativeManager = NativeTileManager.instance
+    val btOn = nativeManager?.isBluetoothEnabled?.collectAsState()?.value ?: false
+    val deviceName = nativeManager?.bluetoothDeviceName?.collectAsState()?.value
+    val deviceBattery = nativeManager?.bluetoothBatteryLevel?.collectAsState()?.value
+    val hasDevice = !deviceName.isNullOrBlank()
+    val gaugeFrac = when {
+        !btOn -> 0f
+        deviceBattery != null -> (deviceBattery / 100f).coerceIn(0f, 1f)
+        hasDevice -> 1f
+        else -> 0.2f
+    }
+
+    MicroCard(shape = MicroCardShapes.Top) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            MicroArcGauge(
+                progress = gaugeFrac,
+                primaryText = when {
+                    !btOn -> "Off"
+                    deviceBattery != null -> "$deviceBattery%"
+                    hasDevice -> "On"
+                    else -> "Ready"
+                },
+                secondaryText = if (hasDevice) "Connected" else if (btOn) "Bluetooth On" else "Disabled",
+                arcColor = ExpressiveTheme.colors.buttonPrimary,
+                sizeDp = 104
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                MicroStatBox(
+                    label = "Active Device",
+                    value = if (!btOn) "Bluetooth Off" else deviceName ?: "No Device Connected",
+                    modifier = Modifier.fillMaxWidth()
+                )
+                MicroStatBox(
+                    label = "Accessory Battery",
+                    value = if (deviceBattery != null) "$deviceBattery%" else "Unavailable",
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+
+    MicroCard(shape = MicroCardShapes.Bottom) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SubtlePillButton(
+                text = if (btOn) "Turn Off" else "Turn On",
+                icon = Icons.Default.Bluetooth,
+                modifier = Modifier.weight(1f),
+                onClick = { nativeManager?.toggleBluetooth() }
+            )
+            PrimaryPillButton(
+                text = "Bluetooth Settings",
+                icon = Icons.Default.Settings,
+                modifier = Modifier.weight(1.2f),
+                onClick = { launchSystemActionAndCollapse(context, Settings.ACTION_BLUETOOTH_SETTINGS, onDismiss) }
+            )
+        }
+    }
+}
+

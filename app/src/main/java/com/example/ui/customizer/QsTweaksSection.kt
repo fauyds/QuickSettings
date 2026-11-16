@@ -559,6 +559,261 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     }
 }
 
+    val footerIconBackgroundCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("footer_icon_background_card", CustomizeCategory.QS_TWEAKS) {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("footer_icon_background_card")
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                        ) {
+                            Text(
+                                text = "Footer Icon Backgrounds",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 17.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Enable M3 rounded backgrounds for QS footer action buttons with 10dp outer and 3dp inner corners.",
+                                fontSize = 12.sp,
+                                lineHeight = 15.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    val footerIconBgEnabled by PanelPreferences.footerIconBackground.collectAsState()
+                    val footerOuterSpacingEnabled by PanelPreferences.footerOuterSpacing.collectAsState()
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Enable Footer Icon Backgrounds",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Switch(
+                            checked = footerIconBgEnabled,
+                            onCheckedChange = { PanelPreferences.setFooterIconBackground(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("footer_icon_bg_toggle")
+                        )
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Outer 3dp Spacing Between Buttons",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Adds 3dp spacing with 3dp inner corners. When disabled, spacing and inner corners are 0dp.",
+                                fontSize = 11.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = footerOuterSpacingEnabled,
+                            onCheckedChange = { PanelPreferences.setFooterOuterSpacing(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("footer_outer_spacing_toggle")
+                        )
+                    }
+
+                    if (footerIconBgEnabled) {
+                        val footerOuterCorner by PanelPreferences.footerOuterCorner.collectAsState()
+                        val footerInnerCorner by PanelPreferences.footerInnerCorner.collectAsState()
+                        val footerSpacing by PanelPreferences.footerSpacing.collectAsState()
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                        // 1. Outer Corner Radius Slider
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "Outer Corner Radius",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Exposed ends corner curvature",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    text = "${footerOuterCorner.toInt()} dp",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Slider(
+                                value = footerOuterCorner,
+                                onValueChange = { PanelPreferences.setFooterOuterCorner(context, Math.round(it).toFloat()) },
+                                valueRange = 0f..24f,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("footer_outer_corner_slider"),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                )
+                            )
+                        }
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                        // 2. Inner Corner Radius Slider
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "Inner Corner Radius",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Adjacent inner edges curvature",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    text = "${footerInnerCorner.toInt()} dp",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Slider(
+                                value = footerInnerCorner,
+                                onValueChange = { PanelPreferences.setFooterInnerCorner(context, Math.round(it).toFloat()) },
+                                valueRange = 0f..20f,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("footer_inner_corner_slider"),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                )
+                            )
+                        }
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                        // 3. Spacing Between Buttons Slider
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "Button Spacing",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Gap between footer button backgrounds",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    text = "${footerSpacing.toInt()} dp",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Slider(
+                                value = footerSpacing,
+                                onValueChange = { PanelPreferences.setFooterSpacing(context, Math.round(it).toFloat()) },
+                                valueRange = 0f..20f,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("footer_spacing_slider"),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     val batteryPercentageLocationCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("battery_percentage_location_card", CustomizeCategory.QS_TWEAKS) {
             SettingsCard(
@@ -2210,6 +2465,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         if (!hiddenInOreoTweakIds.contains("battery_percentage_location_card") && pinnedIds.contains("battery_percentage_location_card")) pinnedCards.add(batteryPercentageLocationCard)
         if (!hiddenInOreoTweakIds.contains("settings_icon_location_card") && pinnedIds.contains("settings_icon_location_card")) pinnedCards.add(settingsIconLocationCard)
         if (!hiddenInOreoTweakIds.contains("edit_pencil_location_card") && pinnedIds.contains("edit_pencil_location_card")) pinnedCards.add(editPencilLocationCard)
+        if (!hiddenInOreoTweakIds.contains("footer_icon_background_card") && pinnedIds.contains("footer_icon_background_card")) pinnedCards.add(footerIconBackgroundCard)
         if (!hiddenInOreoTweakIds.contains("qs_tile_font_size_card") && pinnedIds.contains("qs_tile_font_size_card")) pinnedCards.add(tileFontSizeCard)
         if (!hiddenInOreoTweakIds.contains("hide_date_in_expanded_card") && pinnedIds.contains("hide_date_in_expanded_card")) pinnedCards.add(hideDateInExpandedCard)
         if (!hiddenInOreoTweakIds.contains("disable_labels_in_expanded_card") && pinnedIds.contains("disable_labels_in_expanded_card")) pinnedCards.add(disableLabelsInExpandedCard)
@@ -2259,6 +2515,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         if (!pinnedIds.contains("battery_percentage_location_card")) unpinnedHeaderControls.add(batteryPercentageLocationCard)
         if (!pinnedIds.contains("settings_icon_location_card")) unpinnedHeaderControls.add(settingsIconLocationCard)
         if (!pinnedIds.contains("edit_pencil_location_card")) unpinnedHeaderControls.add(editPencilLocationCard)
+        if (!pinnedIds.contains("footer_icon_background_card")) unpinnedHeaderControls.add(footerIconBackgroundCard)
         if (!pinnedIds.contains("enable_panel_shadows_card")) unpinnedHeaderControls.add(enablePanelShadowsCard)
         if (!pinnedIds.contains("disable_clear_all_bg_card")) unpinnedHeaderControls.add(disableClearAllBgCard)
         if (!pinnedIds.contains("clear_all_fab_offset_card")) unpinnedHeaderControls.add(clearAllFabOffsetsCard)

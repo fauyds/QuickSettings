@@ -573,7 +573,7 @@ class ExampleRobolectricTest {
             text = "Meeting",
             isClearable = true
         )
-        adapter.submitList(listOf(notif0, notif1, notif2))
+        adapter.submitNotifications(listOf(notif0, notif1, notif2))
 
         // Total item count: 2 media cards + 3 notifications = 5
         assertEquals(5, adapter.itemCount)
