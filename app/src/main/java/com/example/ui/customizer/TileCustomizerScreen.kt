@@ -44,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -59,6 +60,7 @@ import com.example.data.PanelPreferences
 import com.example.model.QsGridLayout
 import com.example.model.QsTileModel
 import com.example.model.TileCategory
+import com.example.ui.tile.TileEditorFilter
 import com.example.ui.theme.ExpressiveCardShapes
 import com.example.ui.theme.LocalIsDarkTheme
 import com.example.ui.theme.MonetPrimary
@@ -86,6 +88,8 @@ fun TileCustomizerScreen(
     val scrollState = rememberScrollState()
     val activeTiles = remember(tiles) { tiles.filter { it.isVisible } }
     val availableTiles = remember(tiles) { tiles.filter { !it.isVisible } }
+    val availableQsTiles = remember(availableTiles) { availableTiles.filter { !it.isComplicationTile } }
+    val availableComplications = remember(availableTiles) { availableTiles.filter { it.isComplicationTile } }
 
     val isKitKat by PanelPreferences.isAndroidKitKatStyle.collectAsState()
     val isMarshmallow by PanelPreferences.isAndroidMarshmallowStyle.collectAsState()
@@ -425,7 +429,7 @@ fun TileCustomizerScreen(
             }
         }
 
-        // CENTER CARD: ACTIVE TILES
+        // CENTER CARD: ACTIVE TILES & COMPLICATIONS
         SettingsCard(
             shape = centerCardShape,
             colors = CardDefaults.cardColors(containerColor = cardContainerColor),
@@ -443,7 +447,7 @@ fun TileCustomizerScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "ACTIVE TILES (${activeTiles.size})",
+                        text = "ACTIVE (${activeTiles.size})",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.5.sp,
@@ -460,6 +464,7 @@ fun TileCustomizerScreen(
                     Text("No active tiles. Add from below.", color = Color.Gray, fontSize = 12.sp)
                 } else {
                     activeTiles.forEachIndexed { index, tile ->
+                        val globalFrom = tiles.indexOfFirst { it.id == tile.id }
                         ActiveTileReorderItem(
                             index = index,
                             tile = tile,
@@ -467,8 +472,18 @@ fun TileCustomizerScreen(
                             isLast = index == activeTiles.lastIndex,
                             isKitKat = isKitKat,
                             isMarshmallow = isMarshmallow,
-                            onMoveUp = { onMoveTile(index, index - 1) },
-                            onMoveDown = { onMoveTile(index, index + 1) },
+                            onMoveUp = {
+                                if (index > 0 && globalFrom != -1) {
+                                    val prevGlobal = tiles.indexOfFirst { it.id == activeTiles[index - 1].id }
+                                    if (prevGlobal != -1) onMoveTile(globalFrom, prevGlobal)
+                                }
+                            },
+                            onMoveDown = {
+                                if (index < activeTiles.lastIndex && globalFrom != -1) {
+                                    val nextGlobal = tiles.indexOfFirst { it.id == activeTiles[index + 1].id }
+                                    if (nextGlobal != -1) onMoveTile(globalFrom, nextGlobal)
+                                }
+                            },
                             onRemove = { onToggleVisibility(tile.id, true) }
                         )
                     }
@@ -476,7 +491,7 @@ fun TileCustomizerScreen(
             }
         }
 
-        // BOTTOM CARD: AVAILABLE TILES
+        // BOTTOM CARD: AVAILABLE QS TILES & COMPLICATIONS
         SettingsCard(
             shape = bottomCardShape,
             colors = CardDefaults.cardColors(containerColor = cardContainerColor),
@@ -489,21 +504,47 @@ fun TileCustomizerScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "AVAILABLE TILES FOR PANEL (${availableTiles.size})",
+                    text = "AVAILABLE QS TILES (${availableQsTiles.size})",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.5.sp,
                     color = if (isKitKat) Color(0xFF33B5E5) else if (isMarshmallow) Color(0xFF00BFA5) else MonetPrimary
                 )
 
-                if (availableTiles.isEmpty()) {
+                if (availableQsTiles.isEmpty()) {
                     Text(
-                        text = "All available tiles are currently added to your Quick Settings panel.",
+                        text = "All QS tiles are currently added to your Quick Settings panel.",
                         color = if (isKitKat) (if (isDark) Color(0xFFAAAAAA) else Color(0xFF555555)) else if (isMarshmallow) (if (isDark) Color(0xFFB0BEC5) else Color(0xFF546E7A)) else MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp
                     )
                 } else {
-                    availableTiles.forEach { tile ->
+                    availableQsTiles.forEach { tile ->
+                        HiddenTileItem(
+                            tile = tile,
+                            isKitKat = isKitKat,
+                            isMarshmallow = isMarshmallow,
+                            onAdd = { onToggleVisibility(tile.id, false) }
+                        )
+                    }
+                }
+
+                Text(
+                    text = "COMPLICATIONS (${availableComplications.size})",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp,
+                    color = if (isKitKat) Color(0xFF33B5E5) else if (isMarshmallow) Color(0xFF00BFA5) else MonetTertiary,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+
+                if (availableComplications.isEmpty()) {
+                    Text(
+                        text = "All complications are currently added to your Quick Settings panel.",
+                        color = if (isKitKat) (if (isDark) Color(0xFFAAAAAA) else Color(0xFF555555)) else if (isMarshmallow) (if (isDark) Color(0xFFB0BEC5) else Color(0xFF546E7A)) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp
+                    )
+                } else {
+                    availableComplications.forEach { tile ->
                         HiddenTileItem(
                             tile = tile,
                             isKitKat = isKitKat,

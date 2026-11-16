@@ -187,8 +187,11 @@ fun CompactMediaNotificationCard(
 ) {
     val isOreoStyle by PanelPreferences.isAndroidOreoStyle.collectAsState()
     val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
-    val cardShape = if (isOreoStyle) RoundedCornerShape(0.dp) else RoundedCornerShape(cornerRadius)
-    val artworkShape = RoundedCornerShape(panelOuterCorner.dp)
+    val panelInnerCorner by PanelPreferences.panelInnerCorner.collectAsState()
+    val panelGlobalCornerEnabled by PanelPreferences.panelGlobalCornerEnabled.collectAsState()
+    val effectiveCorner = if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner
+    val cardShape = if (isOreoStyle) RoundedCornerShape(0.dp) else RoundedCornerShape(effectiveCorner.dp)
+    val artworkShape = RoundedCornerShape(effectiveCorner.dp)
 
     val isDark = com.example.ui.theme.LocalIsDarkTheme.current
     val primaryTextColor = if (isDark) Color.White else Color(0xFF1C1B1F)
@@ -353,8 +356,11 @@ fun AdaptiveMediaPlayerCard(
     val mediaNotificationStyle by PanelPreferences.mediaNotificationStyle.collectAsState()
 
     val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
+    val panelInnerCorner by PanelPreferences.panelInnerCorner.collectAsState()
+    val panelGlobalCornerEnabled by PanelPreferences.panelGlobalCornerEnabled.collectAsState()
     val isClassicStyle = isAndroidOreoStyle
-    val effectiveCornerRadius = if (isClassicStyle) 0.dp else panelOuterCorner.dp
+    val effectiveCorner = if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner
+    val effectiveCornerRadius = if (isClassicStyle) 0.dp else effectiveCorner.dp
     val cardShape = if (isClassicStyle) RoundedCornerShape(0.dp) else RoundedCornerShape(effectiveCornerRadius)
     val activeSessions = if (sessions.isNotEmpty()) sessions else listOf(mediaState)
     val coroutineScope = rememberCoroutineScope()

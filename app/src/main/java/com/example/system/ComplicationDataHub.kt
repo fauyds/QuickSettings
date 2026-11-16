@@ -73,7 +73,9 @@ data class ExternalClockTicker(
     val resetAction: PendingIntent?,
     val lapAction: PendingIntent?,
     val plusOneMinAction: PendingIntent?,
+    val dismissAction: PendingIntent? = null,
     val contentIntent: PendingIntent?,
+    val isFinished: Boolean = false,
     val lastUpdatedAtMs: Long = System.currentTimeMillis()
 )
 
@@ -122,6 +124,7 @@ data class TimerComplicationState(
     val totalDurationMs: Long = 300_000L,
     val remainingMs: Long = 300_000L,
     val isRunning: Boolean = false,
+    val isFinished: Boolean = false,
     val isSyncedExternal: Boolean = false,
     val externalAppName: String? = null,
     val externalTitle: String? = null,
@@ -256,11 +259,20 @@ object ComplicationDataHub {
     private var notificationDownloads: List<ActiveDownloadEntry> = emptyList()
 
     // Local Timer state
+    @Volatile
+    private var configuredTimerDurationMs: Long = 300_000L
+    @Volatile
     private var localTimerTotalMs: Long = 300_000L
+    @Volatile
     private var localTimerRemainingMs: Long = 300_000L
+    @Volatile
     private var localTimerEndElapsedMs: Long = 0L
+    @Volatile
     private var localTimerRunning: Boolean = false
+    @Volatile
     private var localTimerFinishedAlerted: Boolean = false
+    @Volatile
+    private var activeTimerRingtone: android.media.Ringtone? = null
 
     // Local Stopwatch state
     private var localSwAccumulatedMs: Long = 0L
@@ -327,7 +339,8 @@ object ComplicationDataHub {
             eventTargetMs = savedTarget
             eventStartMs = if (savedStart > 0L) savedStart else (savedTarget - 14L * 86_400_000L)
         }
-        localTimerTotalMs = prefs.getLong(KEY_TIMER_DURATION_MS, 300_000L).coerceIn(10_000L, 36_000_000L)
+        configuredTimerDurationMs = prefs.getLong(KEY_TIMER_DURATION_MS, 300_000L).coerceIn(10_000L, 36_000_000L)
+        localTimerTotalMs = configuredTimerDurationMs
         localTimerRemainingMs = localTimerTotalMs
         configuredScaleMbps = prefs.getInt(KEY_NET_SCALE_MBPS, 0)
         luxMaxScale = prefs.getFloat(KEY_LUX_MAX_SCALE, 10_000f).coerceIn(500f, 100_000f)
@@ -688,23 +701,44 @@ object ComplicationDataHub {
         return (ticker.parsedDisplayMs ?: 0L).coerceAtLeast(0L)
     }
 
+    private fun stopTimerAlert(context: Context? = appContext) {
+        try {
+            activeTimerRingtone?.stop()
+        } catch (_: Throwable) {
+        } finally {
+            activeTimerRingtone = null
+        }
+        try {
+            val vibrator = context?.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+            vibrator?.cancel()
+        } catch (_: Throwable) {
+        }
+    }
+
     private fun buildTimerState(): TimerComplicationState {
         val ext = externalTimerTicker
         if (ext != null) {
-            val rem = resolveTickerMillis(ext)
+            val rawRem = if (ext.isFinished) 0L else resolveTickerMillis(ext)
+            val extFinished = ext.isFinished || (ext.isCountDown && rawRem == 0L && (ext.isRunning || ext.dismissAction != null || ext.resetAction != null))
+            val rem = if (extFinished) 0L else rawRem
             val maxDur = maxOf(externalTimerMaxDurationMs, rem, 1_000L)
-            val progress = (rem.toFloat() / maxDur.toFloat()).coerceIn(0f, 1f)
+            val progress = if (extFinished) 0f else (rem.toFloat() / maxDur.toFloat()).coerceIn(0f, 1f)
             val formatted = formatDurationCompact(rem)
             return TimerComplicationState(
                 totalDurationMs = maxDur,
                 remainingMs = rem,
-                isRunning = ext.isRunning,
+                isRunning = ext.isRunning && !extFinished,
+                isFinished = extFinished,
                 isSyncedExternal = true,
                 externalAppName = ext.appName,
                 externalTitle = ext.title,
                 progress = progress,
                 compactSubline = formatted,
-                detailedSubtitle = if (ext.isRunning) "${ext.appName} • $formatted" else "Paused • $formatted"
+                detailedSubtitle = when {
+                    extFinished -> "Finished"
+                    ext.isRunning -> "${ext.appName} • $formatted"
+                    else -> "Paused • $formatted"
+                }
             )
         }
 
@@ -717,9 +751,11 @@ object ComplicationDataHub {
                     try {
                         val ctx = appContext
                         if (ctx != null) {
+                            stopTimerAlert(ctx)
                             val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
                                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
                             val ringtone = RingtoneManager.getRingtone(ctx, uri)
+                            activeTimerRingtone = ringtone
                             ringtone?.play()
                             val vibrator = ctx.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -739,12 +775,14 @@ object ComplicationDataHub {
             localTimerRemainingMs
         }
         val total = localTimerTotalMs.coerceAtLeast(1_000L)
+        val isFinished = !localTimerRunning && rem == 0L
         val progress = (rem.toFloat() / total.toFloat()).coerceIn(0f, 1f)
         val formatted = formatDurationCompact(rem)
         return TimerComplicationState(
             totalDurationMs = total,
             remainingMs = rem,
             isRunning = localTimerRunning,
+            isFinished = isFinished,
             isSyncedExternal = false,
             externalAppName = null,
             externalTitle = null,
@@ -752,7 +790,7 @@ object ComplicationDataHub {
             compactSubline = formatted,
             detailedSubtitle = when {
                 localTimerRunning -> "Running • $formatted"
-                rem == 0L -> "Finished"
+                isFinished -> "Finished"
                 rem < total -> "Paused • $formatted"
                 else -> "Ready • $formatted"
             }
@@ -796,7 +834,85 @@ object ComplicationDataHub {
         )
     }
 
+    fun isTimerFinished(): Boolean {
+        val ext = externalTimerTicker
+        if (ext != null) {
+            val rawRem = if (ext.isFinished) 0L else resolveTickerMillis(ext)
+            return ext.isFinished || (ext.isCountDown && rawRem == 0L && (ext.isRunning || ext.dismissAction != null || ext.resetAction != null))
+        }
+        return _snapshot.value.timer.isFinished || (!localTimerRunning && localTimerRemainingMs <= 0L)
+    }
+
+    fun dismissFinishedTimer(context: Context) {
+        stopTimerAlert(context)
+        val ext = externalTimerTicker
+        if (ext != null) {
+            val action = ext.dismissAction ?: ext.resetAction ?: ext.toggleAction
+            if (action != null) {
+                try {
+                    action.send()
+                } catch (_: Throwable) {}
+            }
+            externalTimerTicker = null
+            externalTimerKey = null
+            externalTimerMaxDurationMs = 0L
+        }
+        localTimerRunning = false
+        localTimerFinishedAlerted = false
+        localTimerTotalMs = configuredTimerDurationMs
+        localTimerRemainingMs = configuredTimerDurationMs
+        refreshTelemetryNow()
+    }
+
+    fun addOneMinuteToTimer(context: Context) {
+        stopTimerAlert(context)
+        val ext = externalTimerTicker
+        if (ext != null) {
+            if (ext.plusOneMinAction != null) {
+                try {
+                    ext.plusOneMinAction.send()
+                    externalTimerMaxDurationMs = maxOf(externalTimerMaxDurationMs, 60_000L)
+                    externalTimerTicker = ext.copy(
+                        isFinished = false,
+                        isRunning = true,
+                        isCountDown = true,
+                        baseWhenEpochMs = System.currentTimeMillis() + 60_000L
+                    )
+                    refreshTelemetryNow()
+                    return
+                } catch (_: Throwable) {}
+            }
+            // Fallback if OEM clock notification has no +1m action: dismiss external alert and run local 1m timer
+            val dismissPending = ext.dismissAction ?: ext.resetAction
+            if (dismissPending != null) {
+                try {
+                    dismissPending.send()
+                } catch (_: Throwable) {}
+            }
+            externalTimerTicker = null
+            externalTimerKey = null
+            externalTimerMaxDurationMs = 0L
+        }
+
+        localTimerFinishedAlerted = false
+        if (localTimerRunning) {
+            localTimerEndElapsedMs = maxOf(SystemClock.elapsedRealtime() + 1_000L, localTimerEndElapsedMs + 60_000L)
+            localTimerTotalMs = maxOf(localTimerTotalMs, localTimerEndElapsedMs - SystemClock.elapsedRealtime())
+        } else {
+            val baseRem = if (localTimerRemainingMs <= 0L) 60_000L else localTimerRemainingMs + 60_000L
+            localTimerRemainingMs = baseRem.coerceIn(10_000L, 36_000_000L)
+            localTimerTotalMs = if (baseRem == 60_000L) 60_000L else maxOf(localTimerTotalMs, localTimerRemainingMs)
+            localTimerEndElapsedMs = SystemClock.elapsedRealtime() + localTimerRemainingMs
+            localTimerRunning = true
+        }
+        refreshTelemetryNow()
+    }
+
     fun toggleTimer(context: Context) {
+        if (isTimerFinished()) {
+            dismissFinishedTimer(context)
+            return
+        }
         val ext = externalTimerTicker
         if (ext != null) {
             if (ext.toggleAction != null) {
@@ -830,6 +946,7 @@ object ComplicationDataHub {
     }
 
     fun resetTimer() {
+        stopTimerAlert()
         val ext = externalTimerTicker
         if (ext?.resetAction != null) {
             try {
@@ -839,12 +956,15 @@ object ComplicationDataHub {
         }
         localTimerRunning = false
         localTimerFinishedAlerted = false
-        localTimerRemainingMs = localTimerTotalMs
+        localTimerTotalMs = configuredTimerDurationMs
+        localTimerRemainingMs = configuredTimerDurationMs
         refreshTelemetryNow()
     }
 
     fun setTimerDuration(durationMs: Long) {
+        stopTimerAlert()
         val clamped = durationMs.coerceIn(10_000L, 36_000_000L)
+        configuredTimerDurationMs = clamped
         localTimerTotalMs = clamped
         localTimerRemainingMs = clamped
         localTimerRunning = false

@@ -34,6 +34,7 @@ class TileEditStudioView @JvmOverloads constructor(
     var onDone: (() -> Unit)? = null
 
     private var currentColumns: Int = 4
+    private var isUserDragging: Boolean = false
 
     init {
         val root = LayoutInflater.from(context).inflate(R.layout.layout_tile_edit_studio, this, true)
@@ -60,7 +61,9 @@ class TileEditStudioView @JvmOverloads constructor(
                 onDone?.invoke()
             },
             onTilesUpdated = { activeList, inactiveList ->
-                onTilesUpdated?.invoke(activeList, inactiveList)
+                if (!isUserDragging) {
+                    onTilesUpdated?.invoke(activeList, inactiveList)
+                }
                 persistTiles(activeList, inactiveList)
             }
         )
@@ -72,6 +75,24 @@ class TileEditStudioView @JvmOverloads constructor(
             ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT,
             0
         ) {
+            override fun getMovementFlags(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder
+            ): Int {
+                val pos = viewHolder.bindingAdapterPosition
+                val canDrag = viewHolder is TileEditAdapter.TileViewHolder &&
+                    pos != RecyclerView.NO_POSITION &&
+                    (adapter?.isTilePosition(pos) == true)
+                return if (canDrag) {
+                    makeMovementFlags(
+                        ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT,
+                        0
+                    )
+                } else {
+                    0
+                }
+            }
+
             override fun onMove(
                 recyclerView: RecyclerView,
                 viewHolder: RecyclerView.ViewHolder,
@@ -80,13 +101,17 @@ class TileEditStudioView @JvmOverloads constructor(
                 val fromPos = viewHolder.bindingAdapterPosition
                 val toPos = target.bindingAdapterPosition
                 if (fromPos == RecyclerView.NO_POSITION || toPos == RecyclerView.NO_POSITION) return false
-                viewHolder.itemView.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                return adapter?.onItemMove(fromPos, toPos) ?: false
+                val moved = adapter?.onItemMove(fromPos, toPos) ?: false
+                if (moved) {
+                    viewHolder.itemView.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                }
+                return moved
             }
 
             override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {
                 super.onSelectedChanged(viewHolder, actionState)
                 if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
+                    isUserDragging = true
                     viewHolder?.itemView?.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                     viewHolder?.itemView?.alpha = 0.85f
                     viewHolder?.itemView?.scaleX = 1.08f
@@ -102,9 +127,14 @@ class TileEditStudioView @JvmOverloads constructor(
                 viewHolder.itemView.scaleY = 1.0f
                 viewHolder.itemView.translationZ = 0f
                 viewHolder.itemView.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                isUserDragging = false
 
                 adapter?.let {
-                    persistTiles(it.activeTiles.toList(), it.inactiveTiles.toList())
+                    val activeSnapshot = it.activeTiles.toList()
+                    val inactiveSnapshot = it.inactiveTiles.toList()
+                    it.refreshDataSet()
+                    onTilesUpdated?.invoke(activeSnapshot, inactiveSnapshot)
+                    persistTiles(activeSnapshot, inactiveSnapshot)
                 }
             }
 
@@ -181,6 +211,8 @@ class TileEditStudioView @JvmOverloads constructor(
         activeSquareShape: Boolean,
         isDark: Boolean
     ) {
+        if (isUserDragging) return
+
         val columns = gridLayout.columns.coerceIn(2, 6)
         if (currentColumns != columns || (rvTiles.layoutManager as? GridLayoutManager)?.spanCount != columns) {
             currentColumns = columns
@@ -195,6 +227,6 @@ class TileEditStudioView @JvmOverloads constructor(
         adapter?.inactiveTiles = inactiveTiles.toMutableList()
         adapter?.isDark = isDark
         adapter?.activeSquareShape = activeSquareShape
-        adapter?.notifyDataSetChanged()
+        adapter?.refreshDataSet()
     }
 }

@@ -248,6 +248,14 @@ object PanelPreferences {
     const val PREFS_NAME = "quickpanel_prefs"
     private const val KEY_STYLE_INITIALIZED = "style_initialized"
 
+    fun getSafeString(prefs: android.content.SharedPreferences, key: String, defValue: String?): String? {
+        return try {
+            prefs.getString(key, defValue)
+        } catch (_: Exception) {
+            defValue
+        }
+    }
+
     fun getStyleKey(key: String, style: QsPanelStyle = _panelStyle.value): String =
         "style_${style.id}_$key"
 
@@ -278,8 +286,12 @@ object PanelPreferences {
     private const val KEY_ENABLED_TILE_SHAPE = "enabled_tile_shape"
     private const val KEY_DISABLED_TILE_SHAPE = "disabled_tile_shape"
     private const val KEY_COMPLICATION_TILE_SHAPE = "complication_tile_shape"
+    private const val KEY_INACTIVE_COMPLICATION_TILE_SHAPE = "inactive_complication_tile_shape"
+    private const val KEY_COMPLICATION_ARC_THICKNESS = "complication_arc_thickness"
     private const val KEY_ACTIVE_SQUARE_SHAPE = "active_square_shape"
     private const val KEY_TILE_OUTLINE_ENABLED = "tile_outline_enabled"
+    private const val KEY_TILE_OUTLINE_THICKNESS = "tile_outline_thickness"
+    private const val KEY_COMPLICATION_OUTLINE_ENABLED = "complication_outline_enabled"
     private const val KEY_HIDE_QQS_DRAG_HANDLE = "hide_qqs_drag_handle"
     private const val KEY_HIDE_QQS_EMPTY_NOTIF_LABELS = "hide_qqs_empty_notif_labels"
     private const val KEY_SHOW_CARRIER = "show_carrier"
@@ -1239,6 +1251,15 @@ object PanelPreferences {
     private val _complicationTileShape = MutableStateFlow(TileShape.CIRCLE)
     val complicationTileShape: StateFlow<TileShape> = _complicationTileShape.asStateFlow()
 
+    private val _inactiveComplicationTileShapeId = MutableStateFlow("circle")
+    val inactiveComplicationTileShapeId: StateFlow<String> = _inactiveComplicationTileShapeId.asStateFlow()
+
+    private val _inactiveComplicationTileShape = MutableStateFlow(TileShape.CIRCLE)
+    val inactiveComplicationTileShape: StateFlow<TileShape> = _inactiveComplicationTileShape.asStateFlow()
+
+    private val _complicationArcThicknessDp = MutableStateFlow(4.0f)
+    val complicationArcThicknessDp: StateFlow<Float> = _complicationArcThicknessDp.asStateFlow()
+
     private val _enabledTileShape = MutableStateFlow(TileShape.CIRCLE)
     val enabledTileShape: StateFlow<TileShape> = _enabledTileShape.asStateFlow()
 
@@ -1253,6 +1274,12 @@ object PanelPreferences {
 
     private val _tileOutlineEnabled = MutableStateFlow(false)
     val tileOutlineEnabled: StateFlow<Boolean> = _tileOutlineEnabled.asStateFlow()
+
+    private val _tileOutlineThicknessDp = MutableStateFlow(1.2f)
+    val tileOutlineThicknessDp: StateFlow<Float> = _tileOutlineThicknessDp.asStateFlow()
+
+    private val _complicationOutlineEnabled = MutableStateFlow(false)
+    val complicationOutlineEnabled: StateFlow<Boolean> = _complicationOutlineEnabled.asStateFlow()
 
     private val _hideQqsDragHandle = MutableStateFlow(false)
     val hideQqsDragHandle: StateFlow<Boolean> = _hideQqsDragHandle.asStateFlow()
@@ -1445,7 +1472,18 @@ object PanelPreferences {
         }
         _complicationTileShapeId.value = savedComplicationShape
         _complicationTileShape.value = TileShape.fromId(savedComplicationShape)
+        val savedInactiveComplicationShape = try {
+            prefs.getString(KEY_INACTIVE_COMPLICATION_TILE_SHAPE, null) ?: "circle"
+        } catch (_: ClassCastException) {
+            prefs.edit().putString(KEY_INACTIVE_COMPLICATION_TILE_SHAPE, "circle").apply()
+            "circle"
+        }
+        _inactiveComplicationTileShapeId.value = savedInactiveComplicationShape
+        _inactiveComplicationTileShape.value = TileShape.fromId(savedInactiveComplicationShape)
+        _complicationArcThicknessDp.value = prefs.getFloat(KEY_COMPLICATION_ARC_THICKNESS, 4.0f).coerceIn(1.0f, 8.0f)
         _tileOutlineEnabled.value = prefs.getBoolean(KEY_TILE_OUTLINE_ENABLED, false)
+        _tileOutlineThicknessDp.value = prefs.getFloat(KEY_TILE_OUTLINE_THICKNESS, 1.2f).coerceIn(0.5f, 6.0f)
+        _complicationOutlineEnabled.value = prefs.getBoolean(KEY_COMPLICATION_OUTLINE_ENABLED, false)
         _hideQqsDragHandle.value = prefs.getBoolean(KEY_HIDE_QQS_DRAG_HANDLE, false)
         _hideQqsEmptyNotifLabels.value = prefs.getBoolean(KEY_HIDE_QQS_EMPTY_NOTIF_LABELS, false)
         _dragHandleVerticalOffset.value = prefs.getFloat(KEY_DRAG_HANDLE_VERTICAL_OFFSET, 4f)
@@ -1782,11 +1820,11 @@ object PanelPreferences {
         } else null
         _sliderCornerRadius.value = prefs.getFloat(KEY_SLIDER_CORNER_RADIUS, 19.0f)
         _sliderSyncAll.value = prefs.getBoolean(KEY_SLIDER_SYNC_ALL, true)
-        val savedBrightnessStyle = prefs.getString(KEY_BRIGHTNESS_SLIDER_STYLE, null)
+        val savedBrightnessStyle = getSafeString(prefs, KEY_BRIGHTNESS_SLIDER_STYLE, null)
         _brightnessSliderStyle.value = if (savedBrightnessStyle != null) ProgressBarStyle.fromId(savedBrightnessStyle) else resolvedStyle
-        val savedVolumeStyle = prefs.getString(KEY_VOLUME_SLIDER_STYLE, null)
+        val savedVolumeStyle = getSafeString(prefs, KEY_VOLUME_SLIDER_STYLE, null)
         _volumeSliderStyle.value = if (savedVolumeStyle != null) ProgressBarStyle.fromId(savedVolumeStyle) else resolvedStyle
-        val savedMediaStyle = prefs.getString(KEY_MEDIA_SLIDER_STYLE, null)
+        val savedMediaStyle = getSafeString(prefs, KEY_MEDIA_SLIDER_STYLE, null)
         _mediaSliderStyle.value = if (savedMediaStyle != null) ProgressBarStyle.fromId(savedMediaStyle) else resolvedStyle
 
         _a12InactiveTrackThickness.value = prefs.getFloat(KEY_A12_INACTIVE_THICKNESS, 38.0f)
@@ -1813,7 +1851,7 @@ object PanelPreferences {
         _qsBackgroundColor.value = if (prefs.contains(KEY_QS_BACKGROUND_COLOR)) prefs.getInt(KEY_QS_BACKGROUND_COLOR, 0) else null
         _qsPanelBackgroundColor.value = if (prefs.contains(KEY_QS_PANEL_BACKGROUND_COLOR)) prefs.getInt(KEY_QS_PANEL_BACKGROUND_COLOR, 0) else null
         _initialSetupCompleted.value = prefs.getBoolean(KEY_INITIAL_SETUP_COMPLETED, false)
-        val savedMode = prefs.getString(KEY_PRIVILEGE_MODE, com.example.model.PrivilegeMode.STANDARD.name)
+        val savedMode = getSafeString(prefs, KEY_PRIVILEGE_MODE, com.example.model.PrivilegeMode.STANDARD.name)
         _privilegeMode.value = try {
             com.example.model.PrivilegeMode.valueOf(savedMode ?: com.example.model.PrivilegeMode.STANDARD.name)
         } catch (_: Exception) {
@@ -1905,7 +1943,11 @@ object PanelPreferences {
             putString(getStyleKey(KEY_ENABLED_TILE_SHAPE, style), _enabledTileShapeId.value)
             putString(getStyleKey(KEY_DISABLED_TILE_SHAPE, style), _disabledTileShapeId.value)
             putString(getStyleKey(KEY_COMPLICATION_TILE_SHAPE, style), _complicationTileShapeId.value)
+            putString(getStyleKey(KEY_INACTIVE_COMPLICATION_TILE_SHAPE, style), _inactiveComplicationTileShapeId.value)
+            putFloat(getStyleKey(KEY_COMPLICATION_ARC_THICKNESS, style), _complicationArcThicknessDp.value)
             putBoolean(getStyleKey(KEY_TILE_OUTLINE_ENABLED, style), _tileOutlineEnabled.value)
+            putFloat(getStyleKey(KEY_TILE_OUTLINE_THICKNESS, style), _tileOutlineThicknessDp.value)
+            putBoolean(getStyleKey(KEY_COMPLICATION_OUTLINE_ENABLED, style), _complicationOutlineEnabled.value)
             putBoolean(getStyleKey(KEY_ENABLE_LEGACY_TILE_SHAPES, style), _enableLegacyTileShapes.value)
             putBoolean(getStyleKey(KEY_SHOW_MONET_SURFACE_BACKGROUND, style), _showMonetSurfaceBackground.value)
             putBoolean(getStyleKey(KEY_SHOW_QS_TILE_GRADIENT, style), _showQsTileGradient.value)
@@ -2004,7 +2046,7 @@ object PanelPreferences {
         val targetQqsTileCount = if (isInitialized) prefs.getInt(getStyleKey(KEY_QQS_TILE_COUNT, style), defaultQqsTileCount) else defaultQqsTileCount
         val targetMediaInNotif = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SHOW_MEDIA_IN_NOTIFICATION_CONTAINER, style), defaultMediaInNotif) else defaultMediaInNotif
         val targetMediaNotifStyle = if (isInitialized) {
-            val styleStr = prefs.getString(getStyleKey(KEY_MEDIA_NOTIFICATION_STYLE, style), defaultMediaNotifStyle.id)
+            val styleStr = getSafeString(prefs, getStyleKey(KEY_MEDIA_NOTIFICATION_STYLE, style), defaultMediaNotifStyle.id)
             MediaNotificationStyle.fromId(styleStr)
         } else defaultMediaNotifStyle
         val targetBrightnessAtBottom = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_BRIGHTNESS_AT_BOTTOM, style), defaultBrightnessAtBottom) else defaultBrightnessAtBottom
@@ -2013,19 +2055,19 @@ object PanelPreferences {
         val targetShowBrightnessGradient = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SHOW_BRIGHTNESS_GRADIENT, style), false) else false
 
         val targetProgressBarStyle = if (isInitialized) {
-            ProgressBarStyle.fromId(prefs.getString(getStyleKey(KEY_PROGRESS_BAR_STYLE, style), ProgressBarStyle.DEFAULT.id))
+            ProgressBarStyle.fromId(getSafeString(prefs, getStyleKey(KEY_PROGRESS_BAR_STYLE, style), ProgressBarStyle.DEFAULT.id))
         } else ProgressBarStyle.DEFAULT
 
         val targetBrightnessSliderStyle = if (isInitialized) {
-            ProgressBarStyle.fromId(prefs.getString(getStyleKey(KEY_BRIGHTNESS_SLIDER_STYLE, style), ProgressBarStyle.DEFAULT.id))
+            ProgressBarStyle.fromId(getSafeString(prefs, getStyleKey(KEY_BRIGHTNESS_SLIDER_STYLE, style), ProgressBarStyle.DEFAULT.id))
         } else ProgressBarStyle.DEFAULT
 
         val targetVolumeSliderStyle = if (isInitialized) {
-            ProgressBarStyle.fromId(prefs.getString(getStyleKey(KEY_VOLUME_SLIDER_STYLE, style), ProgressBarStyle.DEFAULT.id))
+            ProgressBarStyle.fromId(getSafeString(prefs, getStyleKey(KEY_VOLUME_SLIDER_STYLE, style), ProgressBarStyle.DEFAULT.id))
         } else ProgressBarStyle.DEFAULT
 
         val targetMediaSliderStyle = if (isInitialized) {
-            ProgressBarStyle.fromId(prefs.getString(getStyleKey(KEY_MEDIA_SLIDER_STYLE, style), ProgressBarStyle.DEFAULT.id))
+            ProgressBarStyle.fromId(getSafeString(prefs, getStyleKey(KEY_MEDIA_SLIDER_STYLE, style), ProgressBarStyle.DEFAULT.id))
         } else ProgressBarStyle.DEFAULT
 
         val targetSliderSyncAll = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SLIDER_SYNC_ALL, style), true) else true
@@ -2041,9 +2083,23 @@ object PanelPreferences {
         val targetGlobalCorner = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_PANEL_GLOBAL_CORNER_ENABLED, style), defaultGlobalCornerEnabled) else defaultGlobalCornerEnabled
         val targetQsBgCorner = if (isInitialized) prefs.getFloat(getStyleKey(KEY_QS_BACKGROUND_CORNER, style), targetPanelOuterCorner) else targetPanelOuterCorner
 
-        val targetEnabledShapeId = if (isInitialized) prefs.getString(getStyleKey(KEY_ENABLED_TILE_SHAPE, style), "circle") ?: "circle" else "circle"
-        val targetDisabledShapeId = if (isInitialized) prefs.getString(getStyleKey(KEY_DISABLED_TILE_SHAPE, style), "circle") ?: "circle" else "circle"
+        val targetEnabledShapeId = if (isInitialized) getSafeString(prefs, getStyleKey(KEY_ENABLED_TILE_SHAPE, style), "circle") ?: "circle" else "circle"
+        val targetDisabledShapeId = if (isInitialized) getSafeString(prefs, getStyleKey(KEY_DISABLED_TILE_SHAPE, style), "circle") ?: "circle" else "circle"
         val targetTileOutline = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_TILE_OUTLINE_ENABLED, style), defaultTileOutline) else defaultTileOutline
+        val globalTileOutlineThickness = prefs.getFloat(KEY_TILE_OUTLINE_THICKNESS, 1.2f).coerceIn(0.5f, 6.0f)
+        val styleTileOutlineThicknessKey = getStyleKey(KEY_TILE_OUTLINE_THICKNESS, style)
+        val targetTileOutlineThickness = if (isInitialized && prefs.contains(styleTileOutlineThicknessKey)) {
+            prefs.getFloat(styleTileOutlineThicknessKey, globalTileOutlineThickness).coerceIn(0.5f, 6.0f)
+        } else {
+            globalTileOutlineThickness
+        }
+        val globalComplicationOutline = prefs.getBoolean(KEY_COMPLICATION_OUTLINE_ENABLED, false)
+        val styleComplicationOutlineKey = getStyleKey(KEY_COMPLICATION_OUTLINE_ENABLED, style)
+        val targetComplicationOutline = if (isInitialized && prefs.contains(styleComplicationOutlineKey)) {
+            prefs.getBoolean(styleComplicationOutlineKey, globalComplicationOutline)
+        } else {
+            globalComplicationOutline
+        }
         val targetLegacyShapes = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_ENABLE_LEGACY_TILE_SHAPES, style), false) else false
 
         val targetShowMonetSurfaceBg = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SHOW_MONET_SURFACE_BACKGROUND, style), false) else false
@@ -2142,6 +2198,31 @@ object PanelPreferences {
             globalComplicationShapeId
         }
 
+        val styleInactiveComplicationKey = getStyleKey(KEY_INACTIVE_COMPLICATION_TILE_SHAPE, style)
+        val globalInactiveComplicationShapeId = try {
+            prefs.getString(KEY_INACTIVE_COMPLICATION_TILE_SHAPE, null) ?: "circle"
+        } catch (_: ClassCastException) {
+            prefs.edit().putString(KEY_INACTIVE_COMPLICATION_TILE_SHAPE, "circle").apply()
+            "circle"
+        }
+        val targetInactiveComplicationShapeId = if (isInitialized && prefs.contains(styleInactiveComplicationKey)) {
+            try {
+                prefs.getString(styleInactiveComplicationKey, null) ?: globalInactiveComplicationShapeId
+            } catch (_: ClassCastException) {
+                prefs.edit().putString(styleInactiveComplicationKey, globalInactiveComplicationShapeId).apply()
+                globalInactiveComplicationShapeId
+            }
+        } else {
+            globalInactiveComplicationShapeId
+        }
+        val styleComplicationArcKey = getStyleKey(KEY_COMPLICATION_ARC_THICKNESS, style)
+        val globalComplicationArcThickness = prefs.getFloat(KEY_COMPLICATION_ARC_THICKNESS, 4.0f).coerceIn(1.0f, 8.0f)
+        val targetComplicationArcThickness = if (isInitialized && prefs.contains(styleComplicationArcKey)) {
+            prefs.getFloat(styleComplicationArcKey, globalComplicationArcThickness).coerceIn(1.0f, 8.0f)
+        } else {
+            globalComplicationArcThickness
+        }
+
         // Update StateFlows
         _gridLayout.value = targetGridLayout
         _qqsTileSize.value = targetQqsTileSize
@@ -2168,7 +2249,12 @@ object PanelPreferences {
         _disabledTileShape.value = TileShape.fromId(targetDisabledShapeId)
         _complicationTileShapeId.value = targetComplicationShapeId
         _complicationTileShape.value = TileShape.fromId(targetComplicationShapeId)
+        _inactiveComplicationTileShapeId.value = targetInactiveComplicationShapeId
+        _inactiveComplicationTileShape.value = TileShape.fromId(targetInactiveComplicationShapeId)
+        _complicationArcThicknessDp.value = targetComplicationArcThickness
         _tileOutlineEnabled.value = targetTileOutline
+        _tileOutlineThicknessDp.value = targetTileOutlineThickness
+        _complicationOutlineEnabled.value = targetComplicationOutline
         _enableLegacyTileShapes.value = targetLegacyShapes
         _showMonetSurfaceBackground.value = targetShowMonetSurfaceBg
         _showQsTileGradient.value = targetShowQsTileGradient
@@ -2230,7 +2316,11 @@ object PanelPreferences {
             putString(KEY_ENABLED_TILE_SHAPE, targetEnabledShapeId)
             putString(KEY_DISABLED_TILE_SHAPE, targetDisabledShapeId)
             putString(KEY_COMPLICATION_TILE_SHAPE, targetComplicationShapeId)
+            putString(KEY_INACTIVE_COMPLICATION_TILE_SHAPE, targetInactiveComplicationShapeId)
+            putFloat(KEY_COMPLICATION_ARC_THICKNESS, targetComplicationArcThickness)
             putBoolean(KEY_TILE_OUTLINE_ENABLED, targetTileOutline)
+            putFloat(KEY_TILE_OUTLINE_THICKNESS, targetTileOutlineThickness)
+            putBoolean(KEY_COMPLICATION_OUTLINE_ENABLED, targetComplicationOutline)
             putBoolean(KEY_ENABLE_LEGACY_TILE_SHAPES, targetLegacyShapes)
             putBoolean(KEY_SHOW_MONET_SURFACE_BACKGROUND, targetShowMonetSurfaceBg)
             putBoolean(KEY_SHOW_QS_TILE_GRADIENT, targetShowQsTileGradient)
@@ -2656,6 +2746,29 @@ object PanelPreferences {
             .apply()
     }
 
+    fun setInactiveComplicationTileShapeId(context: Context, shapeId: String) {
+        _inactiveComplicationTileShapeId.value = shapeId
+        val shape = TileShape.fromId(shapeId)
+        _inactiveComplicationTileShape.value = shape
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString(KEY_INACTIVE_COMPLICATION_TILE_SHAPE, shapeId)
+            .putString(getStyleKey(KEY_INACTIVE_COMPLICATION_TILE_SHAPE), shapeId)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
+    }
+
+    fun setComplicationArcThicknessDp(context: Context, thicknessDp: Float) {
+        val clamped = kotlin.math.round(thicknessDp.coerceIn(1.0f, 8.0f) * 10f) / 10f
+        _complicationArcThicknessDp.value = clamped
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(KEY_COMPLICATION_ARC_THICKNESS, clamped)
+            .putFloat(getStyleKey(KEY_COMPLICATION_ARC_THICKNESS), clamped)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
+    }
+
     fun setEnabledTileShape(context: Context, shape: TileShape) {
         setEnabledTileShapeId(context, shape.id)
     }
@@ -2679,6 +2792,27 @@ object PanelPreferences {
         prefs.edit()
             .putBoolean(KEY_TILE_OUTLINE_ENABLED, enabled)
             .putBoolean(getStyleKey(KEY_TILE_OUTLINE_ENABLED), enabled)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
+    }
+
+    fun setTileOutlineThicknessDp(context: Context, thicknessDp: Float) {
+        val clamped = kotlin.math.round(thicknessDp.coerceIn(0.5f, 6.0f) * 10f) / 10f
+        _tileOutlineThicknessDp.value = clamped
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(KEY_TILE_OUTLINE_THICKNESS, clamped)
+            .putFloat(getStyleKey(KEY_TILE_OUTLINE_THICKNESS), clamped)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
+    }
+
+    fun setComplicationOutlineEnabled(context: Context, enabled: Boolean) {
+        _complicationOutlineEnabled.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean(KEY_COMPLICATION_OUTLINE_ENABLED, enabled)
+            .putBoolean(getStyleKey(KEY_COMPLICATION_OUTLINE_ENABLED), enabled)
             .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }

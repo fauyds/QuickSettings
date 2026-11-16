@@ -59,8 +59,10 @@ import com.example.data.local.TileEntity
 import com.example.model.TileCategory
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.drawOutline
+import com.example.ui.shape.insideShapeBorder
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -89,6 +91,8 @@ import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.AutoAwesome
+import com.example.ui.tile.TileEditorFilter
 import androidx.compose.runtime.mutableStateMapOf
 import kotlinx.coroutines.Dispatchers
 import androidx.compose.foundation.ScrollState
@@ -1446,6 +1450,8 @@ fun KitKatEditTileCard(
     val textSecondary = Color(MonetThemeHelper.getTextSecondary(context, isDark))
 
     val enableLegacyTileShapes by PanelPreferences.enableLegacyTileShapes.collectAsState()
+    val tileOutlineEnabled by PanelPreferences.tileOutlineEnabled.collectAsState()
+    val tileOutlineThicknessDp by PanelPreferences.tileOutlineThicknessDp.collectAsState()
     val enabledTileShapeId by PanelPreferences.enabledTileShapeId.collectAsState()
     val disabledTileShapeId by PanelPreferences.disabledTileShapeId.collectAsState()
     val chosenShapeId = if (isActive) enabledTileShapeId else disabledTileShapeId
@@ -1454,7 +1460,11 @@ fun KitKatEditTileCard(
     val inactiveTextColor = if (isDark) Color(0xFFAAAAAA) else textSecondary
 
     val iconTint = if (enableLegacyTileShapes) {
-        if (isActive) Color.White else inactiveIconColor
+        if (isActive) {
+            if (tileOutlineEnabled) tileAccent else Color.White
+        } else {
+            inactiveIconColor
+        }
     } else {
         if (isActive) tileAccent else inactiveIconColor
     }
@@ -1504,11 +1514,17 @@ fun KitKatEditTileCard(
                 } else if (enableLegacyTileShapes) {
                     val tileShape = com.example.ui.shape.QsShapeManager.getComposeShape(chosenShapeId)
                     val inactiveBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
+                    val oreoOutlineColor = if (isActive) tileAccent else inactiveBgColor
                     Box(
                         modifier = Modifier
                             .size(44.dp)
+                            .then(
+                                if (tileOutlineEnabled) {
+                                    Modifier.insideShapeBorder(tileOutlineThicknessDp.dp, oreoOutlineColor, tileShape)
+                                } else Modifier
+                            )
                             .clip(tileShape)
-                            .background(if (isActive) tileAccent else inactiveBgColor),
+                            .background(if (tileOutlineEnabled) Color.Transparent else if (isActive) tileAccent else inactiveBgColor),
                         contentAlignment = Alignment.Center
                     ) {
                         if (isThirdParty) {
@@ -1620,7 +1636,6 @@ fun KitKatTileEditorScreen(
     val holoBlue = Color(0xFF33B5E5)
     val textPrimary = Color(MonetThemeHelper.getTextPrimary(context, isDark))
     val textSecondary = Color(MonetThemeHelper.getTextSecondary(context, isDark))
-
     val panelSurfaceColor = when {
         customPanelBg != null -> Color(customPanelBg)
         showMonetSurface -> Color(MonetThemeHelper.getSurfaceBackground(context, isDark))
@@ -1634,6 +1649,9 @@ fun KitKatTileEditorScreen(
         activeGridContainerBounds != null &&
         currentDragCenter.y > activeGridContainerBounds!!.bottom + 10f &&
         currentDragCenter.y >= inactiveDropZoneBounds!!.top
+
+    val inactiveQsTiles = remember(localInactive) { localInactive.filter { !it.isComplicationTile } }
+    val inactiveComplications = remember(localInactive) { localInactive.filter { it.isComplicationTile } }
 
     val handleAddTileToActive: (QsTileModel, Int?) -> Unit = { targetTile, slotIndex ->
         val updatedInactive = localInactive.toMutableList()
@@ -1766,233 +1784,244 @@ fun KitKatTileEditorScreen(
                     .background(holoBlue)
             )
 
-            // 3. Scrollable Studio (Active & Available Grids)
+            // 3. Scrollable Studio (Separated Active & Available QS Tiles vs Complications)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
+                    .background(panelSurfaceColor)
                     .verticalScroll(editScrollState)
                     .padding(horizontal = 1.5.dp, vertical = 6.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Section Title Row
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "QUICK SETTINGS TILES",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.2.sp,
-                        color = holoBlue
-                    )
-                    Text(
-                        text = "Hold to drag • Tap '-' to remove",
-                        fontSize = 10.5.sp,
-                        color = if (isDark) Color(0xFFAAAAAA) else Color(0xFF666666)
-                    )
-                }
-
-                // Active Tiles Grid (3-column rows, 3.dp gaps, 1:1 square cards)
-                val activeRows = remember(localActive, columns) {
-                    localActive.chunked(columns)
-                }
-
+                // Active Section Container (Unified Active Tiles)
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .onGloballyPositioned { coords ->
                             activeGridContainerBounds = coords.boundsInRoot()
                         }
                 ) {
-                    activeRows.forEachIndexed { rowIndex, rowTiles ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "ACTIVE TILES (${localActive.size})",
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.2.sp,
+                            color = holoBlue
+                        )
+                        Text(
+                            text = "Hold to drag • Tap '-'",
+                            fontSize = 10.sp,
+                            color = if (isDark) Color(0xFFAAAAAA) else Color(0xFF666666)
+                        )
+                    }
+                    if (localActive.isEmpty()) {
+                        Text(
+                            text = "No active tiles. Add one below.",
+                            fontSize = 11.5.sp,
+                            color = if (isDark) Color.Gray else Color(0xFF777777),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                        )
+                    } else {
+                        val groupRows = localActive.chunked(columns)
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(3.dp),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            rowTiles.forEachIndexed { colIndex, tile ->
-                                val slotIndex = rowIndex * columns + colIndex
-                                val isDragging = draggedTileId == tile.id
-                                val isHoverTarget = draggedTileId != null && hoveredTargetIndex == slotIndex
+                            groupRows.forEach { rowTiles ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    rowTiles.forEach { tile ->
+                                        val slotIndex = localActive.indexOfFirst { it.id == tile.id }
+                                        val isDragging = draggedTileId == tile.id
+                                        val isHoverTarget = draggedTileId != null && hoveredTargetIndex == slotIndex
 
-                                key(tile.id) {
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .aspectRatio(1f)
-                                            .onGloballyPositioned { coords ->
-                                                slotBoundsMap[slotIndex] = coords.boundsInRoot()
-                                                tileBoundsMap[tile.id] = coords.boundsInRoot()
-                                            }
-                                            .pointerInput(tile.id) {
-                                                detectDragGesturesAfterLongPress(
-                                                    onDragStart = { offset ->
-                                                        val currentTile = localActive.getOrNull(slotIndex) ?: return@detectDragGesturesAfterLongPress
-                                                        draggedTileId = currentTile.id
-                                                        dragSourceIndex = slotIndex
-                                                        hoveredTargetIndex = -1
-                                                        onDragStateChange(true)
-                                                        val myBounds = slotBoundsMap[slotIndex] ?: tileBoundsMap[currentTile.id] ?: Rect.Zero
-                                                        currentDragCenter = myBounds.topLeft + offset
-                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    },
-                                                    onDrag = { change, dragAmount ->
-                                                        change.consume()
-                                                        currentDragCenter += dragAmount
-
-                                                        if (draggedTileId != null) {
-                                                            val activeContainer = activeGridContainerBounds
-                                                            val dropBounds = inactiveDropZoneBounds
-                                                            val isStrictlyAvailable = dropBounds != null &&
-                                                                activeContainer != null &&
-                                                                currentDragCenter.y > activeContainer.bottom + 10f &&
-                                                                currentDragCenter.y >= dropBounds.top
-
-                                                            if (isStrictlyAvailable) {
-                                                                hoveredTargetIndex = -1
-                                                            } else {
-                                                                var targetIndex = -1
-                                                                val totalCount = localActive.size
-                                                                for (i in 0 until totalCount) {
-                                                                    val b = slotBoundsMap[i] ?: continue
-                                                                    val expanded = Rect(b.left - 6f, b.top - 6f, b.right + 6f, b.bottom + 6f)
-                                                                    if (expanded.contains(currentDragCenter)) {
-                                                                        targetIndex = i
-                                                                        break
-                                                                    }
-                                                                }
-                                                                if (targetIndex != -1 && targetIndex != dragSourceIndex) {
-                                                                    if (hoveredTargetIndex != targetIndex) {
-                                                                        hoveredTargetIndex = targetIndex
-                                                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                                    }
-                                                                } else {
-                                                                    hoveredTargetIndex = -1
-                                                                }
-                                                            }
-                                                        }
-                                                    },
-                                                    onDragEnd = {
-                                                        onDragStateChange(false)
-                                                        val activeId = draggedTileId
-                                                        val dropBounds = inactiveDropZoneBounds
-                                                        val activeContainer = activeGridContainerBounds
-                                                        val sourceIdx = dragSourceIndex
-                                                        val targetIdx = hoveredTargetIndex
-
-                                                        val isDropToAvailable = activeId != null && dropBounds != null &&
-                                                            ((activeContainer != null && currentDragCenter.y > activeContainer.bottom + 10f && currentDragCenter.y >= dropBounds.top) ||
-                                                             (activeContainer == null && currentDragCenter.y >= dropBounds.top))
-
-                                                        if (isDropToAvailable) {
-                                                            val updatedActive = localActive.toMutableList()
-                                                            val moved = updatedActive.firstOrNull { it.id == activeId }
-                                                            if (moved != null) {
-                                                                updatedActive.remove(moved)
-                                                                val updatedInactive = localInactive.toMutableList().apply {
-                                                                    add(0, moved.copy(isVisible = false))
-                                                                }
-                                                                localActive = updatedActive
-                                                                localInactive = updatedInactive
-                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                            }
-                                                        } else if (sourceIdx != -1 && targetIdx != -1 && sourceIdx != targetIdx &&
-                                                            sourceIdx in 0 until localActive.size && targetIdx in 0 until localActive.size
-                                                        ) {
-                                                            val updated = localActive.toMutableList()
-                                                            java.util.Collections.swap(updated, sourceIdx, targetIdx)
-                                                            localActive = updated
-                                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                        }
-                                                        draggedTileId = null
-                                                        dragSourceIndex = -1
-                                                        hoveredTargetIndex = -1
-                                                        onTilesUpdated(localActive, localInactive)
-                                                    },
-                                                    onDragCancel = {
-                                                        onDragStateChange(false)
-                                                        draggedTileId = null
-                                                        dragSourceIndex = -1
-                                                        hoveredTargetIndex = -1
-                                                        onTilesUpdated(localActive, localInactive)
+                                        key(tile.id) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .aspectRatio(1f)
+                                                    .onGloballyPositioned { coords ->
+                                                        if (slotIndex >= 0) slotBoundsMap[slotIndex] = coords.boundsInRoot()
+                                                        tileBoundsMap[tile.id] = coords.boundsInRoot()
                                                     }
-                                                )
-                                            }
-                                    ) {
-                                        if (isDragging) {
-                                            Spacer(modifier = Modifier.fillMaxSize())
-                                        } else {
-                                            Box(modifier = Modifier.fillMaxSize()) {
-                                                if (isHoverTarget) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .fillMaxSize()
-                                                            .clip(RoundedCornerShape(panelOuterCorner.dp))
-                                                            .background(Color(0x3333B5E5))
-                                                            .border(1.5.dp, holoBlue, RoundedCornerShape(panelOuterCorner.dp))
-                                                    )
-                                                }
-                                                KitKatEditTileCard(
-                                                    tile = tile,
-                                                    isActive = true,
-                                                    modifier = Modifier.fillMaxSize()
-                                                )
+                                                    .pointerInput(tile.id) {
+                                                        detectDragGesturesAfterLongPress(
+                                                            onDragStart = { offset ->
+                                                                val idx = localActive.indexOfFirst { it.id == tile.id }
+                                                                if (idx < 0) return@detectDragGesturesAfterLongPress
+                                                                draggedTileId = tile.id
+                                                                dragSourceIndex = idx
+                                                                hoveredTargetIndex = -1
+                                                                onDragStateChange(true)
+                                                                val myBounds = slotBoundsMap[idx] ?: tileBoundsMap[tile.id] ?: Rect.Zero
+                                                                currentDragCenter = myBounds.topLeft + offset
+                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                            },
+                                                            onDrag = { change, dragAmount ->
+                                                                change.consume()
+                                                                currentDragCenter += dragAmount
 
-                                                // Top-right subtle minus remove button
-                                                if (draggedTileId == null) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .align(Alignment.TopEnd)
-                                                            .padding(top = 2.dp, end = 2.dp)
-                                                            .size(20.dp)
-                                                            .clip(RoundedCornerShape(3.dp))
-                                                            .background(Color(0xFFCC0000))
-                                                            .clickable(
-                                                                interactionSource = remember { MutableInteractionSource() },
-                                                                indication = null
-                                                            ) {
-                                                                val updatedActive = localActive.toMutableList()
-                                                                val moved = updatedActive.firstOrNull { it.id == tile.id }
-                                                                if (moved != null) {
-                                                                    updatedActive.remove(moved)
-                                                                    val updatedInactive = localInactive.toMutableList().apply {
-                                                                        removeAll { it.id == moved.id }
-                                                                        add(0, moved.copy(isVisible = false))
+                                                                if (draggedTileId != null) {
+                                                                    val activeContainer = activeGridContainerBounds
+                                                                    val dropBounds = inactiveDropZoneBounds
+                                                                    val isStrictlyAvailable = dropBounds != null &&
+                                                                        activeContainer != null &&
+                                                                        currentDragCenter.y > activeContainer.bottom + 10f &&
+                                                                        currentDragCenter.y >= dropBounds.top
+
+                                                                    if (isStrictlyAvailable) {
+                                                                        hoveredTargetIndex = -1
+                                                                    } else {
+                                                                        var targetIndex = -1
+                                                                        val totalCount = localActive.size
+                                                                        for (i in 0 until totalCount) {
+                                                                            val b = slotBoundsMap[i] ?: continue
+                                                                            val expanded = Rect(b.left - 6f, b.top - 6f, b.right + 6f, b.bottom + 6f)
+                                                                            if (expanded.contains(currentDragCenter)) {
+                                                                                targetIndex = i
+                                                                                break
+                                                                            }
+                                                                        }
+                                                                        if (targetIndex != -1 && targetIndex != dragSourceIndex) {
+                                                                            if (hoveredTargetIndex != targetIndex) {
+                                                                                hoveredTargetIndex = targetIndex
+                                                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                            }
+                                                                        } else {
+                                                                            hoveredTargetIndex = -1
+                                                                        }
                                                                     }
-                                                                    localActive = updatedActive
-                                                                    localInactive = updatedInactive
-                                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                                    onTilesUpdated(localActive, localInactive)
                                                                 }
                                                             },
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        Icon(
-                                                            imageVector = Icons.Default.Remove,
-                                                            contentDescription = "Remove tile",
-                                                            tint = Color.White,
-                                                            modifier = Modifier.size(13.dp)
+                                                            onDragEnd = {
+                                                                onDragStateChange(false)
+                                                                val activeId = draggedTileId
+                                                                val dropBounds = inactiveDropZoneBounds
+                                                                val activeContainer = activeGridContainerBounds
+                                                                val sourceIdx = dragSourceIndex
+                                                                val targetIdx = hoveredTargetIndex
+
+                                                                val isDropToAvailable = activeId != null && dropBounds != null &&
+                                                                    ((activeContainer != null && currentDragCenter.y > activeContainer.bottom + 10f && currentDragCenter.y >= dropBounds.top) ||
+                                                                     (activeContainer == null && currentDragCenter.y >= dropBounds.top))
+
+                                                                if (isDropToAvailable) {
+                                                                    val updatedActive = localActive.toMutableList()
+                                                                    val moved = updatedActive.firstOrNull { it.id == activeId }
+                                                                    if (moved != null) {
+                                                                        updatedActive.remove(moved)
+                                                                        val updatedInactive = localInactive.toMutableList().apply {
+                                                                            removeAll { it.id == moved.id }
+                                                                            add(0, moved.copy(isVisible = false))
+                                                                        }
+                                                                        localActive = updatedActive
+                                                                        localInactive = updatedInactive
+                                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                                    }
+                                                                } else if (sourceIdx != -1 && targetIdx != -1 && sourceIdx != targetIdx &&
+                                                                    sourceIdx in 0 until localActive.size && targetIdx in 0 until localActive.size
+                                                                ) {
+                                                                    val updated = localActive.toMutableList()
+                                                                    java.util.Collections.swap(updated, sourceIdx, targetIdx)
+                                                                    localActive = updated
+                                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                                }
+                                                                draggedTileId = null
+                                                                dragSourceIndex = -1
+                                                                hoveredTargetIndex = -1
+                                                                onTilesUpdated(localActive, localInactive)
+                                                            },
+                                                            onDragCancel = {
+                                                                onDragStateChange(false)
+                                                                draggedTileId = null
+                                                                dragSourceIndex = -1
+                                                                hoveredTargetIndex = -1
+                                                                onTilesUpdated(localActive, localInactive)
+                                                            }
                                                         )
+                                                    }
+                                            ) {
+                                                if (isDragging) {
+                                                    Spacer(modifier = Modifier.fillMaxSize())
+                                                } else {
+                                                    Box(modifier = Modifier.fillMaxSize()) {
+                                                        if (isHoverTarget) {
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .fillMaxSize()
+                                                                    .clip(RoundedCornerShape(panelOuterCorner.dp))
+                                                                    .background(Color(0x3333B5E5))
+                                                                    .border(1.5.dp, holoBlue, RoundedCornerShape(panelOuterCorner.dp))
+                                                            )
+                                                        }
+                                                        KitKatEditTileCard(
+                                                            tile = tile,
+                                                            isActive = true,
+                                                            modifier = Modifier.fillMaxSize()
+                                                        )
+
+                                                        if (draggedTileId == null) {
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .align(Alignment.TopEnd)
+                                                                    .padding(top = 2.dp, end = 2.dp)
+                                                                    .size(20.dp)
+                                                                    .clip(RoundedCornerShape(3.dp))
+                                                                    .background(Color(0xFFCC0000))
+                                                                    .clickable(
+                                                                        interactionSource = remember { MutableInteractionSource() },
+                                                                        indication = null
+                                                                    ) {
+                                                                        val updatedActive = localActive.toMutableList()
+                                                                        val moved = updatedActive.firstOrNull { it.id == tile.id }
+                                                                        if (moved != null) {
+                                                                            updatedActive.remove(moved)
+                                                                            val updatedInactive = localInactive.toMutableList().apply {
+                                                                                removeAll { it.id == moved.id }
+                                                                                add(0, moved.copy(isVisible = false))
+                                                                            }
+                                                                            localActive = updatedActive
+                                                                            localInactive = updatedInactive
+                                                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                            onTilesUpdated(localActive, localInactive)
+                                                                        }
+                                                                    },
+                                                                contentAlignment = Alignment.Center
+                                                            ) {
+                                                                Icon(
+                                                                    imageVector = Icons.Default.Remove,
+                                                                    contentDescription = "Remove tile",
+                                                                    tint = Color.White,
+                                                                    modifier = Modifier.size(13.dp)
+                                                                )
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
                                     }
+                                    repeat(columns - rowTiles.size) {
+                                        Spacer(modifier = Modifier.weight(1f).aspectRatio(1f))
+                                    }
                                 }
-                            }
-                            repeat(columns - rowTiles.size) {
-                                Spacer(modifier = Modifier.weight(1f).aspectRatio(1f))
                             }
                         }
                     }
                 }
 
-                // Section 2: Available Tiles
+                // Section 2: Available QS Tiles & Complications
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Column(
@@ -2013,158 +2042,167 @@ fun KitKatTileEditorScreen(
                             shape = RoundedCornerShape(panelOuterCorner.dp)
                         )
                         .padding(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 4.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = if (isOverInactiveDropZone) "DROP TO REMOVE FROM ACTIVE PANEL" else "AVAILABLE TILES (${localInactive.size})",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp,
-                            color = holoBlue
-                        )
-                        Text(
-                            text = if (isOverInactiveDropZone) "Release to drop" else "Tap '+' or drag to add",
-                            fontSize = 10.sp,
-                            color = if (isDark) Color.Gray else Color(0xFF666666)
-                        )
-                    }
-
-                    if (localInactive.isEmpty()) {
-                        Box(
+                    val renderAvailableGroup: @Composable (String, List<QsTileModel>, String) -> Unit = { titleText, availTiles, emptyMsg ->
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 16.dp),
-                            contentAlignment = Alignment.Center
+                                .padding(horizontal = 4.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "All tiles are currently in your active panel",
-                                fontSize = 12.sp,
-                                color = if (isDark) Color.Gray else Color(0xFF888888)
+                                text = if (isOverInactiveDropZone) "DROP TO REMOVE FROM PANEL" else titleText,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                color = holoBlue
+                            )
+                            Text(
+                                text = if (isOverInactiveDropZone) "Release to drop" else "Tap '+' or drag up",
+                                fontSize = 10.sp,
+                                color = if (isDark) Color.Gray else Color(0xFF666666)
                             )
                         }
-                    } else {
-                        val inactiveRows = remember(localInactive, columns) {
-                            localInactive.chunked(columns)
-                        }
 
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(3.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            inactiveRows.forEach { rowTiles ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
-                                ) {
-                                    rowTiles.forEach { tile ->
-                                        val isThisDragging = draggedTileId == tile.id
-                                        key(tile.id) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .weight(1f)
-                                                    .aspectRatio(1f)
-                                                    .onGloballyPositioned { coords ->
-                                                        if (draggedTileId != tile.id) {
-                                                            tileBoundsMap[tile.id] = coords.boundsInRoot()
-                                                        }
-                                                    }
-                                                    .pointerInput(tile.id) {
-                                                        detectDragGesturesAfterLongPress(
-                                                            onDragStart = { offset ->
-                                                                draggedTileId = tile.id
-                                                                onDragStateChange(true)
-                                                                val myBounds = tileBoundsMap[tile.id] ?: Rect.Zero
-                                                                currentDragCenter = myBounds.topLeft + offset
-                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                            },
-                                                            onDrag = { change, dragAmount ->
-                                                                change.consume()
-                                                                currentDragCenter += dragAmount
-                                                            },
-                                                            onDragEnd = {
-                                                                onDragStateChange(false)
-                                                                val dropBounds = inactiveDropZoneBounds
-                                                                val activeContainer = activeGridContainerBounds
-
-                                                                val isDraggedToActive = (activeContainer != null && currentDragCenter.y <= activeContainer.bottom + 10f) ||
-                                                                    (dropBounds != null && currentDragCenter.y < dropBounds.top)
-
-                                                                if (isDraggedToActive) {
-                                                                    var targetSlot = localActive.size
-                                                                    for (i in 0 until localActive.size) {
-                                                                        val b = slotBoundsMap[i] ?: continue
-                                                                        if (b.contains(currentDragCenter)) {
-                                                                            targetSlot = i
-                                                                            break
-                                                                        }
-                                                                    }
-                                                                    handleAddTileToActive(tile, targetSlot)
-                                                                }
-                                                                draggedTileId = null
-                                                            },
-                                                            onDragCancel = {
-                                                                onDragStateChange(false)
-                                                                draggedTileId = null
+                        if (availTiles.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = emptyMsg,
+                                    fontSize = 12.sp,
+                                    color = if (isDark) Color.Gray else Color(0xFF888888)
+                                )
+                            }
+                        } else {
+                            val inactiveRows = availTiles.chunked(columns)
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(3.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                inactiveRows.forEach { rowTiles ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                    ) {
+                                        rowTiles.forEach { tile ->
+                                            val isThisDragging = draggedTileId == tile.id
+                                            key(tile.id) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .aspectRatio(1f)
+                                                        .onGloballyPositioned { coords ->
+                                                            if (draggedTileId != tile.id) {
+                                                                tileBoundsMap[tile.id] = coords.boundsInRoot()
                                                             }
-                                                        )
-                                                    }
-                                                    .clickable(
-                                                        interactionSource = remember { MutableInteractionSource() },
-                                                        indication = null
-                                                    ) {
-                                                        handleAddTileToActive(tile, null)
-                                                    }
-                                            ) {
-                                                if (isThisDragging) {
-                                                    Spacer(modifier = Modifier.fillMaxSize())
-                                                } else {
-                                                    Box(modifier = Modifier.fillMaxSize()) {
-                                                        KitKatEditTileCard(
-                                                            tile = tile,
-                                                            isActive = false,
-                                                            modifier = Modifier.fillMaxSize()
-                                                        )
+                                                        }
+                                                        .pointerInput(tile.id) {
+                                                            detectDragGesturesAfterLongPress(
+                                                                onDragStart = { offset ->
+                                                                    draggedTileId = tile.id
+                                                                    onDragStateChange(true)
+                                                                    val myBounds = tileBoundsMap[tile.id] ?: Rect.Zero
+                                                                    currentDragCenter = myBounds.topLeft + offset
+                                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                                },
+                                                                onDrag = { change, dragAmount ->
+                                                                    change.consume()
+                                                                    currentDragCenter += dragAmount
+                                                                },
+                                                                onDragEnd = {
+                                                                    onDragStateChange(false)
+                                                                    val dropBounds = inactiveDropZoneBounds
+                                                                    val activeContainer = activeGridContainerBounds
 
-                                                        // Plus add button
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .align(Alignment.TopEnd)
-                                                                .padding(top = 2.dp, end = 2.dp)
-                                                                .size(20.dp)
-                                                                .clip(RoundedCornerShape(3.dp))
-                                                                .background(holoBlue)
-                                                                .clickable(
-                                                                    interactionSource = remember { MutableInteractionSource() },
-                                                                    indication = null
-                                                                ) { handleAddTileToActive(tile, null) },
-                                                            contentAlignment = Alignment.Center
-                                                        ) {
-                                                            Icon(
-                                                                imageVector = Icons.Default.Add,
-                                                                contentDescription = "Add tile",
-                                                                tint = Color.White,
-                                                                modifier = Modifier.size(13.dp)
+                                                                    val isDraggedToActive = (activeContainer != null && currentDragCenter.y <= activeContainer.bottom + 10f) ||
+                                                                        (dropBounds != null && currentDragCenter.y < dropBounds.top)
+
+                                                                    if (isDraggedToActive) {
+                                                                        var targetSlot: Int? = null
+                                                                        for (i in 0 until localActive.size) {
+                                                                            val b = slotBoundsMap[i] ?: continue
+                                                                            if (b.contains(currentDragCenter)) {
+                                                                                targetSlot = i
+                                                                                break
+                                                                            }
+                                                                        }
+                                                                        handleAddTileToActive(tile, targetSlot)
+                                                                    }
+                                                                    draggedTileId = null
+                                                                },
+                                                                onDragCancel = {
+                                                                    onDragStateChange(false)
+                                                                    draggedTileId = null
+                                                                }
                                                             )
+                                                        }
+                                                        .clickable(
+                                                            interactionSource = remember { MutableInteractionSource() },
+                                                            indication = null
+                                                        ) {
+                                                            handleAddTileToActive(tile, null)
+                                                        }
+                                                ) {
+                                                    if (isThisDragging) {
+                                                        Spacer(modifier = Modifier.fillMaxSize())
+                                                    } else {
+                                                        Box(modifier = Modifier.fillMaxSize()) {
+                                                            KitKatEditTileCard(
+                                                                tile = tile,
+                                                                isActive = false,
+                                                                modifier = Modifier.fillMaxSize()
+                                                            )
+
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .align(Alignment.TopEnd)
+                                                                    .padding(top = 2.dp, end = 2.dp)
+                                                                    .size(20.dp)
+                                                                    .clip(RoundedCornerShape(3.dp))
+                                                                    .background(holoBlue)
+                                                                    .clickable(
+                                                                        interactionSource = remember { MutableInteractionSource() },
+                                                                        indication = null
+                                                                    ) { handleAddTileToActive(tile, null) },
+                                                                contentAlignment = Alignment.Center
+                                                            ) {
+                                                                Icon(
+                                                                    imageVector = Icons.Default.Add,
+                                                                    contentDescription = "Add tile",
+                                                                    tint = Color.White,
+                                                                    modifier = Modifier.size(13.dp)
+                                                                )
+                                                            }
                                                         }
                                                     }
                                                 }
                                             }
                                         }
-                                    }
-                                    repeat(columns - rowTiles.size) {
-                                        Spacer(modifier = Modifier.weight(1f).aspectRatio(1f))
+                                        repeat(columns - rowTiles.size) {
+                                            Spacer(modifier = Modifier.weight(1f).aspectRatio(1f))
+                                        }
                                     }
                                 }
                             }
                         }
                     }
+
+                    renderAvailableGroup(
+                        "AVAILABLE QS TILES (${inactiveQsTiles.size})",
+                        inactiveQsTiles,
+                        "All QS tiles are currently in your active panel"
+                    )
+                    renderAvailableGroup(
+                        "COMPLICATIONS (${inactiveComplications.size})",
+                        inactiveComplications,
+                        "All complications are currently in your active panel"
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(48.dp))
@@ -2362,6 +2400,9 @@ fun MarshmallowTileEditorScreen(
         activeGridContainerBounds != null &&
         currentDragCenter.y > activeGridContainerBounds!!.bottom + 10f &&
         currentDragCenter.y >= inactiveDropZoneBounds!!.top
+
+    val inactiveQsTiles = remember(localInactive) { localInactive.filter { !it.isComplicationTile } }
+    val inactiveComplications = remember(localInactive) { localInactive.filter { it.isComplicationTile } }
 
     val handleAddTileToActive: (QsTileModel, Int?) -> Unit = { targetTile, slotIndex ->
         val updatedInactive = localInactive.toMutableList()
@@ -2588,11 +2629,7 @@ fun MarshmallowTileEditorScreen(
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Active Tiles Grid (Columns = columns, row spacing = 10dp, column spacing = 8dp)
-                val activeRows = remember(localActive, columns) {
-                    localActive.chunked(columns)
-                }
-
+                // Active Section Container (Unified Active Tiles)
                 Column(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier
@@ -2601,193 +2638,236 @@ fun MarshmallowTileEditorScreen(
                             activeGridContainerBounds = coords.boundsInRoot()
                         }
                 ) {
-                    activeRows.forEachIndexed { rowIndex, rowTiles ->
+                    val renderActiveGroup: @Composable (String, List<QsTileModel>, String) -> Unit = { headerTitle, groupTiles, emptyMsg ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            rowTiles.forEachIndexed { colIndex, tile ->
-                                val slotIndex = rowIndex * columns + colIndex
-                                val isDragging = draggedTileId == tile.id
-                                val isHoverTarget = draggedTileId != null && hoveredTargetIndex == slotIndex
-
-                                key(tile.id) {
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(86.dp)
-                                            .onGloballyPositioned { coords ->
-                                                slotBoundsMap[slotIndex] = coords.boundsInRoot()
-                                                tileBoundsMap[tile.id] = coords.boundsInRoot()
-                                            }
-                                            .pointerInput(tile.id) {
-                                                detectDragGesturesAfterLongPress(
-                                                    onDragStart = { offset ->
-                                                        val currentTile = localActive.getOrNull(slotIndex) ?: return@detectDragGesturesAfterLongPress
-                                                        draggedTileId = currentTile.id
-                                                        dragSourceIndex = slotIndex
-                                                        hoveredTargetIndex = -1
-                                                        onDragStateChange(true)
-                                                        val myBounds = slotBoundsMap[slotIndex] ?: tileBoundsMap[currentTile.id] ?: Rect.Zero
-                                                        currentDragCenter = myBounds.topLeft + offset
-                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    },
-                                                    onDrag = { change, dragAmount ->
-                                                        change.consume()
-                                                        currentDragCenter += dragAmount
-                                                        checkAutoScroll(currentDragCenter)
-
-                                                        if (draggedTileId != null) {
-                                                            val activeContainer = activeGridContainerBounds
-                                                            val dropBounds = inactiveDropZoneBounds
-                                                            val isStrictlyAvailable = dropBounds != null &&
-                                                                activeContainer != null &&
-                                                                currentDragCenter.y > activeContainer.bottom + 10f &&
-                                                                currentDragCenter.y >= dropBounds.top
-
-                                                            if (isStrictlyAvailable) {
-                                                                hoveredTargetIndex = -1
-                                                            } else {
-                                                                var targetIndex = -1
-                                                                val totalCount = localActive.size
-                                                                for (i in 0 until totalCount) {
-                                                                    val b = slotBoundsMap[i] ?: continue
-                                                                    val expanded = Rect(b.left - 6f, b.top - 6f, b.right + 6f, b.bottom + 6f)
-                                                                    if (expanded.contains(currentDragCenter)) {
-                                                                        targetIndex = i
-                                                                        break
-                                                                    }
-                                                                }
-                                                                if (targetIndex != -1 && targetIndex != dragSourceIndex) {
-                                                                    if (hoveredTargetIndex != targetIndex) {
-                                                                        hoveredTargetIndex = targetIndex
-                                                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                                    }
-                                                                } else {
-                                                                    hoveredTargetIndex = -1
-                                                                }
-                                                            }
-                                                        }
-                                                    },
-                                                    onDragEnd = {
-                                                        autoScrollDirection = 0
-                                                        onDragStateChange(false)
-                                                        val activeId = draggedTileId
-                                                        val dropBounds = inactiveDropZoneBounds
-                                                        val activeContainer = activeGridContainerBounds
-                                                        val sourceIdx = dragSourceIndex
-                                                        val targetIdx = hoveredTargetIndex
-
-                                                        val isDropToAvailable = activeId != null && dropBounds != null &&
-                                                            ((activeContainer != null && currentDragCenter.y > activeContainer.bottom + 10f && currentDragCenter.y >= dropBounds.top) ||
-                                                             (activeContainer == null && currentDragCenter.y >= dropBounds.top))
-
-                                                        if (isDropToAvailable) {
-                                                            val updatedActive = localActive.toMutableList()
-                                                            val moved = updatedActive.firstOrNull { it.id == activeId }
-                                                            if (moved != null) {
-                                                                updatedActive.remove(moved)
-                                                                val updatedInactive = localInactive.toMutableList().apply {
-                                                                    add(0, moved.copy(isVisible = false))
-                                                                }
-                                                                localActive = updatedActive
-                                                                localInactive = updatedInactive
-                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                            }
-                                                        } else if (sourceIdx != -1 && targetIdx != -1 && sourceIdx != targetIdx &&
-                                                            sourceIdx in 0 until localActive.size && targetIdx in 0 until localActive.size
-                                                        ) {
-                                                            val updated = localActive.toMutableList()
-                                                            java.util.Collections.swap(updated, sourceIdx, targetIdx)
-                                                            localActive = updated
-                                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                        }
-                                                        draggedTileId = null
-                                                        dragSourceIndex = -1
-                                                        hoveredTargetIndex = -1
-                                                        onTilesUpdated(localActive, localInactive)
-                                                    },
-                                                    onDragCancel = {
-                                                        autoScrollDirection = 0
-                                                        onDragStateChange(false)
-                                                        draggedTileId = null
-                                                        dragSourceIndex = -1
-                                                        hoveredTargetIndex = -1
-                                                        onTilesUpdated(localActive, localInactive)
-                                                    }
-                                                )
-                                            }
+                            Text(
+                                text = headerTitle,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                color = monetAccent
+                            )
+                            Text(
+                                text = "Hold to drag • Tap '-'",
+                                fontSize = 10.sp,
+                                color = textLightSecondary
+                            )
+                        }
+                        if (groupTiles.isEmpty()) {
+                            Text(
+                                text = emptyMsg,
+                                fontSize = 11.5.sp,
+                                color = textLightSecondary,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        } else {
+                            val groupRows = groupTiles.chunked(columns)
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                groupRows.forEach { rowTiles ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        if (isDragging) {
-                                            Spacer(modifier = Modifier.fillMaxSize())
-                                        } else {
-                                            Box(modifier = Modifier.fillMaxSize()) {
-                                                if (isHoverTarget) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .fillMaxSize()
-                                                            .clip(RoundedCornerShape(effectiveCorner))
-                                                            .background(monetAccent.copy(alpha = 0.2f))
-                                                            .border(1.5.dp, monetAccent, RoundedCornerShape(effectiveCorner))
-                                                    )
-                                                }
-                                                MarshmallowEditTileCard(
-                                                    tile = tile,
-                                                    tileWidth = Dp.Unspecified,
-                                                    isActive = true,
-                                                    modifier = Modifier.fillMaxSize()
-                                                )
+                                        rowTiles.forEach { tile ->
+                                            val slotIndex = localActive.indexOfFirst { it.id == tile.id }
+                                            val isDragging = draggedTileId == tile.id
+                                            val isHoverTarget = draggedTileId != null && hoveredTargetIndex == slotIndex
 
-                                                // Top-right subtle minus remove button
-                                                if (draggedTileId == null) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .align(Alignment.TopEnd)
-                                                            .padding(top = 3.dp, end = 3.dp)
-                                                            .size(20.dp)
-                                                            .clip(CircleShape)
-                                                            .background(Color(0xFFE53935))
-                                                            .clickable(
-                                                                interactionSource = remember { MutableInteractionSource() },
-                                                                indication = null
-                                                            ) {
-                                                                val updatedActive = localActive.toMutableList()
-                                                                val moved = updatedActive.firstOrNull { it.id == tile.id }
-                                                                if (moved != null) {
-                                                                    updatedActive.remove(moved)
-                                                                    val updatedInactive = localInactive.toMutableList().apply {
-                                                                        removeAll { it.id == moved.id }
-                                                                        add(0, moved.copy(isVisible = false))
+                                            key(tile.id) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .height(86.dp)
+                                                        .onGloballyPositioned { coords ->
+                                                            if (slotIndex >= 0) slotBoundsMap[slotIndex] = coords.boundsInRoot()
+                                                            tileBoundsMap[tile.id] = coords.boundsInRoot()
+                                                        }
+                                                        .pointerInput(tile.id) {
+                                                            detectDragGesturesAfterLongPress(
+                                                                onDragStart = { offset ->
+                                                                    val idx = localActive.indexOfFirst { it.id == tile.id }
+                                                                    if (idx < 0) return@detectDragGesturesAfterLongPress
+                                                                    draggedTileId = tile.id
+                                                                    dragSourceIndex = idx
+                                                                    hoveredTargetIndex = -1
+                                                                    onDragStateChange(true)
+                                                                    val myBounds = slotBoundsMap[idx] ?: tileBoundsMap[tile.id] ?: Rect.Zero
+                                                                    currentDragCenter = myBounds.topLeft + offset
+                                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                                },
+                                                                onDrag = { change, dragAmount ->
+                                                                    change.consume()
+                                                                    currentDragCenter += dragAmount
+                                                                    checkAutoScroll(currentDragCenter)
+
+                                                                    if (draggedTileId != null) {
+                                                                        val activeContainer = activeGridContainerBounds
+                                                                        val dropBounds = inactiveDropZoneBounds
+                                                                        val isStrictlyAvailable = dropBounds != null &&
+                                                                            activeContainer != null &&
+                                                                            currentDragCenter.y > activeContainer.bottom + 10f &&
+                                                                            currentDragCenter.y >= dropBounds.top
+
+                                                                        if (isStrictlyAvailable) {
+                                                                            hoveredTargetIndex = -1
+                                                                        } else {
+                                                                            var targetIndex = -1
+                                                                            val totalCount = localActive.size
+                                                                            for (i in 0 until totalCount) {
+                                                                                val b = slotBoundsMap[i] ?: continue
+                                                                                val expanded = Rect(b.left - 6f, b.top - 6f, b.right + 6f, b.bottom + 6f)
+                                                                                if (expanded.contains(currentDragCenter)) {
+                                                                                    targetIndex = i
+                                                                                    break
+                                                                                }
+                                                                            }
+                                                                            if (targetIndex != -1 && targetIndex != dragSourceIndex) {
+                                                                                if (hoveredTargetIndex != targetIndex) {
+                                                                                    hoveredTargetIndex = targetIndex
+                                                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                                }
+                                                                            } else {
+                                                                                hoveredTargetIndex = -1
+                                                                            }
+                                                                        }
                                                                     }
-                                                                    localActive = updatedActive
-                                                                    localInactive = updatedInactive
-                                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                },
+                                                                onDragEnd = {
+                                                                    autoScrollDirection = 0
+                                                                    onDragStateChange(false)
+                                                                    val activeId = draggedTileId
+                                                                    val dropBounds = inactiveDropZoneBounds
+                                                                    val activeContainer = activeGridContainerBounds
+                                                                    val sourceIdx = dragSourceIndex
+                                                                    val targetIdx = hoveredTargetIndex
+
+                                                                    val isDropToAvailable = activeId != null && dropBounds != null &&
+                                                                        ((activeContainer != null && currentDragCenter.y > activeContainer.bottom + 10f && currentDragCenter.y >= dropBounds.top) ||
+                                                                         (activeContainer == null && currentDragCenter.y >= dropBounds.top))
+
+                                                                    if (isDropToAvailable) {
+                                                                        val updatedActive = localActive.toMutableList()
+                                                                        val moved = updatedActive.firstOrNull { it.id == activeId }
+                                                                        if (moved != null) {
+                                                                            updatedActive.remove(moved)
+                                                                            val updatedInactive = localInactive.toMutableList().apply {
+                                                                                removeAll { it.id == moved.id }
+                                                                                add(0, moved.copy(isVisible = false))
+                                                                            }
+                                                                            localActive = updatedActive
+                                                                            localInactive = updatedInactive
+                                                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                                        }
+                                                                    } else if (sourceIdx != -1 && targetIdx != -1 && sourceIdx != targetIdx &&
+                                                                        sourceIdx in 0 until localActive.size && targetIdx in 0 until localActive.size
+                                                                    ) {
+                                                                        val updated = localActive.toMutableList()
+                                                                        java.util.Collections.swap(updated, sourceIdx, targetIdx)
+                                                                        localActive = updated
+                                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                                    }
+                                                                    draggedTileId = null
+                                                                    dragSourceIndex = -1
+                                                                    hoveredTargetIndex = -1
+                                                                    onTilesUpdated(localActive, localInactive)
+                                                                },
+                                                                onDragCancel = {
+                                                                    autoScrollDirection = 0
+                                                                    onDragStateChange(false)
+                                                                    draggedTileId = null
+                                                                    dragSourceIndex = -1
+                                                                    hoveredTargetIndex = -1
                                                                     onTilesUpdated(localActive, localInactive)
                                                                 }
-                                                            },
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        Icon(
-                                                            imageVector = Icons.Default.Remove,
-                                                            contentDescription = "Remove tile",
-                                                            tint = Color.White,
-                                                            modifier = Modifier.size(13.dp)
-                                                        )
+                                                            )
+                                                        }
+                                                ) {
+                                                    if (isDragging) {
+                                                        Spacer(modifier = Modifier.fillMaxSize())
+                                                    } else {
+                                                        Box(modifier = Modifier.fillMaxSize()) {
+                                                            if (isHoverTarget) {
+                                                                Box(
+                                                                    modifier = Modifier
+                                                                        .fillMaxSize()
+                                                                        .clip(RoundedCornerShape(effectiveCorner))
+                                                                        .background(monetAccent.copy(alpha = 0.2f))
+                                                                        .border(1.5.dp, monetAccent, RoundedCornerShape(effectiveCorner))
+                                                                )
+                                                            }
+                                                            MarshmallowEditTileCard(
+                                                                tile = tile,
+                                                                tileWidth = Dp.Unspecified,
+                                                                isActive = true,
+                                                                modifier = Modifier.fillMaxSize()
+                                                            )
+
+                                                            // Top-right subtle minus remove button
+                                                            if (draggedTileId == null) {
+                                                                Box(
+                                                                    modifier = Modifier
+                                                                        .align(Alignment.TopEnd)
+                                                                        .padding(top = 3.dp, end = 3.dp)
+                                                                        .size(20.dp)
+                                                                        .clip(CircleShape)
+                                                                        .background(Color(0xFFE53935))
+                                                                        .clickable(
+                                                                            interactionSource = remember { MutableInteractionSource() },
+                                                                            indication = null
+                                                                        ) {
+                                                                            val updatedActive = localActive.toMutableList()
+                                                                            val moved = updatedActive.firstOrNull { it.id == tile.id }
+                                                                            if (moved != null) {
+                                                                                updatedActive.remove(moved)
+                                                                                val updatedInactive = localInactive.toMutableList().apply {
+                                                                                    removeAll { it.id == moved.id }
+                                                                                    add(0, moved.copy(isVisible = false))
+                                                                                }
+                                                                                localActive = updatedActive
+                                                                                localInactive = updatedInactive
+                                                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                                onTilesUpdated(localActive, localInactive)
+                                                                            }
+                                                                        },
+                                                                    contentAlignment = Alignment.Center
+                                                                ) {
+                                                                    Icon(
+                                                                        imageVector = Icons.Default.Remove,
+                                                                        contentDescription = "Remove tile",
+                                                                        tint = Color.White,
+                                                                        modifier = Modifier.size(13.dp)
+                                                                    )
+                                                                }
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
+                                        repeat(columns - rowTiles.size) {
+                                            Spacer(modifier = Modifier.weight(1f).height(86.dp))
+                                        }
                                     }
                                 }
                             }
-                            repeat(columns - rowTiles.size) {
-                                Spacer(modifier = Modifier.weight(1f).height(86.dp))
-                            }
                         }
                     }
+
+                    renderActiveGroup(
+                        "ACTIVE TILES (${localActive.size})",
+                        localActive,
+                        "No active tiles. Add one below."
+                    )
                 }
 
-                // Available Tiles Section
+                // Available Tiles & Complications Section
                 val availableBg = if (isOverInactiveDropZone) monetAccent.copy(alpha = 0.2f)
                 else Color(MonetThemeHelper.getInactiveTilesColor(context, isDark))
                 val availableBorder = if (isOverInactiveDropZone) monetAccent
@@ -2809,166 +2889,179 @@ fun MarshmallowTileEditorScreen(
                         .padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Tune,
-                            contentDescription = null,
-                            tint = monetAccent,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = if (isOverInactiveDropZone) {
-                                "DROP TO REMOVE FROM ACTIVE PANEL"
-                            } else {
-                                "AVAILABLE TILES (${localInactive.size})"
-                            },
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp,
-                            color = monetAccent
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text(
-                            text = if (isOverInactiveDropZone) "Release to drop" else "Tap '+' or drag to add",
-                            fontSize = 10.sp,
-                            color = textLightSecondary
-                        )
-                    }
-
-                    if (localInactive.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 12.dp),
-                            contentAlignment = Alignment.Center
+                    val renderAvailableGroup: @Composable (String, List<QsTileModel>, String, Boolean) -> Unit = { titleText, availTiles, emptyMsg, isCompGroup ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
+                            Icon(
+                                imageVector = if (isCompGroup) Icons.Filled.AutoAwesome else Icons.Default.Tune,
+                                contentDescription = null,
+                                tint = monetAccent,
+                                modifier = Modifier.size(16.dp)
+                            )
                             Text(
-                                text = "All tiles are currently in your active panel",
-                                fontSize = 12.sp,
+                                text = if (isOverInactiveDropZone) {
+                                    "DROP TO REMOVE FROM ACTIVE PANEL"
+                                } else {
+                                    titleText
+                                },
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                color = monetAccent
+                            )
+                            Spacer(modifier = Modifier.weight(1f))
+                            Text(
+                                text = if (isOverInactiveDropZone) "Release to drop" else "Tap '+' or drag up",
+                                fontSize = 10.sp,
                                 color = textLightSecondary
                             )
                         }
-                    } else {
-                        val inactiveRows = remember(localInactive, columns) {
-                            localInactive.chunked(columns)
-                        }
 
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            inactiveRows.forEach { rowTiles ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    rowTiles.forEach { tile ->
-                                        val isThisDragging = draggedTileId == tile.id
-                                        key(tile.id) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .weight(1f)
-                                                    .height(86.dp)
-                                                    .onGloballyPositioned { coords ->
-                                                        if (draggedTileId != tile.id) {
-                                                            tileBoundsMap[tile.id] = coords.boundsInRoot()
-                                                        }
-                                                    }
-                                                    .pointerInput(tile.id) {
-                                                        detectDragGesturesAfterLongPress(
-                                                            onDragStart = { offset ->
-                                                                draggedTileId = tile.id
-                                                                onDragStateChange(true)
-                                                                val myBounds = tileBoundsMap[tile.id] ?: Rect.Zero
-                                                                currentDragCenter = myBounds.topLeft + offset
-                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                            },
-                                                            onDrag = { change, dragAmount ->
-                                                                change.consume()
-                                                                currentDragCenter += dragAmount
-                                                            },
-                                                            onDragEnd = {
-                                                                onDragStateChange(false)
-                                                                val dropBounds = inactiveDropZoneBounds
-                                                                val activeContainer = activeGridContainerBounds
+                        if (availTiles.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = emptyMsg,
+                                    fontSize = 12.sp,
+                                    color = textLightSecondary
+                                )
+                            }
+                        } else {
+                            val inactiveRows = availTiles.chunked(columns)
 
-                                                                val isDraggedToActive = (activeContainer != null && currentDragCenter.y <= activeContainer.bottom + 10f) ||
-                                                                    (dropBounds != null && currentDragCenter.y < dropBounds.top)
-
-                                                                if (isDraggedToActive) {
-                                                                    var targetSlot = localActive.size
-                                                                    for (i in 0 until localActive.size) {
-                                                                        val b = slotBoundsMap[i] ?: continue
-                                                                        if (b.contains(currentDragCenter)) {
-                                                                            targetSlot = i
-                                                                            break
-                                                                        }
-                                                                    }
-                                                                    handleAddTileToActive(tile, targetSlot)
-                                                                }
-                                                                draggedTileId = null
-                                                            },
-                                                            onDragCancel = {
-                                                                onDragStateChange(false)
-                                                                draggedTileId = null
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                inactiveRows.forEach { rowTiles ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        rowTiles.forEach { tile ->
+                                            val isThisDragging = draggedTileId == tile.id
+                                            key(tile.id) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .height(86.dp)
+                                                        .onGloballyPositioned { coords ->
+                                                            if (draggedTileId != tile.id) {
+                                                                tileBoundsMap[tile.id] = coords.boundsInRoot()
                                                             }
-                                                        )
-                                                    }
-                                                    .clickable(
-                                                        interactionSource = remember { MutableInteractionSource() },
-                                                        indication = null
-                                                    ) {
-                                                        handleAddTileToActive(tile, null)
-                                                    }
-                                            ) {
-                                                if (isThisDragging) {
-                                                    Spacer(modifier = Modifier.fillMaxSize())
-                                                } else {
-                                                    Box(modifier = Modifier.fillMaxSize()) {
-                                                        MarshmallowEditTileCard(
-                                                            tile = tile,
-                                                            tileWidth = Dp.Unspecified,
-                                                            isActive = false,
-                                                            modifier = Modifier.fillMaxSize()
-                                                        )
+                                                        }
+                                                        .pointerInput(tile.id) {
+                                                            detectDragGesturesAfterLongPress(
+                                                                onDragStart = { offset ->
+                                                                    draggedTileId = tile.id
+                                                                    onDragStateChange(true)
+                                                                    val myBounds = tileBoundsMap[tile.id] ?: Rect.Zero
+                                                                    currentDragCenter = myBounds.topLeft + offset
+                                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                                },
+                                                                onDrag = { change, dragAmount ->
+                                                                    change.consume()
+                                                                    currentDragCenter += dragAmount
+                                                                },
+                                                                onDragEnd = {
+                                                                    onDragStateChange(false)
+                                                                    val dropBounds = inactiveDropZoneBounds
+                                                                    val activeContainer = activeGridContainerBounds
 
-                                                        // Plus add button
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .align(Alignment.TopEnd)
-                                                                .padding(top = 3.dp, end = 3.dp)
-                                                                .size(20.dp)
-                                                                .clip(CircleShape)
-                                                                .background(monetAccent)
-                                                                .clickable(
-                                                                    interactionSource = remember { MutableInteractionSource() },
-                                                                    indication = null
-                                                                ) { handleAddTileToActive(tile, null) },
-                                                            contentAlignment = Alignment.Center
-                                                        ) {
-                                                            Icon(
-                                                                imageVector = Icons.Default.Add,
-                                                                contentDescription = "Add tile",
-                                                                tint = Color.White,
-                                                                modifier = Modifier.size(13.dp)
+                                                                    val isDraggedToActive = (activeContainer != null && currentDragCenter.y <= activeContainer.bottom + 10f) ||
+                                                                        (dropBounds != null && currentDragCenter.y < dropBounds.top)
+
+                                                                    if (isDraggedToActive) {
+                                                                        var targetSlot: Int? = null
+                                                                        for (i in 0 until localActive.size) {
+                                                                            val b = slotBoundsMap[i] ?: continue
+                                                                            if (b.contains(currentDragCenter)) {
+                                                                                targetSlot = i
+                                                                                break
+                                                                            }
+                                                                        }
+                                                                        handleAddTileToActive(tile, targetSlot)
+                                                                    }
+                                                                    draggedTileId = null
+                                                                },
+                                                                onDragCancel = {
+                                                                    onDragStateChange(false)
+                                                                    draggedTileId = null
+                                                                }
                                                             )
+                                                        }
+                                                        .clickable(
+                                                            interactionSource = remember { MutableInteractionSource() },
+                                                            indication = null
+                                                        ) {
+                                                            handleAddTileToActive(tile, null)
+                                                        }
+                                                ) {
+                                                    if (isThisDragging) {
+                                                        Spacer(modifier = Modifier.fillMaxSize())
+                                                    } else {
+                                                        Box(modifier = Modifier.fillMaxSize()) {
+                                                            MarshmallowEditTileCard(
+                                                                tile = tile,
+                                                                tileWidth = Dp.Unspecified,
+                                                                isActive = false,
+                                                                modifier = Modifier.fillMaxSize()
+                                                            )
+
+                                                            // Plus add button
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .align(Alignment.TopEnd)
+                                                                    .padding(top = 3.dp, end = 3.dp)
+                                                                    .size(20.dp)
+                                                                    .clip(CircleShape)
+                                                                    .background(monetAccent)
+                                                                    .clickable(
+                                                                        interactionSource = remember { MutableInteractionSource() },
+                                                                        indication = null
+                                                                    ) { handleAddTileToActive(tile, null) },
+                                                                contentAlignment = Alignment.Center
+                                                            ) {
+                                                                Icon(
+                                                                    imageVector = Icons.Default.Add,
+                                                                    contentDescription = "Add tile",
+                                                                    tint = Color.White,
+                                                                    modifier = Modifier.size(13.dp)
+                                                                )
+                                                            }
                                                         }
                                                     }
                                                 }
                                             }
                                         }
-                                    }
-                                    repeat(columns - rowTiles.size) {
-                                        Spacer(modifier = Modifier.weight(1f).height(86.dp))
+                                        repeat(columns - rowTiles.size) {
+                                            Spacer(modifier = Modifier.weight(1f).height(86.dp))
+                                        }
                                     }
                                 }
                             }
                         }
                     }
+
+                    renderAvailableGroup(
+                        "AVAILABLE QS TILES (${inactiveQsTiles.size})",
+                        inactiveQsTiles,
+                        "All QS tiles are currently in your active panel",
+                        false
+                    )
+                    renderAvailableGroup(
+                        "COMPLICATIONS (${inactiveComplications.size})",
+                        inactiveComplications,
+                        "All complications are currently in your active panel",
+                        true
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(48.dp))
@@ -3158,8 +3251,11 @@ fun EditModeTileStudio(
     val density = LocalDensity.current
     val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
 
-    var localActive by remember { mutableStateOf(activeTiles) }
-    var localInactive by remember { mutableStateOf(inactiveTiles) }
+    var localActive by remember(activeTiles) { mutableStateOf(activeTiles) }
+    var localInactive by remember(inactiveTiles) { mutableStateOf(inactiveTiles) }
+
+    val inactiveQsTiles = remember(localInactive) { localInactive.filter { !it.isComplicationTile } }
+    val inactiveComplications = remember(localInactive) { localInactive.filter { it.isComplicationTile } }
 
     var draggedTileId by remember { mutableStateOf<String?>(null) }
     var dragSourceIndex by remember { mutableIntStateOf(-1) }
@@ -3350,10 +3446,6 @@ fun EditModeTileStudio(
             }
 
             // Active Tiles Grid Section
-            val activeRows = remember(localActive, gridLayout.columns) {
-                localActive.chunked(gridLayout.columns)
-            }
-
             Column(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier
@@ -3362,231 +3454,273 @@ fun EditModeTileStudio(
                         activeGridContainerBounds = coords.boundsInRoot()
                     }
             ) {
-                activeRows.forEachIndexed { rowIndex, rowTiles ->
+                val renderActiveGroup: @Composable (String, List<QsTileModel>, String) -> Unit = { headerTitle, groupTiles, emptyMsg ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        rowTiles.forEachIndexed { colIndex, tile ->
-                            val slotIndex = rowIndex * gridLayout.columns + colIndex
-                            val isDragging = draggedTileId == tile.id
-                            key(slotIndex) {
-                                Box(
-                                    modifier = Modifier
-                                        .width(targetTileWidth)
-                                        .onGloballyPositioned { coords ->
-                                            slotBoundsMap[slotIndex] = coords.boundsInRoot()
-                                            tileBoundsMap[tile.id] = coords.boundsInRoot()
-                                        }
-                                        .pointerInput(slotIndex) {
-                                            detectDragGesturesAfterLongPress(
-                                                onDragStart = { offset ->
-                                                    val currentTile = localActive.getOrNull(slotIndex) ?: return@detectDragGesturesAfterLongPress
-                                                    draggedTileId = currentTile.id
-                                                    dragSourceIndex = slotIndex
-                                                    hoveredTargetIndex = -1
-                                                    onDragStateChange(true)
-                                                    val myBounds = slotBoundsMap[slotIndex] ?: tileBoundsMap[currentTile.id] ?: Rect.Zero
-                                                    currentDragCenter = myBounds.topLeft + offset
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                },
-                                                onDrag = { change, dragAmount ->
-                                                    change.consume()
-                                                    currentDragCenter += dragAmount
-                                                    checkAutoScroll(currentDragCenter)
-
-                                                    if (draggedTileId != null) {
-                                                        val activeContainer = activeGridContainerBounds
-                                                        val dropBounds = inactiveDropZoneBounds
-                                                        val isStrictlyAvailable = dropBounds != null &&
-                                                            activeContainer != null &&
-                                                            currentDragCenter.y > activeContainer.bottom + 10f &&
-                                                            currentDragCenter.y >= dropBounds.top
-
-                                                        if (isStrictlyAvailable) {
-                                                            hoveredTargetIndex = -1
-                                                        } else {
-                                                            var targetIndex = -1
-                                                            val totalCount = localActive.size
-                                                            for (i in 0 until totalCount) {
-                                                                val b = slotBoundsMap[i] ?: continue
-                                                                val expanded = Rect(b.left - 10f, b.top - 10f, b.right + 10f, b.bottom + 10f)
-                                                                if (expanded.contains(currentDragCenter)) {
-                                                                    targetIndex = i
-                                                                    break
-                                                                }
-                                                            }
-                                                            if (targetIndex != -1 && targetIndex != dragSourceIndex) {
-                                                                if (hoveredTargetIndex != targetIndex) {
-                                                                    hoveredTargetIndex = targetIndex
-                                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                                }
-                                                            } else {
-                                                                hoveredTargetIndex = -1
-                                                            }
-                                                        }
-                                                    }
-                                                },
-                                                onDragEnd = {
-                                                    autoScrollDirection = 0
-                                                    onDragStateChange(false)
-                                                    val activeId = draggedTileId
-                                                    val dropBounds = inactiveDropZoneBounds
-                                                    val activeContainer = activeGridContainerBounds
-                                                    val sourceIdx = dragSourceIndex
-                                                    val targetIdx = hoveredTargetIndex
-
-                                                    val isDropToAvailable = activeId != null && dropBounds != null &&
-                                                        ((activeContainer != null && currentDragCenter.y > activeContainer.bottom + 10f && currentDragCenter.y >= dropBounds.top) ||
-                                                         (activeContainer == null && currentDragCenter.y >= dropBounds.top))
-
-                                                    if (isDropToAvailable) {
-                                                        val updatedActive = localActive.toMutableList()
-                                                        val moved = updatedActive.firstOrNull { it.id == activeId }
-                                                        if (moved != null) {
-                                                            updatedActive.remove(moved)
-                                                            val updatedInactive = localInactive.toMutableList().apply {
-                                                                add(0, moved.copy(isVisible = false))
-                                                            }
-                                                            localActive = updatedActive
-                                                            localInactive = updatedInactive
-                                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                        }
-                                                    } else if (sourceIdx != -1 && targetIdx != -1 && sourceIdx != targetIdx &&
-                                                        sourceIdx in 0 until localActive.size && targetIdx in 0 until localActive.size
-                                                    ) {
-                                                        val updated = localActive.toMutableList()
-                                                        java.util.Collections.swap(updated, sourceIdx, targetIdx)
-                                                        localActive = updated
-                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    }
-                                                    draggedTileId = null
-                                                    dragSourceIndex = -1
-                                                    hoveredTargetIndex = -1
-                                                    onTilesUpdated(localActive, localInactive)
-                                                },
-                                                onDragCancel = {
-                                                    autoScrollDirection = 0
-                                                    onDragStateChange(false)
-                                                    draggedTileId = null
-                                                    dragSourceIndex = -1
-                                                    hoveredTargetIndex = -1
-                                                    onTilesUpdated(localActive, localInactive)
-                                                }
-                                            )
-                                        }
+                        Text(
+                            text = headerTitle,
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.8.sp,
+                            color = legacyAccent
+                        )
+                        Text(
+                            text = "Hold to drag • Tap '-'",
+                            fontSize = 10.sp,
+                            color = if (isDark) Color(0xFFAAAAAA) else Color(0xFF666666)
+                        )
+                    }
+                    if (groupTiles.isEmpty()) {
+                        Text(
+                            text = emptyMsg,
+                            fontSize = 11.5.sp,
+                            color = if (isDark) Color.Gray else Color(0xFF777777),
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    } else {
+                        val activeRows = groupTiles.chunked(gridLayout.columns)
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            activeRows.forEach { rowTiles ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    val isHoverTarget = draggedTileId != null && hoveredTargetIndex == slotIndex
-                                    val monetPrimaryColor = androidx.compose.material3.MaterialTheme.colorScheme.primary
-                                    val cardContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
-                                    val availableTilesSolidBg = if (isDark) {
-                                        Color(
-                                            red = (cardContainerColor.red * 0.55f).coerceIn(0f, 1f),
-                                            green = (cardContainerColor.green * 0.55f).coerceIn(0f, 1f),
-                                            blue = (cardContainerColor.blue * 0.55f).coerceIn(0f, 1f),
-                                            alpha = 1f
-                                        )
-                                    } else {
-                                        Color(
-                                            red = (cardContainerColor.red * 0.80f).coerceIn(0f, 1f),
-                                            green = (cardContainerColor.green * 0.80f).coerceIn(0f, 1f),
-                                            blue = (cardContainerColor.blue * 0.80f).coerceIn(0f, 1f),
-                                            alpha = 1f
-                                        )
-                                    }
-                                    if (isDragging) {
-                                        // Hide original drag box
-                                        Spacer(modifier = Modifier.width(targetTileWidth).height(86.dp))
-                                    } else {
-                                        Box(
-                                            modifier = Modifier
-                                                .width(targetTileWidth)
-                                                .height(86.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            if (isHoverTarget) {
-                                                if (isKitKat) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .requiredSize(width = targetTileWidth + 6.dp, height = 92.dp)
-                                                            .clip(RoundedCornerShape(4.dp))
-                                                            .background(Color(0x3333B5E5))
-                                                            .border(1.5.dp, Color(0xFF33B5E5), RoundedCornerShape(4.dp))
+                                    rowTiles.forEach { tile ->
+                                        val slotIndex = localActive.indexOfFirst { it.id == tile.id }
+                                        val isDragging = draggedTileId == tile.id
+                                        key(tile.id) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .width(targetTileWidth)
+                                                    .onGloballyPositioned { coords ->
+                                                        if (slotIndex >= 0) slotBoundsMap[slotIndex] = coords.boundsInRoot()
+                                                        tileBoundsMap[tile.id] = coords.boundsInRoot()
+                                                    }
+                                                    .pointerInput(tile.id) {
+                                                        detectDragGesturesAfterLongPress(
+                                                            onDragStart = { offset ->
+                                                                val idx = localActive.indexOfFirst { it.id == tile.id }
+                                                                if (idx < 0) return@detectDragGesturesAfterLongPress
+                                                                draggedTileId = tile.id
+                                                                dragSourceIndex = idx
+                                                                hoveredTargetIndex = -1
+                                                                onDragStateChange(true)
+                                                                val myBounds = slotBoundsMap[idx] ?: tileBoundsMap[tile.id] ?: Rect.Zero
+                                                                currentDragCenter = myBounds.topLeft + offset
+                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                            },
+                                                            onDrag = { change, dragAmount ->
+                                                                change.consume()
+                                                                currentDragCenter += dragAmount
+                                                                checkAutoScroll(currentDragCenter)
+
+                                                                if (draggedTileId != null) {
+                                                                    val activeContainer = activeGridContainerBounds
+                                                                    val dropBounds = inactiveDropZoneBounds
+                                                                    val isStrictlyAvailable = dropBounds != null &&
+                                                                        activeContainer != null &&
+                                                                        currentDragCenter.y > activeContainer.bottom + 10f &&
+                                                                        currentDragCenter.y >= dropBounds.top
+
+                                                                    if (isStrictlyAvailable) {
+                                                                        hoveredTargetIndex = -1
+                                                                    } else {
+                                                                        var targetIndex = -1
+                                                                        val totalCount = localActive.size
+                                                                        for (i in 0 until totalCount) {
+                                                                            val b = slotBoundsMap[i] ?: continue
+                                                                            val expanded = Rect(b.left - 10f, b.top - 10f, b.right + 10f, b.bottom + 10f)
+                                                                            if (expanded.contains(currentDragCenter)) {
+                                                                                targetIndex = i
+                                                                                break
+                                                                            }
+                                                                        }
+                                                                        if (targetIndex != -1 && targetIndex != dragSourceIndex) {
+                                                                            if (hoveredTargetIndex != targetIndex) {
+                                                                                hoveredTargetIndex = targetIndex
+                                                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                            }
+                                                                        } else {
+                                                                            hoveredTargetIndex = -1
+                                                                        }
+                                                                    }
+                                                                }
+                                                            },
+                                                            onDragEnd = {
+                                                                autoScrollDirection = 0
+                                                                onDragStateChange(false)
+                                                                val activeId = draggedTileId
+                                                                val dropBounds = inactiveDropZoneBounds
+                                                                val activeContainer = activeGridContainerBounds
+                                                                val sourceIdx = dragSourceIndex
+                                                                val targetIdx = hoveredTargetIndex
+
+                                                                val isDropToAvailable = activeId != null && dropBounds != null &&
+                                                                    ((activeContainer != null && currentDragCenter.y > activeContainer.bottom + 10f && currentDragCenter.y >= dropBounds.top) ||
+                                                                     (activeContainer == null && currentDragCenter.y >= dropBounds.top))
+
+                                                                if (isDropToAvailable) {
+                                                                    val updatedActive = localActive.toMutableList()
+                                                                    val moved = updatedActive.firstOrNull { it.id == activeId }
+                                                                    if (moved != null) {
+                                                                        updatedActive.remove(moved)
+                                                                        val updatedInactive = localInactive.toMutableList().apply {
+                                                                            removeAll { it.id == moved.id }
+                                                                            add(0, moved.copy(isVisible = false))
+                                                                        }
+                                                                        localActive = updatedActive
+                                                                        localInactive = updatedInactive
+                                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                                    }
+                                                                } else if (sourceIdx != -1 && targetIdx != -1 && sourceIdx != targetIdx &&
+                                                                    sourceIdx in 0 until localActive.size && targetIdx in 0 until localActive.size
+                                                                ) {
+                                                                    val updated = localActive.toMutableList()
+                                                                    java.util.Collections.swap(updated, sourceIdx, targetIdx)
+                                                                    localActive = updated
+                                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                                }
+                                                                draggedTileId = null
+                                                                dragSourceIndex = -1
+                                                                hoveredTargetIndex = -1
+                                                                onTilesUpdated(localActive, localInactive)
+                                                            },
+                                                            onDragCancel = {
+                                                                autoScrollDirection = 0
+                                                                onDragStateChange(false)
+                                                                draggedTileId = null
+                                                                dragSourceIndex = -1
+                                                                hoveredTargetIndex = -1
+                                                                onTilesUpdated(localActive, localInactive)
+                                                            }
+                                                        )
+                                                    }
+                                            ) {
+                                                val isHoverTarget = draggedTileId != null && hoveredTargetIndex == slotIndex
+                                                val cardContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
+                                                val availableTilesSolidBg = if (isDark) {
+                                                    Color(
+                                                        red = (cardContainerColor.red * 0.55f).coerceIn(0f, 1f),
+                                                        green = (cardContainerColor.green * 0.55f).coerceIn(0f, 1f),
+                                                        blue = (cardContainerColor.blue * 0.55f).coerceIn(0f, 1f),
+                                                        alpha = 1f
                                                     )
-                                                } else if (isMarshmallow) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .requiredSize(width = targetTileWidth + 6.dp, height = 92.dp)
-                                                            .clip(RoundedCornerShape(panelOuterCorner.dp))
-                                                            .background(legacyAccent.copy(alpha = 0.2f))
-                                                            .border(1.5.dp, legacyAccent, RoundedCornerShape(panelOuterCorner.dp))
+                                                } else {
+                                                    Color(
+                                                        red = (cardContainerColor.red * 0.80f).coerceIn(0f, 1f),
+                                                        green = (cardContainerColor.green * 0.80f).coerceIn(0f, 1f),
+                                                        blue = (cardContainerColor.blue * 0.80f).coerceIn(0f, 1f),
+                                                        alpha = 1f
                                                     )
+                                                }
+                                                if (isDragging) {
+                                                    // Hide original drag box
+                                                    Spacer(modifier = Modifier.width(targetTileWidth).height(86.dp))
                                                 } else {
                                                     Box(
                                                         modifier = Modifier
-                                                            .requiredSize(width = targetTileWidth + 16.dp, height = 102.dp)
-                                                            .clip(RoundedCornerShape(20.dp))
-                                                            .background(availableTilesSolidBg)
-                                                    )
-                                                }
-                                            }
-                                            EditStudioTileView(
-                                                tile = tile,
-                                                tileWidth = targetTileWidth,
-                                                isKitKat = isKitKat,
-                                                isMarshmallow = isMarshmallow,
-                                                isActive = true
-                                            )
-
-                                            // Minus remove button
-                                            if (draggedTileId == null) {
-                                                val badgeShape = if (isKitKat) RoundedCornerShape(3.dp) else CircleShape
-                                                val badgeColor = if (isKitKat) Color(0xFFCC0000) else Color(0xFFE53935)
-                                                Box(
-                                                    modifier = Modifier
-                                                        .align(Alignment.TopEnd)
-                                                        .padding(top = 2.dp, end = 2.dp)
-                                                        .size(20.dp)
-                                                        .clip(badgeShape)
-                                                        .background(badgeColor)
-                                                        .clickable(
-                                                            interactionSource = remember { MutableInteractionSource() },
-                                                            indication = null
-                                                        ) {
-                                                            val updatedActive = localActive.toMutableList()
-                                                            val moved = updatedActive.firstOrNull { it.id == tile.id }
-                                                            if (moved != null) {
-                                                                updatedActive.remove(moved)
-                                                                val updatedInactive = localInactive.toMutableList().apply {
-                                                                    removeAll { it.id == moved.id }
-                                                                    add(0, moved.copy(isVisible = false))
-                                                                }
-                                                                localActive = updatedActive
-                                                                localInactive = updatedInactive
-                                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                                onTilesUpdated(localActive, localInactive)
+                                                            .width(targetTileWidth)
+                                                            .height(86.dp),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        if (isHoverTarget) {
+                                                            if (isKitKat) {
+                                                                Box(
+                                                                    modifier = Modifier
+                                                                        .requiredSize(width = targetTileWidth + 6.dp, height = 92.dp)
+                                                                        .clip(RoundedCornerShape(4.dp))
+                                                                        .background(Color(0x3333B5E5))
+                                                                        .border(1.5.dp, Color(0xFF33B5E5), RoundedCornerShape(4.dp))
+                                                                )
+                                                            } else if (isMarshmallow) {
+                                                                Box(
+                                                                    modifier = Modifier
+                                                                        .requiredSize(width = targetTileWidth + 6.dp, height = 92.dp)
+                                                                        .clip(RoundedCornerShape(panelOuterCorner.dp))
+                                                                        .background(legacyAccent.copy(alpha = 0.2f))
+                                                                        .border(1.5.dp, legacyAccent, RoundedCornerShape(panelOuterCorner.dp))
+                                                                )
+                                                            } else {
+                                                                Box(
+                                                                    modifier = Modifier
+                                                                        .requiredSize(width = targetTileWidth + 16.dp, height = 102.dp)
+                                                                        .clip(RoundedCornerShape(20.dp))
+                                                                        .background(availableTilesSolidBg)
+                                                                )
                                                             }
-                                                        },
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.Remove,
-                                                        contentDescription = "Remove tile",
-                                                        tint = Color.White,
-                                                        modifier = Modifier.size(13.dp)
-                                                    )
+                                                        }
+                                                        EditStudioTileView(
+                                                            tile = tile,
+                                                            tileWidth = targetTileWidth,
+                                                            isKitKat = isKitKat,
+                                                            isMarshmallow = isMarshmallow,
+                                                            isActive = true
+                                                        )
+
+                                                        // Minus remove button
+                                                        if (draggedTileId == null) {
+                                                            val badgeShape = if (isKitKat) RoundedCornerShape(3.dp) else CircleShape
+                                                            val badgeColor = if (isKitKat) Color(0xFFCC0000) else Color(0xFFE53935)
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .align(Alignment.TopEnd)
+                                                                    .padding(top = 2.dp, end = 2.dp)
+                                                                    .size(20.dp)
+                                                                    .clip(badgeShape)
+                                                                    .background(badgeColor)
+                                                                    .clickable(
+                                                                        interactionSource = remember { MutableInteractionSource() },
+                                                                        indication = null
+                                                                    ) {
+                                                                        val updatedActive = localActive.toMutableList()
+                                                                        val moved = updatedActive.firstOrNull { it.id == tile.id }
+                                                                        if (moved != null) {
+                                                                            updatedActive.remove(moved)
+                                                                            val updatedInactive = localInactive.toMutableList().apply {
+                                                                                removeAll { it.id == moved.id }
+                                                                                add(0, moved.copy(isVisible = false))
+                                                                            }
+                                                                            localActive = updatedActive
+                                                                            localInactive = updatedInactive
+                                                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                            onTilesUpdated(localActive, localInactive)
+                                                                        }
+                                                                    },
+                                                                contentAlignment = Alignment.Center
+                                                            ) {
+                                                                Icon(
+                                                                    imageVector = Icons.Default.Remove,
+                                                                    contentDescription = "Remove tile",
+                                                                    tint = Color.White,
+                                                                    modifier = Modifier.size(13.dp)
+                                                                )
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
+                                    }
+                                    repeat(gridLayout.columns - rowTiles.size) {
+                                        Spacer(modifier = Modifier.width(targetTileWidth))
                                     }
                                 }
                             }
                         }
-                        repeat(gridLayout.columns - rowTiles.size) {
-                            Spacer(modifier = Modifier.width(targetTileWidth))
-                        }
                     }
                 }
+
+                renderActiveGroup(
+                    "ACTIVE TILES (${localActive.size})",
+                    localActive,
+                    "No active tiles. Add one below."
+                )
             }
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -3625,7 +3759,7 @@ fun EditModeTileStudio(
                 Color.Transparent
             }
 
-            // Inactive / Available Tiles Section
+            // Inactive / Available Tiles & Complications Section
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -3642,6 +3776,108 @@ fun EditModeTileStudio(
                     .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                val handleAddTileToActive: (QsTileModel, Int?) -> Unit = { targetTile, slotIndex ->
+                    val updatedInactive = localInactive.toMutableList()
+                    val moved = updatedInactive.firstOrNull { it.id == targetTile.id }
+                    if (moved != null) {
+                        updatedInactive.remove(moved)
+                        val isExt = moved.isExternal || moved.category == TileCategory.THIRD_PARTY || moved.category == TileCategory.EXTERNAL || moved.id.contains("/")
+                        val pkg = moved.packageName ?: if (moved.id.contains("/")) moved.id.substringBefore('/') else null
+                        val cls = moved.serviceClassName ?: if (moved.id.contains("/")) moved.id.substringAfter('/') else null
+                        val compId = if (isExt && pkg != null && cls != null) "$pkg/$cls" else moved.id
+
+                        val activated = moved.copy(
+                            id = compId,
+                            isVisible = true,
+                            isExternal = isExt,
+                            category = if (isExt) TileCategory.THIRD_PARTY else moved.category,
+                            packageName = pkg,
+                            serviceClassName = cls
+                        )
+                        val updatedActive = localActive.toMutableList().apply {
+                            if (slotIndex != null) {
+                                add(slotIndex.coerceIn(0, size), activated)
+                            } else {
+                                add(activated)
+                            }
+                        }
+                        localActive = updatedActive
+                        localInactive = updatedInactive
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onTilesUpdated(localActive, localInactive)
+                    }
+                }
+
+                val renderInactiveGrid: @Composable (List<QsTileModel>) -> Unit = { list ->
+                    val rows = list.chunked(gridLayout.columns)
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        rows.forEach { rowTiles ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                rowTiles.forEach { tile ->
+                                    InactiveTileItem(
+                                        tile = tile,
+                                        targetTileWidth = targetTileWidth,
+                                        draggedTileId = draggedTileId,
+                                        tileBoundsMap = tileBoundsMap,
+                                        isKitKat = isKitKat,
+                                        isMarshmallow = isMarshmallow,
+                                        onDragStart = { offset ->
+                                            draggedTileId = tile.id
+                                            onDragStateChange(true)
+                                            val myBounds = tileBoundsMap[tile.id] ?: Rect.Zero
+                                            currentDragCenter = myBounds.topLeft + offset
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        },
+                                        onDrag = { dragAmount ->
+                                            currentDragCenter += dragAmount
+                                            checkAutoScroll(currentDragCenter)
+                                        },
+                                        onDragEnd = {
+                                            autoScrollDirection = 0
+                                            onDragStateChange(false)
+                                            val dropBounds = inactiveDropZoneBounds
+                                            val activeContainer = activeGridContainerBounds
+
+                                            val isDraggedToActive = (activeContainer != null && currentDragCenter.y <= activeContainer.bottom + 10f) ||
+                                                (dropBounds != null && currentDragCenter.y < dropBounds.top)
+
+                                            if (isDraggedToActive) {
+                                                var targetSlot: Int? = null
+                                                for (i in 0 until localActive.size) {
+                                                    val b = slotBoundsMap[i] ?: continue
+                                                    if (b.contains(currentDragCenter)) {
+                                                        targetSlot = i
+                                                        break
+                                                    }
+                                                }
+                                                handleAddTileToActive(tile, targetSlot)
+                                            }
+                                            draggedTileId = null
+                                        },
+                                        onDragCancel = {
+                                            autoScrollDirection = 0
+                                            onDragStateChange(false)
+                                            draggedTileId = null
+                                        },
+                                        onClick = {
+                                            handleAddTileToActive(tile, null)
+                                        }
+                                    )
+                                }
+                                repeat(gridLayout.columns - rowTiles.size) {
+                                    Spacer(modifier = Modifier.width(targetTileWidth))
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -3657,7 +3893,7 @@ fun EditModeTileStudio(
                         text = if (isOverInactiveDropZone) {
                             "DROP TO REMOVE FROM ACTIVE PANEL"
                         } else {
-                            "AVAILABLE TILES (${localInactive.size})"
+                            "AVAILABLE QS TILES (${inactiveQsTiles.size})"
                         },
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -3672,54 +3908,22 @@ fun EditModeTileStudio(
                     )
                 }
 
-                if (localInactive.isEmpty()) {
+                if (inactiveQsTiles.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 12.dp),
+                            .padding(vertical = 10.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "All tiles are currently in your active panel",
+                            text = "All QS tiles are currently in your active panel",
                             fontSize = 12.sp,
                             color = if (isDark) Color.Gray else Color(0xFF888888)
                         )
                     }
                 } else {
-                    val handleAddTileToActive: (QsTileModel, Int?) -> Unit = { targetTile, slotIndex ->
-                        val updatedInactive = localInactive.toMutableList()
-                        val moved = updatedInactive.firstOrNull { it.id == targetTile.id }
-                        if (moved != null) {
-                            updatedInactive.remove(moved)
-                            val isExt = moved.isExternal || moved.category == TileCategory.THIRD_PARTY || moved.category == TileCategory.EXTERNAL || moved.id.contains("/")
-                            val pkg = moved.packageName ?: if (moved.id.contains("/")) moved.id.substringBefore('/') else null
-                            val cls = moved.serviceClassName ?: if (moved.id.contains("/")) moved.id.substringAfter('/') else null
-                            val compId = if (isExt && pkg != null && cls != null) "$pkg/$cls" else moved.id
-
-                            val activated = moved.copy(
-                                id = compId,
-                                isVisible = true,
-                                isExternal = isExt,
-                                category = if (isExt) TileCategory.THIRD_PARTY else moved.category,
-                                packageName = pkg,
-                                serviceClassName = cls
-                            )
-                            val updatedActive = localActive.toMutableList().apply {
-                                if (slotIndex != null) {
-                                    add(slotIndex.coerceIn(0, size), activated)
-                                } else {
-                                    add(activated)
-                                }
-                            }
-                            localActive = updatedActive
-                            localInactive = updatedInactive
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onTilesUpdated(localActive, localInactive)
-                        }
-                    }
-
-                    val systemInactive = localInactive.filter { !it.isExternal }
-                    val externalInactive = localInactive.filter { it.isExternal }
+                    val systemInactive = inactiveQsTiles.filter { !it.isExternal }
+                    val externalInactive = inactiveQsTiles.filter { it.isExternal }
 
                     if (systemInactive.isNotEmpty()) {
                         Text(
@@ -3729,75 +3933,7 @@ fun EditModeTileStudio(
                             color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
                         )
-                        val systemRows = remember(systemInactive, gridLayout.columns) {
-                            systemInactive.chunked(gridLayout.columns)
-                        }
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            systemRows.forEach { rowTiles ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    rowTiles.forEach { tile ->
-                                        InactiveTileItem(
-                                            tile = tile,
-                                            targetTileWidth = targetTileWidth,
-                                            draggedTileId = draggedTileId,
-                                            tileBoundsMap = tileBoundsMap,
-                                            isKitKat = isKitKat,
-                                            isMarshmallow = isMarshmallow,
-                                            onDragStart = { offset ->
-                                                draggedTileId = tile.id
-                                                onDragStateChange(true)
-                                                val myBounds = tileBoundsMap[tile.id] ?: Rect.Zero
-                                                currentDragCenter = myBounds.topLeft + offset
-                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            },
-                                            onDrag = { dragAmount ->
-                                                currentDragCenter += dragAmount
-                                                checkAutoScroll(currentDragCenter)
-                                            },
-                                            onDragEnd = {
-                                                autoScrollDirection = 0
-                                                onDragStateChange(false)
-                                                val dropBounds = inactiveDropZoneBounds
-                                                val activeContainer = activeGridContainerBounds
-
-                                                val isDraggedToActive = (activeContainer != null && currentDragCenter.y <= activeContainer.bottom + 10f) ||
-                                                    (dropBounds != null && currentDragCenter.y < dropBounds.top)
-
-                                                if (isDraggedToActive) {
-                                                    var targetSlot = localActive.size
-                                                    for (i in 0 until localActive.size) {
-                                                        val b = slotBoundsMap[i] ?: continue
-                                                        if (b.contains(currentDragCenter)) {
-                                                            targetSlot = i
-                                                            break
-                                                        }
-                                                    }
-                                                    handleAddTileToActive(tile, targetSlot)
-                                                }
-                                                draggedTileId = null
-                                            },
-                                            onDragCancel = {
-                                                autoScrollDirection = 0
-                                                onDragStateChange(false)
-                                                draggedTileId = null
-                                            },
-                                            onClick = {
-                                                handleAddTileToActive(tile, null)
-                                            }
-                                        )
-                                    }
-                                    repeat(gridLayout.columns - rowTiles.size) {
-                                        Spacer(modifier = Modifier.width(targetTileWidth))
-                                    }
-                                }
-                            }
-                        }
+                        renderInactiveGrid(systemInactive)
                     }
 
                     if (externalInactive.isNotEmpty()) {
@@ -3806,78 +3942,59 @@ fun EditModeTileStudio(
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 10.dp, bottom = 2.dp)
+                            modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
                         )
-                        val externalRows = remember(externalInactive, gridLayout.columns) {
-                            externalInactive.chunked(gridLayout.columns)
-                        }
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            externalRows.forEach { rowTiles ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    rowTiles.forEach { tile ->
-                                        InactiveTileItem(
-                                            tile = tile,
-                                            targetTileWidth = targetTileWidth,
-                                            draggedTileId = draggedTileId,
-                                            tileBoundsMap = tileBoundsMap,
-                                            isKitKat = isKitKat,
-                                            isMarshmallow = isMarshmallow,
-                                            onDragStart = { offset ->
-                                                draggedTileId = tile.id
-                                                onDragStateChange(true)
-                                                val myBounds = tileBoundsMap[tile.id] ?: Rect.Zero
-                                                currentDragCenter = myBounds.topLeft + offset
-                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            },
-                                            onDrag = { dragAmount ->
-                                                currentDragCenter += dragAmount
-                                                checkAutoScroll(currentDragCenter)
-                                            },
-                                            onDragEnd = {
-                                                autoScrollDirection = 0
-                                                onDragStateChange(false)
-                                                val dropBounds = inactiveDropZoneBounds
-                                                val activeContainer = activeGridContainerBounds
-
-                                                val isDraggedToActive = (activeContainer != null && currentDragCenter.y <= activeContainer.bottom + 10f) ||
-                                                    (dropBounds != null && currentDragCenter.y < dropBounds.top)
-
-                                                if (isDraggedToActive) {
-                                                    var targetSlot = localActive.size
-                                                    for (i in 0 until localActive.size) {
-                                                        val b = slotBoundsMap[i] ?: continue
-                                                        if (b.contains(currentDragCenter)) {
-                                                            targetSlot = i
-                                                            break
-                                                        }
-                                                    }
-                                                    handleAddTileToActive(tile, targetSlot)
-                                                }
-                                                draggedTileId = null
-                                            },
-                                            onDragCancel = {
-                                                autoScrollDirection = 0
-                                                onDragStateChange(false)
-                                                draggedTileId = null
-                                            },
-                                            onClick = {
-                                                handleAddTileToActive(tile, null)
-                                            }
-                                        )
-                                    }
-                                    repeat(gridLayout.columns - rowTiles.size) {
-                                        Spacer(modifier = Modifier.width(targetTileWidth))
-                                    }
-                                }
-                            }
-                        }
+                        renderInactiveGrid(externalInactive)
                     }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.AutoAwesome,
+                        contentDescription = null,
+                        tint = activeAccent,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = if (isOverInactiveDropZone) {
+                            "DROP TO REMOVE FROM ACTIVE PANEL"
+                        } else {
+                            "COMPLICATIONS (${inactiveComplications.size})"
+                        },
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        color = activeAccent
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        text = if (isOverInactiveDropZone) "Release to drop" else "Tap '+' or drag to add",
+                        fontSize = 10.sp,
+                        color = if (isDark) Color.Gray else Color(0xFF666666)
+                    )
+                }
+
+                if (inactiveComplications.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "All complications are currently in your active panel",
+                            fontSize = 12.sp,
+                            color = if (isDark) Color.Gray else Color(0xFF888888)
+                        )
+                    }
+                } else {
+                    renderInactiveGrid(inactiveComplications)
                 }
             }
 
@@ -6933,6 +7050,7 @@ fun CircularQsTile(
     val enabledTileShapeId by PanelPreferences.enabledTileShapeId.collectAsState()
     val disabledTileShapeId by PanelPreferences.disabledTileShapeId.collectAsState()
     val tileOutlineEnabled by PanelPreferences.tileOutlineEnabled.collectAsState()
+    val tileOutlineThicknessDp by PanelPreferences.tileOutlineThicknessDp.collectAsState()
     val baseQqsSize = qqsTileSizeValue.dp.coerceIn(36.dp, 64.dp)
 
     val isActive = tile.state == TileState.ACTIVE
@@ -7121,9 +7239,9 @@ fun CircularQsTile(
                     .then(
                         if (renderShapeBg && tileOutlineEnabled) {
                             if (isActive && showQsTileGradient) {
-                                Modifier.border(1.2.dp, tileGradientBrush, tileShape)
+                                Modifier.insideShapeBorder(tileOutlineThicknessDp.dp, tileGradientBrush, tileShape)
                             } else {
-                                Modifier.border(1.2.dp, outlineColor, tileShape)
+                                Modifier.insideShapeBorder(tileOutlineThicknessDp.dp, outlineColor, tileShape)
                             }
                         } else {
                             Modifier
@@ -7910,6 +8028,8 @@ private fun MarshmallowTileItem(
     val enabledTileShapeId by PanelPreferences.enabledTileShapeId.collectAsState()
     val disabledTileShapeId by PanelPreferences.disabledTileShapeId.collectAsState()
     val enableLegacyTileShapes by PanelPreferences.enableLegacyTileShapes.collectAsState()
+    val tileOutlineEnabled by PanelPreferences.tileOutlineEnabled.collectAsState()
+    val tileOutlineThicknessDp by PanelPreferences.tileOutlineThicknessDp.collectAsState()
 
     val chosenShapeId = if (isActive) enabledTileShapeId else disabledTileShapeId
     val tileShape = remember(chosenShapeId) {
@@ -7927,12 +8047,17 @@ private fun MarshmallowTileItem(
     val inactiveTileColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
 
     val iconTint = if (enableLegacyTileShapes) {
-        if (isActive) Color.White else (if (isInactiveTilesCustomized) inactiveTileColor else textSecondary)
+        if (isActive) {
+            if (tileOutlineEnabled) primaryAccent else Color.White
+        } else {
+            if (isInactiveTilesCustomized) inactiveTileColor else textSecondary
+        }
     } else {
         if (isActive) primaryAccent else (if (isInactiveTilesCustomized) inactiveTileColor else textSecondary)
     }
     val textTint = if (isActive) textPrimary else (if (isInactiveTilesCustomized) inactiveTileColor else textSecondary)
-    val tileBgColor = if (isActive) primaryAccent else inactiveTileColor
+    val tileBgColor = if (tileOutlineEnabled) Color.Transparent else if (isActive) primaryAccent else inactiveTileColor
+    val legacyOutlineColor = if (isActive) primaryAccent else inactiveTileColor
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -7962,6 +8087,11 @@ private fun MarshmallowTileItem(
             Box(
                 modifier = Modifier
                     .size(46.dp)
+                    .then(
+                        if (tileOutlineEnabled) {
+                            Modifier.insideShapeBorder(tileOutlineThicknessDp.dp, legacyOutlineColor, tileShape)
+                        } else Modifier
+                    )
                     .clip(tileShape)
                     .background(tileBgColor),
                 contentAlignment = Alignment.Center

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/ll_tile_edit_filter_bar"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingHorizontal="4dp"
+    android:paddingTop="4dp"
+    android:paddingBottom="10dp">
+
+    <TextView
+        android:id="@+id/btn_filter_all"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginEnd="6dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:minHeight="36dp"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="7dp"
+        android:singleLine="true"
+        android:text="All"
+        android:textSize="11.5sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/btn_filter_qs"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginEnd="6dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:minHeight="36dp"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="7dp"
+        android:singleLine="true"
+        android:text="QS Tiles"
+        android:textSize="11.5sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/btn_filter_comp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:minHeight="36dp"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="7dp"
+        android:singleLine="true"
+        android:text="Complications"
+        android:textSize="11.5sp"
+        android:textStyle="bold" />
+</LinearLayout>

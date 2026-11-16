@@ -727,7 +727,12 @@ private fun TimerMicroContent(snapshot: ComplicationSnapshot, context: Context) 
             MicroArcGauge(
                 progress = timer.progress,
                 primaryText = ComplicationDataHub.formatDurationPrecise(timer.remainingMs),
-                secondaryText = if (timer.isSyncedExternal) (timer.externalAppName ?: "Clock App") else if (timer.isRunning) "Running" else "Paused",
+                secondaryText = when {
+                    timer.isFinished -> "Finished"
+                    timer.isSyncedExternal -> timer.externalAppName ?: "Clock App"
+                    timer.isRunning -> "Running"
+                    else -> "Paused"
+                },
                 arcColor = ExpressiveTheme.colors.buttonPrimary,
                 sizeDp = 138
             )
@@ -815,8 +820,16 @@ private fun TimerMicroContent(snapshot: ComplicationSnapshot, context: Context) 
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 PrimaryPillButton(
-                    text = if (timer.isRunning) "Pause" else "Start",
-                    icon = if (timer.isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    text = when {
+                        timer.isFinished -> "Dismiss"
+                        timer.isRunning -> "Pause"
+                        else -> "Start"
+                    },
+                    icon = when {
+                        timer.isFinished -> Icons.Default.Close
+                        timer.isRunning -> Icons.Default.Pause
+                        else -> Icons.Default.PlayArrow
+                    },
                     modifier = Modifier.weight(1f),
                     onClick = { ComplicationDataHub.toggleTimer(context) }
                 )

@@ -86,6 +86,7 @@ import com.example.model.ComplicationTileModel
 import com.example.data.PanelPreferences
 import com.example.ui.shape.QsShapeItem
 import com.example.ui.shape.QsShapeManager
+import com.example.ui.shape.insideShapeBorder
 import com.example.ui.theme.LocalIsDarkTheme
 import com.example.ui.theme.QuickPanelTheme
 import kotlin.math.PI
@@ -386,8 +387,13 @@ fun ComplicationTileView(
 
     val inactiveTileColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
 
+    val complicationOutlineEnabled by PanelPreferences.complicationOutlineEnabled.collectAsState()
+    val tileOutlineThicknessDp by PanelPreferences.tileOutlineThicknessDp.collectAsState()
+    val isOutlineMode = showRingBackground && complicationOutlineEnabled
+    val isTransparentInner = !showRingBackground || isOutlineMode
+
     val ringFillColor by animateColorAsState(
-        targetValue = if (!showRingBackground) {
+        targetValue = if (isTransparentInner) {
             Color.Transparent
         } else if (model.isActive) {
             animatedAccent
@@ -398,7 +404,7 @@ fun ComplicationTileView(
         label = "complication_fill_${model.id}"
     )
 
-    val trackColor = if (!showRingBackground) {
+    val trackColor = if (isTransparentInner) {
         if (model.isActive) {
             animatedAccent.copy(alpha = 0.22f)
         } else {
@@ -410,7 +416,7 @@ fun ComplicationTileView(
         if (isDark) animatedAccent.copy(alpha = 0.20f) else animatedAccent.copy(alpha = 0.16f)
     }
 
-    val progressArcColor = if (!showRingBackground) {
+    val progressArcColor = if (isTransparentInner) {
         animatedAccent
     } else if (model.isActive) {
         Color.White
@@ -418,14 +424,14 @@ fun ComplicationTileView(
         animatedAccent
     }
 
-    val iconTint = if (!showRingBackground) {
+    val iconTint = if (isTransparentInner) {
         if (model.isActive) animatedAccent else (if (isDark) Color(0xFFCCCCCC) else Color(0xFF555555))
     } else if (model.isActive) {
         colorScheme.onPrimary
     } else {
         colorScheme.onSurface
     }
-    val sublineColor = if (!showRingBackground) {
+    val sublineColor = if (isTransparentInner) {
         if (model.isActive) animatedAccent else (if (isDark) Color(0xFFCCCCCC) else colorScheme.onSurfaceVariant)
     } else if (model.isActive) {
         colorScheme.onPrimary.copy(alpha = 0.92f)
@@ -475,7 +481,12 @@ fun ComplicationTileView(
             56.dp
         }
 
-        val strokeWidthDp: Dp = if (ringSize <= 48.dp) 3.dp else 4.dp
+        val complicationArcThicknessDp by PanelPreferences.complicationArcThicknessDp.collectAsState()
+        val strokeWidthDp: Dp = if (ringSize <= 48.dp) {
+            (complicationArcThicknessDp * 0.85f).coerceIn(1f, 8f).dp
+        } else {
+            complicationArcThicknessDp.coerceIn(1f, 8f).dp
+        }
         val hasInsideSubline = showInsideSubline &&
             model.sublinePlacement == ComplicationSublinePlacement.INSIDE_RING &&
             model.subline.isNotBlank()
@@ -532,8 +543,10 @@ fun ComplicationTileView(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Complication Container clipped to selected Complication Shape
-            val complicationShapeId by PanelPreferences.complicationTileShapeId.collectAsState()
+            // Complication Container clipped to selected Complication Shape (active vs inactive)
+            val activeComplicationShapeId by PanelPreferences.complicationTileShapeId.collectAsState()
+            val inactiveComplicationShapeId by PanelPreferences.inactiveComplicationTileShapeId.collectAsState()
+            val complicationShapeId = if (model.isActive) activeComplicationShapeId else inactiveComplicationShapeId
             val allShapes by QsShapeManager.allShapes.collectAsState()
             val shapeItem = remember(complicationShapeId, allShapes) {
                 QsShapeManager.getShapeItem(complicationShapeId)
@@ -547,6 +560,7 @@ fun ComplicationTileView(
             val trackComposePath = remember { Path() }
             val progressComposePath = remember { Path() }
 
+            val outlineStrokeColor = if (model.isActive) animatedAccent else inactiveTileColor
             val ringBoxModifier = if (!showRingBackground && !showProgressArc && ringSize < 40.dp) {
                 Modifier
                     .height(ringSize)
@@ -554,6 +568,13 @@ fun ComplicationTileView(
             } else {
                 Modifier
                     .size(ringSize)
+                    .then(
+                        if (isOutlineMode) {
+                            Modifier.insideShapeBorder(tileOutlineThicknessDp.dp, outlineStrokeColor, complicationShape)
+                        } else {
+                            Modifier
+                        }
+                    )
                     .clip(complicationShape)
                     .background(ringFillColor)
             }
@@ -579,7 +600,9 @@ fun ComplicationTileView(
                     Canvas(modifier = Modifier.fillMaxSize()) {
                         val strokePx = strokeWidthDp.toPx()
                         if (!strokePx.isFinite() || strokePx <= 0f) return@Canvas
-                        val extraMargin = if (shapeItem.id == "circle") 1.dp.toPx() else 2.25.dp.toPx()
+                        val baseMargin = if (shapeItem.id == "circle") 1.dp.toPx() else 2.25.dp.toPx()
+                        val outlineGap = if (isOutlineMode) tileOutlineThicknessDp.dp.toPx() + 1.5.dp.toPx() else 0f
+                        val extraMargin = maxOf(baseMargin, outlineGap)
                         val inset = strokePx / 2f + extraMargin
                         val drawW = size.width - inset * 2f
                         val drawH = size.height - inset * 2f

@@ -62,6 +62,7 @@ import com.example.data.QsSliderTarget
 import com.example.data.SavedTheme
 import com.example.ui.components.QsProgressSlider
 import com.example.ui.shape.QsShapeManager
+import com.example.ui.shape.insideShapeBorder
 import org.json.JSONObject
 
 /**
@@ -76,6 +77,7 @@ data class QsOverlaySurfaceConfig(
     val enabledTileShapeId: String = "circle",
     val disabledTileShapeId: String = "circle",
     val tileOutlineEnabled: Boolean = false,
+    val tileOutlineThicknessDp: Float = 1.2f,
     val showQsTileGradient: Boolean = false,
     val progressBarStyle: ProgressBarStyle = ProgressBarStyle.DEFAULT,
     val brightnessSliderStyle: ProgressBarStyle = ProgressBarStyle.DEFAULT,
@@ -146,6 +148,7 @@ data class QsOverlaySurfaceConfig(
             val enabledShape by PanelPreferences.enabledTileShapeId.collectAsState()
             val disabledShape by PanelPreferences.disabledTileShapeId.collectAsState()
             val tileOutline by PanelPreferences.tileOutlineEnabled.collectAsState()
+            val tileOutlineThickness by PanelPreferences.tileOutlineThicknessDp.collectAsState()
             val tileGradient by PanelPreferences.showQsTileGradient.collectAsState()
             val progressStyle by PanelPreferences.progressBarStyle.collectAsState()
             val brightnessStyle by PanelPreferences.brightnessSliderStyle.collectAsState()
@@ -206,6 +209,7 @@ data class QsOverlaySurfaceConfig(
                 enabledTileShapeId = enabledShape,
                 disabledTileShapeId = disabledShape,
                 tileOutlineEnabled = tileOutline,
+                tileOutlineThicknessDp = tileOutlineThickness,
                 showQsTileGradient = tileGradient,
                 progressBarStyle = progressStyle,
                 brightnessSliderStyle = brightnessStyle,
@@ -271,6 +275,7 @@ data class QsOverlaySurfaceConfig(
                     enabledTileShapeId = enabledShape,
                     disabledTileShapeId = disabledShape,
                     tileOutlineEnabled = json.optBoolean("tile_outline_enabled", false),
+                    tileOutlineThicknessDp = json.optDouble("tile_outline_thickness", 1.2).toFloat().coerceIn(0.5f, 6.0f),
                     showQsTileGradient = json.optBoolean("show_qs_tile_gradient", false),
                     progressBarStyle = ProgressBarStyle.entries.firstOrNull { it.id == progressStyleStr } ?: ProgressBarStyle.DEFAULT,
                     brightnessSliderStyle = ProgressBarStyle.entries.firstOrNull { it.id == brightnessStyleStr } ?: ProgressBarStyle.DEFAULT,
@@ -712,6 +717,7 @@ fun QsOverlaySurface(
                                     isActive = true,
                                     tileShape = enabledTileShape,
                                     hasOutline = config.tileOutlineEnabled,
+                                    outlineThicknessDp = config.tileOutlineThicknessDp.dp,
                                     hasGradient = config.showQsTileGradient,
                                     tileAccentColor = tileAccentColor,
                                     tileOnAccentColor = tileOnAccentColor,
@@ -732,6 +738,7 @@ fun QsOverlaySurface(
                                     isActive = false,
                                     tileShape = disabledTileShape,
                                     hasOutline = config.tileOutlineEnabled,
+                                    outlineThicknessDp = config.tileOutlineThicknessDp.dp,
                                     hasGradient = false,
                                     tileAccentColor = tileAccentColor,
                                     tileOnAccentColor = tileOnAccentColor,
@@ -855,6 +862,7 @@ fun QsOverlaySurface(
                                 isActive = true,
                                 tileShape = enabledTileShape,
                                 hasOutline = config.tileOutlineEnabled,
+                                outlineThicknessDp = config.tileOutlineThicknessDp.dp,
                                 hasGradient = config.showQsTileGradient,
                                 tileAccentColor = tileAccentColor,
                                 tileOnAccentColor = tileOnAccentColor,
@@ -874,6 +882,7 @@ fun QsOverlaySurface(
                                 isActive = false,
                                 tileShape = disabledTileShape,
                                 hasOutline = config.tileOutlineEnabled,
+                                outlineThicknessDp = config.tileOutlineThicknessDp.dp,
                                 hasGradient = false,
                                 tileAccentColor = tileAccentColor,
                                 tileOnAccentColor = tileOnAccentColor,
@@ -903,6 +912,7 @@ private fun SharedQsTileView(
     isActive: Boolean,
     tileShape: Shape,
     hasOutline: Boolean,
+    outlineThicknessDp: androidx.compose.ui.unit.Dp = 1.2.dp,
     hasGradient: Boolean,
     tileAccentColor: Color,
     tileOnAccentColor: Color,
@@ -932,9 +942,9 @@ private fun SharedQsTileView(
                 .then(
                     if (hasOutline) {
                         if (isActive && hasGradient) {
-                            Modifier.border(1.5.dp, gradientBrush, tileShape)
+                            Modifier.insideShapeBorder(outlineThicknessDp, gradientBrush, tileShape)
                         } else {
-                            Modifier.border(1.5.dp, outlineColor, tileShape)
+                            Modifier.insideShapeBorder(outlineThicknessDp, outlineColor, tileShape)
                         }
                     } else Modifier
                 )

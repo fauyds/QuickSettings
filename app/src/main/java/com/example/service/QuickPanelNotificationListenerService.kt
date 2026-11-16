@@ -1065,10 +1065,21 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
             val isStopwatchHint = n.category == Notification.CATEGORY_STOPWATCH ||
                 combinedMeta.contains("stopwatch") ||
                 combinedMeta.contains("секундомер")
+            val hasFinishedTimerPhrase = combinedMeta.contains("time's up") ||
+                combinedMeta.contains("times up") ||
+                combinedMeta.contains("timer finished") ||
+                combinedMeta.contains("timer expired") ||
+                combinedMeta.contains("время вышло")
+            val hasPlusOneAction = n.actions?.any { act ->
+                val t = act.title?.toString()?.lowercase() ?: ""
+                t.contains("+1") || t.contains("+ 1") || t.contains("add 1") || t.contains("1 min")
+            } == true
             val isTimerHint = isCountDown ||
                 combinedMeta.contains("timer") ||
                 combinedMeta.contains("таймер") ||
-                combinedMeta.contains("countdown")
+                combinedMeta.contains("countdown") ||
+                hasFinishedTimerPhrase ||
+                (n.category == Notification.CATEGORY_ALARM && hasPlusOneAction)
 
             val looksLikeClockTicker = (isClockPkg && (usesChronometer || isTimerHint || isStopwatchHint || parseClockTimeMs("$title $text") != null)) ||
                 (usesChronometer && (isTimerHint || isStopwatchHint))
@@ -1084,6 +1095,7 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                 var resetPending: PendingIntent? = null
                 var lapPending: PendingIntent? = null
                 var plusOnePending: PendingIntent? = null
+                var dismissPending: PendingIntent? = null
                 n.actions?.forEach { act ->
                     val actTitle = act.title?.toString()?.lowercase() ?: ""
                     when {
@@ -1091,41 +1103,60 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                             actTitle.contains("start") || actTitle.contains("пауза") -> {
                             if (togglePending == null) togglePending = act.actionIntent
                         }
-                        actTitle.contains("reset") || actTitle.contains("stop") ||
-                            actTitle.contains("delete") || actTitle.contains("cancel") ||
-                            actTitle.contains("сброс") -> {
+                        actTitle.contains("dismiss") || actTitle.contains("close") ||
+                            actTitle.contains("stop") || actTitle.contains("отключ") ||
+                            actTitle.contains("закрыть") || actTitle.contains("стоп") -> {
+                            if (dismissPending == null) dismissPending = act.actionIntent
+                            if (resetPending == null) resetPending = act.actionIntent
+                        }
+                        actTitle.contains("reset") || actTitle.contains("delete") ||
+                            actTitle.contains("cancel") || actTitle.contains("сброс") ||
+                            actTitle.contains("отмен") -> {
                             if (resetPending == null) resetPending = act.actionIntent
                         }
                         actTitle.contains("lap") || actTitle.contains("круг") -> {
                             if (lapPending == null) lapPending = act.actionIntent
                         }
-                        actTitle.contains("+1") || actTitle.contains("add 1") -> {
+                        actTitle.contains("+1") || actTitle.contains("+ 1") ||
+                            actTitle.contains("add 1") || actTitle.contains("1 min") ||
+                            actTitle.contains("+1 мин") || actTitle.contains("добавить 1") -> {
                             if (plusOnePending == null) plusOnePending = act.actionIntent
                         }
                     }
                 }
 
                 val parsedMs = parseClockTimeMs("$title $text")
+                val isTimer = isTimerHint && !isStopwatchHint
+                val isTimerFinished = isTimer && (
+                    hasFinishedTimerPhrase ||
+                        combinedMeta.contains("expired") ||
+                        combinedMeta.contains("finished") ||
+                        (dismissPending != null && plusOnePending != null) ||
+                        (isCountDown && n.`when` > 0L && n.`when` <= System.currentTimeMillis() && !combinedMeta.contains("paused") && !combinedMeta.contains("пауза")) ||
+                        (isCountDown && parsedMs == 0L)
+                    )
                 val ticker = com.example.system.ExternalClockTicker(
                     key = sbn.key ?: "${pkg}_${sbn.id}",
                     packageName = pkg,
                     appName = appName,
                     title = title,
                     text = text,
-                    isTimer = isTimerHint && !isStopwatchHint,
-                    isRunning = usesChronometer && !combinedMeta.contains("paused") && !combinedMeta.contains("пауза"),
-                    isCountDown = isCountDown || (isTimerHint && !isStopwatchHint),
+                    isTimer = isTimer,
+                    isRunning = usesChronometer && !isTimerFinished && !combinedMeta.contains("paused") && !combinedMeta.contains("пауза"),
+                    isCountDown = isCountDown || isTimer,
                     baseWhenEpochMs = n.`when`,
                     parsedDisplayMs = parsedMs,
                     toggleAction = togglePending,
                     resetAction = resetPending,
                     lapAction = lapPending,
                     plusOneMinAction = plusOnePending,
-                    contentIntent = n.contentIntent
+                    dismissAction = dismissPending,
+                    contentIntent = n.contentIntent,
+                    isFinished = isTimerFinished
                 )
 
                 if (ticker.isTimer) {
-                    if (foundTimer == null || ticker.isRunning) foundTimer = ticker
+                    if (foundTimer == null || ticker.isFinished || ticker.isRunning) foundTimer = ticker
                 } else if (isStopwatchHint || (usesChronometer && !isCountDown)) {
                     if (foundStopwatch == null || ticker.isRunning) foundStopwatch = ticker
                 }

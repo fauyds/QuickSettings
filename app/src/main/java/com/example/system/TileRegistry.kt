@@ -234,11 +234,8 @@ class TileRegistry(
                     if (currentList.none { it.tileId == "comp_storage" }) {
                         repository.insert(TileEntity("comp_storage", "Storage", "Internal", TileCategory.COMPLICATION.name, 26, isVisible = true, isQqsFavorite = false, settingsAction = Settings.ACTION_INTERNAL_STORAGE_SETTINGS))
                     }
-                    val compBrightnessTile = currentList.find { it.tileId == "comp_brightness" }
-                    if (compBrightnessTile == null) {
+                    if (currentList.none { it.tileId == "comp_brightness" }) {
                         repository.insert(TileEntity("comp_brightness", "Brightness", "Display", TileCategory.COMPLICATION.name, 27, isVisible = true, isQqsFavorite = false, settingsAction = Settings.ACTION_DISPLAY_SETTINGS))
-                    } else if (!compBrightnessTile.isVisible) {
-                        repository.insert(compBrightnessTile.copy(isVisible = true))
                     }
                     if (currentList.none { it.tileId == "comp_volume" }) {
                         repository.insert(TileEntity("comp_volume", "Volume", "Media", TileCategory.COMPLICATION.name, 28, isVisible = false, isQqsFavorite = false, settingsAction = Settings.ACTION_SOUND_SETTINGS))
@@ -511,7 +508,7 @@ class TileRegistry(
                     }
                     "comp_timer" -> {
                         val t = compSnap.timer
-                        Triple(if (t.isRunning) TileState.ACTIVE else TileState.INACTIVE, Icons.Default.Timer, t.detailedSubtitle)
+                        Triple(if (t.isRunning || t.isFinished) TileState.ACTIVE else TileState.INACTIVE, Icons.Default.Timer, t.detailedSubtitle)
                     }
                     "comp_stopwatch" -> {
                         val sw = compSnap.stopwatch
@@ -695,10 +692,10 @@ class TileRegistry(
                             progress = t.progress,
                             icon = Icons.Default.Timer,
                             accentColor = null,
-                            isActive = t.isRunning,
+                            isActive = t.isRunning || t.isFinished,
                             sublinePlacement = sublinePlacement,
                             layoutMode = ComplicationLayoutMode.ADAPTIVE,
-                            tapAction = ComplicationAction.Toggle(tileId = "timer_toggle", isActive = t.isRunning),
+                            tapAction = ComplicationAction.Toggle(tileId = "timer_toggle", isActive = t.isRunning || t.isFinished),
                             settingsAction = entity.settingsAction ?: Settings.ACTION_DATE_SETTINGS
                         )
                     }
@@ -919,7 +916,11 @@ class TileRegistry(
         scope.launch(Dispatchers.IO) {
             try {
                 val spec = tile.complicationSpec
-                if (config.isOverrideEnabled) {
+                if (tile.id == "comp_timer" && ComplicationDataHub.isTimerFinished()) {
+                    withContext(Dispatchers.Main) {
+                        ComplicationDataHub.dismissFinishedTimer(context)
+                    }
+                } else if (config.isOverrideEnabled) {
                     executeOverriddenTileAction(tile, config)
                 } else if (spec != null) {
                     withContext(Dispatchers.Main) {
@@ -1226,6 +1227,11 @@ class TileRegistry(
 
         if (tile.id == "screenrecord") {
             showScreenRecordSheet.value = true
+            return
+        }
+
+        if (tile.id == "comp_timer" && ComplicationDataHub.isTimerFinished()) {
+            ComplicationDataHub.addOneMinuteToTimer(context)
             return
         }
 

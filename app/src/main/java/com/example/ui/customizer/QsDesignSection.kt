@@ -137,8 +137,10 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.material.icons.filled.Speed
 import com.example.ui.shape.QsShapeItem
 import com.example.ui.shape.QsShapeManager
+import com.example.ui.shape.insideShapeBorder
 
 @Composable
 fun QsDesignSection(modifier: Modifier = Modifier) {
@@ -149,6 +151,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val currentEnabledTileShapeId by PanelPreferences.enabledTileShapeId.collectAsState()
     val currentDisabledTileShapeId by PanelPreferences.disabledTileShapeId.collectAsState()
     val tileOutlineEnabled by PanelPreferences.tileOutlineEnabled.collectAsState()
+    val tileOutlineThicknessDp by PanelPreferences.tileOutlineThicknessDp.collectAsState()
+    val complicationOutlineEnabled by PanelPreferences.complicationOutlineEnabled.collectAsState()
     val allShapes by QsShapeManager.allShapes.collectAsState()
     val showCarrier by PanelPreferences.showCarrier.collectAsState()
     val showCarrierDivider by PanelPreferences.showCarrierDivider.collectAsState()
@@ -905,6 +909,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
                 // Complication Tile Shape
                 val currentComplicationShapeId by PanelPreferences.complicationTileShapeId.collectAsState()
+                val currentInactiveComplicationShapeId by PanelPreferences.inactiveComplicationTileShapeId.collectAsState()
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
@@ -915,7 +920,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Choose the shape for complication widgets (battery, brightness, storage, etc.)",
+                            text = "Choose the shape when a complication is active/ON",
                             fontSize = 12.sp,
                             style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -970,6 +975,79 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                     labelColor = MaterialTheme.colorScheme.onSurface
                                 ),
                                 modifier = Modifier.testTag("complication_tile_shape_${shape.id}")
+                            )
+                        }
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                // Inactive Complication Shape
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = "Inactive Complication Shape",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Choose the shape when a complication is inactive/OFF",
+                            fontSize = 12.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        allShapes.forEach { shape ->
+                            val selected = (currentInactiveComplicationShapeId == shape.id)
+                            val chipShape = SegmentedButtonShapes.getShape(
+                                item = shape,
+                                items = allShapes,
+                                selectedItem = allShapes.firstOrNull { it.id == currentInactiveComplicationShapeId }
+                            )
+                            val composeShape = remember(shape.id) {
+                                QsShapeManager.getComposeShape(shape.id)
+                            }
+                            FilterChip(
+                                selected = selected,
+                                onClick = { PanelPreferences.setInactiveComplicationTileShapeId(context, shape.id) },
+                                shape = chipShape,
+                                border = null,
+                                label = {
+                                    Text(
+                                        text = shape.label,
+                                        fontSize = 12.sp,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                },
+                                leadingIcon = {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(16.dp)
+                                            .clip(composeShape)
+                                            .background(
+                                                if (selected) MaterialTheme.colorScheme.onPrimary
+                                                else MaterialTheme.colorScheme.primary
+                                            )
+                                    )
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+                                    containerColor = MaterialTheme.colorScheme.background,
+                                    labelColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                modifier = Modifier.testTag("inactive_complication_tile_shape_${shape.id}")
                             )
                         }
                     }
@@ -1038,6 +1116,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                         if (currentDisabledTileShapeId == customShape.id) {
                                             PanelPreferences.setDisabledTileShapeId(context, "circle")
                                         }
+                                        if (currentComplicationShapeId == customShape.id) {
+                                            PanelPreferences.setComplicationTileShapeId(context, "circle")
+                                        }
+                                        if (currentInactiveComplicationShapeId == customShape.id) {
+                                            PanelPreferences.setInactiveComplicationTileShapeId(context, "circle")
+                                        }
                                         Toast.makeText(context, "Removed shape \"${customShape.label}\"", Toast.LENGTH_SHORT).show()
                                     },
                                     modifier = Modifier.size(32.dp)
@@ -1060,8 +1144,125 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     }
     }
 
-    // 4. 1.2dp Tile Outline Card
+    // 3.5. Complication Arc Thickness Card
+    val complicationArcThicknessCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        val complicationArcThicknessDp by PanelPreferences.complicationArcThicknessDp.collectAsState()
+        val formattedThickness = remember(complicationArcThicknessDp) {
+            String.format(java.util.Locale.US, "%.1f dp", complicationArcThicknessDp)
+        }
+        PinnableCardWrapper("complication_arc_thickness_card", CustomizeCategory.QS_DESIGN, "Complication Arc Thickness") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("complication_arc_thickness_card")
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 20.dp, end = 20.dp, top = 36.dp, bottom = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .offset(y = (-16).dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                val badgeTrackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.22f)
+                                val badgeArcColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primaryContainer),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Canvas(modifier = Modifier.size(22.dp)) {
+                                        val strokePx = (complicationArcThicknessDp * 0.65f).coerceIn(1f, 5.5f).dp.toPx()
+                                        val inset = strokePx / 2f
+                                        val arcSize = androidx.compose.ui.geometry.Size(
+                                            width = size.width - inset * 2f,
+                                            height = size.height - inset * 2f
+                                        )
+                                        val topLeft = Offset(inset, inset)
+                                        drawArc(
+                                            color = badgeTrackColor,
+                                            startAngle = 0f,
+                                            sweepAngle = 360f,
+                                            useCenter = false,
+                                            topLeft = topLeft,
+                                            size = arcSize,
+                                            style = Stroke(width = strokePx, cap = StrokeCap.Round)
+                                        )
+                                        drawArc(
+                                            color = badgeArcColor,
+                                            startAngle = -90f,
+                                            sweepAngle = 250f,
+                                            useCenter = false,
+                                            topLeft = topLeft,
+                                            size = arcSize,
+                                            style = Stroke(width = strokePx, cap = StrokeCap.Round)
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = "Complication Arc Thickness",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    lineHeight = 17.sp,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            Text(
+                                text = formattedThickness,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 16.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        Text(
+                            text = "Adjust the stroke width of progress rings on complication tiles.",
+                            fontSize = 12.sp,
+                            lineHeight = 15.sp,
+                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Slider(
+                        value = complicationArcThicknessDp,
+                        onValueChange = { PanelPreferences.setComplicationArcThicknessDp(context, it) },
+                        valueRange = 1.0f..8.0f,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("complication_arc_thickness_slider"),
+                        colors = SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                            inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    // 4. Tile Outline Card
     val tileOutlineCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        val complicationShapeId by PanelPreferences.complicationTileShapeId.collectAsState()
+        val formattedThickness = remember(tileOutlineThicknessDp) {
+            String.format(java.util.Locale.US, "%.1f dp", tileOutlineThicknessDp)
+        }
         PinnableCardWrapper("tile_outline_card", CustomizeCategory.QS_DESIGN, "QS Tile Outline") {
             SettingsCard(
                 shape = shape,
@@ -1103,14 +1304,14 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text(
-                                text = "1.2dp Tile Outline",
+                                text = "Tile Outline",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Enable a 1.2dp stroke outline on Quick Settings tiles with the inner background hidden.",
+                                text = "Enable a stroke outline on Quick Settings tiles with the inner background hidden.",
                                 fontSize = 12.sp,
                                 style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1131,8 +1332,69 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     )
                 }
 
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                // Separate Complication Outline toggle
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.secondaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Speed,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "Complication Outline",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Show an inside stroke outline instead of a filled background on complications.",
+                                fontSize = 12.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Switch(
+                        checked = complicationOutlineEnabled,
+                        onCheckedChange = { PanelPreferences.setComplicationOutlineEnabled(context, it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                        ),
+                        modifier = Modifier.testTag("complication_outline_toggle")
+                    )
+                }
+
                 AnimatedVisibility(
-                    visible = tileOutlineEnabled,
+                    visible = tileOutlineEnabled || complicationOutlineEnabled,
                     enter = expandVertically() + fadeIn(),
                     exit = shrinkVertically() + fadeOut()
                 ) {
@@ -1142,75 +1404,190 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     val disabledComposeShape = remember(currentDisabledTileShapeId) {
                         QsShapeManager.getComposeShape(currentDisabledTileShapeId)
                     }
+                    val complicationComposeShape = remember(complicationShapeId) {
+                        QsShapeManager.getComposeShape(complicationShapeId)
+                    }
                     val isDark = isSystemInDarkTheme()
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                RoundedCornerShape(12.dp)
-                            )
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Active Tile Preview
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(52.dp)
-                                    .border(1.2.dp, MaterialTheme.colorScheme.primary, enabledComposeShape)
-                                    .clip(enabledComposeShape)
-                                    .background(Color.Transparent),
-                                contentAlignment = Alignment.Center
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Wifi,
-                                    contentDescription = "Active Tile Preview",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(24.dp)
+                                Text(
+                                    text = "Outline Thickness",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = formattedThickness,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             }
-                            Text(
-                                text = "Active (1.2dp)",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary
+                            Slider(
+                                value = tileOutlineThicknessDp,
+                                onValueChange = { PanelPreferences.setTileOutlineThicknessDp(context, it) },
+                                valueRange = 0.5f..6.0f,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("tile_outline_thickness_slider"),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                )
                             )
                         }
 
-                        // Inactive Tile Preview
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            val inactiveOutline = if (isDark) Color(0xFF262B30) else Color.White
-                            val inactiveIconTint = if (isDark) Color.White.copy(alpha = 0.85f) else Color(0xFF1E293B)
-                            Box(
-                                modifier = Modifier
-                                    .size(52.dp)
-                                    .border(1.2.dp, inactiveOutline, disabledComposeShape)
-                                    .clip(disabledComposeShape)
-                                    .background(Color.Transparent),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Wifi,
-                                    contentDescription = "Inactive Tile Preview",
-                                    tint = inactiveIconTint,
-                                    modifier = Modifier.size(24.dp)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                    RoundedCornerShape(12.dp)
                                 )
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (tileOutlineEnabled) {
+                                // Active Tile Preview
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(52.dp)
+                                            .clip(enabledComposeShape)
+                                            .background(Color.Transparent)
+                                            .insideShapeBorder(
+                                                tileOutlineThicknessDp.dp,
+                                                MaterialTheme.colorScheme.primary,
+                                                enabledComposeShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Wifi,
+                                            contentDescription = "Active Tile Preview",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                    Text(
+                                        text = "Active ($formattedThickness)",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+
+                                // Inactive Tile Preview
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    val inactiveOutline = if (isDark) Color(0xFF262B30) else Color.White
+                                    val inactiveIconTint = if (isDark) Color.White.copy(alpha = 0.85f) else Color(0xFF1E293B)
+                                    Box(
+                                        modifier = Modifier
+                                            .size(52.dp)
+                                            .clip(disabledComposeShape)
+                                            .background(Color.Transparent)
+                                            .insideShapeBorder(
+                                                tileOutlineThicknessDp.dp,
+                                                inactiveOutline,
+                                                disabledComposeShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Wifi,
+                                            contentDescription = "Inactive Tile Preview",
+                                            tint = inactiveIconTint,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                    Text(
+                                        text = "Inactive ($formattedThickness)",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
-                            Text(
-                                text = "Inactive (1.2dp)",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+
+                            if (complicationOutlineEnabled) {
+                                // Complication Outline Preview
+                                val previewPrimary = MaterialTheme.colorScheme.primary
+                                val previewTrack = previewPrimary.copy(alpha = 0.22f)
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(52.dp)
+                                            .clip(complicationComposeShape)
+                                            .background(Color.Transparent)
+                                            .insideShapeBorder(
+                                                tileOutlineThicknessDp.dp,
+                                                previewPrimary,
+                                                complicationComposeShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Canvas(modifier = Modifier.fillMaxSize()) {
+                                            val insetFromOutline = tileOutlineThicknessDp.dp.toPx() + 1.5.dp.toPx()
+                                            val arcStrokePx = 3.dp.toPx()
+                                            val totalInset = insetFromOutline + arcStrokePx / 2f
+                                            val arcSide = (minOf(size.width, size.height) - totalInset * 2f).coerceAtLeast(4f)
+                                            val topLeft = Offset((size.width - arcSide) / 2f, (size.height - arcSide) / 2f)
+                                            val arcSize = androidx.compose.ui.geometry.Size(arcSide, arcSide)
+                                            drawArc(
+                                                color = previewTrack,
+                                                startAngle = 0f,
+                                                sweepAngle = 360f,
+                                                useCenter = false,
+                                                topLeft = topLeft,
+                                                size = arcSize,
+                                                style = Stroke(width = arcStrokePx, cap = StrokeCap.Round)
+                                            )
+                                            drawArc(
+                                                color = previewPrimary,
+                                                startAngle = -90f,
+                                                sweepAngle = 240f,
+                                                useCenter = false,
+                                                topLeft = topLeft,
+                                                size = arcSize,
+                                                style = Stroke(width = arcStrokePx, cap = StrokeCap.Round)
+                                            )
+                                        }
+                                        Icon(
+                                            imageVector = Icons.Default.Speed,
+                                            contentDescription = "Complication Outline Preview",
+                                            tint = previewPrimary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    Text(
+                                        text = "Complication ($formattedThickness)",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = previewPrimary
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -4517,6 +4894,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         "enable_qqs_horizontal_scroll_card" to enableQqsHorizontalScrollCard,
         "legacy_tile_shapes_support_card" to legacyTileShapesSupportCard,
         "tile_shape_selection_card" to tileShapeSelectionCard,
+        "complication_arc_thickness_card" to complicationArcThicknessCard,
         "tile_outline_card" to tileOutlineCard,
         "qs_tile_gradient_card" to qsTileGradientCard,
         "disable_clear_all_label_card" to disableClearAllLabelCard,
@@ -4609,6 +4987,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         if (!hiddenDesignIds.contains("enable_qqs_horizontal_scroll_card") && !pinnedIds.contains("enable_qqs_horizontal_scroll_card")) unpinnedTileShapes.add(enableQqsHorizontalScrollCard)
         if (!hiddenDesignIds.contains("legacy_tile_shapes_support_card") && !pinnedIds.contains("legacy_tile_shapes_support_card")) unpinnedTileShapes.add(legacyTileShapesSupportCard)
         if (!hiddenDesignIds.contains("tile_shape_selection_card") && !pinnedIds.contains("tile_shape_selection_card")) unpinnedTileShapes.add(tileShapeSelectionCard)
+        if (!hiddenDesignIds.contains("complication_arc_thickness_card") && !pinnedIds.contains("complication_arc_thickness_card")) unpinnedTileShapes.add(complicationArcThicknessCard)
         if (!hiddenDesignIds.contains("tile_outline_card") && !pinnedIds.contains("tile_outline_card")) unpinnedTileShapes.add(tileOutlineCard)
         if (!hiddenDesignIds.contains("qs_tile_gradient_card") && !pinnedIds.contains("qs_tile_gradient_card")) unpinnedTileShapes.add(qsTileGradientCard)
         if (!hiddenDesignIds.contains("disable_clear_all_label_card") && !pinnedIds.contains("disable_clear_all_label_card")) unpinnedTileShapes.add(disableClearAllLabelCard)

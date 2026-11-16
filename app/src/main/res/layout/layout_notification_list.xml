@@ -174,7 +174,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:clipChildren="true"
-        android:clipToPadding="false"
+        android:clipToPadding="true"
         android:overScrollMode="never"
         android:scrollbars="vertical"
         android:fadeScrollbars="true" />

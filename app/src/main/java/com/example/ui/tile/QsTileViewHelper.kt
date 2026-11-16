@@ -180,7 +180,7 @@ object QsTileViewHelper {
                         TileState.UNAVAILABLE -> if (isDark) Color.argb((255 * 0.4f).toInt(), 38, 43, 48) else Color.argb((255 * 0.5f).toInt(), 255, 255, 255)
                     }
                     shapeDrawable.setColor(Color.TRANSPARENT)
-                    shapeDrawable.strokeWidth = 1.2f * density
+                    shapeDrawable.strokeWidth = PanelPreferences.tileOutlineThicknessDp.value * density
                     shapeDrawable.strokeColor = outlineColor
                     if (showQsTileGradient && isActive) {
                         shapeDrawable.gradientColors = intArrayOf(primaryAccent, tertiaryAccent)

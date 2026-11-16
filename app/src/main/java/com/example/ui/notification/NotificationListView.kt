@@ -133,7 +133,7 @@ class NotificationListView @JvmOverloads constructor(
         rvNotifications.layoutManager = LinearLayoutManager(context, RecyclerView.VERTICAL, false)
         rvNotifications.isNestedScrollingEnabled = false
         rvNotifications.overScrollMode = View.OVER_SCROLL_NEVER
-        rvNotifications.clipToPadding = false
+        rvNotifications.clipToPadding = true
         rvNotifications.clipChildren = true
         this.clipToPadding = true
         this.clipChildren = true

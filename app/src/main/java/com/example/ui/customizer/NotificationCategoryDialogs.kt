@@ -29,6 +29,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -249,7 +250,7 @@ fun NotificationCategoryEditorDialog(
                                             color = colorScheme.onSurface
                                         )
                                         Text(
-                                            text = selectedIcon.label,
+                                            text = "${selectedIcon.label} • ${selectedIcon.group}",
                                             fontSize = 11.5.sp,
                                             color = colorScheme.onSurfaceVariant
                                         )
@@ -265,12 +266,15 @@ fun NotificationCategoryEditorDialog(
                                 }
                             }
 
-                            // Quick inline icon strip
+                            // Quick inline icon strip (pinned selected icon + curated defaults)
+                            val quickStripIcons = remember(selectedIcon) {
+                                (listOf(selectedIcon) + NotificationCategoryIcon.quickEntries).distinctBy { it.id }
+                            }
                             LazyRow(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                items(NotificationCategoryIcon.entries) { iconEntry ->
+                                items(quickStripIcons, key = { it.id }) { iconEntry ->
                                     val isSel = iconEntry.id == selectedIconId
                                     Box(
                                         modifier = Modifier
@@ -521,13 +525,24 @@ private fun CategoryIconPickerModal(
     val dialogBg = com.example.ui.theme.getSettingsScreenBackgroundColor(isDark)
     val cardBg = com.example.ui.theme.getSettingsCardBackgroundColor(isDark)
 
-    val filteredIcons = remember(searchQuery, selectedGroup) {
-        NotificationCategoryIcon.entries.filter { entry ->
+    val allIcons = NotificationCategoryIcon.entries
+    val filteredIcons = remember(searchQuery, selectedGroup, allIcons) {
+        val query = searchQuery.trim()
+        allIcons.filter { entry ->
             val matchesGroup = selectedGroup == "All" || entry.group == selectedGroup
-            val matchesSearch = searchQuery.isBlank() ||
-                entry.label.contains(searchQuery, ignoreCase = true) ||
-                entry.group.contains(searchQuery, ignoreCase = true)
+            val matchesSearch = query.isEmpty() ||
+                entry.label.contains(query, ignoreCase = true) ||
+                entry.group.contains(query, ignoreCase = true) ||
+                entry.keywords.contains(query, ignoreCase = true) ||
+                entry.id.contains(query, ignoreCase = true)
             matchesGroup && matchesSearch
+        }
+    }
+
+    val gridState = rememberLazyGridState()
+    LaunchedEffect(selectedGroup, searchQuery) {
+        if (filteredIcons.isNotEmpty()) {
+            gridState.scrollToItem(0)
         }
     }
 
@@ -538,7 +553,7 @@ private fun CategoryIconPickerModal(
         Surface(
             modifier = Modifier
                 .fillMaxWidth(0.92f)
-                .fillMaxHeight(0.80f)
+                .fillMaxHeight(0.84f)
                 .clip(RoundedCornerShape(24.dp))
                 .testTag("category_icon_picker_modal"),
             color = dialogBg
@@ -553,12 +568,19 @@ private fun CategoryIconPickerModal(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Choose Category Icon",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = colorScheme.onSurface
-                    )
+                    Column {
+                        Text(
+                            text = "Google Icon Library",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = colorScheme.onSurface
+                        )
+                        Text(
+                            text = "${filteredIcons.size} of ${allIcons.size} icons",
+                            fontSize = 11.5.sp,
+                            color = colorScheme.onSurfaceVariant
+                        )
+                    }
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Default.Close, contentDescription = "Close", tint = colorScheme.onSurfaceVariant)
                     }
@@ -569,11 +591,31 @@ private fun CategoryIconPickerModal(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search icons...", fontSize = 12.5.sp) },
+                    placeholder = {
+                        Text(
+                            text = "Search ${allIcons.size} icons (name, keyword, group)...",
+                            fontSize = 12.5.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Clear search",
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    },
                     singleLine = true,
                     shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("field_search_category_icon")
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -587,7 +629,9 @@ private fun CategoryIconPickerModal(
                         Surface(
                             shape = CircleShape,
                             color = if (isSel) colorScheme.primary else cardBg,
-                            modifier = Modifier.clickable { selectedGroup = group }
+                            modifier = Modifier
+                                .clickable { selectedGroup = group }
+                                .testTag("icon_group_${group.lowercase()}")
                         ) {
                             Text(
                                 text = group,
@@ -602,44 +646,74 @@ private fun CategoryIconPickerModal(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(4),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    items(filteredIcons, key = { it.id }) { entry ->
-                        val isSel = entry.id == selectedIconId
+                if (filteredIcons.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Column(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(if (isSel) colorScheme.primaryContainer else cardBg)
-                                .border(
-                                    width = if (isSel) 1.5.dp else 0.dp,
-                                    color = if (isSel) colorScheme.primary else Color.Transparent,
-                                    shape = RoundedCornerShape(14.dp)
-                                )
-                                .clickable { onSelectIcon(entry) }
-                                .padding(vertical = 10.dp, horizontal = 6.dp)
-                                .testTag("modal_icon_${entry.id}"),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(
-                                imageVector = entry.imageVector,
-                                contentDescription = entry.label,
-                                tint = if (isSel) colorScheme.onPrimaryContainer else colorScheme.onSurface,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = entry.label,
-                                fontSize = 10.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                textAlign = TextAlign.Center,
-                                color = if (isSel) colorScheme.onPrimaryContainer else colorScheme.onSurfaceVariant
+                                text = "No icons match \"$searchQuery\"",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = colorScheme.onSurfaceVariant
                             )
+                            TextButton(
+                                onClick = {
+                                    searchQuery = ""
+                                    selectedGroup = "All"
+                                }
+                            ) {
+                                Text("Reset Filters")
+                            }
+                        }
+                    }
+                } else {
+                    LazyVerticalGrid(
+                        state = gridState,
+                        columns = GridCells.Fixed(4),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        items(filteredIcons, key = { it.id }) { entry ->
+                            val isSel = entry.id == selectedIconId
+                            Column(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(if (isSel) colorScheme.primaryContainer else cardBg)
+                                    .border(
+                                        width = if (isSel) 1.5.dp else 0.dp,
+                                        color = if (isSel) colorScheme.primary else Color.Transparent,
+                                        shape = RoundedCornerShape(14.dp)
+                                    )
+                                    .clickable { onSelectIcon(entry) }
+                                    .padding(vertical = 10.dp, horizontal = 6.dp)
+                                    .testTag("modal_icon_${entry.id}"),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = entry.imageVector,
+                                    contentDescription = entry.label,
+                                    tint = if (isSel) colorScheme.onPrimaryContainer else colorScheme.onSurface,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = entry.label,
+                                    fontSize = 10.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center,
+                                    color = if (isSel) colorScheme.onPrimaryContainer else colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }

@@ -591,42 +591,6 @@ class ScreenRecordService : Service() {
         outputPfd = null
         outputFile = null
 
-        // Android 10+ (API 29+): Write directly into public MediaStore Movies/QuickPanel_Recordings
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val values = ContentValues().apply {
-                put(MediaStore.Video.Media.DISPLAY_NAME, fileName)
-                put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-                put(MediaStore.Video.Media.RELATIVE_PATH, "${Environment.DIRECTORY_MOVIES}/QuickPanel_Recordings")
-                put(MediaStore.Video.Media.DATE_ADDED, System.currentTimeMillis() / 1000L)
-                put(MediaStore.Video.Media.DATE_TAKEN, System.currentTimeMillis())
-                put(MediaStore.Video.Media.IS_PENDING, 1)
-            }
-            val collection = MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-            try {
-                val uri = contentResolver.insert(collection, values)
-                    ?: contentResolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)
-                if (uri != null) {
-                    val pfd = try {
-                        contentResolver.openFileDescriptor(uri, "rw")
-                    } catch (_: Exception) {
-                        contentResolver.openFileDescriptor(uri, "w")
-                    }
-                    if (pfd != null) {
-                        outputMediaUri = uri
-                        outputPfd = pfd
-                        return true
-                    } else {
-                        try {
-                            contentResolver.delete(uri, null, null)
-                        } catch (_: Exception) {}
-                    }
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "MediaStore output creation failed, falling back to File: ${e.message}", e)
-            }
-        }
-
-        // Legacy (< API 29) or MediaStore fallback
         val createdFile = createLegacyOutputFile(fileName)
         if (createdFile != null) {
             outputFile = createdFile
@@ -775,64 +739,71 @@ class ScreenRecordService : Service() {
         restoreShowTouchesIfNeeded()
         removeForegroundNotification()
 
-        val uri = outputMediaUri
         val file = outputFile
         val displayName = outputDisplayName ?: "ScreenRecord.mp4"
         outputMediaUri = null
         outputFile = null
         outputDisplayName = null
 
-        if (uri != null) {
-            val savedSize = queryUriSizeBytes(uri)
-            if (savedSize > 0L) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    try {
-                        val publishValues = ContentValues().apply {
-                            put(MediaStore.Video.Media.IS_PENDING, 0)
-                        }
-                        contentResolver.update(uri, publishValues, null, null)
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Failed clearing IS_PENDING: ${e.message}")
-                    }
-                }
-                _lastSavedFilePath.value = uri.toString()
-                showSavedNotification(uri, displayName)
-                if (showResultToast) {
-                    showToast("Screen recording saved to Movies/QuickPanel_Recordings")
-                }
+        if (file != null && file.exists() && file.length() > 0L) {
+            _lastSavedFilePath.value = file.absolutePath
+            val scannedUri = insertFileIntoMediaStore(file, displayName)
+            if (scannedUri != null) {
+                showSavedNotification(scannedUri, displayName)
             } else {
-                try {
-                    contentResolver.delete(uri, null, null)
-                } catch (_: Exception) {}
-                if (wasRecordingActive && showResultToast) {
-                    showToast("Screen recording failed to save (empty recording)")
-                }
-            }
-        } else if (file != null) {
-            if (file.exists() && file.length() > 0L) {
-                _lastSavedFilePath.value = file.absolutePath
                 MediaScannerConnection.scanFile(
                     this,
                     arrayOf(file.absolutePath),
                     arrayOf("video/mp4")
-                ) { path, scannedUri ->
-                    Log.d(TAG, "Scanned $path into MediaStore: $scannedUri")
+                ) { _, uri ->
                     mainHandler.post {
-                        showSavedNotification(scannedUri, file.name)
+                        showSavedNotification(uri, displayName)
                     }
                 }
-                if (showResultToast) {
-                    showToast("Screen recording saved: ${file.name}")
-                }
-            } else {
-                try {
-                    if (file.exists()) file.delete()
-                } catch (_: Exception) {}
-                if (wasRecordingActive && showResultToast) {
-                    showToast("Screen recording failed to save (empty recording)")
-                }
+            }
+            if (showResultToast) {
+                showToast("Screen recording saved to Movies/QuickPanel_Recordings")
+            }
+        } else {
+            if (file != null && file.exists()) {
+                try { file.delete() } catch (_: Exception) {}
+            }
+            if (wasRecordingActive && showResultToast) {
+                showToast("Screen recording failed to save (empty recording)")
             }
         }
+    }
+
+    private fun insertFileIntoMediaStore(sourceFile: File, fileName: String): Uri? {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val values = ContentValues().apply {
+                put(MediaStore.Video.Media.DISPLAY_NAME, fileName)
+                put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+                put(MediaStore.Video.Media.RELATIVE_PATH, "${Environment.DIRECTORY_MOVIES}/QuickPanel_Recordings")
+                put(MediaStore.Video.Media.DATE_ADDED, System.currentTimeMillis() / 1000L)
+                put(MediaStore.Video.Media.DATE_TAKEN, System.currentTimeMillis())
+                put(MediaStore.Video.Media.IS_PENDING, 1)
+            }
+            val collection = MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+            try {
+                val uri = contentResolver.insert(collection, values)
+                if (uri != null) {
+                    contentResolver.openOutputStream(uri)?.use { output ->
+                        sourceFile.inputStream().use { input ->
+                            input.copyTo(output)
+                        }
+                    }
+                    val publishValues = ContentValues().apply {
+                        put(MediaStore.Video.Media.IS_PENDING, 0)
+                    }
+                    contentResolver.update(uri, publishValues, null, null)
+                    return uri
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "MediaStore insert from file failed: ${e.message}")
+            }
+        }
+        return null
     }
 
     private fun queryUriSizeBytes(uri: Uri): Long {

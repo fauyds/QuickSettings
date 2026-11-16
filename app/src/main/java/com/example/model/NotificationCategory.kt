@@ -31,55 +31,110 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.R
 
-enum class NotificationCategoryIcon(
+@Immutable
+class NotificationCategoryIcon(
     val id: String,
     val label: String,
     val group: String,
-    val imageVector: ImageVector,
-    @param:DrawableRes val drawableRes: Int
+    private val vectorProvider: () -> ImageVector,
+    @param:DrawableRes val drawableRes: Int? = null,
+    val keywords: String = ""
 ) {
-    LABEL("label", "General", "General", Icons.Default.Label, R.drawable.ic_cat_label),
-    CHAT("chat", "Messages", "Communication", Icons.Default.Chat, R.drawable.ic_cat_chat),
-    EMAIL("email", "Email", "Communication", Icons.Default.Email, R.drawable.ic_cat_email),
-    GROUP("group", "Social", "Communication", Icons.Default.Group, R.drawable.ic_cat_group),
-    WORK("work", "Work", "Productivity", Icons.Default.Work, R.drawable.ic_cat_work),
-    CALENDAR("calendar", "Events", "Productivity", Icons.Default.Event, R.drawable.ic_cat_calendar),
-    PRIORITY("priority", "Priority", "Alerts", Icons.Default.PriorityHigh, R.drawable.ic_cat_priority),
-    ALERTS("alerts", "Alerts", "Alerts", Icons.Default.NotificationsActive, R.drawable.ic_notif_bell),
-    STAR("star", "Favorites", "General", Icons.Default.Star, R.drawable.ic_cat_star),
-    WALLET("wallet", "Finance", "Lifestyle", Icons.Default.AccountBalanceWallet, R.drawable.ic_cat_wallet),
-    SHOPPING("shopping", "Shopping", "Lifestyle", Icons.Default.ShoppingBag, R.drawable.ic_cat_shopping),
-    DELIVERY("delivery", "Delivery", "Lifestyle", Icons.Default.LocalShipping, R.drawable.ic_cat_delivery),
-    FOOD("food", "Food", "Lifestyle", Icons.Default.Restaurant, R.drawable.ic_cat_food),
-    FLIGHT("flight", "Travel", "Lifestyle", Icons.Default.Flight, R.drawable.ic_qs_flight),
-    MUSIC("music", "Music", "Media", Icons.Default.MusicNote, R.drawable.ic_media_music_note),
-    MOVIE("movie", "Media", "Media", Icons.Default.Movie, R.drawable.ic_cat_movie),
-    GAMING("gaming", "Gaming", "Media", Icons.Default.SportsEsports, R.drawable.ic_cat_gaming),
-    NEWS("news", "News", "Productivity", Icons.Default.Article, R.drawable.ic_cat_news),
-    HEALTH("health", "Health", "Lifestyle", Icons.Default.Favorite, R.drawable.ic_heart_filled),
-    SECURITY("security", "Security", "System", Icons.Default.Security, R.drawable.ic_cat_security),
-    SETTINGS("settings", "System", "System", Icons.Default.Settings, R.drawable.ic_qs_settings),
-    CLOUD("cloud", "Cloud", "System", Icons.Default.Cloud, R.drawable.ic_cat_cloud),
-    SCHOOL("school", "Study", "Productivity", Icons.Default.School, R.drawable.ic_cat_school),
-    HOME("home", "Home", "General", Icons.Default.Home, R.drawable.ic_cat_home),
-    FOLDER("folder", "Other", "General", Icons.Default.Folder, R.drawable.ic_cat_folder);
+    val imageVector: ImageVector
+        get() = vectorProvider()
+
+    override fun equals(other: Any?): Boolean =
+        this === other || (other is NotificationCategoryIcon && id == other.id)
+
+    override fun hashCode(): Int = id.hashCode()
+
+    override fun toString(): String = "NotificationCategoryIcon(id=$id, label=$label, group=$group)"
 
     companion object {
+        val LABEL = NotificationCategoryIcon("label", "General", "General", { Icons.Filled.Label }, R.drawable.ic_cat_label, "tag category default")
+        val CHAT = NotificationCategoryIcon("chat", "Messages", "Communication", { Icons.Filled.Chat }, R.drawable.ic_cat_chat, "sms text talk")
+        val EMAIL = NotificationCategoryIcon("email", "Email", "Communication", { Icons.Filled.Email }, R.drawable.ic_cat_email, "mail inbox letter")
+        val GROUP = NotificationCategoryIcon("group", "Social", "Social", { Icons.Filled.Group }, R.drawable.ic_cat_group, "people friends community")
+        val WORK = NotificationCategoryIcon("work", "Work", "Work", { Icons.Filled.Work }, R.drawable.ic_cat_work, "office job business briefcase")
+        val CALENDAR = NotificationCategoryIcon("calendar", "Events", "Work", { Icons.Filled.Event }, R.drawable.ic_cat_calendar, "date schedule meeting")
+        val PRIORITY = NotificationCategoryIcon("priority", "Priority", "Alerts", { Icons.Filled.PriorityHigh }, R.drawable.ic_cat_priority, "urgent important")
+        val ALERTS = NotificationCategoryIcon("alerts", "Alerts", "Alerts", { Icons.Filled.NotificationsActive }, R.drawable.ic_notif_bell, "bell alarm ring")
+        val STAR = NotificationCategoryIcon("star", "Favorites", "General", { Icons.Filled.Star }, R.drawable.ic_cat_star, "favorite bookmark")
+        val WALLET = NotificationCategoryIcon("wallet", "Finance", "Finance", { Icons.Filled.AccountBalanceWallet }, R.drawable.ic_cat_wallet, "money cash pay")
+        val SHOPPING = NotificationCategoryIcon("shopping", "Shopping", "Shopping", { Icons.Filled.ShoppingBag }, R.drawable.ic_cat_shopping, "store retail buy")
+        val DELIVERY = NotificationCategoryIcon("delivery", "Delivery", "Shopping", { Icons.Filled.LocalShipping }, R.drawable.ic_cat_delivery, "package truck parcel")
+        val FOOD = NotificationCategoryIcon("food", "Food", "Food", { Icons.Filled.Restaurant }, R.drawable.ic_cat_food, "eat dining meal")
+        val FLIGHT = NotificationCategoryIcon("flight", "Travel", "Travel", { Icons.Filled.Flight }, R.drawable.ic_qs_flight, "airplane trip airport")
+        val MUSIC = NotificationCategoryIcon("music", "Music", "Media", { Icons.Filled.MusicNote }, R.drawable.ic_media_music_note, "audio song tune")
+        val MOVIE = NotificationCategoryIcon("movie", "Media", "Media", { Icons.Filled.Movie }, R.drawable.ic_cat_movie, "film video cinema")
+        val GAMING = NotificationCategoryIcon("gaming", "Gaming", "Gaming", { Icons.Filled.SportsEsports }, R.drawable.ic_cat_gaming, "controller game play")
+        val NEWS = NotificationCategoryIcon("news", "News", "Work", { Icons.Filled.Article }, R.drawable.ic_cat_news, "press blog reading")
+        val HEALTH = NotificationCategoryIcon("health", "Health", "Health", { Icons.Filled.Favorite }, R.drawable.ic_heart_filled, "heart wellness fitness")
+        val SECURITY = NotificationCategoryIcon("security", "Security", "Alerts", { Icons.Filled.Security }, R.drawable.ic_cat_security, "shield protect")
+        val SETTINGS = NotificationCategoryIcon("settings", "System", "System", { Icons.Filled.Settings }, R.drawable.ic_qs_settings, "gear config prefs")
+        val CLOUD = NotificationCategoryIcon("cloud", "Cloud", "System", { Icons.Filled.Cloud }, R.drawable.ic_cat_cloud, "sync backup drive")
+        val SCHOOL = NotificationCategoryIcon("school", "Study", "Education", { Icons.Filled.School }, R.drawable.ic_cat_school, "learn college university")
+        val HOME = NotificationCategoryIcon("home", "Home", "Home", { Icons.Filled.Home }, R.drawable.ic_cat_home, "house smart living")
+        val FOLDER = NotificationCategoryIcon("folder", "Other", "General", { Icons.Filled.Folder }, R.drawable.ic_cat_folder, "directory files")
+
+        val quickEntries: List<NotificationCategoryIcon> = listOf(
+            LABEL, CHAT, EMAIL, GROUP, WORK, CALENDAR, PRIORITY, ALERTS, STAR,
+            WALLET, SHOPPING, DELIVERY, FOOD, FLIGHT, MUSIC, MOVIE, GAMING,
+            NEWS, HEALTH, SECURITY, SETTINGS, CLOUD, SCHOOL, HOME, FOLDER
+        )
+
+        val entries: List<NotificationCategoryIcon> by lazy {
+            buildList {
+                addAll(quickEntries)
+                addAll(notificationCategoryIconsPart1())
+                addAll(notificationCategoryIconsPart2())
+                addAll(notificationCategoryIconsPart3())
+            }.distinctBy { it.id }
+        }
+
+        private val byId: Map<String, NotificationCategoryIcon> by lazy {
+            entries.associateBy { it.id.lowercase() }
+        }
+
         val groups: List<String> = listOf(
             "All",
             "Communication",
-            "Productivity",
-            "Lifestyle",
+            "Social",
+            "Work",
+            "Finance",
+            "Shopping",
+            "Food",
+            "Travel",
             "Media",
+            "Gaming",
+            "Health",
+            "Home",
             "Alerts",
             "System",
+            "Education",
+            "Weather",
             "General"
         )
 
         fun fromId(id: String?): NotificationCategoryIcon =
-            entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: LABEL
+            if (id.isNullOrBlank()) LABEL else byId[id.lowercase()] ?: LABEL
     }
 }
+
+internal fun googleCatIcon(
+    id: String,
+    label: String,
+    group: String,
+    keywords: String = "",
+    vectorProvider: () -> ImageVector
+): NotificationCategoryIcon = NotificationCategoryIcon(
+    id = id,
+    label = label,
+    group = group,
+    vectorProvider = vectorProvider,
+    drawableRes = null,
+    keywords = keywords
+)
 
 @Immutable
 data class NotificationCategory(

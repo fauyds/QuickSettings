@@ -12,11 +12,21 @@ import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import androidx.annotation.DrawableRes
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.asComposePath
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.core.graphics.PathParser
 import com.example.R
@@ -164,9 +174,12 @@ class QsPathDrawable(
             canvas.drawPath(scaledPath, paint)
         }
         if (strokeWidth > 0f && strokeColor != Color.TRANSPARENT) {
-            strokePaint.strokeWidth = strokeWidth
+            canvas.save()
+            canvas.clipPath(scaledPath)
+            strokePaint.strokeWidth = strokeWidth * 2f
             strokePaint.color = strokeColor
             canvas.drawPath(scaledPath, strokePaint)
+            canvas.restore()
         }
     }
 
@@ -182,6 +195,56 @@ class QsPathDrawable(
 
     @Deprecated("Deprecated in Java")
     override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+}
+
+/**
+ * Draws a stroke strictly inside [shape]'s bounds rather than centered across the boundary.
+ */
+fun Modifier.insideShapeBorder(
+    width: Dp,
+    color: androidx.compose.ui.graphics.Color,
+    shape: Shape
+): Modifier = insideShapeBorder(width = width, brush = SolidColor(color), shape = shape)
+
+fun Modifier.insideShapeBorder(
+    width: Dp,
+    brush: Brush,
+    shape: Shape
+): Modifier = this.drawWithContent {
+    drawContent()
+    val strokePx = width.toPx()
+    if (strokePx <= 0f || size.width <= 0f || size.height <= 0f) return@drawWithContent
+    val clampedStroke = strokePx.coerceAtMost(minOf(size.width, size.height) / 2f)
+    when (val outline = shape.createOutline(size, layoutDirection, this)) {
+        is Outline.Rectangle -> {
+            val half = clampedStroke / 2f
+            drawRect(
+                brush = brush,
+                topLeft = Offset(half, half),
+                size = Size(size.width - clampedStroke, size.height - clampedStroke),
+                style = Stroke(width = clampedStroke)
+            )
+        }
+        is Outline.Rounded -> {
+            val rrPath = androidx.compose.ui.graphics.Path().apply { addRoundRect(outline.roundRect) }
+            clipPath(rrPath) {
+                drawPath(
+                    path = rrPath,
+                    brush = brush,
+                    style = Stroke(width = clampedStroke * 2f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                )
+            }
+        }
+        is Outline.Generic -> {
+            clipPath(outline.path) {
+                drawPath(
+                    path = outline.path,
+                    brush = brush,
+                    style = Stroke(width = clampedStroke * 2f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                )
+            }
+        }
+    }
 }
 
 object QsShapeManager {

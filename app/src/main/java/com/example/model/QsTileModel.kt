@@ -24,4 +24,7 @@ data class QsTileModel(
     val isVisible: Boolean = true,
     val isQqsFavorite: Boolean = false,
     val complicationSpec: ComplicationTileModel? = null
-)
+) {
+    val isComplicationTile: Boolean
+        get() = category == TileCategory.COMPLICATION || complicationSpec != null || id.startsWith("comp_")
+}
