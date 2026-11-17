@@ -5986,7 +5986,7 @@ fun UnifiedQsPanel(
                 } else {
                     if (shouldReduceQqsContainer) 10.dp else 12.dp
                 }
-                val extraHeightForStraightOrWavy = if (isQqsOnly && isStraightOrWavyBrightness && !isInlineLineCarrier && !moveCollapseToQqsFooter) {
+                val extraHeightForStraightOrWavy = if (isQqsOnly && isStraightOrWavyBrightness) {
                     if (isBottomSliderInQqs) (-16).dp else 0.dp
                 } else 0.dp
                 val rawBottomPadding = baseBottomPadding + extraHeightForStraightOrWavy
@@ -6418,14 +6418,7 @@ fun UnifiedQsPanel(
                         val qqsSettingsLoc by PanelPreferences.settingsIconLocation.collectAsState()
 
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .animateContentSize(
-                                    animationSpec = spring(
-                                        dampingRatio = 0.80f,
-                                        stiffness = 380f
-                                    )
-                                ),
+                            modifier = Modifier.fillMaxWidth(),
                             contentAlignment = Alignment.Center
                         ) {
                             if (morphProgress < 0.5f && !isLandscape) {
@@ -6436,7 +6429,7 @@ fun UnifiedQsPanel(
                                             .fillMaxWidth()
                                             .graphicsLayer { alpha = qqsFooterAlpha }
                                     ) {
-                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Spacer(modifier = Modifier.height(6.dp))
                                         HorizontalDivider(
                                             thickness = 1.dp,
                                             color = if (isDark) Color.White.copy(alpha = 0.14f) else Color.Black.copy(alpha = 0.12f),
@@ -6560,29 +6553,29 @@ fun UnifiedQsPanel(
                                                     }
                                                 }
                                             }
-                                        }
-                                        if (!hideQqsDragHandle) {
-                                            Spacer(modifier = Modifier.height(8.dp))
-                                            Box(
-                                                modifier = Modifier
-                                                    .align(Alignment.CenterHorizontally)
-                                                    .clip(RoundedCornerShape(8.dp))
-                                                    .clickable(
-                                                        interactionSource = remember { MutableInteractionSource() },
-                                                        indication = null,
-                                                        onClick = onExpandFull
-                                                    )
-                                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                                                    .testTag("qqs_drag_handle"),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                val dragColor = if (isDark) Color.White.copy(alpha = 0.25f) else Color(0xFF333333)
+
+                                            if (!hideQqsDragHandle) {
                                                 Box(
                                                     modifier = Modifier
-                                                        .size(width = dragHandleLength.dp, height = 3.dp)
-                                                        .clip(CircleShape)
-                                                        .background(dragColor)
-                                                )
+                                                        .align(Alignment.Center)
+                                                        .offset(y = 12.dp)
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .clickable(
+                                                            interactionSource = remember { MutableInteractionSource() },
+                                                            indication = null,
+                                                            onClick = onExpandFull
+                                                        )
+                                                        .padding(horizontal = 8.dp, vertical = 2.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    val dragColor = if (isDark) Color.White.copy(alpha = 0.25f) else Color(0xFF333333)
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(width = dragHandleLength.dp, height = 3.dp)
+                                                            .clip(CircleShape)
+                                                            .background(dragColor)
+                                                    )
+                                                }
                                             }
                                         }
                                     }
