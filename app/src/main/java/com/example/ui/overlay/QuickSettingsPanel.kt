@@ -1,6 +1,7 @@
 package com.example.ui.overlay
 
 import com.example.R
+import androidx.compose.foundation.layout.defaultMinSize
 import com.example.ui.notification.MonetThemeHelper
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -50,6 +51,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ripple
 import com.example.data.TileShape
 import com.example.data.ProgressBarStyle
+import com.example.data.QsPageIndicatorStyle
 import com.example.data.BatteryPercentageLocation
 import com.example.data.SettingsIconLocation
 import android.content.Intent
@@ -1180,6 +1182,151 @@ fun rememberQqsBatteryState(): QqsBatteryInfo {
 }
 
 @Composable
+fun QsPageIndicator(
+    pageCount: Int,
+    scrollPosition: Float,
+    style: QsPageIndicatorStyle,
+    activeColor: Color,
+    inactiveColor: Color,
+    onPageClick: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    activeLineThickness: Float = 4.0f,
+    inactiveLineThickness: Float = 3.0f,
+    activeLineWidth: Float = 22.0f,
+    inactiveLineWidth: Float = 12.0f,
+    activeDotRadius: Float = 3.5f,
+    inactiveDotRadius: Float = 2.5f,
+    activeSlidingThickness: Float = 4.0f,
+    inactiveSlidingThickness: Float = 4.0f
+) {
+    if (pageCount <= 1) return
+    val clampedScroll = scrollPosition.coerceIn(0f, (pageCount - 1).toFloat())
+
+    when (style) {
+        QsPageIndicatorStyle.DOTS -> {
+            val activeDiam = (activeDotRadius * 2f).dp
+            val inactiveDiam = (inactiveDotRadius * 2f).dp
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = modifier
+            ) {
+                repeat(pageCount) { pageIdx ->
+                    val positionDiff = abs(pageIdx - clampedScroll)
+                    val progress = (1f - positionDiff).coerceIn(0f, 1f)
+                    val dotSize = lerp(inactiveDiam, activeDiam, progress)
+                    val dotColor = androidx.compose.ui.graphics.lerp(inactiveColor, activeColor, progress)
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 2.5.dp)
+                            .size(dotSize)
+                            .clip(CircleShape)
+                            .background(dotColor)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { onPageClick(pageIdx) }
+                    )
+                }
+            }
+        }
+        QsPageIndicatorStyle.HORIZONTAL_LINES -> {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = modifier
+            ) {
+                repeat(pageCount) { pageIdx ->
+                    val positionDiff = abs(pageIdx - clampedScroll)
+                    val progress = (1f - positionDiff).coerceIn(0f, 1f)
+                    val lineWidth = lerp(inactiveLineWidth.dp, activeLineWidth.dp, progress)
+                    val lineHeight = lerp(inactiveLineThickness.dp, activeLineThickness.dp, progress)
+                    val lineColor = androidx.compose.ui.graphics.lerp(inactiveColor, activeColor, progress)
+                    Box(
+                        modifier = Modifier
+                            .width(lineWidth)
+                            .height(lineHeight)
+                            .clip(CircleShape)
+                            .background(lineColor)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { onPageClick(pageIdx) }
+                    )
+                }
+            }
+        }
+        QsPageIndicatorStyle.DOTS_WITH_ACTIVE_LINE -> {
+            val inactiveDiam = (inactiveDotRadius * 2f).dp
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = modifier
+            ) {
+                repeat(pageCount) { pageIdx ->
+                    val positionDiff = abs(pageIdx - clampedScroll)
+                    val progress = (1f - positionDiff).coerceIn(0f, 1f)
+                    val itemWidth = lerp(inactiveDiam, activeLineWidth.dp, progress)
+                    val itemHeight = lerp(inactiveDiam, activeLineThickness.dp, progress)
+                    val itemColor = androidx.compose.ui.graphics.lerp(inactiveColor, activeColor, progress)
+                    Box(
+                        modifier = Modifier
+                            .width(itemWidth)
+                            .height(itemHeight)
+                            .clip(CircleShape)
+                            .background(itemColor)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { onPageClick(pageIdx) }
+                    )
+                }
+            }
+        }
+        QsPageIndicatorStyle.SLIDING_TRACK -> {
+            val thumbWidth = if (pageCount <= 4) 22.dp else (88.dp / pageCount).coerceAtLeast(12.dp)
+            val trackWidth = thumbWidth * pageCount
+            val containerHeight = maxOf(activeSlidingThickness, inactiveSlidingThickness, 14f).dp
+            Box(
+                modifier = modifier
+                    .width(trackWidth)
+                    .height(containerHeight),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(trackWidth)
+                        .height(inactiveSlidingThickness.dp)
+                        .clip(CircleShape)
+                        .background(inactiveColor)
+                )
+                Box(
+                    modifier = Modifier
+                        .offset(x = thumbWidth * clampedScroll)
+                        .width(thumbWidth)
+                        .height(activeSlidingThickness.dp)
+                        .clip(CircleShape)
+                        .background(activeColor)
+                )
+                Row(modifier = Modifier.fillMaxSize()) {
+                    repeat(pageCount) { pageIdx ->
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) { onPageClick(pageIdx) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun OreoTopStatusBar(
     carrierName: String,
     batteryPercent: Int,
@@ -1190,47 +1337,96 @@ fun OreoTopStatusBar(
     val textColor = if (isDark) Color.LightGray else Color(0xFF555555)
     val batteryPercentageLocation by PanelPreferences.batteryPercentageLocation.collectAsState()
     val showBatteryPercent = batteryPercentageLocation != com.example.data.BatteryPercentageLocation.HIDDEN
+    val batteryBgEnabled by PanelPreferences.batteryBackgroundEnabled.collectAsState()
+    val batteryBgCorner by PanelPreferences.batteryBackgroundCorner.collectAsState()
+    val clockBgEnabled by PanelPreferences.clockBackgroundEnabled.collectAsState()
+    val clockBgCorner by PanelPreferences.clockBackgroundCorner.collectAsState()
+    val carrierBgEnabled by PanelPreferences.carrierBackgroundEnabled.collectAsState()
+    val carrierBgCorner by PanelPreferences.carrierBackgroundCorner.collectAsState()
+    val badgeBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
+    val badgeContentColor = if (badgeBgColor.luminance() > 0.5f) Color(0xFF1F1F1F) else Color.White
+
     val currentTime = remember {
         SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
     }
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(28.dp),
+            .heightIn(min = 28.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = carrierName,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            color = textColor
-        )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(carrierBgCorner.dp))
+                .then(
+                    if (carrierBgEnabled) {
+                        Modifier
+                            .background(badgeBgColor)
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    } else Modifier
+                ),
+            contentAlignment = Alignment.Center
         ) {
-            if (showBatteryPercent) {
-                Text(
-                    text = "$batteryPercent %",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textColor
-                )
-                Icon(
-                    imageVector = if (isBatteryCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
-                    contentDescription = "Battery",
-                    tint = textColor,
-                    modifier = Modifier.size(15.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-            }
             Text(
-                text = currentTime,
+                text = carrierName,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = textColor
+                color = if (carrierBgEnabled) badgeContentColor else textColor
             )
+        }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            if (showBatteryPercent) {
+                val batteryTextColor = if (batteryBgEnabled) badgeContentColor else textColor
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(batteryBgCorner.dp))
+                        .then(
+                            if (batteryBgEnabled) {
+                                Modifier
+                                    .background(badgeBgColor)
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            } else Modifier
+                        )
+                ) {
+                    Text(
+                        text = "$batteryPercent %",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = batteryTextColor
+                    )
+                    Icon(
+                        imageVector = if (isBatteryCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
+                        contentDescription = "Battery",
+                        tint = batteryTextColor,
+                        modifier = Modifier.size(15.dp)
+                    )
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(clockBgCorner.dp))
+                    .then(
+                        if (clockBgEnabled) {
+                            Modifier
+                                .background(badgeBgColor)
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        } else Modifier
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = currentTime,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (clockBgEnabled) badgeContentColor else textColor
+                )
+            }
         }
     }
 }
@@ -1267,6 +1463,15 @@ fun QsHeaderBar(
     val hideDateInExpanded by PanelPreferences.hideDateInExpanded.collectAsState()
     val batteryInfo = rememberQqsBatteryState()
 
+    val dateBgEnabled by PanelPreferences.dateBackgroundEnabled.collectAsState()
+    val dateBgCorner by PanelPreferences.dateBackgroundCorner.collectAsState()
+    val batteryBgEnabled by PanelPreferences.batteryBackgroundEnabled.collectAsState()
+    val batteryBgCorner by PanelPreferences.batteryBackgroundCorner.collectAsState()
+    val clockBgEnabled by PanelPreferences.clockBackgroundEnabled.collectAsState()
+    val clockBgCorner by PanelPreferences.clockBackgroundCorner.collectAsState()
+    val badgeBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
+    val badgeContentColor = if (badgeBgColor.luminance() > 0.5f) Color(0xFF1F1F1F) else Color.White
+
     val effectiveDatePos = remember(datePosState, showDateInQqs, hideDateInExpanded, currentStage) {
         if (hideDateInExpanded && currentStage == QsExpansionStage.FULL_QS) {
             com.example.data.DatePosition.HIDDEN
@@ -1293,38 +1498,64 @@ fun QsHeaderBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(if (clockBgEnabled || dateBgEnabled) 4.dp else 0.dp)
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = currentTime,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = headerTextColor,
+                Box(
                     modifier = Modifier
+                        .clip(RoundedCornerShape(clockBgCorner.dp))
+                        .then(
+                            if (clockBgEnabled) {
+                                Modifier
+                                    .background(badgeBgColor)
+                                    .padding(horizontal = 10.dp, vertical = 3.dp)
+                            } else Modifier
+                        )
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
+                            indication = if (clockBgEnabled) ripple(bounded = true) else null,
                             onClick = onTimeClick
                         )
-                        .testTag("qqs_header_time")
-                )
-                if (effectiveDatePos == com.example.data.DatePosition.NEXT_TO_TIME) {
+                        .testTag("qqs_header_time"),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        text = "•  $currentDate",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = headerTextColor,
+                        text = currentTime,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (clockBgEnabled) badgeContentColor else headerTextColor
+                    )
+                }
+                if (effectiveDatePos == com.example.data.DatePosition.NEXT_TO_TIME) {
+                    Box(
                         modifier = Modifier
+                            .clip(RoundedCornerShape(dateBgCorner.dp))
+                            .then(
+                                if (dateBgEnabled) {
+                                    Modifier
+                                        .background(badgeBgColor)
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                } else Modifier
+                            )
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
+                                indication = if (dateBgEnabled) ripple(bounded = true) else null,
                                 onClick = onDateClick
                             )
-                            .testTag("qqs_header_date_inline")
-                    )
+                            .testTag("qqs_header_date_inline"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (clockBgEnabled || dateBgEnabled) currentDate else "•  $currentDate",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = if (dateBgEnabled) badgeContentColor else headerTextColor
+                        )
+                    }
                 }
             }
 
@@ -1333,19 +1564,31 @@ fun QsHeaderBar(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text(
-                        text = currentDate,
-                        fontSize = 12.sp,
-                        color = headerTextColor,
-                        fontWeight = FontWeight.Medium,
+                    Box(
                         modifier = Modifier
+                            .clip(RoundedCornerShape(dateBgCorner.dp))
+                            .then(
+                                if (dateBgEnabled) {
+                                    Modifier
+                                        .background(badgeBgColor)
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                } else Modifier
+                            )
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
+                                indication = if (dateBgEnabled) ripple(bounded = true) else null,
                                 onClick = onDateClick
                             )
-                            .testTag("qqs_header_date_below")
-                    )
+                            .testTag("qqs_header_date_below"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = currentDate,
+                            fontSize = 12.sp,
+                            color = if (dateBgEnabled) badgeContentColor else headerTextColor,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             }
         }
@@ -1355,20 +1598,33 @@ fun QsHeaderBar(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             if (effectiveDatePos == com.example.data.DatePosition.HEADER_RIGHT) {
-                Text(
-                    text = currentDate,
-                    fontSize = 13.sp,
-                    color = headerSecondaryTextColor,
-                    fontWeight = FontWeight.Medium,
+                Box(
                     modifier = Modifier
+                        .clip(RoundedCornerShape(dateBgCorner.dp))
+                        .then(
+                            if (dateBgEnabled) {
+                                Modifier
+                                    .background(badgeBgColor)
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            } else {
+                                Modifier.padding(end = 4.dp)
+                            }
+                        )
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
+                            indication = if (dateBgEnabled) ripple(bounded = true) else null,
                             onClick = onDateClick
                         )
-                        .padding(end = 4.dp)
-                        .testTag("qqs_header_date_right")
-                )
+                        .testTag("qqs_header_date_right"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = currentDate,
+                        fontSize = 13.sp,
+                        color = if (dateBgEnabled) badgeContentColor else headerSecondaryTextColor,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
 
             val batteryLoc by PanelPreferences.batteryPercentageLocation.collectAsState()
@@ -1376,24 +1632,35 @@ fun QsHeaderBar(
 
             // Battery Indicator in QQS Header
             if (batteryLoc == com.example.data.BatteryPercentageLocation.HEADER) {
+                val resolvedBatteryColor = if (batteryBgEnabled) badgeContentColor else headerTextColor
+                val chargingTint = if (batteryBgEnabled && badgeBgColor.luminance() > 0.5f) Color(0xFF2E7D32) else Color(0xFF4CAF50)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                        .clip(RoundedCornerShape(batteryBgCorner.dp))
+                        .then(
+                            if (batteryBgEnabled) {
+                                Modifier
+                                    .background(badgeBgColor)
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            } else {
+                                Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                            }
+                        )
                         .testTag("qqs_header_battery_indicator")
                 ) {
                     Icon(
                         imageVector = if (batteryInfo.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
                         contentDescription = "Battery ${batteryInfo.percentage}%",
-                        tint = if (batteryInfo.isCharging) Color(0xFF4CAF50) else if (batteryInfo.percentage <= 15) Color(0xFFFF5252) else headerTextColor,
+                        tint = if (batteryInfo.isCharging) chargingTint else if (batteryInfo.percentage <= 15) Color(0xFFFF5252) else resolvedBatteryColor,
                         modifier = Modifier.size(15.dp)
                     )
                     Text(
                         text = "${batteryInfo.percentage}%",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = headerTextColor
+                        color = resolvedBatteryColor
                     )
                 }
             }
@@ -1702,6 +1969,14 @@ fun KitKatTileEditorScreen(
             val now = remember { java.util.Date() }
             val timeFormatter = remember { java.text.SimpleDateFormat("H:mm", java.util.Locale.getDefault()) }
             val dateFormatter = remember { java.text.SimpleDateFormat("EEE, MMMM d", java.util.Locale.getDefault()) }
+            val clockBgEnabled by PanelPreferences.clockBackgroundEnabled.collectAsState()
+            val clockBgCorner by PanelPreferences.clockBackgroundCorner.collectAsState()
+            val dateBgEnabled by PanelPreferences.dateBackgroundEnabled.collectAsState()
+            val dateBgCorner by PanelPreferences.dateBackgroundCorner.collectAsState()
+            val carrierBgEnabled by PanelPreferences.carrierBackgroundEnabled.collectAsState()
+            val carrierBgCorner by PanelPreferences.carrierBackgroundCorner.collectAsState()
+            val badgeBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
+            val badgeContentColor = if (badgeBgColor.luminance() > 0.5f) Color(0xFF1F1F1F) else Color.White
 
             Column(
                 modifier = Modifier
@@ -1718,20 +1993,46 @@ fun KitKatTileEditorScreen(
                         verticalAlignment = Alignment.Bottom,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = timeFormatter.format(now),
-                            fontSize = 38.sp,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
-                            fontWeight = FontWeight.Light,
-                            color = if (isDark) Color.White else textPrimary
-                        )
-                        Text(
-                            text = dateFormatter.format(now).uppercase(),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isDark) Color(0xFFB0BEC5) else textSecondary,
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(clockBgCorner.dp))
+                                .then(
+                                    if (clockBgEnabled) {
+                                        Modifier
+                                            .background(badgeBgColor)
+                                            .padding(horizontal = 10.dp, vertical = 3.dp)
+                                    } else Modifier
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = timeFormatter.format(now),
+                                fontSize = 38.sp,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
+                                fontWeight = FontWeight.Light,
+                                color = if (clockBgEnabled) badgeContentColor else if (isDark) Color.White else textPrimary
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .padding(bottom = 4.dp)
+                                .clip(RoundedCornerShape(dateBgCorner.dp))
+                                .then(
+                                    if (dateBgEnabled) {
+                                        Modifier
+                                            .background(badgeBgColor)
+                                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                                    } else Modifier
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = dateFormatter.format(now).uppercase(),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (dateBgEnabled) badgeContentColor else if (isDark) Color(0xFFB0BEC5) else textSecondary
+                            )
+                        }
                     }
 
                     // Right: Action button - Holo "DONE"
@@ -1765,17 +2066,34 @@ fun KitKatTileEditorScreen(
 
                 // Centered Carrier / Status text
                 val resolvedCarrier = if (carrierName.isNotBlank()) carrierName.uppercase() else "EMERGENCY CALLS ONLY"
-                Text(
-                    text = resolvedCarrier,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp,
-                    color = if (isDark) Color(0xFF888888) else textSecondary,
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 2.dp),
-                    textAlign = TextAlign.Center
-                )
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(carrierBgCorner.dp))
+                            .then(
+                                if (carrierBgEnabled) {
+                                    Modifier
+                                        .background(badgeBgColor)
+                                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                                } else Modifier
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = resolvedCarrier,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp,
+                            color = if (carrierBgEnabled) badgeContentColor else if (isDark) Color(0xFF888888) else textSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
             }
 
             // 2. Holo Blue Accent Line
@@ -2454,6 +2772,16 @@ fun MarshmallowTileEditorScreen(
             val timeFormatter = remember { java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()) }
             val dateFormatter = remember { java.text.SimpleDateFormat("EEEE, MMMM d", java.util.Locale.getDefault()) }
             val batteryInfo = rememberQqsBatteryState()
+            val dateBgEnabled by PanelPreferences.dateBackgroundEnabled.collectAsState()
+            val dateBgCorner by PanelPreferences.dateBackgroundCorner.collectAsState()
+            val batteryBgEnabled by PanelPreferences.batteryBackgroundEnabled.collectAsState()
+            val batteryBgCorner by PanelPreferences.batteryBackgroundCorner.collectAsState()
+            val clockBgEnabled by PanelPreferences.clockBackgroundEnabled.collectAsState()
+            val clockBgCorner by PanelPreferences.clockBackgroundCorner.collectAsState()
+            val carrierBgEnabled by PanelPreferences.carrierBackgroundEnabled.collectAsState()
+            val carrierBgCorner by PanelPreferences.carrierBackgroundCorner.collectAsState()
+            val badgeBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
+            val badgeContentColor = if (badgeBgColor.luminance() > 0.5f) Color(0xFF1F1F1F) else Color.White
 
             Column(
                 modifier = Modifier
@@ -2468,20 +2796,30 @@ fun MarshmallowTileEditorScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Left: Carrier name
+                    val resolvedCarrierColor = if (carrierBgEnabled) badgeContentColor else textLightSecondary
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(carrierBgCorner.dp))
+                            .then(
+                                if (carrierBgEnabled) {
+                                    Modifier
+                                        .background(badgeBgColor)
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                } else Modifier
+                            )
                     ) {
                         Icon(
                             imageVector = Icons.Default.CellTower,
                             contentDescription = null,
-                            tint = textLightSecondary,
+                            tint = resolvedCarrierColor,
                             modifier = Modifier.size(13.dp)
                         )
                         Text(
                             text = carrierName.ifBlank { "Emergency calls only" },
                             fontSize = 13.sp,
-                            color = textLightSecondary
+                            color = resolvedCarrierColor
                         )
                     }
 
@@ -2490,18 +2828,34 @@ fun MarshmallowTileEditorScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = "${batteryInfo.percentage}%",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = headerTextColor
-                        )
-                        Icon(
-                            imageVector = if (batteryInfo.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
-                            contentDescription = "Battery",
-                            tint = if (batteryInfo.isCharging) Color(0xFF4CAF50) else headerTextColor,
-                            modifier = Modifier.size(16.dp)
-                        )
+                        val resolvedBatteryColor = if (batteryBgEnabled) badgeContentColor else headerTextColor
+                        val batteryChargingTint = if (batteryBgEnabled && badgeBgColor.luminance() > 0.5f) Color(0xFF2E7D32) else Color(0xFF4CAF50)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(batteryBgCorner.dp))
+                                .then(
+                                    if (batteryBgEnabled) {
+                                        Modifier
+                                            .background(badgeBgColor)
+                                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                                    } else Modifier
+                                )
+                        ) {
+                            Text(
+                                text = "${batteryInfo.percentage}%",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = resolvedBatteryColor
+                            )
+                            Icon(
+                                imageVector = if (batteryInfo.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
+                                contentDescription = "Battery",
+                                tint = if (batteryInfo.isCharging) batteryChargingTint else resolvedBatteryColor,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                         IconButton(
                             onClick = {
                                 try {
@@ -2531,21 +2885,46 @@ fun MarshmallowTileEditorScreen(
 
                 // Time & Date
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = timeFormatter.format(now),
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = headerTextColor,
-                    modifier = Modifier.clickable { launchClockApp(context) }
-                )
-                Text(
-                    text = dateFormatter.format(now),
-                    fontSize = 13.sp,
-                    color = textLightSecondary,
+                Box(
                     modifier = Modifier
-                        .padding(top = 2.dp)
-                        .clickable { launchCalendarApp(context) }
-                )
+                        .clip(RoundedCornerShape(clockBgCorner.dp))
+                        .then(
+                            if (clockBgEnabled) {
+                                Modifier
+                                    .background(badgeBgColor)
+                                    .padding(horizontal = 10.dp, vertical = 3.dp)
+                            } else Modifier
+                        )
+                        .clickable { launchClockApp(context) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = timeFormatter.format(now),
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (clockBgEnabled) badgeContentColor else headerTextColor
+                    )
+                }
+                Spacer(modifier = Modifier.height(if (clockBgEnabled || dateBgEnabled) 4.dp else 2.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(dateBgCorner.dp))
+                        .then(
+                            if (dateBgEnabled) {
+                                Modifier
+                                    .background(badgeBgColor)
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            } else Modifier
+                        )
+                        .clickable { launchCalendarApp(context) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = dateFormatter.format(now),
+                        fontSize = 13.sp,
+                        color = if (dateBgEnabled) badgeContentColor else textLightSecondary
+                    )
+                }
 
                 // Subheader & Done Button Row
                 Spacer(modifier = Modifier.height(10.dp))
@@ -4092,10 +4471,22 @@ fun UnifiedQsPanel(
     val dragHandleLength by PanelPreferences.dragHandleLength.collectAsState()
     val showCarrier by PanelPreferences.showCarrier.collectAsState()
     val showCarrierDivider by PanelPreferences.showCarrierDivider.collectAsState()
+    val carrierDividerAsLine by PanelPreferences.carrierDividerAsLine.collectAsState()
     val hideCarrierInExpanded by PanelPreferences.hideCarrierInExpanded.collectAsState()
+    val moveCollapseToQqsFooter by PanelPreferences.moveCollapseToQqsFooter.collectAsState()
     val brightnessAtBottom by PanelPreferences.brightnessAtBottom.collectAsState()
     val brightnessInQqs by PanelPreferences.brightnessInQqs.collectAsState()
     val datePosition by PanelPreferences.datePosition.collectAsState()
+    val dateBgEnabled by PanelPreferences.dateBackgroundEnabled.collectAsState()
+    val dateBgCorner by PanelPreferences.dateBackgroundCorner.collectAsState()
+    val batteryBgEnabled by PanelPreferences.batteryBackgroundEnabled.collectAsState()
+    val batteryBgCorner by PanelPreferences.batteryBackgroundCorner.collectAsState()
+    val clockBgEnabled by PanelPreferences.clockBackgroundEnabled.collectAsState()
+    val clockBgCorner by PanelPreferences.clockBackgroundCorner.collectAsState()
+    val carrierBgEnabled by PanelPreferences.carrierBackgroundEnabled.collectAsState()
+    val carrierBgCorner by PanelPreferences.carrierBackgroundCorner.collectAsState()
+    val statusBadgeBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
+    val statusBadgeContentColor = if (statusBadgeBgColor.luminance() > 0.5f) Color(0xFF1F1F1F) else Color.White
     val context = LocalContext.current
     val batteryInfo = rememberQqsBatteryState()
     val onSettingsClick = remember {
@@ -4207,8 +4598,9 @@ fun UnifiedQsPanel(
 
     val isExpandedQsState = expansionStage == QsExpansionStage.FULL_QS || morphProgress > 0.5f
     val isCarrierVisible = showCarrier && !(hideCarrierInExpanded && isExpandedQsState)
-    val isSplitCarrierConfigured = isCarrierVisible && showCarrierDivider && !isLandscape && !isEditingTiles
+    val isSplitCarrierConfigured = isCarrierVisible && showCarrierDivider && !carrierDividerAsLine && !isLandscape && !isEditingTiles
     val isSplitCarrier = isSplitCarrierConfigured && morphProgress < 0.5f
+    val isInlineLineCarrier = isCarrierVisible && showCarrierDivider && carrierDividerAsLine && !isLandscape && !isEditingTiles && morphProgress < 0.5f
     val showSplitCarrierCard = !isAndroidOreoStyle && !isAndroidMarshmallowStyle && isSplitCarrierConfigured && (expansionStage == QsExpansionStage.QQS || isDraggingMorph || morphProgress < 0.99f)
 
     val placeholderTile = remember {
@@ -4520,20 +4912,47 @@ fun UnifiedQsPanel(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(
-                                        modifier = Modifier.clickable { launchClockApp(context); onClosePanel() }
+                                        verticalArrangement = Arrangement.spacedBy(if (clockBgEnabled || dateBgEnabled) 4.dp else 2.dp)
                                     ) {
-                                        Text(
-                                            text = timeFormatter.format(now),
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = headerTextColor
-                                        )
-                                        Text(
-                                            text = dateFormatter.format(now),
-                                            fontSize = 12.sp,
-                                            color = textLightSecondary,
-                                            modifier = Modifier.padding(top = 2.dp)
-                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(clockBgCorner.dp))
+                                                .then(
+                                                    if (clockBgEnabled) {
+                                                        Modifier
+                                                            .background(statusBadgeBgColor)
+                                                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                                                    } else Modifier
+                                                )
+                                                .clickable { launchClockApp(context); onClosePanel() },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = timeFormatter.format(now),
+                                                fontSize = 16.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (clockBgEnabled) statusBadgeContentColor else headerTextColor
+                                            )
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(dateBgCorner.dp))
+                                                .then(
+                                                    if (dateBgEnabled) {
+                                                        Modifier
+                                                            .background(statusBadgeBgColor)
+                                                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                                                    } else Modifier
+                                                )
+                                                .clickable { launchCalendarApp(context); onClosePanel() },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = dateFormatter.format(now),
+                                                fontSize = 12.sp,
+                                                color = if (dateBgEnabled) statusBadgeContentColor else textLightSecondary
+                                            )
+                                        }
                                     }
 
                                     Row(
@@ -4564,20 +4983,36 @@ fun UnifiedQsPanel(
                                                 modifier = Modifier.size(16.dp)
                                             )
                                         }
-                                        if (batteryPercentageLocation == BatteryPercentageLocation.HEADER || batteryPercentageLocation == BatteryPercentageLocation.QQS_RIGHT) {
-                                            Text(
-                                                text = "${batteryInfo.percentage}%",
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = headerTextColor
+                                        val resolvedMmBatteryColor = if (batteryBgEnabled) statusBadgeContentColor else headerTextColor
+                                        val mmChargingTint = if (batteryBgEnabled && statusBadgeBgColor.luminance() > 0.5f) Color(0xFF2E7D32) else Color(0xFF4CAF50)
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(batteryBgCorner.dp))
+                                                .then(
+                                                    if (batteryBgEnabled) {
+                                                        Modifier
+                                                            .background(statusBadgeBgColor)
+                                                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                                                    } else Modifier
+                                                )
+                                        ) {
+                                            if (batteryPercentageLocation == BatteryPercentageLocation.HEADER || batteryPercentageLocation == BatteryPercentageLocation.QQS_RIGHT) {
+                                                Text(
+                                                    text = "${batteryInfo.percentage}%",
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = resolvedMmBatteryColor
+                                                )
+                                            }
+                                            Icon(
+                                                imageVector = if (batteryInfo.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
+                                                contentDescription = "Battery",
+                                                tint = if (batteryInfo.isCharging) mmChargingTint else resolvedMmBatteryColor,
+                                                modifier = Modifier.size(16.dp)
                                             )
                                         }
-                                        Icon(
-                                            imageVector = if (batteryInfo.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
-                                            contentDescription = "Battery",
-                                            tint = if (batteryInfo.isCharging) Color(0xFF4CAF50) else headerTextColor,
-                                            modifier = Modifier.size(16.dp)
-                                        )
                                         if (settingsIconLocation == SettingsIconLocation.HEADER || settingsIconLocation == SettingsIconLocation.CARRIER_RIGHT) {
                                             IconButton(
                                                 onClick = onSettingsClick,
@@ -4631,20 +5066,30 @@ fun UnifiedQsPanel(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         if (showCarrier && !hideCarrierInExpanded) {
+                                            val resolvedMmCarrierColor = if (carrierBgEnabled) statusBadgeContentColor else textLightSecondary
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(carrierBgCorner.dp))
+                                                    .then(
+                                                        if (carrierBgEnabled) {
+                                                            Modifier
+                                                                .background(statusBadgeBgColor)
+                                                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                                                        } else Modifier
+                                                    )
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.CellTower,
                                                     contentDescription = null,
-                                                    tint = textLightSecondary,
+                                                    tint = resolvedMmCarrierColor,
                                                     modifier = Modifier.size(13.dp)
                                                 )
                                                 Text(
                                                     text = carrierName.ifBlank { "Emergency calls only" },
                                                     fontSize = 13.sp,
-                                                    color = textLightSecondary
+                                                    color = resolvedMmCarrierColor
                                                 )
                                             }
                                         } else {
@@ -4678,20 +5123,36 @@ fun UnifiedQsPanel(
                                                     modifier = Modifier.size(15.dp)
                                                 )
                                             }
-                                            if (batteryPercentageLocation == BatteryPercentageLocation.HEADER) {
-                                                Text(
-                                                    text = "${batteryInfo.percentage}%",
-                                                    fontSize = 13.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = headerTextColor
+                                            val resolvedMmExpBatteryColor = if (batteryBgEnabled) statusBadgeContentColor else headerTextColor
+                                            val mmExpChargingTint = if (batteryBgEnabled && statusBadgeBgColor.luminance() > 0.5f) Color(0xFF2E7D32) else Color(0xFF4CAF50)
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(batteryBgCorner.dp))
+                                                    .then(
+                                                        if (batteryBgEnabled) {
+                                                            Modifier
+                                                                .background(statusBadgeBgColor)
+                                                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                                                        } else Modifier
+                                                    )
+                                            ) {
+                                                if (batteryPercentageLocation == BatteryPercentageLocation.HEADER) {
+                                                    Text(
+                                                        text = "${batteryInfo.percentage}%",
+                                                        fontSize = 13.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = resolvedMmExpBatteryColor
+                                                    )
+                                                }
+                                                Icon(
+                                                    imageVector = if (batteryInfo.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
+                                                    contentDescription = "Battery",
+                                                    tint = if (batteryInfo.isCharging) mmExpChargingTint else resolvedMmExpBatteryColor,
+                                                    modifier = Modifier.size(16.dp)
                                                 )
                                             }
-                                            Icon(
-                                                imageVector = if (batteryInfo.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
-                                                contentDescription = "Battery",
-                                                tint = if (batteryInfo.isCharging) Color(0xFF4CAF50) else headerTextColor,
-                                                modifier = Modifier.size(16.dp)
-                                            )
                                             IconButton(
                                                 onClick = onToggleEditMode,
                                                 modifier = Modifier.size(28.dp)
@@ -4732,19 +5193,46 @@ fun UnifiedQsPanel(
 
                                     Spacer(modifier = Modifier.height(8.dp))
 
-                                    Text(
-                                        text = timeFormatter.format(now),
-                                        fontSize = 26.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = headerTextColor,
-                                        modifier = Modifier.clickable { launchClockApp(context); onClosePanel() }
-                                    )
-                                    Text(
-                                        text = dateFormatter.format(now),
-                                        fontSize = 13.sp,
-                                        color = textLightSecondary,
-                                        modifier = Modifier.padding(top = 2.dp)
-                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(clockBgCorner.dp))
+                                            .then(
+                                                if (clockBgEnabled) {
+                                                    Modifier
+                                                        .background(statusBadgeBgColor)
+                                                        .padding(horizontal = 10.dp, vertical = 3.dp)
+                                                } else Modifier
+                                            )
+                                            .clickable { launchClockApp(context); onClosePanel() },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = timeFormatter.format(now),
+                                            fontSize = 26.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (clockBgEnabled) statusBadgeContentColor else headerTextColor
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(if (clockBgEnabled || dateBgEnabled) 4.dp else 2.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(dateBgCorner.dp))
+                                            .then(
+                                                if (dateBgEnabled) {
+                                                    Modifier
+                                                        .background(statusBadgeBgColor)
+                                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                                } else Modifier
+                                            )
+                                            .clickable { launchCalendarApp(context); onClosePanel() },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = dateFormatter.format(now),
+                                            fontSize = 13.sp,
+                                            color = if (dateBgEnabled) statusBadgeContentColor else textLightSecondary
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -5112,6 +5600,14 @@ fun UnifiedQsPanel(
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                                     modifier = Modifier
                                         .offset(y = (-3).dp)
+                                        .clip(RoundedCornerShape(dateBgCorner.dp))
+                                        .then(
+                                            if (dateBgEnabled) {
+                                                Modifier
+                                                    .background(statusBadgeBgColor)
+                                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                                            } else Modifier
+                                        )
                                         .clickable {
                                             launchCalendarApp(context)
                                             onClosePanel()
@@ -5121,7 +5617,7 @@ fun UnifiedQsPanel(
                                         text = currentDate,
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = subheaderTextColor
+                                        color = if (dateBgEnabled) statusBadgeContentColor else subheaderTextColor
                                     )
                                 }
                             } else {
@@ -5272,47 +5768,59 @@ fun UnifiedQsPanel(
                             contentAlignment = Alignment.Center
                         ) {
                             if (showDateFull) {
-                                Text(
-                                    text = shortDateStr,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = footerTint,
+                                Box(
                                     modifier = Modifier
                                         .align(Alignment.CenterStart)
+                                        .clip(RoundedCornerShape(dateBgCorner.dp))
+                                        .then(
+                                            if (dateBgEnabled) {
+                                                Modifier
+                                                    .background(statusBadgeBgColor)
+                                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                                            } else Modifier
+                                        )
                                         .clickable {
                                             launchCalendarApp(context)
                                             onClosePanel()
-                                        }
-                                )
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = shortDateStr,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (dateBgEnabled) statusBadgeContentColor else footerTint
+                                    )
+                                }
                             }
 
                             if (tilePages.size > 1) {
-                                Row(
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.align(Alignment.Center)
-                                ) {
-                                    repeat(tilePages.size) { pageIdx ->
-                                        val positionDiff = kotlin.math.abs(pageIdx - viewPagerScrollPosition)
-                                        val progress = (1f - positionDiff).coerceIn(0f, 1f)
-                                        val dotSize = androidx.compose.ui.unit.lerp(4.5.dp, 7.dp, progress)
-                                        val dotColor = androidx.compose.ui.graphics.lerp(
-                                            footerTint.copy(alpha = 0.35f),
-                                            com.example.ui.theme.getMiscElementColor(isDark),
-                                            progress
-                                        )
-                                        Box(
-                                            modifier = Modifier
-                                                .padding(horizontal = 2.5.dp)
-                                                .size(dotSize)
-                                                .clip(CircleShape)
-                                                .background(dotColor)
-                                                .clickable {
-                                                    viewPagerRef?.setCurrentItem(pageIdx, true)
-                                                }
-                                        )
-                                    }
-                                }
+                                val pageIndicatorStyle by PanelPreferences.qsPageIndicatorStyle.collectAsState()
+                                val piActiveLineThickness by PanelPreferences.piActiveLineThickness.collectAsState()
+                                val piInactiveLineThickness by PanelPreferences.piInactiveLineThickness.collectAsState()
+                                val piActiveLineWidth by PanelPreferences.piActiveLineWidth.collectAsState()
+                                val piInactiveLineWidth by PanelPreferences.piInactiveLineWidth.collectAsState()
+                                val piActiveDotRadius by PanelPreferences.piActiveDotRadius.collectAsState()
+                                val piInactiveDotRadius by PanelPreferences.piInactiveDotRadius.collectAsState()
+                                val piActiveSlidingThickness by PanelPreferences.piActiveSlidingThickness.collectAsState()
+                                val piInactiveSlidingThickness by PanelPreferences.piInactiveSlidingThickness.collectAsState()
+                                QsPageIndicator(
+                                    pageCount = tilePages.size,
+                                    scrollPosition = viewPagerScrollPosition,
+                                    style = pageIndicatorStyle,
+                                    activeColor = com.example.ui.theme.getMiscElementColor(isDark),
+                                    inactiveColor = footerTint.copy(alpha = 0.35f),
+                                    onPageClick = { pageIdx -> viewPagerRef?.setCurrentItem(pageIdx, true) },
+                                    modifier = Modifier.align(Alignment.Center),
+                                    activeLineThickness = piActiveLineThickness,
+                                    inactiveLineThickness = piInactiveLineThickness,
+                                    activeLineWidth = piActiveLineWidth,
+                                    inactiveLineWidth = piInactiveLineWidth,
+                                    activeDotRadius = piActiveDotRadius,
+                                    inactiveDotRadius = piInactiveDotRadius,
+                                    activeSlidingThickness = piActiveSlidingThickness,
+                                    inactiveSlidingThickness = piInactiveSlidingThickness
+                                )
                             }
 
                             val footerIconBgEnabled by PanelPreferences.footerIconBackground.collectAsState()
@@ -5468,7 +5976,7 @@ fun UnifiedQsPanel(
             ) {
                 val isQqsMode = morphProgress < 0.5f && !isLandscape
                 val isBottomSliderInQqs = brightnessInQqs && brightnessAtBottom
-                val shouldReduceQqsContainer = isQqsMode && hideQqsDragHandle && (
+                val shouldReduceQqsContainer = isQqsMode && hideQqsDragHandle && !moveCollapseToQqsFooter && !isInlineLineCarrier && (
                     !isSplitCarrier || isBottomSliderInQqs
                 )
 
@@ -5478,7 +5986,7 @@ fun UnifiedQsPanel(
                 } else {
                     if (shouldReduceQqsContainer) 10.dp else 12.dp
                 }
-                val extraHeightForStraightOrWavy = if (isQqsOnly && isStraightOrWavyBrightness) {
+                val extraHeightForStraightOrWavy = if (isQqsOnly && isStraightOrWavyBrightness && !isInlineLineCarrier && !moveCollapseToQqsFooter) {
                     if (isBottomSliderInQqs) (-16).dp else 0.dp
                 } else 0.dp
                 val rawBottomPadding = baseBottomPadding + extraHeightForStraightOrWavy
@@ -5524,11 +6032,11 @@ fun UnifiedQsPanel(
                         val hideDateInExpanded by PanelPreferences.hideDateInExpanded.collectAsState()
                         val isExpandedQs = expansionStage == QsExpansionStage.FULL_QS || morphProgress > 0.5f
                         val isQqsDate = !(hideDateInExpanded && isExpandedQs) && datePosition == com.example.data.DatePosition.QQS_PANEL
-                        val showInlineCarrier = isCarrierVisible && !isSplitCarrier
+                        val showInlineCarrier = isCarrierVisible && !isSplitCarrier && !isInlineLineCarrier
                         val batteryLocTop by PanelPreferences.batteryPercentageLocation.collectAsState()
                         val settingsLocTop by PanelPreferences.settingsIconLocation.collectAsState()
                         val showQqsRightBattery = batteryLocTop == com.example.data.BatteryPercentageLocation.QQS_RIGHT
-                        val showInlineSettings = !isSplitCarrier && settingsLocTop == com.example.data.SettingsIconLocation.CARRIER_RIGHT
+                        val showInlineSettings = !isSplitCarrier && !isInlineLineCarrier && settingsLocTop == com.example.data.SettingsIconLocation.CARRIER_RIGHT
 
                         if (isQqsDate || showInlineCarrier || showQqsRightBattery || showInlineSettings) {
                             val dateYOffset = if (isExpandedQs) 2.dp else (-4).dp
@@ -5543,16 +6051,7 @@ fun UnifiedQsPanel(
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(5.dp),
-                                    modifier = Modifier.clickable(
-                                        enabled = isQqsDate,
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null,
-                                        onClick = {
-                                            launchCalendarApp(context)
-                                            onClosePanel()
-                                        }
-                                    )
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     val textColor = if (isDark) Color.LightGray.copy(alpha = 0.9f) else Color(0xFF333333)
                                     if (isQqsDate) {
@@ -5560,39 +6059,87 @@ fun UnifiedQsPanel(
                                             val sdf = SimpleDateFormat("EEE, MMM d", Locale.getDefault())
                                             sdf.format(Date())
                                         }
-                                        Icon(
-                                            imageVector = Icons.Default.CalendarToday,
-                                            contentDescription = "Date",
-                                            tint = textColor,
-                                            modifier = Modifier.size(13.dp)
-                                        )
-                                        Text(
-                                            text = currentDate,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = textColor
-                                        )
-                                        if (showInlineCarrier) {
-                                            Text(
-                                                text = "•",
-                                                fontSize = 12.sp,
-                                                color = textColor.copy(alpha = 0.6f)
+                                        val resolvedDateColor = if (dateBgEnabled) statusBadgeContentColor else textColor
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(dateBgCorner.dp))
+                                                .then(
+                                                    if (dateBgEnabled) {
+                                                        Modifier
+                                                            .background(statusBadgeBgColor)
+                                                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                                                    } else Modifier
+                                                )
+                                                .clickable(
+                                                    interactionSource = remember { MutableInteractionSource() },
+                                                    indication = if (dateBgEnabled) ripple(bounded = true) else null,
+                                                    onClick = {
+                                                        launchCalendarApp(context)
+                                                        onClosePanel()
+                                                    }
+                                                )
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.CalendarToday,
+                                                contentDescription = "Date",
+                                                tint = resolvedDateColor,
+                                                modifier = Modifier.size(13.dp)
                                             )
+                                            Text(
+                                                text = currentDate,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = resolvedDateColor
+                                            )
+                                        }
+                                        if (showInlineCarrier && !dateBgEnabled && !carrierBgEnabled) {
+                                            if (carrierDividerAsLine) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .width(1.dp)
+                                                        .height(12.dp)
+                                                        .background(textColor.copy(alpha = 0.35f))
+                                                        .testTag("carrier_inline_divider_line")
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = "•",
+                                                    fontSize = 12.sp,
+                                                    color = textColor.copy(alpha = 0.6f)
+                                                )
+                                            }
                                         }
                                     }
                                     if (showInlineCarrier) {
-                                        Icon(
-                                            imageVector = Icons.Default.CellTower,
-                                            contentDescription = null,
-                                            tint = textColor,
-                                            modifier = Modifier.size(13.dp)
-                                        )
-                                        Text(
-                                            text = carrierName,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = textColor
-                                        )
+                                        val resolvedCarrierColor = if (carrierBgEnabled) statusBadgeContentColor else textColor
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(carrierBgCorner.dp))
+                                                .then(
+                                                    if (carrierBgEnabled) {
+                                                        Modifier
+                                                            .background(statusBadgeBgColor)
+                                                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                                                    } else Modifier
+                                                )
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.CellTower,
+                                                contentDescription = null,
+                                                tint = resolvedCarrierColor,
+                                                modifier = Modifier.size(13.dp)
+                                            )
+                                            Text(
+                                                text = carrierName,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = resolvedCarrierColor
+                                            )
+                                        }
                                     }
                                 }
 
@@ -5602,22 +6149,33 @@ fun UnifiedQsPanel(
                                 ) {
                                     val textColor = if (isDark) Color.LightGray.copy(alpha = 0.9f) else Color(0xFF333333)
                                     if (showQqsRightBattery) {
+                                        val resolvedRightBatteryColor = if (batteryBgEnabled) statusBadgeContentColor else textColor
+                                        val rightChargingTint = if (batteryBgEnabled && statusBadgeBgColor.luminance() > 0.5f) Color(0xFF2E7D32) else Color(0xFF4CAF50)
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                            modifier = Modifier.testTag("qqs_right_battery_indicator")
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(batteryBgCorner.dp))
+                                                .then(
+                                                    if (batteryBgEnabled) {
+                                                        Modifier
+                                                            .background(statusBadgeBgColor)
+                                                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                                                    } else Modifier
+                                                )
+                                                .testTag("qqs_right_battery_indicator")
                                         ) {
                                             Icon(
                                                 imageVector = if (batteryInfo.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
                                                 contentDescription = "Battery ${batteryInfo.percentage}%",
-                                                tint = if (batteryInfo.isCharging) Color(0xFF4CAF50) else if (batteryInfo.percentage <= 15) Color(0xFFFF5252) else textColor,
+                                                tint = if (batteryInfo.isCharging) rightChargingTint else if (batteryInfo.percentage <= 15) Color(0xFFFF5252) else resolvedRightBatteryColor,
                                                 modifier = Modifier.size(14.dp)
                                             )
                                             Text(
                                                 text = "${batteryInfo.percentage}%",
                                                 fontSize = 12.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = textColor
+                                                color = resolvedRightBatteryColor
                                             )
                                         }
                                     }
@@ -5844,6 +6402,21 @@ fun UnifiedQsPanel(
                         }
 
                         // 3. Footer Bar / Drag Pill (Morphing footer)
+                        val footerTint = if (isDark) Color(0xFFCCCCCC) else Color(0xFF333333)
+                        val editPos by PanelPreferences.editButtonPosition.collectAsState()
+                        val footerIconBgEnabled by PanelPreferences.footerIconBackground.collectAsState()
+                        val footerOuterSpacingEnabled by PanelPreferences.footerOuterSpacing.collectAsState()
+                        val footerOuterCorner by PanelPreferences.footerOuterCorner.collectAsState()
+                        val footerInnerCorner by PanelPreferences.footerInnerCorner.collectAsState()
+                        val footerSpacing by PanelPreferences.footerSpacing.collectAsState()
+                        val footerBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
+                        val resolvedFooterIconTint = if (footerIconBgEnabled) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            footerTint
+                        }
+                        val qqsSettingsLoc by PanelPreferences.settingsIconLocation.collectAsState()
+
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -5857,33 +6430,216 @@ fun UnifiedQsPanel(
                         ) {
                             if (morphProgress < 0.5f && !isLandscape) {
                                 val qqsFooterAlpha = ((0.5f - morphProgress) / 0.5f).coerceIn(0f, 1f)
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .graphicsLayer { alpha = qqsFooterAlpha }
-                                ) {
-                                    if (!hideQqsDragHandle && !isSplitCarrier) {
-                                        Box(
+                                if (isInlineLineCarrier) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .graphicsLayer { alpha = qqsFooterAlpha }
+                                    ) {
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        HorizontalDivider(
+                                            thickness = 1.dp,
+                                            color = if (isDark) Color.White.copy(alpha = 0.14f) else Color.Black.copy(alpha = 0.12f),
                                             modifier = Modifier
-                                                .align(Alignment.Center)
-                                                .padding(bottom = 0.dp)
-                                                .offset(y = 3.dp)
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .clickable(
-                                                    interactionSource = remember { MutableInteractionSource() },
-                                                    indication = null,
-                                                    onClick = onExpandFull
-                                                )
-                                                .padding(vertical = 4.dp),
+                                                .fillMaxWidth()
+                                                .layout { measurable, constraints ->
+                                                    val horizontalBleed = 14.dp.roundToPx()
+                                                    val targetWidth = constraints.maxWidth + horizontalBleed * 2
+                                                    val placeable = measurable.measure(
+                                                        constraints.copy(
+                                                            minWidth = targetWidth,
+                                                            maxWidth = targetWidth
+                                                        )
+                                                    )
+                                                    layout(constraints.maxWidth, placeable.height) {
+                                                        placeable.placeRelative(-horizontalBleed, 0)
+                                                    }
+                                                }
+                                                .testTag("carrier_divider_line")
+                                        )
+                                        Spacer(modifier = Modifier.height(10.dp))
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth(),
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            val dragColor = if (isDark) Color.White.copy(alpha = 0.25f) else Color(0xFF333333)
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                modifier = Modifier
+                                                    .align(Alignment.CenterStart)
+                                                    .clip(RoundedCornerShape(carrierBgCorner.dp))
+                                                    .then(
+                                                        if (carrierBgEnabled) {
+                                                            Modifier
+                                                                .background(statusBadgeBgColor)
+                                                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                                                        } else Modifier
+                                                    )
+                                            ) {
+                                                val defaultCarrierColor = if (isDark) Color.LightGray.copy(alpha = 0.9f) else Color(0xFF333333)
+                                                val carrierColor = if (carrierBgEnabled) statusBadgeContentColor else defaultCarrierColor
+                                                Icon(
+                                                    imageVector = Icons.Default.CellTower,
+                                                    contentDescription = null,
+                                                    tint = carrierColor,
+                                                    modifier = Modifier.size(15.dp)
+                                                )
+                                                Text(
+                                                    text = carrierName,
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = carrierColor
+                                                )
+                                            }
+
+                                            val inlineActionButtons = mutableListOf<String>()
+                                            if (moveCollapseToQqsFooter) inlineActionButtons.add("collapse")
+                                            if (qqsSettingsLoc == com.example.data.SettingsIconLocation.CARRIER_RIGHT) inlineActionButtons.add("settings")
+
+                                            if (inlineActionButtons.isNotEmpty()) {
+                                                val spacingVal = if (footerIconBgEnabled) footerSpacing.dp else 4.dp
+                                                Row(
+                                                    horizontalArrangement = Arrangement.spacedBy(spacingVal),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    modifier = Modifier.align(Alignment.CenterEnd)
+                                                ) {
+                                                    inlineActionButtons.forEachIndexed { idx, btnType ->
+                                                        val isFirst = (idx == 0)
+                                                        val isLast = (idx == inlineActionButtons.size - 1)
+                                                        val outerCorner = footerOuterCorner.dp
+                                                        val innerCorner = footerInnerCorner.dp
+                                                        val btnShape = when {
+                                                            isFirst && isLast -> RoundedCornerShape(outerCorner)
+                                                            isFirst -> RoundedCornerShape(topStart = outerCorner, bottomStart = outerCorner, topEnd = innerCorner, bottomEnd = innerCorner)
+                                                            isLast -> RoundedCornerShape(topStart = innerCorner, bottomStart = innerCorner, topEnd = outerCorner, bottomEnd = outerCorner)
+                                                            else -> RoundedCornerShape(innerCorner)
+                                                        }
+                                                        val btnMod = Modifier
+                                                            .size(32.dp)
+                                                            .clip(btnShape)
+                                                            .then(if (footerIconBgEnabled) Modifier.background(footerBgColor) else Modifier)
+
+                                                        when (btnType) {
+                                                            "collapse" -> {
+                                                                Box(
+                                                                    modifier = btnMod
+                                                                        .clickable(
+                                                                            interactionSource = remember { MutableInteractionSource() },
+                                                                            indication = ripple(bounded = true)
+                                                                        ) { onExpandFull() }
+                                                                        .testTag("qqs_footer_collapse_btn"),
+                                                                    contentAlignment = Alignment.Center
+                                                                ) {
+                                                                    Icon(
+                                                                        imageVector = Icons.Default.KeyboardArrowDown,
+                                                                        contentDescription = "Expand",
+                                                                        tint = resolvedFooterIconTint,
+                                                                        modifier = Modifier.size(18.dp)
+                                                                    )
+                                                                }
+                                                            }
+                                                            "settings" -> {
+                                                                Box(
+                                                                    modifier = btnMod
+                                                                        .clickable(
+                                                                            interactionSource = remember { MutableInteractionSource() },
+                                                                            indication = ripple(bounded = true)
+                                                                        ) { onSettingsClick() }
+                                                                        .testTag("carrier_settings_button"),
+                                                                    contentAlignment = Alignment.Center
+                                                                ) {
+                                                                    Icon(
+                                                                        imageVector = Icons.Default.Settings,
+                                                                        contentDescription = "System Settings",
+                                                                        tint = resolvedFooterIconTint,
+                                                                        modifier = Modifier.size(16.dp)
+                                                                    )
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if (!hideQqsDragHandle) {
+                                            Spacer(modifier = Modifier.height(8.dp))
                                             Box(
                                                 modifier = Modifier
-                                                    .size(width = dragHandleLength.dp, height = 3.dp)
-                                                    .clip(CircleShape)
-                                                    .background(dragColor)
-                                            )
+                                                    .align(Alignment.CenterHorizontally)
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .clickable(
+                                                        interactionSource = remember { MutableInteractionSource() },
+                                                        indication = null,
+                                                        onClick = onExpandFull
+                                                    )
+                                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                                                    .testTag("qqs_drag_handle"),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                val dragColor = if (isDark) Color.White.copy(alpha = 0.25f) else Color(0xFF333333)
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(width = dragHandleLength.dp, height = 3.dp)
+                                                        .clip(CircleShape)
+                                                        .background(dragColor)
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .then(if (moveCollapseToQqsFooter && !isSplitCarrier) Modifier.defaultMinSize(minHeight = 32.dp) else Modifier)
+                                            .graphicsLayer { alpha = qqsFooterAlpha }
+                                    ) {
+                                        if (moveCollapseToQqsFooter && !isSplitCarrier) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(32.dp)
+                                                    .align(Alignment.CenterStart)
+                                                    .clip(RoundedCornerShape(footerOuterCorner.dp))
+                                                    .then(
+                                                        if (footerIconBgEnabled) Modifier.background(footerBgColor) else Modifier
+                                                    )
+                                                    .clickable(
+                                                        interactionSource = remember { MutableInteractionSource() },
+                                                        indication = ripple(bounded = true)
+                                                    ) { onExpandFull() }
+                                                    .testTag("qqs_footer_collapse_btn"),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                                    contentDescription = "Expand",
+                                                    tint = resolvedFooterIconTint,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                        if (!hideQqsDragHandle && !isSplitCarrier) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.Center)
+                                                    .padding(bottom = 0.dp)
+                                                    .offset(y = if (moveCollapseToQqsFooter) 0.dp else 3.dp)
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .clickable(
+                                                        interactionSource = remember { MutableInteractionSource() },
+                                                        indication = null,
+                                                        onClick = onExpandFull
+                                                    )
+                                                    .padding(vertical = 4.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                val dragColor = if (isDark) Color.White.copy(alpha = 0.25f) else Color(0xFF333333)
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(width = dragHandleLength.dp, height = 3.dp)
+                                                        .clip(CircleShape)
+                                                        .background(dragColor)
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -5896,19 +6652,6 @@ fun UnifiedQsPanel(
                                     .padding(vertical = 1.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                val footerTint = if (isDark) Color(0xFFCCCCCC) else Color(0xFF333333)
-                                val editPos by PanelPreferences.editButtonPosition.collectAsState()
-                                val footerIconBgEnabled by PanelPreferences.footerIconBackground.collectAsState()
-                                val footerOuterSpacingEnabled by PanelPreferences.footerOuterSpacing.collectAsState()
-                                val footerOuterCorner by PanelPreferences.footerOuterCorner.collectAsState()
-                                val footerInnerCorner by PanelPreferences.footerInnerCorner.collectAsState()
-                                val footerSpacing by PanelPreferences.footerSpacing.collectAsState()
-                                val footerBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
-                                val resolvedFooterIconTint = if (footerIconBgEnabled) {
-                                    MaterialTheme.colorScheme.onSurface
-                                } else {
-                                    footerTint
-                                }
 
                                 Box(
                                     modifier = Modifier
@@ -5933,35 +6676,34 @@ fun UnifiedQsPanel(
                                     )
                                 }
 
-                                // Page Indicator Dots
+                                // Page Indicator
                                 if (tilePages.size > 1) {
-                                    Row(
-                                        horizontalArrangement = Arrangement.Center,
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.align(Alignment.Center)
-                                    ) {
-                                        repeat(tilePages.size) { pageIdx ->
-                                            val positionDiff = kotlin.math.abs(pageIdx - viewPagerScrollPosition)
-                                            val progress = (1f - positionDiff).coerceIn(0f, 1f)
-                                            val dotSize = androidx.compose.ui.unit.lerp(4.5.dp, 7.dp, progress)
-                                            val miscDotColor = com.example.ui.theme.getMiscElementColor(isDark)
-                                            val dotColor = androidx.compose.ui.graphics.lerp(
-                                                footerTint.copy(alpha = 0.35f),
-                                                miscDotColor,
-                                                progress
-                                            )
-                                            Box(
-                                                modifier = Modifier
-                                                    .padding(horizontal = 2.5.dp)
-                                                    .size(dotSize)
-                                                    .clip(CircleShape)
-                                                    .background(dotColor)
-                                                    .clickable {
-                                                        viewPagerRef?.setCurrentItem(pageIdx, true)
-                                                    }
-                                            )
-                                        }
-                                    }
+                                    val pageIndicatorStyle by PanelPreferences.qsPageIndicatorStyle.collectAsState()
+                                    val piActiveLineThickness by PanelPreferences.piActiveLineThickness.collectAsState()
+                                    val piInactiveLineThickness by PanelPreferences.piInactiveLineThickness.collectAsState()
+                                    val piActiveLineWidth by PanelPreferences.piActiveLineWidth.collectAsState()
+                                    val piInactiveLineWidth by PanelPreferences.piInactiveLineWidth.collectAsState()
+                                    val piActiveDotRadius by PanelPreferences.piActiveDotRadius.collectAsState()
+                                    val piInactiveDotRadius by PanelPreferences.piInactiveDotRadius.collectAsState()
+                                    val piActiveSlidingThickness by PanelPreferences.piActiveSlidingThickness.collectAsState()
+                                    val piInactiveSlidingThickness by PanelPreferences.piInactiveSlidingThickness.collectAsState()
+                                    QsPageIndicator(
+                                        pageCount = tilePages.size,
+                                        scrollPosition = viewPagerScrollPosition,
+                                        style = pageIndicatorStyle,
+                                        activeColor = com.example.ui.theme.getMiscElementColor(isDark),
+                                        inactiveColor = footerTint.copy(alpha = 0.35f),
+                                        onPageClick = { pageIdx -> viewPagerRef?.setCurrentItem(pageIdx, true) },
+                                        modifier = Modifier.align(Alignment.Center),
+                                        activeLineThickness = piActiveLineThickness,
+                                        inactiveLineThickness = piInactiveLineThickness,
+                                        activeLineWidth = piActiveLineWidth,
+                                        inactiveLineWidth = piInactiveLineWidth,
+                                        activeDotRadius = piActiveDotRadius,
+                                        inactiveDotRadius = piInactiveDotRadius,
+                                        activeSlidingThickness = piActiveSlidingThickness,
+                                        inactiveSlidingThickness = piInactiveSlidingThickness
+                                    )
                                 }
 
                                 val spacingVal = if (footerIconBgEnabled) {
@@ -6115,9 +6857,19 @@ fun UnifiedQsPanel(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier.align(Alignment.CenterStart)
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .clip(RoundedCornerShape(carrierBgCorner.dp))
+                            .then(
+                                if (carrierBgEnabled) {
+                                    Modifier
+                                        .background(statusBadgeBgColor)
+                                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                                } else Modifier
+                            )
                     ) {
-                        val carrierColor = if (isDark) Color.LightGray.copy(alpha = 0.9f) else Color(0xFF333333)
+                        val defaultCarrierColor = if (isDark) Color.LightGray.copy(alpha = 0.9f) else Color(0xFF333333)
+                        val carrierColor = if (carrierBgEnabled) statusBadgeContentColor else defaultCarrierColor
                         Icon(
                             imageVector = Icons.Default.CellTower,
                             contentDescription = null,
@@ -6133,21 +6885,80 @@ fun UnifiedQsPanel(
                     }
 
                     val settingsLocCarrier by PanelPreferences.settingsIconLocation.collectAsState()
-                    if (settingsLocCarrier == com.example.data.SettingsIconLocation.CARRIER_RIGHT) {
-                        IconButton(
-                            onClick = onSettingsClick,
-                            modifier = Modifier
-                                .size(28.dp)
-                                .align(Alignment.CenterEnd)
-                                .testTag("carrier_settings_button")
+                    val splitActionButtons = mutableListOf<String>()
+                    if (moveCollapseToQqsFooter) splitActionButtons.add("collapse")
+                    if (settingsLocCarrier == com.example.data.SettingsIconLocation.CARRIER_RIGHT) splitActionButtons.add("settings")
+
+                    if (splitActionButtons.isNotEmpty()) {
+                        val footerIconBgEnabled by PanelPreferences.footerIconBackground.collectAsState()
+                        val footerOuterCorner by PanelPreferences.footerOuterCorner.collectAsState()
+                        val footerInnerCorner by PanelPreferences.footerInnerCorner.collectAsState()
+                        val footerSpacing by PanelPreferences.footerSpacing.collectAsState()
+                        val footerBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
+                        val defaultIconColor = if (isDark) Color.LightGray.copy(alpha = 0.9f) else Color(0xFF333333)
+                        val resolvedIconColor = if (footerIconBgEnabled) MaterialTheme.colorScheme.onSurface else defaultIconColor
+                        val spacingVal = if (footerIconBgEnabled) footerSpacing.dp else 4.dp
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(spacingVal),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.align(Alignment.CenterEnd)
                         ) {
-                            val carrierColor = if (isDark) Color.LightGray.copy(alpha = 0.9f) else Color(0xFF333333)
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = "System Settings",
-                                tint = carrierColor,
-                                modifier = Modifier.size(18.dp)
-                            )
+                            splitActionButtons.forEachIndexed { idx, btnType ->
+                                val isFirst = (idx == 0)
+                                val isLast = (idx == splitActionButtons.size - 1)
+                                val outerCorner = footerOuterCorner.dp
+                                val innerCorner = footerInnerCorner.dp
+                                val btnShape = when {
+                                    isFirst && isLast -> RoundedCornerShape(outerCorner)
+                                    isFirst -> RoundedCornerShape(topStart = outerCorner, bottomStart = outerCorner, topEnd = innerCorner, bottomEnd = innerCorner)
+                                    isLast -> RoundedCornerShape(topStart = innerCorner, bottomStart = innerCorner, topEnd = outerCorner, bottomEnd = outerCorner)
+                                    else -> RoundedCornerShape(innerCorner)
+                                }
+                                val btnMod = Modifier
+                                    .size(if (footerIconBgEnabled || moveCollapseToQqsFooter) 32.dp else 28.dp)
+                                    .clip(btnShape)
+                                    .then(if (footerIconBgEnabled) Modifier.background(footerBgColor) else Modifier)
+
+                                when (btnType) {
+                                    "collapse" -> {
+                                        Box(
+                                            modifier = btnMod
+                                                .clickable(
+                                                    interactionSource = remember { MutableInteractionSource() },
+                                                    indication = ripple(bounded = true)
+                                                ) { onExpandFull() }
+                                                .testTag("qqs_footer_collapse_btn"),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.KeyboardArrowDown,
+                                                contentDescription = "Expand",
+                                                tint = resolvedIconColor,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                    "settings" -> {
+                                        Box(
+                                            modifier = btnMod
+                                                .clickable(
+                                                    interactionSource = remember { MutableInteractionSource() },
+                                                    indication = ripple(bounded = true)
+                                                ) { onSettingsClick() }
+                                                .testTag("carrier_settings_button"),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Settings,
+                                                contentDescription = "System Settings",
+                                                tint = resolvedIconColor,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 

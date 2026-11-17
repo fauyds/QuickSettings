@@ -791,7 +791,118 @@ class ExampleRobolectricTest {
         assertEquals("Bluetooth", com.example.system.TileRegistry.resolveMarshmallowTileLabel(btOnDisconnectedTile, btDeviceName = null))
         assertEquals("Pixel Buds Pro", com.example.system.TileRegistry.resolveMarshmallowTileLabel(btOnConnectedTile, btDeviceName = "Pixel Buds Pro"))
     }
+
+    @Test
+    fun `verify separate date battery clock carrier background toggles and corner sliders`() {
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        com.example.data.PanelPreferences.init(app)
+
+        // Reset defaults
+        com.example.data.PanelPreferences.setDateBackgroundEnabled(app, false)
+        com.example.data.PanelPreferences.setBatteryBackgroundEnabled(app, false)
+        com.example.data.PanelPreferences.setClockBackgroundEnabled(app, false)
+        com.example.data.PanelPreferences.setCarrierBackgroundEnabled(app, false)
+
+        com.example.data.PanelPreferences.setDateBackgroundCorner(app, 10f)
+        com.example.data.PanelPreferences.setBatteryBackgroundCorner(app, 10f)
+        com.example.data.PanelPreferences.setClockBackgroundCorner(app, 10f)
+        com.example.data.PanelPreferences.setCarrierBackgroundCorner(app, 10f)
+
+        // Verify independent toggles
+        com.example.data.PanelPreferences.setDateBackgroundEnabled(app, true)
+        org.junit.Assert.assertTrue(com.example.data.PanelPreferences.dateBackgroundEnabled.value)
+        org.junit.Assert.assertFalse(com.example.data.PanelPreferences.batteryBackgroundEnabled.value)
+        org.junit.Assert.assertFalse(com.example.data.PanelPreferences.clockBackgroundEnabled.value)
+        org.junit.Assert.assertFalse(com.example.data.PanelPreferences.carrierBackgroundEnabled.value)
+
+        com.example.data.PanelPreferences.setBatteryBackgroundEnabled(app, true)
+        com.example.data.PanelPreferences.setClockBackgroundEnabled(app, true)
+        com.example.data.PanelPreferences.setCarrierBackgroundEnabled(app, true)
+
+        // Verify distinct corner radii and clamping (0f..24f)
+        com.example.data.PanelPreferences.setDateBackgroundCorner(app, 6f)
+        com.example.data.PanelPreferences.setBatteryBackgroundCorner(app, 16f)
+        com.example.data.PanelPreferences.setClockBackgroundCorner(app, -5f) // clamped to 0f
+        com.example.data.PanelPreferences.setCarrierBackgroundCorner(app, 42f) // clamped to 24f
+
+        // Re-initialize from SharedPreferences to verify persistence
+        com.example.data.PanelPreferences.init(app)
+        org.junit.Assert.assertTrue(com.example.data.PanelPreferences.dateBackgroundEnabled.value)
+        org.junit.Assert.assertTrue(com.example.data.PanelPreferences.batteryBackgroundEnabled.value)
+        org.junit.Assert.assertTrue(com.example.data.PanelPreferences.clockBackgroundEnabled.value)
+        org.junit.Assert.assertTrue(com.example.data.PanelPreferences.carrierBackgroundEnabled.value)
+        assertEquals(6f, com.example.data.PanelPreferences.dateBackgroundCorner.value, 0.01f)
+        assertEquals(16f, com.example.data.PanelPreferences.batteryBackgroundCorner.value, 0.01f)
+        assertEquals(0f, com.example.data.PanelPreferences.clockBackgroundCorner.value, 0.01f)
+        assertEquals(24f, com.example.data.PanelPreferences.carrierBackgroundCorner.value, 0.01f)
+    }
+
+    @Test
+    fun `verify qs page indicator style enum mapping and persistence`() {
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        com.example.data.PanelPreferences.init(app)
+
+        assertEquals(com.example.data.QsPageIndicatorStyle.DOTS, com.example.data.QsPageIndicatorStyle.fromId(null))
+        assertEquals(com.example.data.QsPageIndicatorStyle.DOTS, com.example.data.QsPageIndicatorStyle.fromId("unknown"))
+
+        for (style in com.example.data.QsPageIndicatorStyle.entries) {
+            com.example.data.PanelPreferences.setQsPageIndicatorStyle(app, style)
+            assertEquals(style, com.example.data.PanelPreferences.qsPageIndicatorStyle.value)
+
+            com.example.data.PanelPreferences.init(app)
+            assertEquals(style, com.example.data.PanelPreferences.qsPageIndicatorStyle.value)
+        }
+
+        // Verify all 8 page indicator dimension preferences (persistence + clamping)
+        com.example.data.PanelPreferences.setPiActiveLineThickness(app, 6.5f)
+        com.example.data.PanelPreferences.setPiInactiveLineThickness(app, 2.0f)
+        com.example.data.PanelPreferences.setPiActiveLineWidth(app, 34f)
+        com.example.data.PanelPreferences.setPiInactiveLineWidth(app, 14f)
+        com.example.data.PanelPreferences.setPiActiveDotRadius(app, 5.5f)
+        com.example.data.PanelPreferences.setPiInactiveDotRadius(app, 1.5f)
+        com.example.data.PanelPreferences.setPiActiveSlidingThickness(app, 8.0f)
+        com.example.data.PanelPreferences.setPiInactiveSlidingThickness(app, 99f) // clamped to 12f
+
+        com.example.data.PanelPreferences.init(app)
+        assertEquals(6.5f, com.example.data.PanelPreferences.piActiveLineThickness.value, 0.01f)
+        assertEquals(2.0f, com.example.data.PanelPreferences.piInactiveLineThickness.value, 0.01f)
+        assertEquals(34f, com.example.data.PanelPreferences.piActiveLineWidth.value, 0.01f)
+        assertEquals(14f, com.example.data.PanelPreferences.piInactiveLineWidth.value, 0.01f)
+        assertEquals(5.5f, com.example.data.PanelPreferences.piActiveDotRadius.value, 0.01f)
+        assertEquals(1.5f, com.example.data.PanelPreferences.piInactiveDotRadius.value, 0.01f)
+        assertEquals(8.0f, com.example.data.PanelPreferences.piActiveSlidingThickness.value, 0.01f)
+        assertEquals(12.0f, com.example.data.PanelPreferences.piInactiveSlidingThickness.value, 0.01f)
+
+        // Restore default
+        com.example.data.PanelPreferences.setQsPageIndicatorStyle(app, com.example.data.QsPageIndicatorStyle.DOTS)
+    }
+
+    @Test
+    fun `verify move collapse to qqs footer and carrier divider as line persistence`() {
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        com.example.data.PanelPreferences.init(app)
+
+        // Reset to defaults
+        com.example.data.PanelPreferences.setMoveCollapseToQqsFooter(app, false)
+        com.example.data.PanelPreferences.setCarrierDividerAsLine(app, false)
+
+        org.junit.Assert.assertFalse(com.example.data.PanelPreferences.moveCollapseToQqsFooter.value)
+        org.junit.Assert.assertFalse(com.example.data.PanelPreferences.carrierDividerAsLine.value)
+
+        // Enable both and re-initialize from SharedPreferences
+        com.example.data.PanelPreferences.setMoveCollapseToQqsFooter(app, true)
+        com.example.data.PanelPreferences.setCarrierDividerAsLine(app, true)
+
+        com.example.data.PanelPreferences.init(app)
+        org.junit.Assert.assertTrue(com.example.data.PanelPreferences.moveCollapseToQqsFooter.value)
+        org.junit.Assert.assertTrue(com.example.data.PanelPreferences.carrierDividerAsLine.value)
+
+        // Restore defaults
+        com.example.data.PanelPreferences.setMoveCollapseToQqsFooter(app, false)
+        com.example.data.PanelPreferences.setCarrierDividerAsLine(app, false)
+    }
 }
+
 
 
 

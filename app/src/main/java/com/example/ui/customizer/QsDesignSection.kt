@@ -156,6 +156,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val allShapes by QsShapeManager.allShapes.collectAsState()
     val showCarrier by PanelPreferences.showCarrier.collectAsState()
     val showCarrierDivider by PanelPreferences.showCarrierDivider.collectAsState()
+    val carrierDividerAsLine by PanelPreferences.carrierDividerAsLine.collectAsState()
     val hideCarrierInExpanded by PanelPreferences.hideCarrierInExpanded.collectAsState()
     val brightnessAtBottom by PanelPreferences.brightnessAtBottom.collectAsState()
     val brightnessInQqs by PanelPreferences.brightnessInQqs.collectAsState()
@@ -1744,10 +1745,14 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 shape = shape,
                 modifier = Modifier.testTag("carrier_divider_card")
             ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -1783,7 +1788,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "Show a divider line separating the SIM card carrier name and QQS tiles",
+                                    text = "Show a divider separating the SIM card carrier name and QQS tiles",
                                     fontSize = 12.sp,
                                     style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1803,7 +1808,51 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             modifier = Modifier.testTag("show_carrier_divider_toggle")
                         )
                     }
+
+                    androidx.compose.material3.HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Text(
+                                text = "Replace Carrier Divider with Line",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Keep carrier and tiles inside one card with a crisp divider line instead of splitting cards",
+                                fontSize = 11.5.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Switch(
+                            checked = carrierDividerAsLine,
+                            onCheckedChange = { PanelPreferences.setCarrierDividerAsLine(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("carrier_divider_as_line_toggle")
+                        )
+                    }
                 }
+            }
         }
     }
 

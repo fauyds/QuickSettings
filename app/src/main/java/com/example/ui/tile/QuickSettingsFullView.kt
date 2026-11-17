@@ -334,19 +334,76 @@ class QuickSettingsFullView @JvmOverloads constructor(
         llPageIndicators.visibility = View.VISIBLE
         val primaryAccent = MonetThemeHelper.getPrimaryAccent(context, isDark)
         val inactiveDotColor = if (isDark) Color.parseColor("#44FFFFFF") else Color.parseColor("#44000000")
+        val style = com.example.data.PanelPreferences.qsPageIndicatorStyle.value
+        val activeLineT = com.example.data.PanelPreferences.piActiveLineThickness.value
+        val inactiveLineT = com.example.data.PanelPreferences.piInactiveLineThickness.value
+        val activeLineW = com.example.data.PanelPreferences.piActiveLineWidth.value
+        val inactiveLineW = com.example.data.PanelPreferences.piInactiveLineWidth.value
+        val activeDotR = com.example.data.PanelPreferences.piActiveDotRadius.value
+        val inactiveDotR = com.example.data.PanelPreferences.piInactiveDotRadius.value
+        val activeSlideT = com.example.data.PanelPreferences.piActiveSlidingThickness.value
+        val inactiveSlideT = com.example.data.PanelPreferences.piInactiveSlidingThickness.value
+
+        if (style == com.example.data.QsPageIndicatorStyle.SLIDING_TRACK) {
+            val segWidthPx = ((if (totalPages <= 4) 22 else (88 / totalPages).coerceAtLeast(12)) * density).toInt()
+            val trackWidthPx = segWidthPx * totalPages
+            val activeHeightPx = (activeSlideT * density).toInt().coerceAtLeast(1)
+            val inactiveHeightPx = (inactiveSlideT * density).toInt().coerceAtLeast(1)
+            val containerHeightPx = maxOf(activeHeightPx, inactiveHeightPx)
+            val trackContainer = FrameLayout(context).apply {
+                layoutParams = LinearLayout.LayoutParams(trackWidthPx, containerHeightPx)
+            }
+            val bgTrack = View(context).apply {
+                layoutParams = FrameLayout.LayoutParams(trackWidthPx, inactiveHeightPx, android.view.Gravity.CENTER_VERTICAL)
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = (inactiveSlideT / 2f) * density
+                    setColor(inactiveDotColor)
+                }
+            }
+            val thumb = View(context).apply {
+                layoutParams = FrameLayout.LayoutParams(segWidthPx, activeHeightPx, android.view.Gravity.CENTER_VERTICAL).apply {
+                    marginStart = selectedIndex.coerceIn(0, totalPages - 1) * segWidthPx
+                }
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = (activeSlideT / 2f) * density
+                    setColor(primaryAccent)
+                }
+            }
+            trackContainer.addView(bgTrack)
+            trackContainer.addView(thumb)
+            llPageIndicators.addView(trackContainer)
+            return
+        }
 
         for (i in 0 until totalPages) {
             val isSelected = i == selectedIndex
+            val (dotWidth, dotHeight, cornerDp) = when (style) {
+                com.example.data.QsPageIndicatorStyle.HORIZONTAL_LINES -> Triple(
+                    ((if (isSelected) activeLineW else inactiveLineW) * density).toInt().coerceAtLeast(1),
+                    ((if (isSelected) activeLineT else inactiveLineT) * density).toInt().coerceAtLeast(1),
+                    if (isSelected) activeLineT / 2f else inactiveLineT / 2f
+                )
+                com.example.data.QsPageIndicatorStyle.DOTS_WITH_ACTIVE_LINE -> Triple(
+                    ((if (isSelected) activeLineW else inactiveDotR * 2f) * density).toInt().coerceAtLeast(1),
+                    ((if (isSelected) activeLineT else inactiveDotR * 2f) * density).toInt().coerceAtLeast(1),
+                    if (isSelected) activeLineT / 2f else inactiveDotR
+                )
+                else -> Triple(
+                    ((if (isSelected) activeDotR * 2f else inactiveDotR * 2f) * density).toInt().coerceAtLeast(1),
+                    ((if (isSelected) activeDotR * 2f else inactiveDotR * 2f) * density).toInt().coerceAtLeast(1),
+                    if (isSelected) activeDotR else inactiveDotR
+                )
+            }
             val dot = View(context).apply {
-                val dotWidth = if (isSelected) (14 * density).toInt() else (6 * density).toInt()
-                val dotHeight = (6 * density).toInt()
                 val lp = LinearLayout.LayoutParams(dotWidth, dotHeight).apply {
-                    marginEnd = (4 * density).toInt()
+                    marginEnd = if (i < totalPages - 1) (5 * density).toInt() else 0
                 }
                 layoutParams = lp
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
-                    cornerRadius = 3f * density
+                    cornerRadius = cornerDp * density
                     setColor(if (isSelected) primaryAccent else inactiveDotColor)
                 }
             }

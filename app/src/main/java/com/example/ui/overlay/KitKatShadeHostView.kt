@@ -826,19 +826,48 @@ class KitKatShadeHostView @JvmOverloads constructor(
             llHeader.setBackgroundColor(Color.TRANSPARENT)
         }
 
-        // Themed header controls
-        tvTime.setTextColor(textPrimary)
-        tvDate.setTextColor(textSecondary)
+        // Themed header controls + optional individual pill backgrounds
+        val density = context.resources.displayMetrics.density
+        val badgeBgColor = MonetThemeHelper.getInactiveTilesColor(context, isDark)
+        val badgeTextColor = if (ColorUtils.calculateLuminance(badgeBgColor) > 0.5) Color.parseColor("#1F1F1F") else Color.WHITE
+
+        fun applyBadgeStyle(view: TextView, enabled: Boolean, cornerDp: Float, defaultColor: Int, hPadDp: Int, vPadDp: Int) {
+            if (enabled) {
+                view.setTextColor(badgeTextColor)
+                val hPx = (hPadDp * density).toInt()
+                val vPx = (vPadDp * density).toInt()
+                view.setPadding(hPx, vPx, hPx, vPx)
+                view.background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = cornerDp * density
+                    setColor(badgeBgColor)
+                }
+            } else {
+                view.setTextColor(defaultColor)
+                view.setPadding(0, 0, 0, 0)
+                view.background = null
+            }
+        }
+
+        val clockBgEnabled = PanelPreferences.clockBackgroundEnabled.value
+        val clockBgCorner = PanelPreferences.clockBackgroundCorner.value
+        val dateBgEnabled = PanelPreferences.dateBackgroundEnabled.value
+        val dateBgCorner = PanelPreferences.dateBackgroundCorner.value
+        val carrierBgEnabled = PanelPreferences.carrierBackgroundEnabled.value
+        val carrierBgCorner = PanelPreferences.carrierBackgroundCorner.value
+
+        applyBadgeStyle(tvTime, clockBgEnabled, clockBgCorner, textPrimary, 10, 3)
+        applyBadgeStyle(tvDate, dateBgEnabled, dateBgCorner, textSecondary, 8, 3)
         btnSwitchScreen.setColorFilter(primaryAccent)
         btnEditTiles.setColorFilter(primaryAccent)
         btnClearAll.setColorFilter(clearAllAccent)
-        tvCarrier.setTextColor(textSecondary)
 
         // 2. Carrier display
         val resolvedCarrier = if (carrierName.isNotBlank()) carrierName.uppercase() else "EMERGENCY CALLS ONLY"
         tvCarrier.text = resolvedCarrier
         tvBottomCarrier.text = resolvedCarrier
-        tvBottomCarrier.setTextColor(textSecondary)
+        applyBadgeStyle(tvCarrier, carrierBgEnabled, carrierBgCorner, textSecondary, 8, 2)
+        applyBadgeStyle(tvBottomCarrier, carrierBgEnabled, carrierBgCorner, textSecondary, 8, 2)
 
         // Themed bottom divider
         val dividerColor = if (showMonetSurface) cardOutline else (if (isDark) Color.parseColor("#333333") else cardOutline)

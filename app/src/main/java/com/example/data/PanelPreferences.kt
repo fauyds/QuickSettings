@@ -165,6 +165,18 @@ enum class ProgressBarStyle(val id: String, val label: String, val description: 
     }
 }
 
+enum class QsPageIndicatorStyle(val id: String, val label: String, val description: String) {
+    DOTS("dots", "Dots", "Circular page indicator dots"),
+    HORIZONTAL_LINES("horizontal_lines", "Lines", "Horizontal dashes for each page"),
+    DOTS_WITH_ACTIVE_LINE("dots_active_line", "Dots + Line", "Dots for inactive tabs and a line for active"),
+    SLIDING_TRACK("sliding_track", "Sliding Line", "A horizontal line with an active sliding bar");
+
+    companion object {
+        fun fromId(id: String?): QsPageIndicatorStyle =
+            entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: DOTS
+    }
+}
+
 enum class QsSliderTarget(val id: String, val label: String) {
     BRIGHTNESS("brightness", "Brightness"),
     VOLUME("volume", "Volume"),
@@ -392,6 +404,26 @@ object PanelPreferences {
     private const val KEY_FOOTER_INNER_CORNER = "footer_inner_corner"
     private const val KEY_FOOTER_SPACING = "footer_spacing"
 
+    private const val KEY_DATE_BACKGROUND_ENABLED = "date_background_enabled"
+    private const val KEY_DATE_BACKGROUND_CORNER = "date_background_corner"
+    private const val KEY_BATTERY_BACKGROUND_ENABLED = "battery_background_enabled"
+    private const val KEY_BATTERY_BACKGROUND_CORNER = "battery_background_corner"
+    private const val KEY_CLOCK_BACKGROUND_ENABLED = "clock_background_enabled"
+    private const val KEY_CLOCK_BACKGROUND_CORNER = "clock_background_corner"
+    private const val KEY_CARRIER_BACKGROUND_ENABLED = "carrier_background_enabled"
+    private const val KEY_CARRIER_BACKGROUND_CORNER = "carrier_background_corner"
+    private const val KEY_QS_PAGE_INDICATOR_STYLE = "qs_page_indicator_style"
+    private const val KEY_PI_ACTIVE_LINE_THICKNESS = "pi_active_line_thickness"
+    private const val KEY_PI_INACTIVE_LINE_THICKNESS = "pi_inactive_line_thickness"
+    private const val KEY_PI_ACTIVE_LINE_WIDTH = "pi_active_line_width"
+    private const val KEY_PI_INACTIVE_LINE_WIDTH = "pi_inactive_line_width"
+    private const val KEY_PI_ACTIVE_DOT_RADIUS = "pi_active_dot_radius"
+    private const val KEY_PI_INACTIVE_DOT_RADIUS = "pi_inactive_dot_radius"
+    private const val KEY_PI_ACTIVE_SLIDING_THICKNESS = "pi_active_sliding_thickness"
+    private const val KEY_PI_INACTIVE_SLIDING_THICKNESS = "pi_inactive_sliding_thickness"
+    private const val KEY_MOVE_COLLAPSE_TO_QQS_FOOTER = "move_collapse_to_qqs_footer"
+    private const val KEY_CARRIER_DIVIDER_AS_LINE = "carrier_divider_as_line"
+
     private val _showHeaderComplications = MutableStateFlow(true)
     val showHeaderComplications: StateFlow<Boolean> = _showHeaderComplications.asStateFlow()
 
@@ -412,6 +444,63 @@ object PanelPreferences {
 
     private val _footerSpacing = MutableStateFlow(3.0f)
     val footerSpacing: StateFlow<Float> = _footerSpacing.asStateFlow()
+
+    private val _dateBackgroundEnabled = MutableStateFlow(false)
+    val dateBackgroundEnabled: StateFlow<Boolean> = _dateBackgroundEnabled.asStateFlow()
+
+    private val _dateBackgroundCorner = MutableStateFlow(10.0f)
+    val dateBackgroundCorner: StateFlow<Float> = _dateBackgroundCorner.asStateFlow()
+
+    private val _batteryBackgroundEnabled = MutableStateFlow(false)
+    val batteryBackgroundEnabled: StateFlow<Boolean> = _batteryBackgroundEnabled.asStateFlow()
+
+    private val _batteryBackgroundCorner = MutableStateFlow(10.0f)
+    val batteryBackgroundCorner: StateFlow<Float> = _batteryBackgroundCorner.asStateFlow()
+
+    private val _clockBackgroundEnabled = MutableStateFlow(false)
+    val clockBackgroundEnabled: StateFlow<Boolean> = _clockBackgroundEnabled.asStateFlow()
+
+    private val _clockBackgroundCorner = MutableStateFlow(10.0f)
+    val clockBackgroundCorner: StateFlow<Float> = _clockBackgroundCorner.asStateFlow()
+
+    private val _carrierBackgroundEnabled = MutableStateFlow(false)
+    val carrierBackgroundEnabled: StateFlow<Boolean> = _carrierBackgroundEnabled.asStateFlow()
+
+    private val _carrierBackgroundCorner = MutableStateFlow(10.0f)
+    val carrierBackgroundCorner: StateFlow<Float> = _carrierBackgroundCorner.asStateFlow()
+
+    private val _qsPageIndicatorStyle = MutableStateFlow(QsPageIndicatorStyle.DOTS)
+    val qsPageIndicatorStyle: StateFlow<QsPageIndicatorStyle> = _qsPageIndicatorStyle.asStateFlow()
+
+    private val _piActiveLineThickness = MutableStateFlow(4.0f)
+    val piActiveLineThickness: StateFlow<Float> = _piActiveLineThickness.asStateFlow()
+
+    private val _piInactiveLineThickness = MutableStateFlow(3.0f)
+    val piInactiveLineThickness: StateFlow<Float> = _piInactiveLineThickness.asStateFlow()
+
+    private val _piActiveLineWidth = MutableStateFlow(22.0f)
+    val piActiveLineWidth: StateFlow<Float> = _piActiveLineWidth.asStateFlow()
+
+    private val _piInactiveLineWidth = MutableStateFlow(12.0f)
+    val piInactiveLineWidth: StateFlow<Float> = _piInactiveLineWidth.asStateFlow()
+
+    private val _piActiveDotRadius = MutableStateFlow(3.5f)
+    val piActiveDotRadius: StateFlow<Float> = _piActiveDotRadius.asStateFlow()
+
+    private val _piInactiveDotRadius = MutableStateFlow(2.5f)
+    val piInactiveDotRadius: StateFlow<Float> = _piInactiveDotRadius.asStateFlow()
+
+    private val _piActiveSlidingThickness = MutableStateFlow(4.0f)
+    val piActiveSlidingThickness: StateFlow<Float> = _piActiveSlidingThickness.asStateFlow()
+
+    private val _piInactiveSlidingThickness = MutableStateFlow(4.0f)
+    val piInactiveSlidingThickness: StateFlow<Float> = _piInactiveSlidingThickness.asStateFlow()
+
+    private val _moveCollapseToQqsFooter = MutableStateFlow(false)
+    val moveCollapseToQqsFooter: StateFlow<Boolean> = _moveCollapseToQqsFooter.asStateFlow()
+
+    private val _carrierDividerAsLine = MutableStateFlow(false)
+    val carrierDividerAsLine: StateFlow<Boolean> = _carrierDividerAsLine.asStateFlow()
 
     fun setFooterIconBackground(context: Context, enabled: Boolean) {
         _footerIconBackground.value = enabled
@@ -471,6 +560,112 @@ object PanelPreferences {
             _footerOuterSpacing.value = false
             prefs.edit().putBoolean(KEY_FOOTER_OUTER_SPACING, false).apply()
         }
+    }
+
+    fun setDateBackgroundEnabled(context: Context, enabled: Boolean) {
+        _dateBackgroundEnabled.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_DATE_BACKGROUND_ENABLED, enabled).apply()
+    }
+
+    fun setDateBackgroundCorner(context: Context, value: Float) {
+        val clamped = value.coerceIn(0f, 24f)
+        _dateBackgroundCorner.value = clamped
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_DATE_BACKGROUND_CORNER, clamped).apply()
+    }
+
+    fun setBatteryBackgroundEnabled(context: Context, enabled: Boolean) {
+        _batteryBackgroundEnabled.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_BATTERY_BACKGROUND_ENABLED, enabled).apply()
+    }
+
+    fun setBatteryBackgroundCorner(context: Context, value: Float) {
+        val clamped = value.coerceIn(0f, 24f)
+        _batteryBackgroundCorner.value = clamped
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_BATTERY_BACKGROUND_CORNER, clamped).apply()
+    }
+
+    fun setClockBackgroundEnabled(context: Context, enabled: Boolean) {
+        _clockBackgroundEnabled.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_CLOCK_BACKGROUND_ENABLED, enabled).apply()
+    }
+
+    fun setClockBackgroundCorner(context: Context, value: Float) {
+        val clamped = value.coerceIn(0f, 24f)
+        _clockBackgroundCorner.value = clamped
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_CLOCK_BACKGROUND_CORNER, clamped).apply()
+    }
+
+    fun setCarrierBackgroundEnabled(context: Context, enabled: Boolean) {
+        _carrierBackgroundEnabled.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_CARRIER_BACKGROUND_ENABLED, enabled).apply()
+    }
+
+    fun setCarrierBackgroundCorner(context: Context, value: Float) {
+        val clamped = value.coerceIn(0f, 24f)
+        _carrierBackgroundCorner.value = clamped
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_CARRIER_BACKGROUND_CORNER, clamped).apply()
+    }
+
+    fun setQsPageIndicatorStyle(context: Context, style: QsPageIndicatorStyle) {
+        _qsPageIndicatorStyle.value = style
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_QS_PAGE_INDICATOR_STYLE, style.id).apply()
+    }
+
+    fun setPiActiveLineThickness(context: Context, value: Float) {
+        val clamped = value.coerceIn(1f, 10f)
+        _piActiveLineThickness.value = clamped
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putFloat(KEY_PI_ACTIVE_LINE_THICKNESS, clamped).apply()
+    }
+
+    fun setPiInactiveLineThickness(context: Context, value: Float) {
+        val clamped = value.coerceIn(1f, 10f)
+        _piInactiveLineThickness.value = clamped
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putFloat(KEY_PI_INACTIVE_LINE_THICKNESS, clamped).apply()
+    }
+
+    fun setPiActiveLineWidth(context: Context, value: Float) {
+        val clamped = value.coerceIn(8f, 48f)
+        _piActiveLineWidth.value = clamped
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putFloat(KEY_PI_ACTIVE_LINE_WIDTH, clamped).apply()
+    }
+
+    fun setPiInactiveLineWidth(context: Context, value: Float) {
+        val clamped = value.coerceIn(4f, 32f)
+        _piInactiveLineWidth.value = clamped
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putFloat(KEY_PI_INACTIVE_LINE_WIDTH, clamped).apply()
+    }
+
+    fun setPiActiveDotRadius(context: Context, value: Float) {
+        val clamped = value.coerceIn(1.5f, 8f)
+        _piActiveDotRadius.value = clamped
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putFloat(KEY_PI_ACTIVE_DOT_RADIUS, clamped).apply()
+    }
+
+    fun setPiInactiveDotRadius(context: Context, value: Float) {
+        val clamped = value.coerceIn(1.0f, 6f)
+        _piInactiveDotRadius.value = clamped
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putFloat(KEY_PI_INACTIVE_DOT_RADIUS, clamped).apply()
+    }
+
+    fun setPiActiveSlidingThickness(context: Context, value: Float) {
+        val clamped = value.coerceIn(1f, 12f)
+        _piActiveSlidingThickness.value = clamped
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putFloat(KEY_PI_ACTIVE_SLIDING_THICKNESS, clamped).apply()
+    }
+
+    fun setPiInactiveSlidingThickness(context: Context, value: Float) {
+        val clamped = value.coerceIn(1f, 12f)
+        _piInactiveSlidingThickness.value = clamped
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putFloat(KEY_PI_INACTIVE_SLIDING_THICKNESS, clamped).apply()
     }
 
     // Per-Element Monet Accent Color Preferences (false = Primary, true = Tertiary)
@@ -1566,6 +1761,25 @@ object PanelPreferences {
         _footerOuterCorner.value = prefs.getFloat(KEY_FOOTER_OUTER_CORNER, 10.0f)
         _footerInnerCorner.value = prefs.getFloat(KEY_FOOTER_INNER_CORNER, 3.0f)
         _footerSpacing.value = prefs.getFloat(KEY_FOOTER_SPACING, 3.0f)
+        _dateBackgroundEnabled.value = prefs.getBoolean(KEY_DATE_BACKGROUND_ENABLED, false)
+        _dateBackgroundCorner.value = prefs.getFloat(KEY_DATE_BACKGROUND_CORNER, 10.0f).coerceIn(0f, 24f)
+        _batteryBackgroundEnabled.value = prefs.getBoolean(KEY_BATTERY_BACKGROUND_ENABLED, false)
+        _batteryBackgroundCorner.value = prefs.getFloat(KEY_BATTERY_BACKGROUND_CORNER, 10.0f).coerceIn(0f, 24f)
+        _clockBackgroundEnabled.value = prefs.getBoolean(KEY_CLOCK_BACKGROUND_ENABLED, false)
+        _clockBackgroundCorner.value = prefs.getFloat(KEY_CLOCK_BACKGROUND_CORNER, 10.0f).coerceIn(0f, 24f)
+        _carrierBackgroundEnabled.value = prefs.getBoolean(KEY_CARRIER_BACKGROUND_ENABLED, false)
+        _carrierBackgroundCorner.value = prefs.getFloat(KEY_CARRIER_BACKGROUND_CORNER, 10.0f).coerceIn(0f, 24f)
+        _qsPageIndicatorStyle.value = QsPageIndicatorStyle.fromId(prefs.getString(KEY_QS_PAGE_INDICATOR_STYLE, null))
+        _piActiveLineThickness.value = prefs.getFloat(KEY_PI_ACTIVE_LINE_THICKNESS, 4.0f).coerceIn(1f, 10f)
+        _piInactiveLineThickness.value = prefs.getFloat(KEY_PI_INACTIVE_LINE_THICKNESS, 3.0f).coerceIn(1f, 10f)
+        _piActiveLineWidth.value = prefs.getFloat(KEY_PI_ACTIVE_LINE_WIDTH, 22.0f).coerceIn(8f, 48f)
+        _piInactiveLineWidth.value = prefs.getFloat(KEY_PI_INACTIVE_LINE_WIDTH, 12.0f).coerceIn(4f, 32f)
+        _piActiveDotRadius.value = prefs.getFloat(KEY_PI_ACTIVE_DOT_RADIUS, 3.5f).coerceIn(1.5f, 8f)
+        _piInactiveDotRadius.value = prefs.getFloat(KEY_PI_INACTIVE_DOT_RADIUS, 2.5f).coerceIn(1.0f, 6f)
+        _piActiveSlidingThickness.value = prefs.getFloat(KEY_PI_ACTIVE_SLIDING_THICKNESS, 4.0f).coerceIn(1f, 12f)
+        _piInactiveSlidingThickness.value = prefs.getFloat(KEY_PI_INACTIVE_SLIDING_THICKNESS, 4.0f).coerceIn(1f, 12f)
+        _moveCollapseToQqsFooter.value = prefs.getBoolean(KEY_MOVE_COLLAPSE_TO_QQS_FOOTER, false)
+        _carrierDividerAsLine.value = prefs.getBoolean(KEY_CARRIER_DIVIDER_AS_LINE, false)
         _tileOutlineEnabled.value = prefs.getBoolean(KEY_TILE_OUTLINE_ENABLED, false)
         _tileOutlineThicknessDp.value = prefs.getFloat(KEY_TILE_OUTLINE_THICKNESS, 1.2f).coerceIn(0.5f, 6.0f)
         _complicationOutlineEnabled.value = prefs.getBoolean(KEY_COMPLICATION_OUTLINE_ENABLED, false)
@@ -2935,6 +3149,18 @@ object PanelPreferences {
             .putBoolean(getStyleKey(KEY_SHOW_CARRIER_DIVIDER), show)
             .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
+    }
+
+    fun setMoveCollapseToQqsFooter(context: Context, enabled: Boolean) {
+        _moveCollapseToQqsFooter.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_MOVE_COLLAPSE_TO_QQS_FOOTER, enabled).apply()
+    }
+
+    fun setCarrierDividerAsLine(context: Context, asLine: Boolean) {
+        _carrierDividerAsLine.value = asLine
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_CARRIER_DIVIDER_AS_LINE, asLine).apply()
     }
 
     fun setHideCarrierInExpanded(context: Context, hide: Boolean) {
