@@ -901,6 +901,325 @@ class ExampleRobolectricTest {
         com.example.data.PanelPreferences.setMoveCollapseToQqsFooter(app, false)
         com.example.data.PanelPreferences.setCarrierDividerAsLine(app, false)
     }
+
+    @Test
+    fun `verify qqs 2x1 complications row toggle and complication selection persistence`() {
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        com.example.data.PanelPreferences.init(app)
+
+        // Reset to defaults
+        com.example.data.PanelPreferences.setEnableQqsComplicationsRow(app, false)
+        com.example.data.PanelPreferences.setQqs2x1ComplicationIds(
+            app,
+            com.example.data.PanelPreferences.DEFAULT_QQS_2X1_COMPLICATION_IDS
+        )
+
+        org.junit.Assert.assertFalse(com.example.data.PanelPreferences.enableQqsComplicationsRow.value)
+        assertEquals(
+            listOf("comp_battery", "comp_storage"),
+            com.example.data.PanelPreferences.qqs2x1ComplicationIds.value
+        )
+
+        // Enable toggle and modify selected 2x1 complications
+        com.example.data.PanelPreferences.setEnableQqsComplicationsRow(app, true)
+        com.example.data.PanelPreferences.toggleQqs2x1ComplicationId(app, "comp_brightness")
+        com.example.data.PanelPreferences.toggleQqs2x1ComplicationId(app, "comp_storage")
+
+        org.junit.Assert.assertTrue(com.example.data.PanelPreferences.enableQqsComplicationsRow.value)
+        assertEquals(
+            listOf("comp_battery", "comp_brightness"),
+            com.example.data.PanelPreferences.qqs2x1ComplicationIds.value
+        )
+
+        // Toggling off when only 1 item remains must keep at least 1 complication selected
+        com.example.data.PanelPreferences.toggleQqs2x1ComplicationId(app, "comp_brightness")
+        com.example.data.PanelPreferences.toggleQqs2x1ComplicationId(app, "comp_battery")
+        assertEquals(listOf("comp_battery"), com.example.data.PanelPreferences.qqs2x1ComplicationIds.value)
+
+        // Re-initialize from SharedPreferences to verify persistence
+        com.example.data.PanelPreferences.init(app)
+        org.junit.Assert.assertTrue(com.example.data.PanelPreferences.enableQqsComplicationsRow.value)
+        assertEquals(listOf("comp_battery"), com.example.data.PanelPreferences.qqs2x1ComplicationIds.value)
+
+        // Restore defaults
+        com.example.data.PanelPreferences.setEnableQqsComplicationsRow(app, false)
+        com.example.data.PanelPreferences.setQqs2x1ComplicationIds(
+            app,
+            com.example.data.PanelPreferences.DEFAULT_QQS_2X1_COMPLICATION_IDS
+        )
+    }
+
+    @Test
+    fun `verify qqs 2x1 complications move insert and remove operations`() {
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        com.example.data.PanelPreferences.init(app)
+
+        // Reset to known list
+        com.example.data.PanelPreferences.setQqs2x1ComplicationIds(
+            app,
+            listOf("comp_battery", "comp_storage")
+        )
+
+        // 1. Insert new complication at index 1
+        com.example.data.PanelPreferences.insertQqs2x1ComplicationId(app, "comp_brightness", targetIndex = 1)
+        assertEquals(
+            listOf("comp_battery", "comp_brightness", "comp_storage"),
+            com.example.data.PanelPreferences.qqs2x1ComplicationIds.value
+        )
+
+        // 2. Insert new complication at end (null targetIndex)
+        com.example.data.PanelPreferences.insertQqs2x1ComplicationId(app, "comp_ram")
+        assertEquals(
+            listOf("comp_battery", "comp_brightness", "comp_storage", "comp_ram"),
+            com.example.data.PanelPreferences.qqs2x1ComplicationIds.value
+        )
+
+        // 3. Move item from index 3 to index 0
+        com.example.data.PanelPreferences.moveQqs2x1ComplicationId(app, fromIndex = 3, toIndex = 0)
+        assertEquals(
+            listOf("comp_ram", "comp_battery", "comp_brightness", "comp_storage"),
+            com.example.data.PanelPreferences.qqs2x1ComplicationIds.value
+        )
+
+        // 4. Re-insert existing item at a different target index repositions it without duplicates
+        com.example.data.PanelPreferences.insertQqs2x1ComplicationId(app, "comp_ram", targetIndex = 2)
+        assertEquals(
+            listOf("comp_battery", "comp_brightness", "comp_ram", "comp_storage"),
+            com.example.data.PanelPreferences.qqs2x1ComplicationIds.value
+        )
+
+        // 5. Ignore invalid move indices
+        com.example.data.PanelPreferences.moveQqs2x1ComplicationId(app, fromIndex = -1, toIndex = 1)
+        com.example.data.PanelPreferences.moveQqs2x1ComplicationId(app, fromIndex = 0, toIndex = 99)
+        assertEquals(
+            listOf("comp_battery", "comp_brightness", "comp_ram", "comp_storage"),
+            com.example.data.PanelPreferences.qqs2x1ComplicationIds.value
+        )
+
+        // 6. Remove down to 1 item; last item cannot be removed
+        com.example.data.PanelPreferences.removeQqs2x1ComplicationId(app, "comp_battery")
+        com.example.data.PanelPreferences.removeQqs2x1ComplicationId(app, "comp_brightness")
+        com.example.data.PanelPreferences.removeQqs2x1ComplicationId(app, "comp_ram")
+        assertEquals(listOf("comp_storage"), com.example.data.PanelPreferences.qqs2x1ComplicationIds.value)
+        com.example.data.PanelPreferences.removeQqs2x1ComplicationId(app, "comp_storage")
+        assertEquals(listOf("comp_storage"), com.example.data.PanelPreferences.qqs2x1ComplicationIds.value)
+
+        // Restore defaults
+        com.example.data.PanelPreferences.setQqs2x1ComplicationIds(
+            app,
+            com.example.data.PanelPreferences.DEFAULT_QQS_2X1_COMPLICATION_IDS
+        )
+    }
+
+    @Test
+    fun `verify qqs 2x1 horizontal line toggle persistence`() {
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        com.example.data.PanelPreferences.init(app)
+
+        // Reset to default false
+        com.example.data.PanelPreferences.setQqs2x1HorizontalLine(app, false)
+        org.junit.Assert.assertFalse(com.example.data.PanelPreferences.qqs2x1HorizontalLine.value)
+
+        // Enable horizontal line mode and verify re-init persistence
+        com.example.data.PanelPreferences.setQqs2x1HorizontalLine(app, true)
+        org.junit.Assert.assertTrue(com.example.data.PanelPreferences.qqs2x1HorizontalLine.value)
+
+        com.example.data.PanelPreferences.init(app)
+        org.junit.Assert.assertTrue(com.example.data.PanelPreferences.qqs2x1HorizontalLine.value)
+
+        // Restore default
+        com.example.data.PanelPreferences.setQqs2x1HorizontalLine(app, false)
+        org.junit.Assert.assertFalse(com.example.data.PanelPreferences.qqs2x1HorizontalLine.value)
+    }
+
+    @Test
+    fun `verify qqs 2x1 perimeter progress toggle persistence`() {
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        com.example.data.PanelPreferences.init(app)
+
+        // Reset to default false
+        com.example.data.PanelPreferences.setQqs2x1PerimeterProgress(app, false)
+        org.junit.Assert.assertFalse(com.example.data.PanelPreferences.qqs2x1PerimeterProgress.value)
+
+        // Enable perimeter progress bar and verify re-init persistence
+        com.example.data.PanelPreferences.setQqs2x1PerimeterProgress(app, true)
+        org.junit.Assert.assertTrue(com.example.data.PanelPreferences.qqs2x1PerimeterProgress.value)
+
+        com.example.data.PanelPreferences.init(app)
+        org.junit.Assert.assertTrue(com.example.data.PanelPreferences.qqs2x1PerimeterProgress.value)
+
+        // Verify independence from horizontal line toggle
+        com.example.data.PanelPreferences.setQqs2x1HorizontalLine(app, false)
+        org.junit.Assert.assertTrue(com.example.data.PanelPreferences.qqs2x1PerimeterProgress.value)
+
+        // Restore default
+        com.example.data.PanelPreferences.setQqs2x1PerimeterProgress(app, false)
+        org.junit.Assert.assertFalse(com.example.data.PanelPreferences.qqs2x1PerimeterProgress.value)
+    }
+
+    @Test
+    fun `verify qqs 2x1 perimeter progress hides icon arc and horizontal progress indicator`() {
+        // Default: only icon arc visible
+        val defaultMode = com.example.data.PanelPreferences.resolveQqs2x1ProgressDisplayMode(
+            useHorizontalLine = false,
+            usePerimeterProgress = false
+        )
+        org.junit.Assert.assertFalse(defaultMode.showPerimeterBar)
+        org.junit.Assert.assertFalse(defaultMode.showHorizontalLine)
+        org.junit.Assert.assertTrue(defaultMode.showIconArc)
+
+        // Horizontal line only: icon arc hidden, horizontal line visible
+        val lineOnlyMode = com.example.data.PanelPreferences.resolveQqs2x1ProgressDisplayMode(
+            useHorizontalLine = true,
+            usePerimeterProgress = false
+        )
+        org.junit.Assert.assertFalse(lineOnlyMode.showPerimeterBar)
+        org.junit.Assert.assertTrue(lineOnlyMode.showHorizontalLine)
+        org.junit.Assert.assertFalse(lineOnlyMode.showIconArc)
+
+        // Perimeter progress enabled (with horizontal line false): icon arc and horizontal indicator hidden
+        val perimeterDefaultMode = com.example.data.PanelPreferences.resolveQqs2x1ProgressDisplayMode(
+            useHorizontalLine = false,
+            usePerimeterProgress = true
+        )
+        org.junit.Assert.assertTrue(perimeterDefaultMode.showPerimeterBar)
+        org.junit.Assert.assertFalse(perimeterDefaultMode.showHorizontalLine)
+        org.junit.Assert.assertFalse(perimeterDefaultMode.showIconArc)
+
+        // Perimeter progress enabled (even if horizontal line toggle is also on): icon arc and horizontal indicator hidden
+        val perimeterWithLineMode = com.example.data.PanelPreferences.resolveQqs2x1ProgressDisplayMode(
+            useHorizontalLine = true,
+            usePerimeterProgress = true
+        )
+        org.junit.Assert.assertTrue(perimeterWithLineMode.showPerimeterBar)
+        org.junit.Assert.assertFalse(perimeterWithLineMode.showHorizontalLine)
+        org.junit.Assert.assertFalse(perimeterWithLineMode.showIconArc)
+    }
+
+    @Test
+    fun `verify qqs 2x1 corner sliders and tile height slider persistence and clamping`() {
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        com.example.data.PanelPreferences.init(app)
+
+        // Reset to defaults and verify
+        com.example.data.PanelPreferences.setQqs2x1ActiveCornerDp(app, 28.0f)
+        com.example.data.PanelPreferences.setQqs2x1InactiveCornerDp(app, 12.0f)
+        com.example.data.PanelPreferences.setQqs2x1TileHeightDp(app, 56)
+        assertEquals(28.0f, com.example.data.PanelPreferences.qqs2x1ActiveCornerDp.value, 0.001f)
+        assertEquals(12.0f, com.example.data.PanelPreferences.qqs2x1InactiveCornerDp.value, 0.001f)
+        assertEquals(56, com.example.data.PanelPreferences.qqs2x1TileHeightDp.value)
+
+        // Set custom values within range
+        com.example.data.PanelPreferences.setQqs2x1ActiveCornerDp(app, 20.0f)
+        com.example.data.PanelPreferences.setQqs2x1InactiveCornerDp(app, 6.0f)
+        com.example.data.PanelPreferences.setQqs2x1TileHeightDp(app, 68)
+        assertEquals(20.0f, com.example.data.PanelPreferences.qqs2x1ActiveCornerDp.value, 0.001f)
+        assertEquals(6.0f, com.example.data.PanelPreferences.qqs2x1InactiveCornerDp.value, 0.001f)
+        assertEquals(68, com.example.data.PanelPreferences.qqs2x1TileHeightDp.value)
+
+        // Re-initialize from SharedPreferences and verify persistence
+        com.example.data.PanelPreferences.init(app)
+        assertEquals(20.0f, com.example.data.PanelPreferences.qqs2x1ActiveCornerDp.value, 0.001f)
+        assertEquals(6.0f, com.example.data.PanelPreferences.qqs2x1InactiveCornerDp.value, 0.001f)
+        assertEquals(68, com.example.data.PanelPreferences.qqs2x1TileHeightDp.value)
+
+        // Verify clamping bounds
+        com.example.data.PanelPreferences.setQqs2x1ActiveCornerDp(app, -10.0f)
+        assertEquals(0.0f, com.example.data.PanelPreferences.qqs2x1ActiveCornerDp.value, 0.001f)
+        com.example.data.PanelPreferences.setQqs2x1ActiveCornerDp(app, 99.0f)
+        assertEquals(40.0f, com.example.data.PanelPreferences.qqs2x1ActiveCornerDp.value, 0.001f)
+
+        com.example.data.PanelPreferences.setQqs2x1InactiveCornerDp(app, -5.0f)
+        assertEquals(0.0f, com.example.data.PanelPreferences.qqs2x1InactiveCornerDp.value, 0.001f)
+        com.example.data.PanelPreferences.setQqs2x1InactiveCornerDp(app, 80.0f)
+        assertEquals(40.0f, com.example.data.PanelPreferences.qqs2x1InactiveCornerDp.value, 0.001f)
+
+        com.example.data.PanelPreferences.setQqs2x1TileHeightDp(app, 12)
+        assertEquals(40, com.example.data.PanelPreferences.qqs2x1TileHeightDp.value)
+        com.example.data.PanelPreferences.setQqs2x1TileHeightDp(app, 150)
+        assertEquals(84, com.example.data.PanelPreferences.qqs2x1TileHeightDp.value)
+
+        // Restore defaults
+        com.example.data.PanelPreferences.setQqs2x1ActiveCornerDp(app, 28.0f)
+        com.example.data.PanelPreferences.setQqs2x1InactiveCornerDp(app, 12.0f)
+        com.example.data.PanelPreferences.setQqs2x1TileHeightDp(app, 56)
+    }
+
+    @Test
+    fun `verify active inactive complication arc and track element color preferences isolation persistence and sync`() {
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        com.example.data.PanelPreferences.init(app)
+
+        // Reset both Light and Dark modes to defaults
+        for (isDark in listOf(false, true)) {
+            com.example.data.PanelPreferences.setActiveCompArcMode(app, isDark, com.example.data.ComplicationArcMonetMode.PRIMARY)
+            com.example.data.PanelPreferences.setActiveCompArcHsb(app, isDark, 0f, 1f, 1f)
+            com.example.data.PanelPreferences.setActiveCompArcCustomColor(app, isDark, 0xFFFFFFFF.toInt())
+
+            com.example.data.PanelPreferences.setInactiveCompArcMode(app, isDark, com.example.data.ComplicationArcMonetMode.PRIMARY)
+            com.example.data.PanelPreferences.setInactiveCompArcHsb(app, isDark, 0f, 1f, 1f)
+            com.example.data.PanelPreferences.setInactiveCompArcCustomColor(app, isDark, 0xFF673AB7.toInt())
+
+            com.example.data.PanelPreferences.setCompArcTrackMode(app, isDark, com.example.data.ComplicationArcMonetMode.PRIMARY)
+            com.example.data.PanelPreferences.setCompArcTrackHsb(app, isDark, 0f, 1f, 1f)
+            com.example.data.PanelPreferences.setCompArcTrackCustomColor(app, isDark, 0xFF334155.toInt())
+        }
+
+        // Verify defaults
+        assertEquals(com.example.data.ComplicationArcMonetMode.PRIMARY, com.example.data.PanelPreferences.getActiveCompArcMode(false).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.PRIMARY, com.example.data.PanelPreferences.getInactiveCompArcMode(true).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.PRIMARY, com.example.data.PanelPreferences.getCompArcTrackMode(false).value)
+
+        // Modify Dark mode settings and verify Light mode remains isolated
+        com.example.data.PanelPreferences.setActiveCompArcMode(app, true, com.example.data.ComplicationArcMonetMode.CUSTOM)
+        com.example.data.PanelPreferences.setActiveCompArcHsb(app, true, 45f, 1.4f, 0.9f)
+        com.example.data.PanelPreferences.setActiveCompArcCustomColor(app, true, 0xFF00E5FF.toInt())
+
+        com.example.data.PanelPreferences.setInactiveCompArcMode(app, true, com.example.data.ComplicationArcMonetMode.TERTIARY)
+        com.example.data.PanelPreferences.setInactiveCompArcHsb(app, true, -30f, 0.8f, 1.2f)
+
+        com.example.data.PanelPreferences.setCompArcTrackMode(app, true, com.example.data.ComplicationArcMonetMode.CUSTOM)
+        com.example.data.PanelPreferences.setCompArcTrackCustomColor(app, true, 0xFF223344.toInt())
+
+        assertEquals(com.example.data.ComplicationArcMonetMode.CUSTOM, com.example.data.PanelPreferences.getActiveCompArcMode(true).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.PRIMARY, com.example.data.PanelPreferences.getActiveCompArcMode(false).value)
+        assertEquals(0xFF00E5FF.toInt(), com.example.data.PanelPreferences.getActiveCompArcCustomColor(true).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.TERTIARY, com.example.data.PanelPreferences.getInactiveCompArcMode(true).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.PRIMARY, com.example.data.PanelPreferences.getInactiveCompArcMode(false).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.CUSTOM, com.example.data.PanelPreferences.getCompArcTrackMode(true).value)
+        assertEquals(0xFF223344.toInt(), com.example.data.PanelPreferences.getCompArcTrackCustomColor(true).value)
+
+        // Re-initialize from SharedPreferences and confirm persistence
+        com.example.data.PanelPreferences.init(app)
+        assertEquals(com.example.data.ComplicationArcMonetMode.CUSTOM, com.example.data.PanelPreferences.getActiveCompArcMode(true).value)
+        assertEquals(45f, com.example.data.PanelPreferences.getActiveCompArcHue(true).value, 0.001f)
+        assertEquals(1.4f, com.example.data.PanelPreferences.getActiveCompArcSat(true).value, 0.001f)
+        assertEquals(0.9f, com.example.data.PanelPreferences.getActiveCompArcVal(true).value, 0.001f)
+        assertEquals(0xFF00E5FF.toInt(), com.example.data.PanelPreferences.getActiveCompArcCustomColor(true).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.TERTIARY, com.example.data.PanelPreferences.getInactiveCompArcMode(true).value)
+        assertEquals(-30f, com.example.data.PanelPreferences.getInactiveCompArcHue(true).value, 0.001f)
+        assertEquals(com.example.data.ComplicationArcMonetMode.CUSTOM, com.example.data.PanelPreferences.getCompArcTrackMode(true).value)
+        assertEquals(0xFF223344.toInt(), com.example.data.PanelPreferences.getCompArcTrackCustomColor(true).value)
+
+        // Verify syncElementColors copies Dark -> Light cleanly
+        com.example.data.PanelPreferences.syncElementColors(app, fromDark = true)
+        assertEquals(com.example.data.ComplicationArcMonetMode.CUSTOM, com.example.data.PanelPreferences.getActiveCompArcMode(false).value)
+        assertEquals(45f, com.example.data.PanelPreferences.getActiveCompArcHue(false).value, 0.001f)
+        assertEquals(0xFF00E5FF.toInt(), com.example.data.PanelPreferences.getActiveCompArcCustomColor(false).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.TERTIARY, com.example.data.PanelPreferences.getInactiveCompArcMode(false).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.CUSTOM, com.example.data.PanelPreferences.getCompArcTrackMode(false).value)
+        assertEquals(0xFF223344.toInt(), com.example.data.PanelPreferences.getCompArcTrackCustomColor(false).value)
+
+        // Restore defaults
+        for (isDark in listOf(false, true)) {
+            com.example.data.PanelPreferences.setActiveCompArcMode(app, isDark, com.example.data.ComplicationArcMonetMode.PRIMARY)
+            com.example.data.PanelPreferences.setActiveCompArcHsb(app, isDark, 0f, 1f, 1f)
+            com.example.data.PanelPreferences.setInactiveCompArcMode(app, isDark, com.example.data.ComplicationArcMonetMode.PRIMARY)
+            com.example.data.PanelPreferences.setInactiveCompArcHsb(app, isDark, 0f, 1f, 1f)
+            com.example.data.PanelPreferences.setCompArcTrackMode(app, isDark, com.example.data.ComplicationArcMonetMode.PRIMARY)
+            com.example.data.PanelPreferences.setCompArcTrackHsb(app, isDark, 0f, 1f, 1f)
+        }
+    }
 }
 
 

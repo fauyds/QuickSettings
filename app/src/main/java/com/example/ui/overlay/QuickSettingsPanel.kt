@@ -66,7 +66,9 @@ import androidx.compose.ui.graphics.drawOutline
 import com.example.ui.shape.insideShapeBorder
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -123,6 +125,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -227,6 +230,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Brush
@@ -3627,29 +3636,55 @@ fun EditModeTileStudio(
     onTilesUpdated: (List<QsTileModel>, List<QsTileModel>) -> Unit,
     onDone: () -> Unit
 ) {
+    val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val isDark = LocalIsDarkTheme.current
     val density = LocalDensity.current
     val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
+    val enableQqsComplicationsRow by PanelPreferences.enableQqsComplicationsRow.collectAsState()
+    val qqs2x1ComplicationIds by PanelPreferences.qqs2x1ComplicationIds.collectAsState()
+    val qqs2x1ActiveCornerDp by PanelPreferences.qqs2x1ActiveCornerDp.collectAsState()
+    val qqs2x1InactiveCornerDp by PanelPreferences.qqs2x1InactiveCornerDp.collectAsState()
+    val qqs2x1TileHeightDp by PanelPreferences.qqs2x1TileHeightDp.collectAsState()
+
+    val isKitKat = PanelPreferences.isAndroidKitKatStyle(context)
+    val isMarshmallow = PanelPreferences.isAndroidMarshmallowStyle(context)
+    val isLegacyFlat = isKitKat || isMarshmallow
+    val show2x1ComplicationEditor = enableQqsComplicationsRow && !isLegacyFlat
 
     var localActive by remember(activeTiles) { mutableStateOf(activeTiles) }
     var localInactive by remember(inactiveTiles) { mutableStateOf(inactiveTiles) }
+
+    val allEditTileMap = remember(localActive, localInactive) {
+        (localActive + localInactive).associateBy { it.id }
+    }
+    val qqs2x1EditTiles = remember(allEditTileMap, qqs2x1ComplicationIds, show2x1ComplicationEditor) {
+        if (!show2x1ComplicationEditor) emptyList()
+        else qqs2x1ComplicationIds.mapNotNull { id ->
+            allEditTileMap[id]?.takeIf { it.isComplicationTile || it.complicationSpec != null }
+        }
+    }
 
     val inactiveQsTiles = remember(localInactive) { localInactive.filter { !it.isComplicationTile } }
     val inactiveComplications = remember(localInactive) { localInactive.filter { it.isComplicationTile } }
 
     var draggedTileId by remember { mutableStateOf<String?>(null) }
+    var dragSourceKind by remember { mutableStateOf<String?>(null) } // "active", "inactive", "comp2x1"
     var dragSourceIndex by remember { mutableIntStateOf(-1) }
     var hoveredTargetIndex by remember { mutableIntStateOf(-1) }
+    var hoveredCompSlotIndex by remember { mutableIntStateOf(-1) }
     var currentDragCenter by remember { mutableStateOf(Offset.Zero) }
     var autoScrollDirection by remember { mutableIntStateOf(0) } // -1 = up, 1 = down, 0 = idle
 
     val slotBoundsMap = remember { mutableStateMapOf<Int, Rect>() }
+    val compSlotBoundsMap = remember { mutableStateMapOf<Int, Rect>() }
     val tileBoundsMap = remember { mutableStateMapOf<String, Rect>() }
+    var compRowContainerBounds by remember { mutableStateOf<Rect?>(null) }
     var activeGridContainerBounds by remember { mutableStateOf<Rect?>(null) }
     var inactiveDropZoneBounds by remember { mutableStateOf<Rect?>(null) }
     var studioViewportBounds by remember { mutableStateOf<Rect?>(null) }
     var studioCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    var compCardWidthDp by remember { mutableStateOf(140.dp) }
 
     // Lock/unlock parent vertical scroll while dragging to prevent gesture cancellation
     LaunchedEffect(draggedTileId) {
@@ -3700,14 +3735,24 @@ fun EditModeTileStudio(
         else -> 74.dp
     }
 
+    val draggedTileObj = remember(draggedTileId, localActive, localInactive) {
+        draggedTileId?.let { id ->
+            localActive.firstOrNull { it.id == id } ?: localInactive.firstOrNull { it.id == id }
+        }
+    }
+    val canDropInto2x1Row = show2x1ComplicationEditor &&
+        draggedTileObj != null &&
+        (draggedTileObj.isComplicationTile || draggedTileObj.complicationSpec != null)
+    val isOverComp2x1DropZone = canDropInto2x1Row &&
+        compRowContainerBounds != null &&
+        compRowContainerBounds!!.let { b ->
+            Rect(b.left - 12f, b.top - 12f, b.right + 12f, b.bottom + 12f).contains(currentDragCenter)
+        }
+
     val isOverInactiveDropZone = draggedTileId != null &&
         inactiveDropZoneBounds != null &&
         currentDragCenter.y >= (inactiveDropZoneBounds?.top ?: Float.MAX_VALUE)
 
-    val context = LocalContext.current
-    val isKitKat = PanelPreferences.isAndroidKitKatStyle(context)
-    val isMarshmallow = PanelPreferences.isAndroidMarshmallowStyle(context)
-    val isLegacyFlat = isKitKat || isMarshmallow
     val legacyAccent = if (isKitKat) Color(0xFF33B5E5) else if (isMarshmallow) com.example.ui.theme.getQsTilesElementColor(isDark) else androidx.compose.material3.MaterialTheme.colorScheme.primary
 
     Box(
@@ -3826,6 +3871,318 @@ fun EditModeTileStudio(
                 )
             }
 
+            // QQS 2x1 Complications Row Section (when enabled in Modern / Oreo styles)
+            if (show2x1ComplicationEditor) {
+                val compHighlightBorder = if (isOverComp2x1DropZone) legacyAccent else Color.Transparent
+                val compContainerBg = if (isOverComp2x1DropZone) {
+                    legacyAccent.copy(alpha = 0.12f)
+                } else if (isDark) {
+                    Color.White.copy(alpha = 0.05f)
+                } else {
+                    Color.Black.copy(alpha = 0.04f)
+                }
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onGloballyPositioned { coords ->
+                            compRowContainerBounds = coords.boundsInRoot()
+                        }
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(compContainerBg)
+                        .border(
+                            width = if (isOverComp2x1DropZone) 1.5.dp else 0.dp,
+                            color = compHighlightBorder,
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .padding(10.dp)
+                        .testTag("edit_studio_qqs_2x1_row")
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isOverComp2x1DropZone) "DROP TO PLACE IN 2x1 ROW" else "QQS 2x1 COMPLICATIONS (${qqs2x1EditTiles.size})",
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.8.sp,
+                            color = legacyAccent
+                        )
+                        Text(
+                            text = "Hold & drag to reorder/move",
+                            fontSize = 10.sp,
+                            color = if (isDark) Color(0xFFAAAAAA) else Color(0xFF666666)
+                        )
+                    }
+
+                    if (qqs2x1EditTiles.isEmpty()) {
+                        Text(
+                            text = "Drag any complication tile here for the 2x1 QQS row.",
+                            fontSize = 11.5.sp,
+                            color = if (isDark) Color.Gray else Color(0xFF777777),
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    } else {
+                        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                            val spacing = 8.dp
+                            val computedWidth = if (qqs2x1EditTiles.size == 1) {
+                                maxWidth
+                            } else {
+                                ((maxWidth - spacing) / 2f).coerceAtLeast(124.dp)
+                            }
+                            compCardWidthDp = computedWidth
+                            val compRows = qqs2x1EditTiles.chunked(2)
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                compRows.forEach { rowComps ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(spacing)
+                                    ) {
+                                        rowComps.forEach { tile ->
+                                            val compIdx = qqs2x1EditTiles.indexOfFirst { it.id == tile.id }
+                                            val isDraggingThis = draggedTileId == tile.id && dragSourceKind == "comp2x1"
+                                            val isHoverCompSlot = draggedTileId != null && hoveredCompSlotIndex == compIdx
+                                            key("edit_2x1_${tile.id}") {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .width(computedWidth)
+                                                        .height(qqs2x1TileHeightDp.dp)
+                                                        .onGloballyPositioned { coords ->
+                                                            if (compIdx >= 0) compSlotBoundsMap[compIdx] = coords.boundsInRoot()
+                                                            tileBoundsMap[tile.id] = coords.boundsInRoot()
+                                                        }
+                                                        .pointerInput(tile.id, qqs2x1EditTiles.size) {
+                                                            detectDragGesturesAfterLongPress(
+                                                                onDragStart = { offset ->
+                                                                    val idx = qqs2x1EditTiles.indexOfFirst { it.id == tile.id }
+                                                                    if (idx < 0) return@detectDragGesturesAfterLongPress
+                                                                    draggedTileId = tile.id
+                                                                    dragSourceKind = "comp2x1"
+                                                                    dragSourceIndex = idx
+                                                                    hoveredTargetIndex = -1
+                                                                    hoveredCompSlotIndex = -1
+                                                                    onDragStateChange(true)
+                                                                    val myBounds = compSlotBoundsMap[idx] ?: tileBoundsMap[tile.id] ?: Rect.Zero
+                                                                    currentDragCenter = myBounds.topLeft + offset
+                                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                                },
+                                                                onDrag = { change, dragAmount ->
+                                                                    change.consume()
+                                                                    currentDragCenter += dragAmount
+                                                                    checkAutoScroll(currentDragCenter)
+
+                                                                    if (draggedTileId != null) {
+                                                                        val compBounds = compRowContainerBounds
+                                                                        val activeContainer = activeGridContainerBounds
+                                                                        val dropBounds = inactiveDropZoneBounds
+
+                                                                        val insideCompRow = compBounds != null && Rect(
+                                                                            compBounds.left - 12f,
+                                                                            compBounds.top - 12f,
+                                                                            compBounds.right + 12f,
+                                                                            compBounds.bottom + 12f
+                                                                        ).contains(currentDragCenter)
+
+                                                                        if (insideCompRow) {
+                                                                            hoveredTargetIndex = -1
+                                                                            var foundCompIdx = -1
+                                                                            for (i in 0 until qqs2x1EditTiles.size) {
+                                                                                val b = compSlotBoundsMap[i] ?: continue
+                                                                                if (Rect(b.left - 8f, b.top - 8f, b.right + 8f, b.bottom + 8f).contains(currentDragCenter)) {
+                                                                                    foundCompIdx = i
+                                                                                    break
+                                                                                }
+                                                                            }
+                                                                            if (foundCompIdx != -1 && foundCompIdx != dragSourceIndex) {
+                                                                                if (hoveredCompSlotIndex != foundCompIdx) {
+                                                                                    hoveredCompSlotIndex = foundCompIdx
+                                                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                                }
+                                                                            } else {
+                                                                                hoveredCompSlotIndex = -1
+                                                                            }
+                                                                        } else {
+                                                                            hoveredCompSlotIndex = -1
+                                                                            val isStrictlyAvailable = dropBounds != null &&
+                                                                                activeContainer != null &&
+                                                                                currentDragCenter.y > activeContainer.bottom + 10f &&
+                                                                                currentDragCenter.y >= dropBounds.top
+                                                                            if (isStrictlyAvailable) {
+                                                                                hoveredTargetIndex = -1
+                                                                            } else {
+                                                                                var foundGridIdx = -1
+                                                                                for (i in 0 until localActive.size) {
+                                                                                    val b = slotBoundsMap[i] ?: continue
+                                                                                    if (Rect(b.left - 10f, b.top - 10f, b.right + 10f, b.bottom + 10f).contains(currentDragCenter)) {
+                                                                                        foundGridIdx = i
+                                                                                        break
+                                                                                    }
+                                                                                }
+                                                                                if (foundGridIdx != hoveredTargetIndex) {
+                                                                                    hoveredTargetIndex = foundGridIdx
+                                                                                    if (foundGridIdx != -1) {
+                                                                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                },
+                                                                onDragEnd = {
+                                                                    autoScrollDirection = 0
+                                                                    onDragStateChange(false)
+                                                                    val activeId = draggedTileId
+                                                                    val compBounds = compRowContainerBounds
+                                                                    val activeContainer = activeGridContainerBounds
+                                                                    val dropBounds = inactiveDropZoneBounds
+                                                                    val sourceIdx = dragSourceIndex
+                                                                    val targetCompIdx = hoveredCompSlotIndex
+                                                                    val targetGridIdx = hoveredTargetIndex
+
+                                                                    val droppedInCompRow = compBounds != null && Rect(
+                                                                        compBounds.left - 12f,
+                                                                        compBounds.top - 12f,
+                                                                        compBounds.right + 12f,
+                                                                        compBounds.bottom + 12f
+                                                                    ).contains(currentDragCenter)
+                                                                    val droppedInAvailable = dropBounds != null &&
+                                                                        ((activeContainer != null && currentDragCenter.y > activeContainer.bottom + 10f && currentDragCenter.y >= dropBounds.top) ||
+                                                                         (activeContainer == null && currentDragCenter.y >= dropBounds.top))
+                                                                    val droppedInActiveGrid = !droppedInCompRow && !droppedInAvailable &&
+                                                                        activeContainer != null &&
+                                                                        currentDragCenter.y >= activeContainer.top - 12f &&
+                                                                        currentDragCenter.y <= activeContainer.bottom + 16f
+
+                                                                    if (activeId != null) {
+                                                                        if (droppedInCompRow) {
+                                                                            if (sourceIdx != -1 && targetCompIdx != -1 && sourceIdx != targetCompIdx) {
+                                                                                PanelPreferences.moveQqs2x1ComplicationId(context, sourceIdx, targetCompIdx)
+                                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                                            }
+                                                                        } else if (droppedInAvailable) {
+                                                                            if (qqs2x1EditTiles.size > 1) {
+                                                                                PanelPreferences.removeQqs2x1ComplicationId(context, activeId)
+                                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                                            }
+                                                                        } else if (droppedInActiveGrid) {
+                                                                            val alreadyActiveIdx = localActive.indexOfFirst { it.id == activeId }
+                                                                            if (alreadyActiveIdx == -1) {
+                                                                                val tileObj = localInactive.firstOrNull { it.id == activeId }
+                                                                                if (tileObj != null) {
+                                                                                    val updatedInactive = localInactive.toMutableList().apply { remove(tileObj) }
+                                                                                    val updatedActive = localActive.toMutableList().apply {
+                                                                                        val insertAt = if (targetGridIdx != -1) targetGridIdx.coerceIn(0, size) else size
+                                                                                        add(insertAt, tileObj.copy(isVisible = true))
+                                                                                    }
+                                                                                    localActive = updatedActive
+                                                                                    localInactive = updatedInactive
+                                                                                    onTilesUpdated(localActive, localInactive)
+                                                                                }
+                                                                            } else if (targetGridIdx != -1 && targetGridIdx != alreadyActiveIdx && targetGridIdx in localActive.indices) {
+                                                                                val updatedActive = localActive.toMutableList()
+                                                                                java.util.Collections.swap(updatedActive, alreadyActiveIdx, targetGridIdx)
+                                                                                localActive = updatedActive
+                                                                                onTilesUpdated(localActive, localInactive)
+                                                                            }
+                                                                            if (qqs2x1EditTiles.size > 1) {
+                                                                                PanelPreferences.removeQqs2x1ComplicationId(context, activeId)
+                                                                            }
+                                                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                                        }
+                                                                    }
+                                                                    draggedTileId = null
+                                                                    dragSourceKind = null
+                                                                    dragSourceIndex = -1
+                                                                    hoveredTargetIndex = -1
+                                                                    hoveredCompSlotIndex = -1
+                                                                },
+                                                                onDragCancel = {
+                                                                    autoScrollDirection = 0
+                                                                    onDragStateChange(false)
+                                                                    draggedTileId = null
+                                                                    dragSourceKind = null
+                                                                    dragSourceIndex = -1
+                                                                    hoveredTargetIndex = -1
+                                                                    hoveredCompSlotIndex = -1
+                                                                }
+                                                            )
+                                                        }
+                                                ) {
+                                                    val compPlaceholderCorner = if (tile.state != TileState.ACTIVE) {
+                                                        qqs2x1InactiveCornerDp.dp
+                                                    } else {
+                                                        qqs2x1ActiveCornerDp.dp
+                                                    }
+                                                    if (isDraggingThis) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .fillMaxSize()
+                                                                .clip(RoundedCornerShape(compPlaceholderCorner))
+                                                                .background(legacyAccent.copy(alpha = 0.08f))
+                                                                .border(1.dp, legacyAccent.copy(alpha = 0.35f), RoundedCornerShape(compPlaceholderCorner))
+                                                        )
+                                                    } else {
+                                                        Box(modifier = Modifier.fillMaxSize()) {
+                                                            Qqs2x1ComplicationCard(
+                                                                tile = tile,
+                                                                isDark = isDark,
+                                                                onClick = {},
+                                                                onLongClick = {},
+                                                                modifier = Modifier
+                                                                    .fillMaxSize()
+                                                                    .then(
+                                                                        if (isHoverCompSlot) {
+                                                                            Modifier.border(2.dp, legacyAccent, RoundedCornerShape(compPlaceholderCorner))
+                                                                        } else Modifier
+                                                                    )
+                                                            )
+                                                            if (draggedTileId == null && qqs2x1EditTiles.size > 1) {
+                                                                Box(
+                                                                    modifier = Modifier
+                                                                        .align(Alignment.TopEnd)
+                                                                        .padding(top = 2.dp, end = 2.dp)
+                                                                        .size(20.dp)
+                                                                        .clip(CircleShape)
+                                                                        .background(Color(0xFFE53935))
+                                                                        .clickable(
+                                                                            interactionSource = remember { MutableInteractionSource() },
+                                                                            indication = null
+                                                                        ) {
+                                                                            PanelPreferences.removeQqs2x1ComplicationId(context, tile.id)
+                                                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                        }
+                                                                        .testTag("edit_studio_remove_2x1_${tile.id}"),
+                                                                    contentAlignment = Alignment.Center
+                                                                ) {
+                                                                    Icon(
+                                                                        imageVector = Icons.Default.Remove,
+                                                                        contentDescription = "Remove from 2x1 Row",
+                                                                        tint = Color.White,
+                                                                        modifier = Modifier.size(13.dp)
+                                                                    )
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if (rowComps.size == 1 && qqs2x1EditTiles.size > 1) {
+                                            Spacer(modifier = Modifier.width(computedWidth))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Active Tiles Grid Section
             Column(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -3874,7 +4231,7 @@ fun EditModeTileStudio(
                                 ) {
                                     rowTiles.forEach { tile ->
                                         val slotIndex = localActive.indexOfFirst { it.id == tile.id }
-                                        val isDragging = draggedTileId == tile.id
+                                        val isDragging = draggedTileId == tile.id && dragSourceKind == "active"
                                         key(tile.id) {
                                             Box(
                                                 modifier = Modifier
@@ -3889,8 +4246,10 @@ fun EditModeTileStudio(
                                                                 val idx = localActive.indexOfFirst { it.id == tile.id }
                                                                 if (idx < 0) return@detectDragGesturesAfterLongPress
                                                                 draggedTileId = tile.id
+                                                                dragSourceKind = "active"
                                                                 dragSourceIndex = idx
                                                                 hoveredTargetIndex = -1
+                                                                hoveredCompSlotIndex = -1
                                                                 onDragStateChange(true)
                                                                 val myBounds = slotBoundsMap[idx] ?: tileBoundsMap[tile.id] ?: Rect.Zero
                                                                 currentDragCenter = myBounds.topLeft + offset
@@ -3902,16 +4261,36 @@ fun EditModeTileStudio(
                                                                 checkAutoScroll(currentDragCenter)
 
                                                                 if (draggedTileId != null) {
+                                                                    val compBounds = compRowContainerBounds
                                                                     val activeContainer = activeGridContainerBounds
                                                                     val dropBounds = inactiveDropZoneBounds
+                                                                    val isCompTile = tile.isComplicationTile || tile.complicationSpec != null
+                                                                    val overCompRow = show2x1ComplicationEditor && isCompTile && compBounds != null &&
+                                                                        Rect(compBounds.left - 12f, compBounds.top - 12f, compBounds.right + 12f, compBounds.bottom + 12f).contains(currentDragCenter)
                                                                     val isStrictlyAvailable = dropBounds != null &&
                                                                         activeContainer != null &&
                                                                         currentDragCenter.y > activeContainer.bottom + 10f &&
                                                                         currentDragCenter.y >= dropBounds.top
 
-                                                                    if (isStrictlyAvailable) {
+                                                                    if (overCompRow) {
                                                                         hoveredTargetIndex = -1
+                                                                        var targetCompIdx = -1
+                                                                        for (i in 0 until qqs2x1EditTiles.size) {
+                                                                            val b = compSlotBoundsMap[i] ?: continue
+                                                                            if (Rect(b.left - 8f, b.top - 8f, b.right + 8f, b.bottom + 8f).contains(currentDragCenter)) {
+                                                                                targetCompIdx = i
+                                                                                break
+                                                                            }
+                                                                        }
+                                                                        if (targetCompIdx != hoveredCompSlotIndex) {
+                                                                            hoveredCompSlotIndex = targetCompIdx
+                                                                            if (targetCompIdx != -1) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                        }
+                                                                    } else if (isStrictlyAvailable) {
+                                                                        hoveredTargetIndex = -1
+                                                                        hoveredCompSlotIndex = -1
                                                                     } else {
+                                                                        hoveredCompSlotIndex = -1
                                                                         var targetIndex = -1
                                                                         val totalCount = localActive.size
                                                                         for (i in 0 until totalCount) {
@@ -3937,16 +4316,40 @@ fun EditModeTileStudio(
                                                                 autoScrollDirection = 0
                                                                 onDragStateChange(false)
                                                                 val activeId = draggedTileId
+                                                                val compBounds = compRowContainerBounds
                                                                 val dropBounds = inactiveDropZoneBounds
                                                                 val activeContainer = activeGridContainerBounds
                                                                 val sourceIdx = dragSourceIndex
                                                                 val targetIdx = hoveredTargetIndex
+                                                                val targetCompIdx = hoveredCompSlotIndex
+                                                                val isCompTile = tile.isComplicationTile || tile.complicationSpec != null
 
+                                                                val isDropToCompRow = activeId != null && show2x1ComplicationEditor && isCompTile &&
+                                                                    compBounds != null &&
+                                                                    Rect(compBounds.left - 12f, compBounds.top - 12f, compBounds.right + 12f, compBounds.bottom + 12f).contains(currentDragCenter)
                                                                 val isDropToAvailable = activeId != null && dropBounds != null &&
                                                                     ((activeContainer != null && currentDragCenter.y > activeContainer.bottom + 10f && currentDragCenter.y >= dropBounds.top) ||
                                                                      (activeContainer == null && currentDragCenter.y >= dropBounds.top))
 
-                                                                if (isDropToAvailable) {
+                                                                if (isDropToCompRow) {
+                                                                    PanelPreferences.insertQqs2x1ComplicationId(
+                                                                        context,
+                                                                        activeId!!,
+                                                                        targetCompIdx.takeIf { it != -1 }
+                                                                    )
+                                                                    val updatedActive = localActive.toMutableList()
+                                                                    val moved = updatedActive.firstOrNull { it.id == activeId }
+                                                                    if (moved != null) {
+                                                                        updatedActive.remove(moved)
+                                                                        val updatedInactive = localInactive.toMutableList().apply {
+                                                                            removeAll { it.id == moved.id }
+                                                                            add(0, moved.copy(isVisible = false))
+                                                                        }
+                                                                        localActive = updatedActive
+                                                                        localInactive = updatedInactive
+                                                                    }
+                                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                                } else if (isDropToAvailable) {
                                                                     val updatedActive = localActive.toMutableList()
                                                                     val moved = updatedActive.firstOrNull { it.id == activeId }
                                                                     if (moved != null) {
@@ -3968,16 +4371,20 @@ fun EditModeTileStudio(
                                                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                                 }
                                                                 draggedTileId = null
+                                                                dragSourceKind = null
                                                                 dragSourceIndex = -1
                                                                 hoveredTargetIndex = -1
+                                                                hoveredCompSlotIndex = -1
                                                                 onTilesUpdated(localActive, localInactive)
                                                             },
                                                             onDragCancel = {
                                                                 autoScrollDirection = 0
                                                                 onDragStateChange(false)
                                                                 draggedTileId = null
+                                                                dragSourceKind = null
                                                                 dragSourceIndex = -1
                                                                 hoveredTargetIndex = -1
+                                                                hoveredCompSlotIndex = -1
                                                                 onTilesUpdated(localActive, localInactive)
                                                             }
                                                         )
@@ -4201,55 +4608,125 @@ fun EditModeTileStudio(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 rowTiles.forEach { tile ->
-                                    InactiveTileItem(
-                                        tile = tile,
-                                        targetTileWidth = targetTileWidth,
-                                        draggedTileId = draggedTileId,
-                                        tileBoundsMap = tileBoundsMap,
-                                        isKitKat = isKitKat,
-                                        isMarshmallow = isMarshmallow,
-                                        onDragStart = { offset ->
-                                            draggedTileId = tile.id
-                                            onDragStateChange(true)
-                                            val myBounds = tileBoundsMap[tile.id] ?: Rect.Zero
-                                            currentDragCenter = myBounds.topLeft + offset
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        },
-                                        onDrag = { dragAmount ->
-                                            currentDragCenter += dragAmount
-                                            checkAutoScroll(currentDragCenter)
-                                        },
-                                        onDragEnd = {
-                                            autoScrollDirection = 0
-                                            onDragStateChange(false)
-                                            val dropBounds = inactiveDropZoneBounds
-                                            val activeContainer = activeGridContainerBounds
-
-                                            val isDraggedToActive = (activeContainer != null && currentDragCenter.y <= activeContainer.bottom + 10f) ||
-                                                (dropBounds != null && currentDragCenter.y < dropBounds.top)
-
-                                            if (isDraggedToActive) {
-                                                var targetSlot: Int? = null
-                                                for (i in 0 until localActive.size) {
-                                                    val b = slotBoundsMap[i] ?: continue
-                                                    if (b.contains(currentDragCenter)) {
-                                                        targetSlot = i
-                                                        break
+                                    Box {
+                                        InactiveTileItem(
+                                            tile = tile,
+                                            targetTileWidth = targetTileWidth,
+                                            draggedTileId = if (dragSourceKind == "inactive") draggedTileId else null,
+                                            tileBoundsMap = tileBoundsMap,
+                                            isKitKat = isKitKat,
+                                            isMarshmallow = isMarshmallow,
+                                            onDragStart = { offset ->
+                                                draggedTileId = tile.id
+                                                dragSourceKind = "inactive"
+                                                hoveredCompSlotIndex = -1
+                                                hoveredTargetIndex = -1
+                                                onDragStateChange(true)
+                                                val myBounds = tileBoundsMap[tile.id] ?: Rect.Zero
+                                                currentDragCenter = myBounds.topLeft + offset
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            },
+                                            onDrag = { dragAmount ->
+                                                currentDragCenter += dragAmount
+                                                checkAutoScroll(currentDragCenter)
+                                                val compBounds = compRowContainerBounds
+                                                val isCompTile = tile.isComplicationTile || tile.complicationSpec != null
+                                                if (show2x1ComplicationEditor && isCompTile && compBounds != null &&
+                                                    Rect(compBounds.left - 12f, compBounds.top - 12f, compBounds.right + 12f, compBounds.bottom + 12f).contains(currentDragCenter)
+                                                ) {
+                                                    var foundCompIdx = -1
+                                                    for (i in 0 until qqs2x1EditTiles.size) {
+                                                        val b = compSlotBoundsMap[i] ?: continue
+                                                        if (Rect(b.left - 8f, b.top - 8f, b.right + 8f, b.bottom + 8f).contains(currentDragCenter)) {
+                                                            foundCompIdx = i
+                                                            break
+                                                        }
                                                     }
+                                                    hoveredCompSlotIndex = foundCompIdx
+                                                } else {
+                                                    hoveredCompSlotIndex = -1
                                                 }
-                                                handleAddTileToActive(tile, targetSlot)
+                                            },
+                                            onDragEnd = {
+                                                autoScrollDirection = 0
+                                                onDragStateChange(false)
+                                                val compBounds = compRowContainerBounds
+                                                val dropBounds = inactiveDropZoneBounds
+                                                val activeContainer = activeGridContainerBounds
+                                                val isCompTile = tile.isComplicationTile || tile.complicationSpec != null
+
+                                                val isDraggedToCompRow = show2x1ComplicationEditor && isCompTile &&
+                                                    compBounds != null &&
+                                                    Rect(compBounds.left - 12f, compBounds.top - 12f, compBounds.right + 12f, compBounds.bottom + 12f).contains(currentDragCenter)
+
+                                                val isDraggedToActive = !isDraggedToCompRow &&
+                                                    ((activeContainer != null && currentDragCenter.y <= activeContainer.bottom + 10f) ||
+                                                     (dropBounds != null && currentDragCenter.y < dropBounds.top))
+
+                                                if (isDraggedToCompRow) {
+                                                    PanelPreferences.insertQqs2x1ComplicationId(
+                                                        context,
+                                                        tile.id,
+                                                        hoveredCompSlotIndex.takeIf { it != -1 }
+                                                    )
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                } else if (isDraggedToActive) {
+                                                    var targetSlot: Int? = null
+                                                    for (i in 0 until localActive.size) {
+                                                        val b = slotBoundsMap[i] ?: continue
+                                                        if (b.contains(currentDragCenter)) {
+                                                            targetSlot = i
+                                                            break
+                                                        }
+                                                    }
+                                                    handleAddTileToActive(tile, targetSlot)
+                                                }
+                                                draggedTileId = null
+                                                dragSourceKind = null
+                                                hoveredCompSlotIndex = -1
+                                                hoveredTargetIndex = -1
+                                            },
+                                            onDragCancel = {
+                                                autoScrollDirection = 0
+                                                onDragStateChange(false)
+                                                draggedTileId = null
+                                                dragSourceKind = null
+                                                hoveredCompSlotIndex = -1
+                                                hoveredTargetIndex = -1
+                                            },
+                                            onClick = {
+                                                handleAddTileToActive(tile, null)
                                             }
-                                            draggedTileId = null
-                                        },
-                                        onDragCancel = {
-                                            autoScrollDirection = 0
-                                            onDragStateChange(false)
-                                            draggedTileId = null
-                                        },
-                                        onClick = {
-                                            handleAddTileToActive(tile, null)
+                                        )
+                                        if (show2x1ComplicationEditor && tile.isComplicationTile && draggedTileId != tile.id) {
+                                            val in2x1 = qqs2x1ComplicationIds.contains(tile.id)
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.TopStart)
+                                                    .padding(top = 2.dp, start = 2.dp)
+                                                    .clip(RoundedCornerShape(percent = 50))
+                                                    .background(
+                                                        if (in2x1) legacyAccent else MaterialTheme.colorScheme.surfaceVariant
+                                                    )
+                                                    .clickable(
+                                                        interactionSource = remember { MutableInteractionSource() },
+                                                        indication = null
+                                                    ) {
+                                                        PanelPreferences.toggleQqs2x1ComplicationId(context, tile.id)
+                                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                    }
+                                                    .padding(horizontal = 5.dp, vertical = 2.dp)
+                                                    .testTag("edit_studio_toggle_2x1_${tile.id}")
+                                            ) {
+                                                Text(
+                                                    text = if (in2x1) "2x1 ✓" else "+2x1",
+                                                    fontSize = 8.5.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (in2x1) Color.White else (if (isDark) Color(0xFFCCCCCC) else Color(0xFF333333))
+                                                )
+                                            }
                                         }
-                                    )
+                                    }
                                 }
                                 repeat(gridLayout.columns - rowTiles.size) {
                                     Spacer(modifier = Modifier.width(targetTileWidth))
@@ -4394,33 +4871,64 @@ fun EditModeTileStudio(
                 val studioOrigin = currentStudio.boundsInRoot().topLeft
                 val localX = currentDragCenter.x - studioOrigin.x
                 val localY = currentDragCenter.y - studioOrigin.y
-                val tileHalfW = with(density) { (targetTileWidth / 2f).toPx() }
-                val tileHalfH = with(density) { 43.dp.toPx() }
+                if (dragSourceKind == "comp2x1") {
+                    val halfW = with(density) { (compCardWidthDp / 2f).toPx() }
+                    val halfH = with(density) { (qqs2x1TileHeightDp / 2f).dp.toPx() }
+                    Box(
+                        modifier = Modifier
+                            .offset {
+                                IntOffset(
+                                    (localX - halfW).roundToInt(),
+                                    (localY - halfH).roundToInt()
+                                )
+                            }
+                            .width(compCardWidthDp)
+                            .height(qqs2x1TileHeightDp.dp)
+                            .zIndex(9999f)
+                            .graphicsLayer {
+                                scaleX = 1.05f
+                                scaleY = 1.05f
+                                alpha = 0.95f
+                                shadowElevation = 24f
+                            }
+                    ) {
+                        Qqs2x1ComplicationCard(
+                            tile = draggedTile,
+                            isDark = isDark,
+                            onClick = {},
+                            onLongClick = {},
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                } else {
+                    val tileHalfW = with(density) { (targetTileWidth / 2f).toPx() }
+                    val tileHalfH = with(density) { 43.dp.toPx() }
 
-                Box(
-                    modifier = Modifier
-                        .offset {
-                            IntOffset(
-                                (localX - tileHalfW).roundToInt(),
-                                (localY - tileHalfH).roundToInt()
-                            )
-                        }
-                        .width(targetTileWidth)
-                        .zIndex(9999f)
-                        .graphicsLayer {
-                            scaleX = 1.08f
-                            scaleY = 1.08f
-                            alpha = 0.95f
-                            shadowElevation = if (isKitKat) 8f else if (isMarshmallow) 16f else 24f
-                        }
-                ) {
-                    EditStudioTileView(
-                        tile = draggedTile,
-                        tileWidth = targetTileWidth,
-                        isKitKat = isKitKat,
-                        isMarshmallow = isMarshmallow,
-                        isActive = true
-                    )
+                    Box(
+                        modifier = Modifier
+                            .offset {
+                                IntOffset(
+                                    (localX - tileHalfW).roundToInt(),
+                                    (localY - tileHalfH).roundToInt()
+                                )
+                            }
+                            .width(targetTileWidth)
+                            .zIndex(9999f)
+                            .graphicsLayer {
+                                scaleX = 1.08f
+                                scaleY = 1.08f
+                                alpha = 0.95f
+                                shadowElevation = if (isKitKat) 8f else if (isMarshmallow) 16f else 24f
+                            }
+                    ) {
+                        EditStudioTileView(
+                            tile = draggedTile,
+                            tileWidth = targetTileWidth,
+                            isKitKat = isKitKat,
+                            isMarshmallow = isMarshmallow,
+                            isActive = true
+                        )
+                    }
                 }
             }
         }
@@ -4552,12 +5060,24 @@ fun UnifiedQsPanel(
         }
     }
     val enableQqsHorizontalScroll by PanelPreferences.enableQqsHorizontalScroll.collectAsState()
+    val enableQqsComplicationsRow by PanelPreferences.enableQqsComplicationsRow.collectAsState()
+    val qqs2x1ComplicationIds by PanelPreferences.qqs2x1ComplicationIds.collectAsState()
     val qqsTileCount by PanelPreferences.qqsTileCount.collectAsState()
     val qqsTiles = remember(activeTiles, qqsTileCount, enableQqsHorizontalScroll) {
         if (enableQqsHorizontalScroll) {
             activeTiles
         } else {
             activeTiles.take(qqsTileCount.coerceIn(2, 6))
+        }
+    }
+    val qqs2x1Tiles = remember(tiles, qqs2x1ComplicationIds, enableQqsComplicationsRow) {
+        if (!enableQqsComplicationsRow) {
+            emptyList()
+        } else {
+            val tileMap = tiles.associateBy { it.id }
+            qqs2x1ComplicationIds.mapNotNull { id ->
+                tileMap[id]?.takeIf { it.complicationSpec != null }
+            }
         }
     }
     val configuration = LocalConfiguration.current
@@ -5539,6 +6059,17 @@ fun UnifiedQsPanel(
                             }
                         }
 
+                        if (enableQqsComplicationsRow && qqs2x1Tiles.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Qqs2x1ComplicationsRow(
+                                complications = qqs2x1Tiles,
+                                isDark = isDark,
+                                fadeBgColor = qqsFadeBgColor,
+                                onTileClick = onTileClick,
+                                onTileLongClick = onTileLongClick
+                            )
+                        }
+
                         if (brightnessInQqs && brightnessAtBottom) {
                             Spacer(modifier = Modifier.height(4.dp))
                             BrightnessSliderRow(
@@ -6230,67 +6761,83 @@ fun UnifiedQsPanel(
                                 val dQqsScrollState = rememberScrollState()
                                 val qqsFadeBgColor = com.example.ui.theme.getQsPanelBackgroundColor(isDark)
 
-                                Box(
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(IntrinsicSize.Min)
                                         .graphicsLayer {
                                             alpha = qqsAlpha
                                             scaleX = qqsScale
                                             scaleY = qqsScale
-                                        }
+                                        },
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    Row(
+                                    Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .then(
-                                                if (enableQqsHorizontalScroll) {
-                                                    Modifier.horizontalScroll(dQqsScrollState)
-                                                } else Modifier
-                                            ),
-                                        horizontalArrangement = if (enableQqsHorizontalScroll) Arrangement.spacedBy(16.dp) else Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                            .height(IntrinsicSize.Min)
                                     ) {
-                                        qqsTiles.forEach { tile ->
-                                            key(tile.id) {
-                                                CircularQsTile(
-                                                    tile = tile,
-                                                    morphProgress = morphProgress * 2f,
-                                                    tileWidth = qqsTileSizeValue.dp,
-                                                    onClick = { onTileClick(tile) },
-                                                    onLongClick = { onTileLongClick(tile) }
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .then(
+                                                    if (enableQqsHorizontalScroll) {
+                                                        Modifier.horizontalScroll(dQqsScrollState)
+                                                    } else Modifier
+                                                ),
+                                            horizontalArrangement = if (enableQqsHorizontalScroll) Arrangement.spacedBy(16.dp) else Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            qqsTiles.forEach { tile ->
+                                                key(tile.id) {
+                                                    CircularQsTile(
+                                                        tile = tile,
+                                                        morphProgress = morphProgress * 2f,
+                                                        tileWidth = qqsTileSizeValue.dp,
+                                                        onClick = { onTileClick(tile) },
+                                                        onLongClick = { onTileLongClick(tile) }
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        if (enableQqsHorizontalScroll) {
+                                            if (dQqsScrollState.canScrollBackward) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .align(Alignment.CenterStart)
+                                                        .width(28.dp)
+                                                        .fillMaxHeight()
+                                                        .background(
+                                                            Brush.horizontalGradient(
+                                                                colors = listOf(qqsFadeBgColor, Color.Transparent)
+                                                            )
+                                                        )
+                                                )
+                                            }
+                                            if (dQqsScrollState.canScrollForward) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .align(Alignment.CenterEnd)
+                                                        .width(28.dp)
+                                                        .fillMaxHeight()
+                                                        .background(
+                                                            Brush.horizontalGradient(
+                                                                colors = listOf(Color.Transparent, qqsFadeBgColor)
+                                                            )
+                                                        )
                                                 )
                                             }
                                         }
                                     }
 
-                                    if (enableQqsHorizontalScroll) {
-                                        if (dQqsScrollState.canScrollBackward) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .align(Alignment.CenterStart)
-                                                    .width(28.dp)
-                                                    .fillMaxHeight()
-                                                    .background(
-                                                        Brush.horizontalGradient(
-                                                            colors = listOf(qqsFadeBgColor, Color.Transparent)
-                                                        )
-                                                    )
-                                            )
-                                        }
-                                        if (dQqsScrollState.canScrollForward) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .align(Alignment.CenterEnd)
-                                                    .width(28.dp)
-                                                    .fillMaxHeight()
-                                                    .background(
-                                                        Brush.horizontalGradient(
-                                                            colors = listOf(Color.Transparent, qqsFadeBgColor)
-                                                        )
-                                                    )
-                                            )
-                                        }
+                                    if (enableQqsComplicationsRow && qqs2x1Tiles.isNotEmpty()) {
+                                        Qqs2x1ComplicationsRow(
+                                            complications = qqs2x1Tiles,
+                                            isDark = isDark,
+                                            fadeBgColor = qqsFadeBgColor,
+                                            onTileClick = onTileClick,
+                                            onTileLongClick = onTileLongClick
+                                        )
                                     }
                                 }
                             } else {
@@ -7957,6 +8504,508 @@ fun NotificationAppIcon(
             tint = MonetPrimary,
             modifier = modifier.size(size)
         )
+    }
+}
+
+/**
+ * Additional QQS row rendering 2x1 live complication pills (2 side-by-side per row; horizontal scroll for 3+).
+ */
+@Composable
+fun Qqs2x1ComplicationsRow(
+    complications: List<QsTileModel>,
+    isDark: Boolean,
+    fadeBgColor: Color,
+    onTileClick: (QsTileModel) -> Unit,
+    onTileLongClick: (QsTileModel) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (complications.isEmpty()) return
+
+    val cardHeightDp by PanelPreferences.qqs2x1TileHeightDp.collectAsState()
+    val scrollState = rememberScrollState()
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("qqs_2x1_complications_row")
+    ) {
+        val spacing = 8.dp
+        val cardWidth = if (complications.size == 1) {
+            maxWidth
+        } else {
+            ((maxWidth - spacing) / 2f).coerceAtLeast(136.dp)
+        }
+        val canScroll = complications.size > 2
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (canScroll) Modifier.horizontalScroll(scrollState) else Modifier),
+                horizontalArrangement = Arrangement.spacedBy(spacing),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                complications.forEach { tile ->
+                    key(tile.id) {
+                        Qqs2x1ComplicationCard(
+                            tile = tile,
+                            isDark = isDark,
+                            onClick = { onTileClick(tile) },
+                            onLongClick = { onTileLongClick(tile) },
+                            modifier = Modifier
+                                .width(cardWidth)
+                                .height(cardHeightDp.dp)
+                        )
+                    }
+                }
+            }
+
+            if (canScroll) {
+                if (scrollState.canScrollBackward) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .width(24.dp)
+                            .fillMaxHeight()
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(fadeBgColor, Color.Transparent)
+                                )
+                            )
+                    )
+                }
+                if (scrollState.canScrollForward) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .width(24.dp)
+                            .fillMaxHeight()
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(Color.Transparent, fadeBgColor)
+                                )
+                            )
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun Qqs2x1ComplicationCard(
+    tile: QsTileModel,
+    isDark: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val haptic = LocalHapticFeedback.current
+    val compSpec = tile.complicationSpec ?: return
+    val isActive = tile.state == TileState.ACTIVE
+    val isUnavailable = tile.state == TileState.UNAVAILABLE
+
+    val qsTilesColorTertiary by PanelPreferences.qsTilesColorTertiary.collectAsState()
+    val primaryColor = com.example.ui.theme.getQsTilesElementColor(isDark)
+    val onPrimaryColor = if (qsTilesColorTertiary) {
+        MaterialTheme.colorScheme.onTertiary
+    } else {
+        MaterialTheme.colorScheme.onPrimary
+    }
+    val inactiveTileColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
+    val tileOutlineEnabled by PanelPreferences.tileOutlineEnabled.collectAsState()
+    val tileOutlineThicknessDp by PanelPreferences.tileOutlineThicknessDp.collectAsState()
+    val showQsTileGradient by PanelPreferences.showQsTileGradient.collectAsState()
+    val useHorizontalLine by PanelPreferences.qqs2x1HorizontalLine.collectAsState()
+    val usePerimeterProgress by PanelPreferences.qqs2x1PerimeterProgress.collectAsState()
+    val activeCornerDp by PanelPreferences.qqs2x1ActiveCornerDp.collectAsState()
+    val inactiveCornerDp by PanelPreferences.qqs2x1InactiveCornerDp.collectAsState()
+    val cardHeightDp by PanelPreferences.qqs2x1TileHeightDp.collectAsState()
+    val complicationArcThicknessDp by PanelPreferences.complicationArcThicknessDp.collectAsState()
+
+    val targetCornerDp = (if (!isActive) inactiveCornerDp else activeCornerDp).dp
+    val animatedCornerDp by animateDpAsState(
+        targetValue = targetCornerDp,
+        animationSpec = tween(durationMillis = 250),
+        label = "qqs_2x1_corner_${tile.id}"
+    )
+    val cardShape = RoundedCornerShape(animatedCornerDp)
+
+    val primaryThemeColor = MaterialTheme.colorScheme.primary
+    val tertiaryThemeColor = MaterialTheme.colorScheme.tertiary
+    val gradientBrush = remember(primaryThemeColor, tertiaryThemeColor) {
+        Brush.linearGradient(
+            colors = listOf(primaryThemeColor, tertiaryThemeColor),
+            start = androidx.compose.ui.geometry.Offset.Zero,
+            end = androidx.compose.ui.geometry.Offset.Infinite
+        )
+    }
+
+    val useFilledActiveBg = isActive && !tileOutlineEnabled
+    val containerBg by animateColorAsState(
+        targetValue = when {
+            tileOutlineEnabled -> Color.Transparent
+            isActive -> primaryColor
+            isUnavailable -> inactiveTileColor.copy(alpha = 0.5f)
+            else -> inactiveTileColor
+        },
+        animationSpec = tween(durationMillis = 250),
+        label = "qqs_2x1_bg_${tile.id}"
+    )
+
+    val outlineColor = when {
+        isActive -> primaryColor
+        isUnavailable -> inactiveTileColor.copy(alpha = 0.5f)
+        else -> inactiveTileColor
+    }
+
+    val titleColor = when {
+        isActive && tileOutlineEnabled -> primaryColor
+        isActive -> onPrimaryColor
+        isUnavailable -> (if (isDark) Color.White else Color(0xFF1E293B)).copy(alpha = 0.45f)
+        else -> if (isDark) Color.White.copy(alpha = 0.92f) else Color(0xFF1E293B)
+    }
+    val sublineColor = titleColor.copy(alpha = if (isActive) 0.85f else 0.72f)
+
+    val ringModel = remember(compSpec, useFilledActiveBg, isActive, primaryColor, onPrimaryColor, isDark) {
+        compSpec.copy(
+            isActive = isActive,
+            accentColor = when {
+                useFilledActiveBg -> onPrimaryColor
+                isActive -> primaryColor
+                else -> if (isDark) Color(0xFFCCCCCC) else Color(0xFF555555)
+            }
+        )
+    }
+
+    val sublineText = compSpec.subline.ifBlank { tile.subtitle }
+
+    val animatedLineProgress by animateFloatAsState(
+        targetValue = compSpec.progress.coerceIn(0f, 1f),
+        animationSpec = tween(durationMillis = 450, easing = FastOutSlowInEasing),
+        label = "qqs_2x1_line_progress_${tile.id}"
+    )
+
+    val progressDisplayMode = remember(useHorizontalLine, usePerimeterProgress) {
+        PanelPreferences.resolveQqs2x1ProgressDisplayMode(
+            useHorizontalLine = useHorizontalLine,
+            usePerimeterProgress = usePerimeterProgress
+        )
+    }
+
+    val perimeterPath = remember { Path() }
+    val perimeterProgressPath = remember { Path() }
+    val perimeterPathMeasure = remember { PathMeasure() }
+    val activeArcOverride = com.example.ui.theme.resolveActiveComplicationArcOverride(isDark)
+    val inactiveArcOverride = com.example.ui.theme.resolveInactiveComplicationArcOverride(isDark)
+    val trackOverride = com.example.ui.theme.resolveComplicationArcTrackOverride(isDark)
+    val perimeterTrackColor = trackOverride ?: when {
+        useFilledActiveBg -> onPrimaryColor.copy(alpha = 0.25f)
+        isActive -> primaryColor.copy(alpha = 0.22f)
+        isDark -> Color.White.copy(alpha = 0.14f)
+        else -> Color.Black.copy(alpha = 0.12f)
+    }
+    val defaultPerimeterFillColor = when {
+        useFilledActiveBg -> onPrimaryColor
+        isActive -> primaryColor
+        else -> compSpec.accentColor ?: primaryColor
+    }
+    val perimeterFillColor = if (isActive) {
+        activeArcOverride ?: defaultPerimeterFillColor
+    } else {
+        inactiveArcOverride ?: defaultPerimeterFillColor
+    }
+
+    Row(
+        modifier = modifier
+            .clip(cardShape)
+            .then(
+                if (tileOutlineEnabled) {
+                    if (isActive && showQsTileGradient) {
+                        Modifier.border(tileOutlineThicknessDp.dp, gradientBrush, cardShape)
+                    } else {
+                        Modifier.border(tileOutlineThicknessDp.dp, outlineColor, cardShape)
+                    }
+                } else {
+                    Modifier
+                }
+            )
+            .then(
+                if (useFilledActiveBg && showQsTileGradient) {
+                    Modifier.background(gradientBrush)
+                } else {
+                    Modifier.background(containerBg)
+                }
+            )
+            .then(
+                if (progressDisplayMode.showPerimeterBar) {
+                    Modifier.drawWithContent {
+                        drawContent()
+                        val strokePx = complicationArcThicknessDp.coerceIn(2.0f, 5.5f).dp.toPx()
+                        val gapPx = if (tileOutlineEnabled) {
+                            tileOutlineThicknessDp.dp.toPx() + 1.5.dp.toPx()
+                        } else {
+                            1.5.dp.toPx()
+                        }
+                        val inset = strokePx / 2f + gapPx
+                        val left = inset
+                        val top = inset
+                        val right = size.width - inset
+                        val bottom = size.height - inset
+                        if (right > left && bottom > top) {
+                            val w = right - left
+                            val h = bottom - top
+                            val r = (animatedCornerDp.toPx() - inset).coerceIn(0f, minOf(w, h) / 2f)
+                            val cx = (left + right) / 2f
+                            perimeterPath.reset()
+                            perimeterPath.moveTo(cx, top)
+                            if (r > 0.5f) {
+                                perimeterPath.lineTo(right - r, top)
+                                perimeterPath.arcTo(
+                                    rect = Rect(right - 2f * r, top, right, top + 2f * r),
+                                    startAngleDegrees = -90f,
+                                    sweepAngleDegrees = 90f,
+                                    forceMoveTo = false
+                                )
+                                perimeterPath.lineTo(right, bottom - r)
+                                perimeterPath.arcTo(
+                                    rect = Rect(right - 2f * r, bottom - 2f * r, right, bottom),
+                                    startAngleDegrees = 0f,
+                                    sweepAngleDegrees = 90f,
+                                    forceMoveTo = false
+                                )
+                                perimeterPath.lineTo(left + r, bottom)
+                                perimeterPath.arcTo(
+                                    rect = Rect(left, bottom - 2f * r, left + 2f * r, bottom),
+                                    startAngleDegrees = 90f,
+                                    sweepAngleDegrees = 90f,
+                                    forceMoveTo = false
+                                )
+                                perimeterPath.lineTo(left, top + r)
+                                perimeterPath.arcTo(
+                                    rect = Rect(left, top, left + 2f * r, top + 2f * r),
+                                    startAngleDegrees = 180f,
+                                    sweepAngleDegrees = 90f,
+                                    forceMoveTo = false
+                                )
+                                perimeterPath.lineTo(cx, top)
+                            } else {
+                                perimeterPath.lineTo(right, top)
+                                perimeterPath.lineTo(right, bottom)
+                                perimeterPath.lineTo(left, bottom)
+                                perimeterPath.lineTo(left, top)
+                                perimeterPath.lineTo(cx, top)
+                            }
+                            perimeterPath.close()
+
+                            val strokeStyle = Stroke(
+                                width = strokePx,
+                                cap = StrokeCap.Round,
+                                join = StrokeJoin.Round
+                            )
+                            drawPath(
+                                path = perimeterPath,
+                                color = perimeterTrackColor,
+                                style = strokeStyle
+                            )
+                            if (animatedLineProgress > 0.005f) {
+                                perimeterPathMeasure.setPath(perimeterPath, false)
+                                val totalLen = perimeterPathMeasure.length
+                                if (totalLen > 0f) {
+                                    if (animatedLineProgress >= 0.995f) {
+                                        drawPath(
+                                            path = perimeterPath,
+                                            color = perimeterFillColor,
+                                            style = strokeStyle
+                                        )
+                                    } else {
+                                        perimeterProgressPath.reset()
+                                        perimeterPathMeasure.getSegment(
+                                            0f,
+                                            totalLen * animatedLineProgress,
+                                            perimeterProgressPath,
+                                            true
+                                        )
+                                        drawPath(
+                                            path = perimeterProgressPath,
+                                            color = perimeterFillColor,
+                                            style = strokeStyle
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Modifier
+                }
+            )
+            .combinedClickable(
+                enabled = !isUnavailable,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onClick()
+                },
+                onLongClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick()
+                }
+            )
+            .padding(
+                horizontal = if (!progressDisplayMode.showIconArc) 12.dp else 10.dp,
+                vertical = if (cardHeightDp < 48) 4.dp else 6.dp
+            )
+            .testTag("qqs_2x1_complication_${tile.id}"),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        val scaledRingSize = if (!progressDisplayMode.showIconArc) {
+            (cardHeightDp * 0.43f).coerceIn(18f, 30f).dp
+        } else {
+            (cardHeightDp - 18).coerceIn(26, 48).dp
+        }
+        val scaledIconSize = if (!progressDisplayMode.showIconArc) {
+            (cardHeightDp * 0.36f).coerceIn(16f, 24f).dp
+        } else {
+            (cardHeightDp * 0.32f).coerceIn(14f, 24f).dp
+        }
+        com.example.ui.tile.ComplicationTileView(
+            model = ringModel,
+            showGridCardContainer = false,
+            isInteractive = false,
+            showTitle = false,
+            showBelowSubline = false,
+            showRingBackground = false,
+            showProgressArc = progressDisplayMode.showIconArc,
+            showInsideSubline = false,
+            customRingSize = scaledRingSize,
+            customIconSize = scaledIconSize
+        )
+
+        if (progressDisplayMode.showHorizontalLine) {
+            val lineTrackColor = trackOverride ?: if (useFilledActiveBg) {
+                onPrimaryColor.copy(alpha = 0.28f)
+            } else if (isDark) {
+                Color.White.copy(alpha = 0.16f)
+            } else {
+                Color.Black.copy(alpha = 0.12f)
+            }
+            val defaultLineFillColor = when {
+                useFilledActiveBg -> onPrimaryColor
+                isActive -> primaryColor
+                else -> compSpec.accentColor ?: primaryColor
+            }
+            val lineFillColor = if (isActive) {
+                activeArcOverride ?: defaultLineFillColor
+            } else {
+                inactiveArcOverride ?: defaultLineFillColor
+            }
+            val lineHeightDp = complicationArcThicknessDp.coerceIn(2.5f, 5.5f).dp
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = tile.label,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = titleColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                        style = androidx.compose.ui.text.TextStyle(
+                            platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)
+                        )
+                    )
+                    if (sublineText.isNotBlank()) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = sublineText,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = sublineColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Clip,
+                            style = androidx.compose.ui.text.TextStyle(
+                                fontFeatureSettings = "tnum",
+                                platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)
+                            )
+                        )
+                    }
+                }
+
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(lineHeightDp)
+                        .testTag("qqs_2x1_horizontal_line_${tile.id}")
+                ) {
+                    val strokePx = size.height
+                    val capInset = strokePx / 2f
+                    val y = size.height / 2f
+                    val endX = (size.width - capInset).coerceAtLeast(capInset)
+                    drawLine(
+                        color = lineTrackColor,
+                        start = Offset(capInset, y),
+                        end = Offset(endX, y),
+                        strokeWidth = strokePx,
+                        cap = androidx.compose.ui.graphics.StrokeCap.Round
+                    )
+                    if (animatedLineProgress > 0.005f) {
+                        val fillEndX = (capInset + (endX - capInset) * animatedLineProgress)
+                            .coerceIn(capInset, endX)
+                        drawLine(
+                            color = lineFillColor,
+                            start = Offset(capInset, y),
+                            end = Offset(fillEndX, y),
+                            strokeWidth = strokePx,
+                            cap = androidx.compose.ui.graphics.StrokeCap.Round
+                        )
+                    }
+                }
+            }
+        } else {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(1.dp)
+            ) {
+                Text(
+                    text = tile.label,
+                    fontSize = 12.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = titleColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = androidx.compose.ui.text.TextStyle(
+                        platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)
+                    )
+                )
+                if (sublineText.isNotBlank()) {
+                    Text(
+                        text = sublineText,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = sublineColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = androidx.compose.ui.text.TextStyle(
+                            fontFeatureSettings = "tnum",
+                            platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)
+                        )
+                    )
+                }
+            }
+        }
     }
 }
 

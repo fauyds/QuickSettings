@@ -50,8 +50,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -90,9 +97,22 @@ fun TileCustomizerScreen(
     val availableTiles = remember(tiles) { tiles.filter { !it.isVisible } }
     val availableQsTiles = remember(availableTiles) { availableTiles.filter { !it.isComplicationTile } }
     val availableComplications = remember(availableTiles) { availableTiles.filter { it.isComplicationTile } }
+    val editorContext = androidx.compose.ui.platform.LocalContext.current
+    val enableQqsComplicationsRow by PanelPreferences.enableQqsComplicationsRow.collectAsState()
+    val qqs2x1ComplicationIds by PanelPreferences.qqs2x1ComplicationIds.collectAsState()
 
     val isKitKat by PanelPreferences.isAndroidKitKatStyle.collectAsState()
     val isMarshmallow by PanelPreferences.isAndroidMarshmallowStyle.collectAsState()
+    val qqs2x1Tiles = remember(tiles, qqs2x1ComplicationIds, enableQqsComplicationsRow, isKitKat, isMarshmallow) {
+        if (!enableQqsComplicationsRow || isKitKat || isMarshmallow) {
+            emptyList()
+        } else {
+            val tileMap = tiles.associateBy { it.id }
+            qqs2x1ComplicationIds.mapNotNull { id ->
+                tileMap[id]?.takeIf { it.isComplicationTile || it.complicationSpec != null }
+            }
+        }
+    }
     val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
     val isDark = LocalIsDarkTheme.current
 
@@ -327,6 +347,214 @@ fun TileCustomizerScreen(
                         )
                     }
 
+                    // 2x1 Complications Row in QQS option
+                    val screenContext = androidx.compose.ui.platform.LocalContext.current
+                    val enableQqsComplicationsRow by com.example.data.PanelPreferences.enableQqsComplicationsRow.collectAsState()
+                    val qqs2x1HorizontalLine by com.example.data.PanelPreferences.qqs2x1HorizontalLine.collectAsState()
+                    val qqs2x1PerimeterProgress by com.example.data.PanelPreferences.qqs2x1PerimeterProgress.collectAsState()
+                    val qqs2x1TileHeightDp by com.example.data.PanelPreferences.qqs2x1TileHeightDp.collectAsState()
+                    val qqs2x1ActiveCornerDp by com.example.data.PanelPreferences.qqs2x1ActiveCornerDp.collectAsState()
+                    val qqs2x1InactiveCornerDp by com.example.data.PanelPreferences.qqs2x1InactiveCornerDp.collectAsState()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "2x1 Complications QQS Row:",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Add an extra row of 2x1 live complications below QQS tiles",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        androidx.compose.material3.Switch(
+                            checked = enableQqsComplicationsRow,
+                            onCheckedChange = { com.example.data.PanelPreferences.setEnableQqsComplicationsRow(screenContext, it) },
+                            colors = androidx.compose.material3.SwitchDefaults.colors(
+                                checkedThumbColor = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = androidx.compose.material3.MaterialTheme.colorScheme.primary
+                            ),
+                            modifier = Modifier.testTag("switch_qqs_2x1_complications_row")
+                        )
+                    }
+
+                    if (enableQqsComplicationsRow) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Horizontal Progress Line:",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Replace the circular progress arc with a horizontal line in 2x1 row",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            androidx.compose.material3.Switch(
+                                checked = qqs2x1HorizontalLine,
+                                onCheckedChange = { com.example.data.PanelPreferences.setQqs2x1HorizontalLine(screenContext, it) },
+                                colors = androidx.compose.material3.SwitchDefaults.colors(
+                                    checkedThumbColor = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary,
+                                    checkedTrackColor = androidx.compose.material3.MaterialTheme.colorScheme.primary
+                                ),
+                                modifier = Modifier.testTag("switch_qqs_2x1_horizontal_line")
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Progress Bar Around 2x1 Tiles:",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Draw a progress bar tracing the outer perimeter of 2x1 complication cards",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            androidx.compose.material3.Switch(
+                                checked = qqs2x1PerimeterProgress,
+                                onCheckedChange = { com.example.data.PanelPreferences.setQqs2x1PerimeterProgress(screenContext, it) },
+                                colors = androidx.compose.material3.SwitchDefaults.colors(
+                                    checkedThumbColor = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary,
+                                    checkedTrackColor = androidx.compose.material3.MaterialTheme.colorScheme.primary
+                                ),
+                                modifier = Modifier.testTag("switch_qqs_2x1_perimeter_progress")
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "2x1 Tile Height:",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "$qqs2x1TileHeightDp dp",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            androidx.compose.material3.Slider(
+                                value = qqs2x1TileHeightDp.toFloat(),
+                                onValueChange = {
+                                    com.example.data.PanelPreferences.setQqs2x1TileHeightDp(
+                                        screenContext,
+                                        kotlin.math.round(it).toInt()
+                                    )
+                                },
+                                valueRange = 40f..84f,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("slider_qqs_2x1_tile_height")
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Active 2x1 Corner:",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "${kotlin.math.round(qqs2x1ActiveCornerDp).toInt()} dp",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            androidx.compose.material3.Slider(
+                                value = qqs2x1ActiveCornerDp,
+                                onValueChange = {
+                                    com.example.data.PanelPreferences.setQqs2x1ActiveCornerDp(
+                                        screenContext,
+                                        kotlin.math.round(it)
+                                    )
+                                },
+                                valueRange = 0f..40f,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("slider_qqs_2x1_active_corner")
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Inactive 2x1 Corner:",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "${kotlin.math.round(qqs2x1InactiveCornerDp).toInt()} dp",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            androidx.compose.material3.Slider(
+                                value = qqs2x1InactiveCornerDp,
+                                onValueChange = {
+                                    com.example.data.PanelPreferences.setQqs2x1InactiveCornerDp(
+                                        screenContext,
+                                        kotlin.math.round(it)
+                                    )
+                                },
+                                valueRange = 0f..40f,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("slider_qqs_2x1_inactive_corner")
+                            )
+                        }
+                    }
+
                     // Edit Pencil Icon Position Option
                     Column(
                         modifier = Modifier.fillMaxWidth(),
@@ -429,6 +657,70 @@ fun TileCustomizerScreen(
             }
         }
 
+        // QQS 2x1 COMPLICATIONS ROW CARD (when enabled)
+        if (enableQqsComplicationsRow && !isKitKat && !isMarshmallow) {
+            SettingsCard(
+                shape = centerCardShape,
+                colors = CardDefaults.cardColors(containerColor = cardContainerColor),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("tile_editor_qqs_2x1_row_card")
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "QQS 2x1 COMPLICATIONS (${qqs2x1Tiles.size})",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp,
+                            color = MonetPrimary
+                        )
+                        Text(
+                            text = "Reorder or move out of 2x1 row",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    if (qqs2x1Tiles.isEmpty()) {
+                        Text(
+                            text = "No complications in QQS 2x1 row. Tap '+ 2x1' on any complication below.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp
+                        )
+                    } else {
+                        qqs2x1Tiles.forEachIndexed { index, tile ->
+                            ActiveComplication2x1ReorderItem(
+                                index = index,
+                                tile = tile,
+                                isFirst = index == 0,
+                                isLast = index == qqs2x1Tiles.lastIndex,
+                                canRemove = qqs2x1Tiles.size > 1,
+                                onMoveUp = {
+                                    PanelPreferences.moveQqs2x1ComplicationId(editorContext, index, index - 1)
+                                },
+                                onMoveDown = {
+                                    PanelPreferences.moveQqs2x1ComplicationId(editorContext, index, index + 1)
+                                },
+                                onRemove = {
+                                    PanelPreferences.removeQqs2x1ComplicationId(editorContext, tile.id)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // CENTER CARD: ACTIVE TILES & COMPLICATIONS
         SettingsCard(
             shape = centerCardShape,
@@ -465,6 +757,7 @@ fun TileCustomizerScreen(
                 } else {
                     activeTiles.forEachIndexed { index, tile ->
                         val globalFrom = tiles.indexOfFirst { it.id == tile.id }
+                        val show2x1Toggle = enableQqsComplicationsRow && !isKitKat && !isMarshmallow && tile.isComplicationTile
                         ActiveTileReorderItem(
                             index = index,
                             tile = tile,
@@ -472,6 +765,10 @@ fun TileCustomizerScreen(
                             isLast = index == activeTiles.lastIndex,
                             isKitKat = isKitKat,
                             isMarshmallow = isMarshmallow,
+                            isIn2x1Row = if (show2x1Toggle) qqs2x1ComplicationIds.contains(tile.id) else null,
+                            onToggle2x1Row = if (show2x1Toggle) {
+                                { PanelPreferences.toggleQqs2x1ComplicationId(editorContext, tile.id) }
+                            } else null,
                             onMoveUp = {
                                 if (index > 0 && globalFrom != -1) {
                                     val prevGlobal = tiles.indexOfFirst { it.id == activeTiles[index - 1].id }
@@ -545,10 +842,15 @@ fun TileCustomizerScreen(
                     )
                 } else {
                     availableComplications.forEach { tile ->
+                        val show2x1Toggle = enableQqsComplicationsRow && !isKitKat && !isMarshmallow
                         HiddenTileItem(
                             tile = tile,
                             isKitKat = isKitKat,
                             isMarshmallow = isMarshmallow,
+                            isIn2x1Row = if (show2x1Toggle) qqs2x1ComplicationIds.contains(tile.id) else null,
+                            onToggle2x1Row = if (show2x1Toggle) {
+                                { PanelPreferences.toggleQqs2x1ComplicationId(editorContext, tile.id) }
+                            } else null,
                             onAdd = { onToggleVisibility(tile.id, false) }
                         )
                     }
@@ -583,6 +885,224 @@ fun TileCustomizerScreen(
 }
 
 @Composable
+fun ActiveComplication2x1ReorderItem(
+    index: Int,
+    tile: QsTileModel,
+    isFirst: Boolean,
+    isLast: Boolean,
+    canRemove: Boolean,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
+    onRemove: () -> Unit
+) {
+    val isDark = LocalIsDarkTheme.current
+    val itemBg = MaterialTheme.colorScheme.background
+    val itemBorder = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+    val subline = tile.complicationSpec?.subline?.ifBlank { tile.subtitle } ?: tile.subtitle
+    val useHorizontalLine by PanelPreferences.qqs2x1HorizontalLine.collectAsState()
+    val usePerimeterProgress by PanelPreferences.qqs2x1PerimeterProgress.collectAsState()
+    val progressDisplayMode = remember(useHorizontalLine, usePerimeterProgress) {
+        PanelPreferences.resolveQqs2x1ProgressDisplayMode(
+            useHorizontalLine = useHorizontalLine,
+            usePerimeterProgress = usePerimeterProgress
+        )
+    }
+    val perimeterPath = remember { Path() }
+    val perimeterProgressPath = remember { Path() }
+    val perimeterPathMeasure = remember { PathMeasure() }
+    val activeArcOverride = com.example.ui.theme.resolveActiveComplicationArcOverride(isDark)
+    val inactiveArcOverride = com.example.ui.theme.resolveInactiveComplicationArcOverride(isDark)
+    val trackOverride = com.example.ui.theme.resolveComplicationArcTrackOverride(isDark)
+    val isActiveComp = tile.state == com.example.model.TileState.ACTIVE || tile.complicationSpec?.isActive == true
+    val perimeterTrackColor = trackOverride ?: MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)
+    val defaultPerimeterFillColor = tile.complicationSpec?.accentColor ?: MaterialTheme.colorScheme.primary
+    val perimeterFillColor = if (isActiveComp) {
+        activeArcOverride ?: defaultPerimeterFillColor
+    } else {
+        inactiveArcOverride ?: defaultPerimeterFillColor
+    }
+    val previewProgress = (tile.complicationSpec?.progress ?: 0f).coerceIn(0f, 1f)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(itemBg)
+            .border(itemBorder, RoundedCornerShape(14.dp))
+            .then(
+                if (progressDisplayMode.showPerimeterBar && tile.complicationSpec != null) {
+                    Modifier.drawWithContent {
+                        drawContent()
+                        val strokePx = 2.5.dp.toPx()
+                        val inset = strokePx / 2f + 1.5.dp.toPx()
+                        val left = inset
+                        val top = inset
+                        val right = size.width - inset
+                        val bottom = size.height - inset
+                        if (right > left && bottom > top) {
+                            val w = right - left
+                            val h = bottom - top
+                            val r = (14.dp.toPx() - inset).coerceIn(0f, minOf(w, h) / 2f)
+                            val cx = (left + right) / 2f
+                            perimeterPath.reset()
+                            perimeterPath.moveTo(cx, top)
+                            if (r > 0.5f) {
+                                perimeterPath.lineTo(right - r, top)
+                                perimeterPath.arcTo(Rect(right - 2f * r, top, right, top + 2f * r), -90f, 90f, false)
+                                perimeterPath.lineTo(right, bottom - r)
+                                perimeterPath.arcTo(Rect(right - 2f * r, bottom - 2f * r, right, bottom), 0f, 90f, false)
+                                perimeterPath.lineTo(left + r, bottom)
+                                perimeterPath.arcTo(Rect(left, bottom - 2f * r, left + 2f * r, bottom), 90f, 90f, false)
+                                perimeterPath.lineTo(left, top + r)
+                                perimeterPath.arcTo(Rect(left, top, left + 2f * r, top + 2f * r), 180f, 90f, false)
+                                perimeterPath.lineTo(cx, top)
+                            } else {
+                                perimeterPath.lineTo(right, top)
+                                perimeterPath.lineTo(right, bottom)
+                                perimeterPath.lineTo(left, bottom)
+                                perimeterPath.lineTo(left, top)
+                                perimeterPath.lineTo(cx, top)
+                            }
+                            perimeterPath.close()
+                            val strokeStyle = Stroke(width = strokePx, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                            drawPath(path = perimeterPath, color = perimeterTrackColor, style = strokeStyle)
+                            if (previewProgress > 0.005f) {
+                                perimeterPathMeasure.setPath(perimeterPath, false)
+                                val totalLen = perimeterPathMeasure.length
+                                if (totalLen > 0f) {
+                                    if (previewProgress >= 0.995f) {
+                                        drawPath(path = perimeterPath, color = perimeterFillColor, style = strokeStyle)
+                                    } else {
+                                        perimeterProgressPath.reset()
+                                        perimeterPathMeasure.getSegment(0f, totalLen * previewProgress, perimeterProgressPath, true)
+                                        drawPath(path = perimeterProgressPath, color = perimeterFillColor, style = strokeStyle)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Modifier
+                }
+            )
+            .padding(horizontal = 10.dp, vertical = 6.dp)
+            .testTag("tile_editor_2x1_item_${tile.id}"),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.weight(1f)
+        ) {
+            val compSpec = tile.complicationSpec
+            if (compSpec != null) {
+                com.example.ui.tile.ComplicationTileView(
+                    model = compSpec,
+                    showGridCardContainer = false,
+                    isInteractive = false,
+                    showTitle = false,
+                    showBelowSubline = false,
+                    showRingBackground = false,
+                    showProgressArc = progressDisplayMode.showIconArc,
+                    showInsideSubline = false,
+                    customRingSize = if (!progressDisplayMode.showIconArc) 28.dp else 36.dp,
+                    customIconSize = if (!progressDisplayMode.showIconArc) 20.dp else 16.dp
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    tile.iconVector?.let {
+                        Icon(it, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(18.dp))
+                    }
+                }
+            }
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Text(
+                    text = "${index + 1}. ${tile.label}",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = if (subline.isNotBlank()) "2x1 Row • $subline" else "2x1 QQS Row",
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (progressDisplayMode.showHorizontalLine && compSpec != null) {
+                    val progress = compSpec.progress.coerceIn(0f, 1f)
+                    val trackBg = trackOverride ?: MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)
+                    val fillColor = perimeterFillColor
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.75f)
+                            .height(3.5.dp)
+                            .clip(CircleShape)
+                            .background(trackBg)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(progress)
+                                .height(3.5.dp)
+                                .clip(CircleShape)
+                                .background(fillColor)
+                        )
+                    }
+                }
+            }
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(
+                onClick = onMoveUp,
+                enabled = !isFirst,
+                modifier = Modifier.size(32.dp).testTag("move_up_2x1_${tile.id}")
+            ) {
+                Icon(
+                    Icons.Default.KeyboardArrowUp,
+                    contentDescription = "Move Up",
+                    tint = if (!isFirst) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            IconButton(
+                onClick = onMoveDown,
+                enabled = !isLast,
+                modifier = Modifier.size(32.dp).testTag("move_down_2x1_${tile.id}")
+            ) {
+                Icon(
+                    Icons.Default.KeyboardArrowDown,
+                    contentDescription = "Move Down",
+                    tint = if (!isLast) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            IconButton(
+                onClick = onRemove,
+                enabled = canRemove,
+                modifier = Modifier.size(32.dp).testTag("remove_2x1_${tile.id}")
+            ) {
+                Icon(
+                    Icons.Default.Remove,
+                    contentDescription = "Remove from 2x1 Row",
+                    tint = if (canRemove) Color(0xFFFF6B6B) else Color(0xFFFF6B6B).copy(alpha = 0.35f),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun ActiveTileReorderItem(
     index: Int,
     tile: QsTileModel,
@@ -590,6 +1110,8 @@ fun ActiveTileReorderItem(
     isLast: Boolean,
     isKitKat: Boolean = false,
     isMarshmallow: Boolean = false,
+    isIn2x1Row: Boolean? = null,
+    onToggle2x1Row: (() -> Unit)? = null,
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
     onRemove: () -> Unit
@@ -706,6 +1228,25 @@ fun ActiveTileReorderItem(
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
+            if (isIn2x1Row != null && onToggle2x1Row != null) {
+                Surface(
+                    onClick = onToggle2x1Row,
+                    shape = CircleShape,
+                    color = if (isIn2x1Row) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier
+                        .padding(end = 4.dp)
+                        .testTag("toggle_2x1_active_${tile.id}")
+                ) {
+                    Text(
+                        text = if (isIn2x1Row) "2x1 ✓" else "+ 2x1",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isIn2x1Row) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
             // Move Up
             IconButton(
                 onClick = onMoveUp,
@@ -755,6 +1296,8 @@ fun HiddenTileItem(
     tile: QsTileModel,
     isKitKat: Boolean = false,
     isMarshmallow: Boolean = false,
+    isIn2x1Row: Boolean? = null,
+    onToggle2x1Row: (() -> Unit)? = null,
     onAdd: () -> Unit
 ) {
     val isDark = com.example.ui.theme.LocalIsDarkTheme.current
@@ -876,20 +1419,43 @@ fun HiddenTileItem(
             }
         }
 
-        Surface(
-            onClick = onAdd,
-            shape = addBtnShape,
-            color = addBtnColor,
-            border = BorderStroke(1.dp, addBtnBorder),
-            modifier = Modifier.testTag("add_tile_${tile.id}")
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            if (isIn2x1Row != null && onToggle2x1Row != null) {
+                Surface(
+                    onClick = onToggle2x1Row,
+                    shape = addBtnShape,
+                    color = if (isIn2x1Row) MaterialTheme.colorScheme.primary else addBtnColor,
+                    border = if (isIn2x1Row) null else BorderStroke(1.dp, addBtnBorder),
+                    modifier = Modifier.testTag("toggle_2x1_pool_${tile.id}")
+                ) {
+                    Text(
+                        text = if (isIn2x1Row) "2x1 ✓" else "+ 2x1",
+                        fontSize = 11.sp,
+                        color = if (isIn2x1Row) MaterialTheme.colorScheme.onPrimary else addBtnTint,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
+                    )
+                }
+            }
+
+            Surface(
+                onClick = onAdd,
+                shape = addBtnShape,
+                color = addBtnColor,
+                border = BorderStroke(1.dp, addBtnBorder),
+                modifier = Modifier.testTag("add_tile_${tile.id}")
             ) {
-                Icon(Icons.Default.Add, contentDescription = null, tint = addBtnTint, modifier = Modifier.size(14.dp))
-                Text(if (isKitKat) "ADD" else "Add", fontSize = 11.sp, color = addBtnTint, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, tint = addBtnTint, modifier = Modifier.size(14.dp))
+                    Text(if (isKitKat) "ADD" else "Add", fontSize = 11.sp, color = addBtnTint, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }

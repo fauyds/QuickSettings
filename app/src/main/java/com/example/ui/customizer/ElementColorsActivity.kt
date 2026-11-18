@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.ComplicationArcMonetMode
 import com.example.data.PanelPreferences
 import com.example.ui.theme.AppSettingsTheme
 import com.example.ui.theme.applyHsvAdjustments
@@ -72,17 +73,6 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
     val systemInDark = isSystemInDarkTheme()
     var selectedTab by remember { mutableStateOf(if (systemInDark) ModeTab.DARK else ModeTab.LIGHT) }
     val isEditingDark = selectedTab == ModeTab.DARK
-
-    // Monet Accent Toggles
-    val surfaceBgColorTertiary by PanelPreferences.getSurfaceBgColorTertiary(isEditingDark).collectAsState()
-    val panelContainerColorTertiary by PanelPreferences.getPanelContainerColorTertiary(isEditingDark).collectAsState()
-    val headerGradientColorTertiary by PanelPreferences.getHeaderGradientColorTertiary(isEditingDark).collectAsState()
-    val qsTilesColorTertiary by PanelPreferences.getQsTilesColorTertiary(isEditingDark).collectAsState()
-    val inactiveTilesColorTertiary by PanelPreferences.getInactiveTilesColorTertiary(isEditingDark).collectAsState()
-    val inactiveTilesColorPrimary by PanelPreferences.getInactiveTilesColorPrimary(isEditingDark).collectAsState()
-    val slidersColorTertiary by PanelPreferences.getSlidersColorTertiary(isEditingDark).collectAsState()
-    val miscElementsColorTertiary by PanelPreferences.getMiscElementsColorTertiary(isEditingDark).collectAsState()
-    val clearAllColorTertiary by PanelPreferences.getClearAllColorTertiary(isEditingDark).collectAsState()
 
     // HSB values
     val surfaceBgHue by PanelPreferences.getSurfaceBgHue(isEditingDark).collectAsState()
@@ -141,6 +131,25 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
 
     val clearAllUseCustom by PanelPreferences.getClearAllUseCustom(isEditingDark).collectAsState()
     val clearAllCustomColor by PanelPreferences.getClearAllCustomColor(isEditingDark).collectAsState()
+
+    // Complication Arcs & Tracks StateFlows
+    val activeCompArcMode by PanelPreferences.getActiveCompArcMode(isEditingDark).collectAsState()
+    val activeCompArcHue by PanelPreferences.getActiveCompArcHue(isEditingDark).collectAsState()
+    val activeCompArcSat by PanelPreferences.getActiveCompArcSat(isEditingDark).collectAsState()
+    val activeCompArcVal by PanelPreferences.getActiveCompArcVal(isEditingDark).collectAsState()
+    val activeCompArcCustomColor by PanelPreferences.getActiveCompArcCustomColor(isEditingDark).collectAsState()
+
+    val inactiveCompArcMode by PanelPreferences.getInactiveCompArcMode(isEditingDark).collectAsState()
+    val inactiveCompArcHue by PanelPreferences.getInactiveCompArcHue(isEditingDark).collectAsState()
+    val inactiveCompArcSat by PanelPreferences.getInactiveCompArcSat(isEditingDark).collectAsState()
+    val inactiveCompArcVal by PanelPreferences.getInactiveCompArcVal(isEditingDark).collectAsState()
+    val inactiveCompArcCustomColor by PanelPreferences.getInactiveCompArcCustomColor(isEditingDark).collectAsState()
+
+    val compArcTrackMode by PanelPreferences.getCompArcTrackMode(isEditingDark).collectAsState()
+    val compArcTrackHue by PanelPreferences.getCompArcTrackHue(isEditingDark).collectAsState()
+    val compArcTrackSat by PanelPreferences.getCompArcTrackSat(isEditingDark).collectAsState()
+    val compArcTrackVal by PanelPreferences.getCompArcTrackVal(isEditingDark).collectAsState()
+    val compArcTrackCustomColor by PanelPreferences.getCompArcTrackCustomColor(isEditingDark).collectAsState()
 
     Scaffold(
         topBar = {
@@ -321,12 +330,11 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                     onUseCustomChange = { PanelPreferences.setSurfaceBgUseCustom(context, isEditingDark, it) },
                     customColor = surfaceBgCustomColor,
                     onCustomColorChange = { PanelPreferences.setSurfaceBgCustomColor(context, isEditingDark, it) },
-                    isTertiary = surfaceBgColorTertiary,
-                    onTertiaryChange = { PanelPreferences.setSurfaceBgColorTertiary(context, isEditingDark, it) },
                     hue = surfaceBgHue,
                     sat = surfaceBgSat,
                     valFactor = surfaceBgVal,
                     onHsbChange = { h, s, v -> PanelPreferences.setSurfaceBgHsb(context, isEditingDark, h, s, v) },
+                    defaultBaseColor = MaterialTheme.colorScheme.surfaceVariant,
                     shape = CustomizeCardShapes.TopCard,
                     testTag = "activity_surface_bg_tertiary_toggle"
                 )
@@ -339,12 +347,11 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                     onUseCustomChange = { PanelPreferences.setPanelContainerUseCustom(context, isEditingDark, it) },
                     customColor = panelContainerCustomColor,
                     onCustomColorChange = { PanelPreferences.setPanelContainerCustomColor(context, isEditingDark, it) },
-                    isTertiary = panelContainerColorTertiary,
-                    onTertiaryChange = { PanelPreferences.setPanelContainerColorTertiary(context, isEditingDark, it) },
                     hue = panelContainerHue,
                     sat = panelContainerSat,
                     valFactor = panelContainerVal,
                     onHsbChange = { h, s, v -> PanelPreferences.setPanelContainerHsb(context, isEditingDark, h, s, v) },
+                    defaultBaseColor = MaterialTheme.colorScheme.surfaceVariant,
                     shape = CustomizeCardShapes.CenterCard,
                     testTag = "activity_panel_container_tertiary_toggle"
                 )
@@ -357,12 +364,11 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                     onUseCustomChange = { PanelPreferences.setHeaderGradientUseCustom(context, isEditingDark, it) },
                     customColor = headerGradientCustomColor,
                     onCustomColorChange = { PanelPreferences.setHeaderGradientCustomColor(context, isEditingDark, it) },
-                    isTertiary = headerGradientColorTertiary,
-                    onTertiaryChange = { PanelPreferences.setHeaderGradientColorTertiary(context, isEditingDark, it) },
                     hue = headerGradientHue,
                     sat = headerGradientSat,
                     valFactor = headerGradientVal,
                     onHsbChange = { h, s, v -> PanelPreferences.setHeaderGradientHsb(context, isEditingDark, h, s, v) },
+                    defaultBaseColor = if (isEditingDark) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.primary,
                     shape = CustomizeCardShapes.CenterCard,
                     testTag = "activity_header_gradient_tertiary_toggle"
                 )
@@ -375,42 +381,39 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                     onUseCustomChange = { PanelPreferences.setQsTilesUseCustom(context, isEditingDark, it) },
                     customColor = qsTilesCustomColor,
                     onCustomColorChange = { PanelPreferences.setQsTilesCustomColor(context, isEditingDark, it) },
-                    isTertiary = qsTilesColorTertiary,
-                    onTertiaryChange = { PanelPreferences.setQsTilesColorTertiary(context, isEditingDark, it) },
                     hue = qsTilesHue,
                     sat = qsTilesSat,
                     valFactor = qsTilesVal,
                     onHsbChange = { h, s, v -> PanelPreferences.setQsTilesHsb(context, isEditingDark, h, s, v) },
+                    defaultBaseColor = MaterialTheme.colorScheme.primary,
                     shape = CustomizeCardShapes.CenterCard,
                     testTag = "activity_qs_tiles_tertiary_toggle"
                 )
 
                 // 5. Inactive QS Tiles
-                ExpandableInactiveTilesColorCard(
+                val cardContainerColor = MaterialTheme.colorScheme.surfaceVariant
+                val defaultInactiveBg = if (isEditingDark) {
+                    Color(
+                        red = (cardContainerColor.red * 0.72f).coerceIn(0f, 1f),
+                        green = (cardContainerColor.green * 0.72f).coerceIn(0f, 1f),
+                        blue = (cardContainerColor.blue * 0.72f).coerceIn(0f, 1f),
+                        alpha = cardContainerColor.alpha
+                    )
+                } else {
+                    Color.White
+                }
+                ExpandableElementColorCard(
                     title = "5. Inactive QS Tiles",
                     subtitle = "Quick settings inactive tiles background and icons",
                     useCustom = inactiveTilesUseCustom,
                     onUseCustomChange = { PanelPreferences.setInactiveTilesUseCustom(context, isEditingDark, it) },
                     customColor = inactiveTilesCustomColor,
                     onCustomColorChange = { PanelPreferences.setInactiveTilesCustomColor(context, isEditingDark, it) },
-                    isPrimary = inactiveTilesColorPrimary,
-                    onPrimaryChange = { enabled ->
-                        PanelPreferences.setInactiveTilesColorPrimary(context, isEditingDark, enabled)
-                        if (enabled) {
-                            PanelPreferences.setInactiveTilesColorTertiary(context, isEditingDark, false)
-                        }
-                    },
-                    isTertiary = inactiveTilesColorTertiary,
-                    onTertiaryChange = { enabled ->
-                        PanelPreferences.setInactiveTilesColorTertiary(context, isEditingDark, enabled)
-                        if (enabled) {
-                            PanelPreferences.setInactiveTilesColorPrimary(context, isEditingDark, false)
-                        }
-                    },
                     hue = inactiveTilesHue,
                     sat = inactiveTilesSat,
                     valFactor = inactiveTilesVal,
                     onHsbChange = { h, s, v -> PanelPreferences.setInactiveTilesHsb(context, isEditingDark, h, s, v) },
+                    defaultBaseColor = defaultInactiveBg,
                     shape = CustomizeCardShapes.CenterCard,
                     testTag = "activity_inactive_tiles_color"
                 )
@@ -423,12 +426,11 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                     onUseCustomChange = { PanelPreferences.setSlidersUseCustom(context, isEditingDark, it) },
                     customColor = slidersCustomColor,
                     onCustomColorChange = { PanelPreferences.setSlidersCustomColor(context, isEditingDark, it) },
-                    isTertiary = slidersColorTertiary,
-                    onTertiaryChange = { PanelPreferences.setSlidersColorTertiary(context, isEditingDark, it) },
                     hue = slidersHue,
                     sat = slidersSat,
                     valFactor = slidersVal,
                     onHsbChange = { h, s, v -> PanelPreferences.setSlidersHsb(context, isEditingDark, h, s, v) },
+                    defaultBaseColor = MaterialTheme.colorScheme.primary,
                     shape = CustomizeCardShapes.CenterCard,
                     testTag = "activity_sliders_tertiary_toggle"
                 )
@@ -441,12 +443,11 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                     onUseCustomChange = { PanelPreferences.setMiscElementsUseCustom(context, isEditingDark, it) },
                     customColor = miscElementsCustomColor,
                     onCustomColorChange = { PanelPreferences.setMiscElementsCustomColor(context, isEditingDark, it) },
-                    isTertiary = miscElementsColorTertiary,
-                    onTertiaryChange = { PanelPreferences.setMiscElementsColorTertiary(context, isEditingDark, it) },
                     hue = miscElementsHue,
                     sat = miscElementsSat,
                     valFactor = miscElementsVal,
                     onHsbChange = { h, s, v -> PanelPreferences.setMiscElementsHsb(context, isEditingDark, h, s, v) },
+                    defaultBaseColor = MaterialTheme.colorScheme.primary,
                     shape = CustomizeCardShapes.CenterCard,
                     testTag = "activity_misc_elements_tertiary_toggle"
                 )
@@ -459,14 +460,65 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                     onUseCustomChange = { PanelPreferences.setClearAllUseCustom(context, isEditingDark, it) },
                     customColor = clearAllCustomColor,
                     onCustomColorChange = { PanelPreferences.setClearAllCustomColor(context, isEditingDark, it) },
-                    isTertiary = clearAllColorTertiary,
-                    onTertiaryChange = { PanelPreferences.setClearAllColorTertiary(context, isEditingDark, it) },
                     hue = clearAllHue,
                     sat = clearAllSat,
                     valFactor = clearAllVal,
                     onHsbChange = { h, s, v -> PanelPreferences.setClearAllHsb(context, isEditingDark, h, s, v) },
-                    shape = CustomizeCardShapes.BottomCard,
+                    defaultBaseColor = MaterialTheme.colorScheme.primary,
+                    shape = CustomizeCardShapes.CenterCard,
                     testTag = "activity_clear_all_tertiary_toggle"
+                )
+
+                // 9. Active Complication Arcs
+                ExpandableComplicationArcColorCard(
+                    title = "9. Active Complication Arcs",
+                    subtitle = "Progress arc, horizontal line, and perimeter bar for active complications",
+                    monetMode = activeCompArcMode,
+                    onMonetModeChange = { PanelPreferences.setActiveCompArcMode(context, isEditingDark, it) },
+                    customColor = activeCompArcCustomColor,
+                    onCustomColorChange = { PanelPreferences.setActiveCompArcCustomColor(context, isEditingDark, it) },
+                    hue = activeCompArcHue,
+                    sat = activeCompArcSat,
+                    valFactor = activeCompArcVal,
+                    onHsbChange = { h, s, v -> PanelPreferences.setActiveCompArcHsb(context, isEditingDark, h, s, v) },
+                    defaultBaseColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = CustomizeCardShapes.CenterCard,
+                    testTag = "activity_active_comp_arc_color"
+                )
+
+                // 10. Inactive Complication Arcs
+                ExpandableComplicationArcColorCard(
+                    title = "10. Inactive Complication Arcs",
+                    subtitle = "Progress arc, horizontal line, and perimeter bar for inactive complications",
+                    monetMode = inactiveCompArcMode,
+                    onMonetModeChange = { PanelPreferences.setInactiveCompArcMode(context, isEditingDark, it) },
+                    customColor = inactiveCompArcCustomColor,
+                    onCustomColorChange = { PanelPreferences.setInactiveCompArcCustomColor(context, isEditingDark, it) },
+                    hue = inactiveCompArcHue,
+                    sat = inactiveCompArcSat,
+                    valFactor = inactiveCompArcVal,
+                    onHsbChange = { h, s, v -> PanelPreferences.setInactiveCompArcHsb(context, isEditingDark, h, s, v) },
+                    defaultBaseColor = if (isEditingDark) Color(0xFFCCCCCC) else Color(0xFF555555),
+                    shape = CustomizeCardShapes.CenterCard,
+                    testTag = "activity_inactive_comp_arc_color"
+                )
+
+                // 11. Complication Arc Tracks
+                ExpandableComplicationArcColorCard(
+                    title = "11. Complication Arc Tracks",
+                    subtitle = "Unfilled background track behind complication arcs, lines, and perimeter bars",
+                    monetMode = compArcTrackMode,
+                    onMonetModeChange = { PanelPreferences.setCompArcTrackMode(context, isEditingDark, it) },
+                    customColor = compArcTrackCustomColor,
+                    onCustomColorChange = { PanelPreferences.setCompArcTrackCustomColor(context, isEditingDark, it) },
+                    hue = compArcTrackHue,
+                    sat = compArcTrackSat,
+                    valFactor = compArcTrackVal,
+                    onHsbChange = { h, s, v -> PanelPreferences.setCompArcTrackHsb(context, isEditingDark, h, s, v) },
+                    defaultBaseColor = (if (isEditingDark) Color.White else Color.Black).copy(alpha = 0.22f),
+                    monetTrackAlpha = 0.30f,
+                    shape = CustomizeCardShapes.BottomCard,
+                    testTag = "activity_comp_arc_track_color"
                 )
             }
 
@@ -521,24 +573,30 @@ private fun ExpandableElementColorCard(
     onUseCustomChange: (Boolean) -> Unit,
     customColor: Int,
     onCustomColorChange: (Int) -> Unit,
-    isTertiary: Boolean,
-    onTertiaryChange: (Boolean) -> Unit,
     hue: Float,
     sat: Float,
     valFactor: Float,
     onHsbChange: (hue: Float, sat: Float, valFactor: Float) -> Unit,
+    defaultBaseColor: Color,
     shape: androidx.compose.ui.graphics.Shape,
     testTag: String
 ) {
     var isExpanded by remember { mutableStateOf(false) }
 
-    val baseThemeColor = if (isTertiary) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
     val activeColor = if (useCustom) {
         Color(customColor)
     } else {
-        remember(baseThemeColor, hue, sat, valFactor) {
-            applyHsvAdjustments(baseThemeColor, hue, sat, valFactor)
+        remember(defaultBaseColor, hue, sat, valFactor) {
+            applyHsvAdjustments(defaultBaseColor, hue, sat, valFactor)
         }
+    }
+
+    val statusText = if (useCustom) {
+        String.format("Custom Color (#%06X)", (0xFFFFFF and customColor))
+    } else if (hue != 0f || sat != 1f || valFactor != 1f) {
+        "Default Accent (HSB Adjusted)"
+    } else {
+        "Default Accent"
     }
 
     SettingsCard(
@@ -583,11 +641,7 @@ private fun ExpandableElementColorCard(
                                 .background(activeColor)
                         )
                         Text(
-                            text = if (useCustom) {
-                                String.format("Custom Color (#%06X)", (0xFFFFFF and customColor))
-                            } else {
-                                if (isTertiary) "Tertiary Color Accent" else "Primary Color Accent"
-                            },
+                            text = statusText,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = activeColor
@@ -668,41 +722,10 @@ private fun ExpandableElementColorCard(
                                 onColorSelected = onCustomColorChange
                             )
                         } else {
-                            // Monet Accent & Saturation/Hue/Brightness Sliders
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                                        Text(
-                                            text = "Tertiary Monet Accent",
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "Switch between Primary and Tertiary Monet theme accent",
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Switch(
-                                        checked = isTertiary,
-                                        onCheckedChange = onTertiaryChange,
-                                        modifier = Modifier.testTag(testTag)
-                                    )
-                                }
-
-                                HorizontalDivider(
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                                    thickness = 1.dp
-                                )
-
                                 val isCustomized = hue != 0f || sat != 1f || valFactor != 1f
 
                                 // 1. Hue Shift Slider
@@ -820,51 +843,41 @@ private fun ExpandableElementColorCard(
 }
 
 @Composable
-private fun ExpandableInactiveTilesColorCard(
+private fun ExpandableComplicationArcColorCard(
     title: String,
     subtitle: String,
-    useCustom: Boolean,
-    onUseCustomChange: (Boolean) -> Unit,
+    monetMode: ComplicationArcMonetMode,
+    onMonetModeChange: (ComplicationArcMonetMode) -> Unit,
     customColor: Int,
     onCustomColorChange: (Int) -> Unit,
-    isPrimary: Boolean,
-    onPrimaryChange: (Boolean) -> Unit,
-    isTertiary: Boolean,
-    onTertiaryChange: (Boolean) -> Unit,
     hue: Float,
     sat: Float,
     valFactor: Float,
     onHsbChange: (hue: Float, sat: Float, valFactor: Float) -> Unit,
+    defaultBaseColor: Color,
+    monetTrackAlpha: Float = 1.0f,
     shape: androidx.compose.ui.graphics.Shape,
     testTag: String
 ) {
     var isExpanded by remember { mutableStateOf(false) }
 
-    val isDark = isSystemInDarkTheme()
-    val cardContainerColor = MaterialTheme.colorScheme.surfaceVariant
-    val defaultInactiveBg = if (isDark) {
-        Color(
-            red = (cardContainerColor.red * 0.72f).coerceIn(0f, 1f),
-            green = (cardContainerColor.green * 0.72f).coerceIn(0f, 1f),
-            blue = (cardContainerColor.blue * 0.72f).coerceIn(0f, 1f),
-            alpha = cardContainerColor.alpha
-        )
-    } else {
-        Color.White
+    val baseThemeColor = when (monetMode) {
+        ComplicationArcMonetMode.PRIMARY -> MaterialTheme.colorScheme.primary.copy(alpha = monetTrackAlpha)
+        ComplicationArcMonetMode.TERTIARY -> MaterialTheme.colorScheme.tertiary.copy(alpha = monetTrackAlpha)
+        ComplicationArcMonetMode.CUSTOM -> Color(customColor)
     }
-
-    val baseInactiveBg = when {
-        isTertiary -> MaterialTheme.colorScheme.tertiaryContainer
-        isPrimary -> MaterialTheme.colorScheme.primaryContainer
-        else -> defaultInactiveBg
-    }
-
-    val activeColor = if (useCustom) {
+    val activeColor = if (monetMode == ComplicationArcMonetMode.CUSTOM) {
         Color(customColor)
     } else {
-        remember(baseInactiveBg, hue, sat, valFactor) {
-            applyHsvAdjustments(baseInactiveBg, hue, sat, valFactor)
+        remember(baseThemeColor, hue, sat, valFactor) {
+            applyHsvAdjustments(baseThemeColor, hue, sat, valFactor)
         }
+    }
+
+    val statusText = when (monetMode) {
+        ComplicationArcMonetMode.CUSTOM -> String.format("Custom Color (#%06X)", (0xFFFFFF and customColor))
+        ComplicationArcMonetMode.PRIMARY -> if (hue != 0f || sat != 1f || valFactor != 1f) "Primary (HSB Adjusted)" else "Primary"
+        ComplicationArcMonetMode.TERTIARY -> if (hue != 0f || sat != 1f || valFactor != 1f) "Tertiary (HSB Adjusted)" else "Tertiary"
     }
 
     SettingsCard(
@@ -909,15 +922,7 @@ private fun ExpandableInactiveTilesColorCard(
                                 .background(activeColor)
                         )
                         Text(
-                            text = if (useCustom) {
-                                String.format("Custom Color (#%06X)", (0xFFFFFF and customColor))
-                            } else {
-                                when {
-                                    isTertiary -> "Tertiary Container Accent"
-                                    isPrimary -> "Primary Container Accent"
-                                    else -> "Default Surface Variant"
-                                }
-                            },
+                            text = statusText,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -961,205 +966,175 @@ private fun ExpandableInactiveTilesColorCard(
                             .padding(horizontal = 12.dp, vertical = 10.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        // Custom Color Toggle
+                        Text(
+                            text = "Color Mode",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        val modes = ComplicationArcMonetMode.entries
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                                Text(
-                                    text = "Set Custom Color",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Use exact custom color for inactive tiles instead of Monet theme accent",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                            modes.forEachIndexed { idx, mode ->
+                                val selected = monetMode == mode
+                                val segShape = if (selected) {
+                                    RoundedCornerShape(percent = 50)
+                                } else {
+                                    RoundedCornerShape(
+                                        topStartPercent = if (idx == 0) 50 else 12,
+                                        bottomStartPercent = if (idx == 0) 50 else 12,
+                                        topEndPercent = if (idx == modes.lastIndex) 50 else 12,
+                                        bottomEndPercent = if (idx == modes.lastIndex) 50 else 12
+                                    )
+                                }
+                                Surface(
+                                    onClick = { onMonetModeChange(mode) },
+                                    shape = segShape,
+                                    color = if (selected) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                    },
+                                    contentColor = if (selected) {
+                                        MaterialTheme.colorScheme.onPrimary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .heightIn(min = 48.dp)
+                                        .testTag("${testTag}_mode_${mode.id}")
+                                ) {
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
+                                    ) {
+                                        Text(
+                                            text = mode.label,
+                                            fontSize = 11.sp,
+                                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
                             }
-                            Switch(
-                                checked = useCustom,
-                                onCheckedChange = onUseCustomChange,
-                                modifier = Modifier.testTag("${testTag}_use_custom_switch")
-                            )
                         }
 
                         HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
                             thickness = 1.dp
                         )
 
-                        if (useCustom) {
+                        if (monetMode == ComplicationArcMonetMode.CUSTOM) {
                             TwoTabColorPicker(
                                 selectedColor = customColor,
                                 onColorSelected = onCustomColorChange
                             )
                         } else {
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                                        Text(
-                                            text = "Primary Container Accent",
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "Use Primary Container Monet color for inactive tiles",
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Switch(
-                                        checked = isPrimary,
-                                        onCheckedChange = onPrimaryChange
-                                    )
-                                }
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                                        Text(
-                                            text = "Tertiary Container Accent",
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "Use Tertiary Container Monet color for inactive tiles",
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Switch(
-                                        checked = isTertiary,
-                                        onCheckedChange = onTertiaryChange
-                                    )
-                                }
+                            val isCustomized = hue != 0f || sat != 1f || valFactor != 1f
 
-                                HorizontalDivider(
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                                    thickness = 1.dp
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Hue Shift",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = if (hue == 0f) "0° (Default)" else "${if (hue > 0) "+" else ""}${hue.roundToInt()}°",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                ThickElementSlider(
+                                    value = hue,
+                                    onValueChange = { onHsbChange(it, sat, valFactor) },
+                                    valueRange = -180f..180f,
+                                    steps = 359,
+                                    modifier = Modifier.fillMaxWidth()
                                 )
+                            }
 
-                                val isCustomized = hue != 0f || sat != 1f || valFactor != 1f
-
-                                // 1. Hue Shift Slider
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "Hue Shift",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = if (hue == 0f) "0° (Default)" else "${if (hue > 0) "+" else ""}${hue.roundToInt()}°",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                    ThickElementSlider(
-                                        value = hue,
-                                        onValueChange = { onHsbChange(it, sat, valFactor) },
-                                        valueRange = -180f..180f,
-                                        steps = 359,
-                                        modifier = Modifier.fillMaxWidth()
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Saturation",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${(sat * 100).roundToInt()}%",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 }
+                                ThickElementSlider(
+                                    value = sat,
+                                    onValueChange = { onHsbChange(hue, it, valFactor) },
+                                    valueRange = 0f..2.0f,
+                                    steps = 39,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
 
-                                // 2. Saturation Slider
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "Saturation",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "${(sat * 100).roundToInt()}%",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                    ThickElementSlider(
-                                        value = sat,
-                                        onValueChange = { onHsbChange(hue, it, valFactor) },
-                                        valueRange = 0f..2.0f,
-                                        steps = 39,
-                                        modifier = Modifier.fillMaxWidth()
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Brightness",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${(valFactor * 100).roundToInt()}%",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 }
+                                ThickElementSlider(
+                                    value = valFactor,
+                                    onValueChange = { onHsbChange(hue, sat, it) },
+                                    valueRange = 0.5f..1.5f,
+                                    steps = 19,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
 
-                                // 3. Brightness Slider
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "Brightness",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "${(valFactor * 100).roundToInt()}%",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                    ThickElementSlider(
-                                        value = valFactor,
-                                        onValueChange = { onHsbChange(hue, sat, it) },
-                                        valueRange = 0.5f..1.5f,
-                                        steps = 19,
-                                        modifier = Modifier.fillMaxWidth()
+                            if (isCustomized) {
+                                OutlinedButton(
+                                    onClick = { onHsbChange(0f, 1f, 1f) },
+                                    modifier = Modifier.align(Alignment.End),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp)
                                     )
-                                }
-
-                                if (isCustomized) {
-                                    OutlinedButton(
-                                        onClick = { onHsbChange(0f, 1f, 1f) },
-                                        modifier = Modifier.align(Alignment.End),
-                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Refresh,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = "Reset Color Sliders",
-                                            fontSize = 12.sp
-                                        )
-                                    }
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Reset Color Sliders",
+                                        fontSize = 12.sp
+                                    )
                                 }
                             }
                         }

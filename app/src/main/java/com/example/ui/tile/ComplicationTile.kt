@@ -372,7 +372,8 @@ fun ComplicationTileView(
     val isDark = LocalIsDarkTheme.current
     val colorScheme = MaterialTheme.colorScheme
 
-    val resolvedAccentTarget = model.accentColor ?: colorScheme.primary
+    val qsTilesElementColor = com.example.ui.theme.getQsTilesElementColor(isDark)
+    val resolvedAccentTarget = model.accentColor ?: qsTilesElementColor
     val animatedAccent by animateColorAsState(
         targetValue = resolvedAccentTarget,
         animationSpec = tween(durationMillis = 300),
@@ -386,6 +387,15 @@ fun ComplicationTileView(
     )
 
     val inactiveTileColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
+    val isInactiveTilesCustomized = PanelPreferences.getInactiveTilesColorPrimary(isDark).collectAsState().value ||
+        PanelPreferences.getInactiveTilesColorTertiary(isDark).collectAsState().value ||
+        PanelPreferences.getInactiveTilesHue(isDark).collectAsState().value != 0f ||
+        PanelPreferences.getInactiveTilesSat(isDark).collectAsState().value != 1f ||
+        PanelPreferences.getInactiveTilesVal(isDark).collectAsState().value != 1f
+
+    val activeArcOverride = com.example.ui.theme.resolveActiveComplicationArcOverride(isDark)
+    val inactiveArcOverride = com.example.ui.theme.resolveInactiveComplicationArcOverride(isDark)
+    val trackOverride = com.example.ui.theme.resolveComplicationArcTrackOverride(isDark)
 
     val complicationOutlineEnabled by PanelPreferences.complicationOutlineEnabled.collectAsState()
     val tileOutlineThicknessDp by PanelPreferences.tileOutlineThicknessDp.collectAsState()
@@ -404,7 +414,7 @@ fun ComplicationTileView(
         label = "complication_fill_${model.id}"
     )
 
-    val trackColor = if (isTransparentInner) {
+    val defaultTrackColor = if (isTransparentInner) {
         if (model.isActive) {
             animatedAccent.copy(alpha = 0.22f)
         } else {
@@ -415,28 +425,38 @@ fun ComplicationTileView(
     } else {
         if (isDark) animatedAccent.copy(alpha = 0.20f) else animatedAccent.copy(alpha = 0.16f)
     }
+    val trackColor = trackOverride ?: defaultTrackColor
 
-    val progressArcColor = if (isTransparentInner) {
+    val defaultProgressArcColor = if (isTransparentInner) {
         animatedAccent
     } else if (model.isActive) {
         Color.White
     } else {
         animatedAccent
     }
+    val progressArcColor by animateColorAsState(
+        targetValue = if (model.isActive) {
+            activeArcOverride ?: defaultProgressArcColor
+        } else {
+            inactiveArcOverride ?: defaultProgressArcColor
+        },
+        animationSpec = tween(durationMillis = 250),
+        label = "complication_arc_${model.id}"
+    )
 
     val iconTint = if (isTransparentInner) {
-        if (model.isActive) animatedAccent else (if (isDark) Color(0xFFCCCCCC) else Color(0xFF555555))
+        if (model.isActive) animatedAccent else (if (isInactiveTilesCustomized) inactiveTileColor else (if (isDark) Color(0xFFCCCCCC) else Color(0xFF555555)))
     } else if (model.isActive) {
         colorScheme.onPrimary
     } else {
-        colorScheme.onSurface
+        if (isInactiveTilesCustomized) inactiveTileColor else colorScheme.onSurface
     }
     val sublineColor = if (isTransparentInner) {
-        if (model.isActive) animatedAccent else (if (isDark) Color(0xFFCCCCCC) else colorScheme.onSurfaceVariant)
+        if (model.isActive) animatedAccent else (if (isInactiveTilesCustomized) inactiveTileColor else (if (isDark) Color(0xFFCCCCCC) else colorScheme.onSurfaceVariant))
     } else if (model.isActive) {
         colorScheme.onPrimary.copy(alpha = 0.92f)
     } else {
-        colorScheme.onSurfaceVariant
+        if (isInactiveTilesCustomized) inactiveTileColor else colorScheme.onSurfaceVariant
     }
 
     val handleTap = {

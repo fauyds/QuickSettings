@@ -22,6 +22,17 @@ enum class ThemeMode(val id: String, val displayName: String) {
     }
 }
 
+enum class ComplicationArcMonetMode(val id: String, val label: String) {
+    PRIMARY("primary", "Primary"),
+    TERTIARY("tertiary", "Tertiary"),
+    CUSTOM("custom", "Custom");
+
+    companion object {
+        fun fromId(id: String?): ComplicationArcMonetMode =
+            entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: PRIMARY
+    }
+}
+
 enum class QsPanelStyle(val id: String, val displayName: String, val description: String) {
     DEFAULT("default", "Default (Modern)", "Modern Jetpack Compose dynamic theme layout"),
     ANDROID_OREO("android_oreo", "Android 8.0 Oreo Style", "Classic Android 8.0 Oreo Quick Settings layout"),
@@ -275,6 +286,14 @@ object PanelPreferences {
     private const val KEY_DISABLE_CLEAR_ALL_LABEL = "disable_clear_all_label"
     private const val KEY_CLEAR_ALL_ICON_SIZE = "clear_all_icon_size"
     private const val KEY_ENABLE_QQS_HORIZONTAL_SCROLL = "enable_qqs_horizontal_scroll"
+    private const val KEY_ENABLE_QQS_COMPLICATIONS_ROW = "enable_qqs_complications_row"
+    private const val KEY_QQS_2X1_COMPLICATION_IDS = "qqs_2x1_complication_ids"
+    private const val KEY_QQS_2X1_HORIZONTAL_LINE = "qqs_2x1_horizontal_line"
+    private const val KEY_QQS_2X1_PERIMETER_PROGRESS = "qqs_2x1_perimeter_progress"
+    private const val KEY_QQS_2X1_ACTIVE_CORNER_DP = "qqs_2x1_active_corner_dp"
+    private const val KEY_QQS_2X1_INACTIVE_CORNER_DP = "qqs_2x1_inactive_corner_dp"
+    private const val KEY_QQS_2X1_TILE_HEIGHT_DP = "qqs_2x1_tile_height_dp"
+    val DEFAULT_QQS_2X1_COMPLICATION_IDS = listOf("comp_battery", "comp_storage")
     private const val KEY_ENABLE_PANEL_SHADOWS = "enable_panel_shadows"
     private const val KEY_PANEL_SHADOW_ELEVATION = "panel_shadow_elevation"
     private const val KEY_PANEL_SHADOW_OFFSET_Y = "panel_shadow_offset_y"
@@ -839,6 +858,46 @@ object PanelPreferences {
     private const val KEY_ELEM_CLEAR_ALL_USE_CUSTOM_DARK = "elem_clear_all_use_custom_dark"
     private const val KEY_ELEM_CLEAR_ALL_CUSTOM_COLOR_LIGHT = "elem_clear_all_custom_color_light"
     private const val KEY_ELEM_CLEAR_ALL_CUSTOM_COLOR_DARK = "elem_clear_all_custom_color_dark"
+
+    // Active / Inactive Complication Arc & Track Per-Element Color Keys (Light & Dark)
+    private const val KEY_ELEM_ACTIVE_COMP_ARC_MODE_LIGHT = "elem_active_comp_arc_mode_light"
+    private const val KEY_ELEM_ACTIVE_COMP_ARC_MODE_DARK = "elem_active_comp_arc_mode_dark"
+    private const val KEY_ELEM_ACTIVE_COMP_ARC_HUE_LIGHT = "elem_active_comp_arc_hue_light"
+    private const val KEY_ELEM_ACTIVE_COMP_ARC_SAT_LIGHT = "elem_active_comp_arc_sat_light"
+    private const val KEY_ELEM_ACTIVE_COMP_ARC_VAL_LIGHT = "elem_active_comp_arc_val_light"
+    private const val KEY_ELEM_ACTIVE_COMP_ARC_HUE_DARK = "elem_active_comp_arc_hue_dark"
+    private const val KEY_ELEM_ACTIVE_COMP_ARC_SAT_DARK = "elem_active_comp_arc_sat_dark"
+    private const val KEY_ELEM_ACTIVE_COMP_ARC_VAL_DARK = "elem_active_comp_arc_val_dark"
+    private const val KEY_ELEM_ACTIVE_COMP_ARC_USE_CUSTOM_LIGHT = "elem_active_comp_arc_use_custom_light"
+    private const val KEY_ELEM_ACTIVE_COMP_ARC_USE_CUSTOM_DARK = "elem_active_comp_arc_use_custom_dark"
+    private const val KEY_ELEM_ACTIVE_COMP_ARC_CUSTOM_COLOR_LIGHT = "elem_active_comp_arc_custom_color_light"
+    private const val KEY_ELEM_ACTIVE_COMP_ARC_CUSTOM_COLOR_DARK = "elem_active_comp_arc_custom_color_dark"
+
+    private const val KEY_ELEM_INACTIVE_COMP_ARC_MODE_LIGHT = "elem_inactive_comp_arc_mode_light"
+    private const val KEY_ELEM_INACTIVE_COMP_ARC_MODE_DARK = "elem_inactive_comp_arc_mode_dark"
+    private const val KEY_ELEM_INACTIVE_COMP_ARC_HUE_LIGHT = "elem_inactive_comp_arc_hue_light"
+    private const val KEY_ELEM_INACTIVE_COMP_ARC_SAT_LIGHT = "elem_inactive_comp_arc_sat_light"
+    private const val KEY_ELEM_INACTIVE_COMP_ARC_VAL_LIGHT = "elem_inactive_comp_arc_val_light"
+    private const val KEY_ELEM_INACTIVE_COMP_ARC_HUE_DARK = "elem_inactive_comp_arc_hue_dark"
+    private const val KEY_ELEM_INACTIVE_COMP_ARC_SAT_DARK = "elem_inactive_comp_arc_sat_dark"
+    private const val KEY_ELEM_INACTIVE_COMP_ARC_VAL_DARK = "elem_inactive_comp_arc_val_dark"
+    private const val KEY_ELEM_INACTIVE_COMP_ARC_USE_CUSTOM_LIGHT = "elem_inactive_comp_arc_use_custom_light"
+    private const val KEY_ELEM_INACTIVE_COMP_ARC_USE_CUSTOM_DARK = "elem_inactive_comp_arc_use_custom_dark"
+    private const val KEY_ELEM_INACTIVE_COMP_ARC_CUSTOM_COLOR_LIGHT = "elem_inactive_comp_arc_custom_color_light"
+    private const val KEY_ELEM_INACTIVE_COMP_ARC_CUSTOM_COLOR_DARK = "elem_inactive_comp_arc_custom_color_dark"
+
+    private const val KEY_ELEM_COMP_ARC_TRACK_MODE_LIGHT = "elem_comp_arc_track_mode_light"
+    private const val KEY_ELEM_COMP_ARC_TRACK_MODE_DARK = "elem_comp_arc_track_mode_dark"
+    private const val KEY_ELEM_COMP_ARC_TRACK_HUE_LIGHT = "elem_comp_arc_track_hue_light"
+    private const val KEY_ELEM_COMP_ARC_TRACK_SAT_LIGHT = "elem_comp_arc_track_sat_light"
+    private const val KEY_ELEM_COMP_ARC_TRACK_VAL_LIGHT = "elem_comp_arc_track_val_light"
+    private const val KEY_ELEM_COMP_ARC_TRACK_HUE_DARK = "elem_comp_arc_track_hue_dark"
+    private const val KEY_ELEM_COMP_ARC_TRACK_SAT_DARK = "elem_comp_arc_track_sat_dark"
+    private const val KEY_ELEM_COMP_ARC_TRACK_VAL_DARK = "elem_comp_arc_track_val_dark"
+    private const val KEY_ELEM_COMP_ARC_TRACK_USE_CUSTOM_LIGHT = "elem_comp_arc_track_use_custom_light"
+    private const val KEY_ELEM_COMP_ARC_TRACK_USE_CUSTOM_DARK = "elem_comp_arc_track_use_custom_dark"
+    private const val KEY_ELEM_COMP_ARC_TRACK_CUSTOM_COLOR_LIGHT = "elem_comp_arc_track_custom_color_light"
+    private const val KEY_ELEM_COMP_ARC_TRACK_CUSTOM_COLOR_DARK = "elem_comp_arc_track_custom_color_dark"
     private const val KEY_QS_BACKGROUND_COLOR = "qs_background_color"
     private const val KEY_QS_PANEL_BACKGROUND_COLOR = "qs_panel_background_color"
     private const val KEY_QS_BACKGROUND_CORNER = "qs_background_corner"
@@ -1232,6 +1291,84 @@ object PanelPreferences {
     private val _clearAllCustomColorDark = MutableStateFlow(0xFF673AB7.toInt())
     val clearAllCustomColorDark: StateFlow<Int> = _clearAllCustomColorDark.asStateFlow()
 
+    // Active Complication Arcs StateFlows (Light & Dark)
+    private val _activeCompArcModeLight = MutableStateFlow(ComplicationArcMonetMode.PRIMARY)
+    val activeCompArcModeLight: StateFlow<ComplicationArcMonetMode> = _activeCompArcModeLight.asStateFlow()
+    private val _activeCompArcModeDark = MutableStateFlow(ComplicationArcMonetMode.PRIMARY)
+    val activeCompArcModeDark: StateFlow<ComplicationArcMonetMode> = _activeCompArcModeDark.asStateFlow()
+    private val _activeCompArcHueLight = MutableStateFlow(0f)
+    val activeCompArcHueLight: StateFlow<Float> = _activeCompArcHueLight.asStateFlow()
+    private val _activeCompArcSatLight = MutableStateFlow(1f)
+    val activeCompArcSatLight: StateFlow<Float> = _activeCompArcSatLight.asStateFlow()
+    private val _activeCompArcValLight = MutableStateFlow(1f)
+    val activeCompArcValLight: StateFlow<Float> = _activeCompArcValLight.asStateFlow()
+    private val _activeCompArcHueDark = MutableStateFlow(0f)
+    val activeCompArcHueDark: StateFlow<Float> = _activeCompArcHueDark.asStateFlow()
+    private val _activeCompArcSatDark = MutableStateFlow(1f)
+    val activeCompArcSatDark: StateFlow<Float> = _activeCompArcSatDark.asStateFlow()
+    private val _activeCompArcValDark = MutableStateFlow(1f)
+    val activeCompArcValDark: StateFlow<Float> = _activeCompArcValDark.asStateFlow()
+    private val _activeCompArcUseCustomLight = MutableStateFlow(false)
+    val activeCompArcUseCustomLight: StateFlow<Boolean> = _activeCompArcUseCustomLight.asStateFlow()
+    private val _activeCompArcUseCustomDark = MutableStateFlow(false)
+    val activeCompArcUseCustomDark: StateFlow<Boolean> = _activeCompArcUseCustomDark.asStateFlow()
+    private val _activeCompArcCustomColorLight = MutableStateFlow(0xFFFFFFFF.toInt())
+    val activeCompArcCustomColorLight: StateFlow<Int> = _activeCompArcCustomColorLight.asStateFlow()
+    private val _activeCompArcCustomColorDark = MutableStateFlow(0xFFFFFFFF.toInt())
+    val activeCompArcCustomColorDark: StateFlow<Int> = _activeCompArcCustomColorDark.asStateFlow()
+
+    // Inactive Complication Arcs StateFlows (Light & Dark)
+    private val _inactiveCompArcModeLight = MutableStateFlow(ComplicationArcMonetMode.PRIMARY)
+    val inactiveCompArcModeLight: StateFlow<ComplicationArcMonetMode> = _inactiveCompArcModeLight.asStateFlow()
+    private val _inactiveCompArcModeDark = MutableStateFlow(ComplicationArcMonetMode.PRIMARY)
+    val inactiveCompArcModeDark: StateFlow<ComplicationArcMonetMode> = _inactiveCompArcModeDark.asStateFlow()
+    private val _inactiveCompArcHueLight = MutableStateFlow(0f)
+    val inactiveCompArcHueLight: StateFlow<Float> = _inactiveCompArcHueLight.asStateFlow()
+    private val _inactiveCompArcSatLight = MutableStateFlow(1f)
+    val inactiveCompArcSatLight: StateFlow<Float> = _inactiveCompArcSatLight.asStateFlow()
+    private val _inactiveCompArcValLight = MutableStateFlow(1f)
+    val inactiveCompArcValLight: StateFlow<Float> = _inactiveCompArcValLight.asStateFlow()
+    private val _inactiveCompArcHueDark = MutableStateFlow(0f)
+    val inactiveCompArcHueDark: StateFlow<Float> = _inactiveCompArcHueDark.asStateFlow()
+    private val _inactiveCompArcSatDark = MutableStateFlow(1f)
+    val inactiveCompArcSatDark: StateFlow<Float> = _inactiveCompArcSatDark.asStateFlow()
+    private val _inactiveCompArcValDark = MutableStateFlow(1f)
+    val inactiveCompArcValDark: StateFlow<Float> = _inactiveCompArcValDark.asStateFlow()
+    private val _inactiveCompArcUseCustomLight = MutableStateFlow(false)
+    val inactiveCompArcUseCustomLight: StateFlow<Boolean> = _inactiveCompArcUseCustomLight.asStateFlow()
+    private val _inactiveCompArcUseCustomDark = MutableStateFlow(false)
+    val inactiveCompArcUseCustomDark: StateFlow<Boolean> = _inactiveCompArcUseCustomDark.asStateFlow()
+    private val _inactiveCompArcCustomColorLight = MutableStateFlow(0xFF673AB7.toInt())
+    val inactiveCompArcCustomColorLight: StateFlow<Int> = _inactiveCompArcCustomColorLight.asStateFlow()
+    private val _inactiveCompArcCustomColorDark = MutableStateFlow(0xFF4EE3D0.toInt())
+    val inactiveCompArcCustomColorDark: StateFlow<Int> = _inactiveCompArcCustomColorDark.asStateFlow()
+
+    // Complication Arc Tracks StateFlows (Light & Dark)
+    private val _compArcTrackModeLight = MutableStateFlow(ComplicationArcMonetMode.PRIMARY)
+    val compArcTrackModeLight: StateFlow<ComplicationArcMonetMode> = _compArcTrackModeLight.asStateFlow()
+    private val _compArcTrackModeDark = MutableStateFlow(ComplicationArcMonetMode.PRIMARY)
+    val compArcTrackModeDark: StateFlow<ComplicationArcMonetMode> = _compArcTrackModeDark.asStateFlow()
+    private val _compArcTrackHueLight = MutableStateFlow(0f)
+    val compArcTrackHueLight: StateFlow<Float> = _compArcTrackHueLight.asStateFlow()
+    private val _compArcTrackSatLight = MutableStateFlow(1f)
+    val compArcTrackSatLight: StateFlow<Float> = _compArcTrackSatLight.asStateFlow()
+    private val _compArcTrackValLight = MutableStateFlow(1f)
+    val compArcTrackValLight: StateFlow<Float> = _compArcTrackValLight.asStateFlow()
+    private val _compArcTrackHueDark = MutableStateFlow(0f)
+    val compArcTrackHueDark: StateFlow<Float> = _compArcTrackHueDark.asStateFlow()
+    private val _compArcTrackSatDark = MutableStateFlow(1f)
+    val compArcTrackSatDark: StateFlow<Float> = _compArcTrackSatDark.asStateFlow()
+    private val _compArcTrackValDark = MutableStateFlow(1f)
+    val compArcTrackValDark: StateFlow<Float> = _compArcTrackValDark.asStateFlow()
+    private val _compArcTrackUseCustomLight = MutableStateFlow(false)
+    val compArcTrackUseCustomLight: StateFlow<Boolean> = _compArcTrackUseCustomLight.asStateFlow()
+    private val _compArcTrackUseCustomDark = MutableStateFlow(false)
+    val compArcTrackUseCustomDark: StateFlow<Boolean> = _compArcTrackUseCustomDark.asStateFlow()
+    private val _compArcTrackCustomColorLight = MutableStateFlow(0xFFCBD5E1.toInt())
+    val compArcTrackCustomColorLight: StateFlow<Int> = _compArcTrackCustomColorLight.asStateFlow()
+    private val _compArcTrackCustomColorDark = MutableStateFlow(0xFF334155.toInt())
+    val compArcTrackCustomColorDark: StateFlow<Int> = _compArcTrackCustomColorDark.asStateFlow()
+
     private val _showQsTileGradient = MutableStateFlow(false)
     val showQsTileGradient: StateFlow<Boolean> = _showQsTileGradient.asStateFlow()
 
@@ -1478,6 +1615,27 @@ object PanelPreferences {
     private val _enableQqsHorizontalScroll = MutableStateFlow(false)
     val enableQqsHorizontalScroll: StateFlow<Boolean> = _enableQqsHorizontalScroll.asStateFlow()
 
+    private val _enableQqsComplicationsRow = MutableStateFlow(false)
+    val enableQqsComplicationsRow: StateFlow<Boolean> = _enableQqsComplicationsRow.asStateFlow()
+
+    private val _qqs2x1ComplicationIds = MutableStateFlow(DEFAULT_QQS_2X1_COMPLICATION_IDS)
+    val qqs2x1ComplicationIds: StateFlow<List<String>> = _qqs2x1ComplicationIds.asStateFlow()
+
+    private val _qqs2x1HorizontalLine = MutableStateFlow(false)
+    val qqs2x1HorizontalLine: StateFlow<Boolean> = _qqs2x1HorizontalLine.asStateFlow()
+
+    private val _qqs2x1PerimeterProgress = MutableStateFlow(false)
+    val qqs2x1PerimeterProgress: StateFlow<Boolean> = _qqs2x1PerimeterProgress.asStateFlow()
+
+    private val _qqs2x1ActiveCornerDp = MutableStateFlow(28.0f)
+    val qqs2x1ActiveCornerDp: StateFlow<Float> = _qqs2x1ActiveCornerDp.asStateFlow()
+
+    private val _qqs2x1InactiveCornerDp = MutableStateFlow(12.0f)
+    val qqs2x1InactiveCornerDp: StateFlow<Float> = _qqs2x1InactiveCornerDp.asStateFlow()
+
+    private val _qqs2x1TileHeightDp = MutableStateFlow(56)
+    val qqs2x1TileHeightDp: StateFlow<Int> = _qqs2x1TileHeightDp.asStateFlow()
+
     private val _enablePanelShadows = MutableStateFlow(false)
     val enablePanelShadows: StateFlow<Boolean> = _enablePanelShadows.asStateFlow()
 
@@ -1703,6 +1861,18 @@ object PanelPreferences {
         _disableClearAllLabel.value = prefs.getBoolean(KEY_DISABLE_CLEAR_ALL_LABEL, false)
         _clearAllIconSize.value = prefs.getInt(KEY_CLEAR_ALL_ICON_SIZE, 24)
         _enableQqsHorizontalScroll.value = prefs.getBoolean(KEY_ENABLE_QQS_HORIZONTAL_SCROLL, false)
+        _enableQqsComplicationsRow.value = prefs.getBoolean(KEY_ENABLE_QQS_COMPLICATIONS_ROW, false)
+        val savedQqs2x1Ids = prefs.getString(KEY_QQS_2X1_COMPLICATION_IDS, null)
+        _qqs2x1ComplicationIds.value = if (!savedQqs2x1Ids.isNullOrBlank()) {
+            savedQqs2x1Ids.split(",").map { it.trim() }.filter { it.isNotEmpty() }.ifEmpty { DEFAULT_QQS_2X1_COMPLICATION_IDS }
+        } else {
+            DEFAULT_QQS_2X1_COMPLICATION_IDS
+        }
+        _qqs2x1HorizontalLine.value = prefs.getBoolean(KEY_QQS_2X1_HORIZONTAL_LINE, false)
+        _qqs2x1PerimeterProgress.value = prefs.getBoolean(KEY_QQS_2X1_PERIMETER_PROGRESS, false)
+        _qqs2x1ActiveCornerDp.value = prefs.getFloat(KEY_QQS_2X1_ACTIVE_CORNER_DP, 28.0f).coerceIn(0.0f, 40.0f)
+        _qqs2x1InactiveCornerDp.value = prefs.getFloat(KEY_QQS_2X1_INACTIVE_CORNER_DP, 12.0f).coerceIn(0.0f, 40.0f)
+        _qqs2x1TileHeightDp.value = prefs.getInt(KEY_QQS_2X1_TILE_HEIGHT_DP, 56).coerceIn(40, 84)
         _enablePanelShadows.value = prefs.getBoolean(KEY_ENABLE_PANEL_SHADOWS, false)
         _panelShadowElevation.value = prefs.getFloat(KEY_PANEL_SHADOW_ELEVATION, 8f)
         _panelShadowOffsetY.value = prefs.getFloat(KEY_PANEL_SHADOW_OFFSET_Y, 0f)
@@ -2102,6 +2272,57 @@ object PanelPreferences {
         _clearAllCustomColorLight.value = prefs.getInt(KEY_ELEM_CLEAR_ALL_CUSTOM_COLOR_LIGHT, 0xFF673AB7.toInt())
         _clearAllCustomColorDark.value = prefs.getInt(KEY_ELEM_CLEAR_ALL_CUSTOM_COLOR_DARK, 0xFF673AB7.toInt())
 
+        _activeCompArcModeLight.value = ComplicationArcMonetMode.fromId(
+            prefs.getString(KEY_ELEM_ACTIVE_COMP_ARC_MODE_LIGHT, ComplicationArcMonetMode.PRIMARY.id)
+        )
+        _activeCompArcModeDark.value = ComplicationArcMonetMode.fromId(
+            prefs.getString(KEY_ELEM_ACTIVE_COMP_ARC_MODE_DARK, ComplicationArcMonetMode.PRIMARY.id)
+        )
+        _activeCompArcHueLight.value = prefs.getFloat(KEY_ELEM_ACTIVE_COMP_ARC_HUE_LIGHT, 0f)
+        _activeCompArcSatLight.value = prefs.getFloat(KEY_ELEM_ACTIVE_COMP_ARC_SAT_LIGHT, 1f)
+        _activeCompArcValLight.value = prefs.getFloat(KEY_ELEM_ACTIVE_COMP_ARC_VAL_LIGHT, 1f)
+        _activeCompArcHueDark.value = prefs.getFloat(KEY_ELEM_ACTIVE_COMP_ARC_HUE_DARK, 0f)
+        _activeCompArcSatDark.value = prefs.getFloat(KEY_ELEM_ACTIVE_COMP_ARC_SAT_DARK, 1f)
+        _activeCompArcValDark.value = prefs.getFloat(KEY_ELEM_ACTIVE_COMP_ARC_VAL_DARK, 1f)
+        _activeCompArcUseCustomLight.value = prefs.getBoolean(KEY_ELEM_ACTIVE_COMP_ARC_USE_CUSTOM_LIGHT, false)
+        _activeCompArcUseCustomDark.value = prefs.getBoolean(KEY_ELEM_ACTIVE_COMP_ARC_USE_CUSTOM_DARK, false)
+        _activeCompArcCustomColorLight.value = prefs.getInt(KEY_ELEM_ACTIVE_COMP_ARC_CUSTOM_COLOR_LIGHT, 0xFFFFFFFF.toInt())
+        _activeCompArcCustomColorDark.value = prefs.getInt(KEY_ELEM_ACTIVE_COMP_ARC_CUSTOM_COLOR_DARK, 0xFFFFFFFF.toInt())
+
+        _inactiveCompArcModeLight.value = ComplicationArcMonetMode.fromId(
+            prefs.getString(KEY_ELEM_INACTIVE_COMP_ARC_MODE_LIGHT, ComplicationArcMonetMode.PRIMARY.id)
+        )
+        _inactiveCompArcModeDark.value = ComplicationArcMonetMode.fromId(
+            prefs.getString(KEY_ELEM_INACTIVE_COMP_ARC_MODE_DARK, ComplicationArcMonetMode.PRIMARY.id)
+        )
+        _inactiveCompArcHueLight.value = prefs.getFloat(KEY_ELEM_INACTIVE_COMP_ARC_HUE_LIGHT, 0f)
+        _inactiveCompArcSatLight.value = prefs.getFloat(KEY_ELEM_INACTIVE_COMP_ARC_SAT_LIGHT, 1f)
+        _inactiveCompArcValLight.value = prefs.getFloat(KEY_ELEM_INACTIVE_COMP_ARC_VAL_LIGHT, 1f)
+        _inactiveCompArcHueDark.value = prefs.getFloat(KEY_ELEM_INACTIVE_COMP_ARC_HUE_DARK, 0f)
+        _inactiveCompArcSatDark.value = prefs.getFloat(KEY_ELEM_INACTIVE_COMP_ARC_SAT_DARK, 1f)
+        _inactiveCompArcValDark.value = prefs.getFloat(KEY_ELEM_INACTIVE_COMP_ARC_VAL_DARK, 1f)
+        _inactiveCompArcUseCustomLight.value = prefs.getBoolean(KEY_ELEM_INACTIVE_COMP_ARC_USE_CUSTOM_LIGHT, false)
+        _inactiveCompArcUseCustomDark.value = prefs.getBoolean(KEY_ELEM_INACTIVE_COMP_ARC_USE_CUSTOM_DARK, false)
+        _inactiveCompArcCustomColorLight.value = prefs.getInt(KEY_ELEM_INACTIVE_COMP_ARC_CUSTOM_COLOR_LIGHT, 0xFF673AB7.toInt())
+        _inactiveCompArcCustomColorDark.value = prefs.getInt(KEY_ELEM_INACTIVE_COMP_ARC_CUSTOM_COLOR_DARK, 0xFF4EE3D0.toInt())
+
+        _compArcTrackModeLight.value = ComplicationArcMonetMode.fromId(
+            prefs.getString(KEY_ELEM_COMP_ARC_TRACK_MODE_LIGHT, ComplicationArcMonetMode.PRIMARY.id)
+        )
+        _compArcTrackModeDark.value = ComplicationArcMonetMode.fromId(
+            prefs.getString(KEY_ELEM_COMP_ARC_TRACK_MODE_DARK, ComplicationArcMonetMode.PRIMARY.id)
+        )
+        _compArcTrackHueLight.value = prefs.getFloat(KEY_ELEM_COMP_ARC_TRACK_HUE_LIGHT, 0f)
+        _compArcTrackSatLight.value = prefs.getFloat(KEY_ELEM_COMP_ARC_TRACK_SAT_LIGHT, 1f)
+        _compArcTrackValLight.value = prefs.getFloat(KEY_ELEM_COMP_ARC_TRACK_VAL_LIGHT, 1f)
+        _compArcTrackHueDark.value = prefs.getFloat(KEY_ELEM_COMP_ARC_TRACK_HUE_DARK, 0f)
+        _compArcTrackSatDark.value = prefs.getFloat(KEY_ELEM_COMP_ARC_TRACK_SAT_DARK, 1f)
+        _compArcTrackValDark.value = prefs.getFloat(KEY_ELEM_COMP_ARC_TRACK_VAL_DARK, 1f)
+        _compArcTrackUseCustomLight.value = prefs.getBoolean(KEY_ELEM_COMP_ARC_TRACK_USE_CUSTOM_LIGHT, false)
+        _compArcTrackUseCustomDark.value = prefs.getBoolean(KEY_ELEM_COMP_ARC_TRACK_USE_CUSTOM_DARK, false)
+        _compArcTrackCustomColorLight.value = prefs.getInt(KEY_ELEM_COMP_ARC_TRACK_CUSTOM_COLOR_LIGHT, 0xFFCBD5E1.toInt())
+        _compArcTrackCustomColorDark.value = prefs.getInt(KEY_ELEM_COMP_ARC_TRACK_CUSTOM_COLOR_DARK, 0xFF334155.toInt())
+
         _disableMonetNotifText.value = prefs.getBoolean(KEY_DISABLE_MONET_NOTIF_TEXT, false)
         _showQsTileGradient.value = prefs.getBoolean(KEY_SHOW_QS_TILE_GRADIENT, false)
         _qsTileLabelFontSize.value = prefs.getFloat(KEY_QS_TILE_LABEL_FONT_SIZE, 12.0f)
@@ -2265,6 +2486,13 @@ object PanelPreferences {
             putBoolean(getStyleKey(KEY_DISABLE_CLEAR_ALL_LABEL, style), _disableClearAllLabel.value)
             putInt(getStyleKey(KEY_CLEAR_ALL_ICON_SIZE, style), _clearAllIconSize.value)
             putBoolean(getStyleKey(KEY_ENABLE_QQS_HORIZONTAL_SCROLL, style), _enableQqsHorizontalScroll.value)
+            putBoolean(getStyleKey(KEY_ENABLE_QQS_COMPLICATIONS_ROW, style), _enableQqsComplicationsRow.value)
+            putString(getStyleKey(KEY_QQS_2X1_COMPLICATION_IDS, style), _qqs2x1ComplicationIds.value.joinToString(","))
+            putBoolean(getStyleKey(KEY_QQS_2X1_HORIZONTAL_LINE, style), _qqs2x1HorizontalLine.value)
+            putBoolean(getStyleKey(KEY_QQS_2X1_PERIMETER_PROGRESS, style), _qqs2x1PerimeterProgress.value)
+            putFloat(getStyleKey(KEY_QQS_2X1_ACTIVE_CORNER_DP, style), _qqs2x1ActiveCornerDp.value)
+            putFloat(getStyleKey(KEY_QQS_2X1_INACTIVE_CORNER_DP, style), _qqs2x1InactiveCornerDp.value)
+            putInt(getStyleKey(KEY_QQS_2X1_TILE_HEIGHT_DP, style), _qqs2x1TileHeightDp.value)
             putBoolean(getStyleKey(KEY_HIDE_DATE_IN_EXPANDED, style), _hideDateInExpanded.value)
             putBoolean(getStyleKey(KEY_DISABLE_LABELS_IN_EXPANDED, style), _disableLabelsInExpanded.value)
             putFloat(getStyleKey(KEY_QS_TILE_LABEL_FONT_SIZE, style), _qsTileLabelFontSize.value)
@@ -2427,6 +2655,18 @@ object PanelPreferences {
         val targetDisableClearAllLabel = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_DISABLE_CLEAR_ALL_LABEL, style), false) else false
         val targetClearAllIconSize = if (isInitialized) prefs.getInt(getStyleKey(KEY_CLEAR_ALL_ICON_SIZE, style), 24) else 24
         val targetEnableQqsHorizontalScroll = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_ENABLE_QQS_HORIZONTAL_SCROLL, style), false) else false
+        val targetEnableQqsComplicationsRow = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_ENABLE_QQS_COMPLICATIONS_ROW, style), false) else false
+        val styleQqs2x1Raw = if (isInitialized) prefs.getString(getStyleKey(KEY_QQS_2X1_COMPLICATION_IDS, style), null) else null
+        val targetQqs2x1ComplicationIds = if (!styleQqs2x1Raw.isNullOrBlank()) {
+            styleQqs2x1Raw.split(",").map { it.trim() }.filter { it.isNotEmpty() }.ifEmpty { DEFAULT_QQS_2X1_COMPLICATION_IDS }
+        } else {
+            DEFAULT_QQS_2X1_COMPLICATION_IDS
+        }
+        val targetQqs2x1HorizontalLine = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_QQS_2X1_HORIZONTAL_LINE, style), false) else false
+        val targetQqs2x1PerimeterProgress = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_QQS_2X1_PERIMETER_PROGRESS, style), false) else false
+        val targetQqs2x1ActiveCornerDp = if (isInitialized) prefs.getFloat(getStyleKey(KEY_QQS_2X1_ACTIVE_CORNER_DP, style), 28.0f).coerceIn(0.0f, 40.0f) else 28.0f
+        val targetQqs2x1InactiveCornerDp = if (isInitialized) prefs.getFloat(getStyleKey(KEY_QQS_2X1_INACTIVE_CORNER_DP, style), 12.0f).coerceIn(0.0f, 40.0f) else 12.0f
+        val targetQqs2x1TileHeightDp = if (isInitialized) prefs.getInt(getStyleKey(KEY_QQS_2X1_TILE_HEIGHT_DP, style), 56).coerceIn(40, 84) else 56
 
         val targetHideDateInExpanded = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_HIDE_DATE_IN_EXPANDED, style), false) else false
         val targetDisableLabelsInExpanded = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_DISABLE_LABELS_IN_EXPANDED, style), false) else false
@@ -2572,6 +2812,13 @@ object PanelPreferences {
         _disableClearAllLabel.value = targetDisableClearAllLabel
         _clearAllIconSize.value = targetClearAllIconSize
         _enableQqsHorizontalScroll.value = targetEnableQqsHorizontalScroll
+        _enableQqsComplicationsRow.value = targetEnableQqsComplicationsRow
+        _qqs2x1ComplicationIds.value = targetQqs2x1ComplicationIds
+        _qqs2x1HorizontalLine.value = targetQqs2x1HorizontalLine
+        _qqs2x1PerimeterProgress.value = targetQqs2x1PerimeterProgress
+        _qqs2x1ActiveCornerDp.value = targetQqs2x1ActiveCornerDp
+        _qqs2x1InactiveCornerDp.value = targetQqs2x1InactiveCornerDp
+        _qqs2x1TileHeightDp.value = targetQqs2x1TileHeightDp
         _hideDateInExpanded.value = targetHideDateInExpanded
         _disableLabelsInExpanded.value = targetDisableLabelsInExpanded
         _qsTileLabelFontSize.value = targetQsTileLabelFontSize
@@ -2638,6 +2885,13 @@ object PanelPreferences {
             putBoolean(KEY_DISABLE_CLEAR_ALL_LABEL, targetDisableClearAllLabel)
             putInt(KEY_CLEAR_ALL_ICON_SIZE, targetClearAllIconSize)
             putBoolean(KEY_ENABLE_QQS_HORIZONTAL_SCROLL, targetEnableQqsHorizontalScroll)
+            putBoolean(KEY_ENABLE_QQS_COMPLICATIONS_ROW, targetEnableQqsComplicationsRow)
+            putString(KEY_QQS_2X1_COMPLICATION_IDS, targetQqs2x1ComplicationIds.joinToString(","))
+            putBoolean(KEY_QQS_2X1_HORIZONTAL_LINE, targetQqs2x1HorizontalLine)
+            putBoolean(KEY_QQS_2X1_PERIMETER_PROGRESS, targetQqs2x1PerimeterProgress)
+            putFloat(KEY_QQS_2X1_ACTIVE_CORNER_DP, targetQqs2x1ActiveCornerDp)
+            putFloat(KEY_QQS_2X1_INACTIVE_CORNER_DP, targetQqs2x1InactiveCornerDp)
+            putInt(KEY_QQS_2X1_TILE_HEIGHT_DP, targetQqs2x1TileHeightDp)
             putBoolean(KEY_HIDE_DATE_IN_EXPANDED, targetHideDateInExpanded)
             putBoolean(KEY_DISABLE_LABELS_IN_EXPANDED, targetDisableLabelsInExpanded)
             putFloat(KEY_QS_TILE_LABEL_FONT_SIZE, targetQsTileLabelFontSize)
@@ -2873,6 +3127,149 @@ object PanelPreferences {
             .putBoolean(KEY_ENABLE_QQS_HORIZONTAL_SCROLL, enable)
             .putBoolean(getStyleKey(KEY_ENABLE_QQS_HORIZONTAL_SCROLL), enable)
             .apply()
+    }
+
+    fun setEnableQqsComplicationsRow(context: Context, enable: Boolean) {
+        _enableQqsComplicationsRow.value = enable
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean(KEY_ENABLE_QQS_COMPLICATIONS_ROW, enable)
+            .putBoolean(getStyleKey(KEY_ENABLE_QQS_COMPLICATIONS_ROW), enable)
+            .apply()
+    }
+
+    fun setQqs2x1ComplicationIds(context: Context, ids: List<String>) {
+        val sanitized = ids.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+            .ifEmpty { DEFAULT_QQS_2X1_COMPLICATION_IDS }
+        _qqs2x1ComplicationIds.value = sanitized
+        val joined = sanitized.joinToString(",")
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString(KEY_QQS_2X1_COMPLICATION_IDS, joined)
+            .putString(getStyleKey(KEY_QQS_2X1_COMPLICATION_IDS), joined)
+            .apply()
+    }
+
+    fun setQqs2x1HorizontalLine(context: Context, enabled: Boolean) {
+        _qqs2x1HorizontalLine.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean(KEY_QQS_2X1_HORIZONTAL_LINE, enabled)
+            .putBoolean(getStyleKey(KEY_QQS_2X1_HORIZONTAL_LINE), enabled)
+            .apply()
+    }
+
+    data class Qqs2x1ProgressDisplayMode(
+        val showPerimeterBar: Boolean,
+        val showHorizontalLine: Boolean,
+        val showIconArc: Boolean
+    )
+
+    fun resolveQqs2x1ProgressDisplayMode(
+        useHorizontalLine: Boolean,
+        usePerimeterProgress: Boolean
+    ): Qqs2x1ProgressDisplayMode {
+        return when {
+            usePerimeterProgress -> Qqs2x1ProgressDisplayMode(
+                showPerimeterBar = true,
+                showHorizontalLine = false,
+                showIconArc = false
+            )
+            useHorizontalLine -> Qqs2x1ProgressDisplayMode(
+                showPerimeterBar = false,
+                showHorizontalLine = true,
+                showIconArc = false
+            )
+            else -> Qqs2x1ProgressDisplayMode(
+                showPerimeterBar = false,
+                showHorizontalLine = false,
+                showIconArc = true
+            )
+        }
+    }
+
+    fun setQqs2x1PerimeterProgress(context: Context, enabled: Boolean) {
+        _qqs2x1PerimeterProgress.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean(KEY_QQS_2X1_PERIMETER_PROGRESS, enabled)
+            .putBoolean(getStyleKey(KEY_QQS_2X1_PERIMETER_PROGRESS), enabled)
+            .apply()
+    }
+
+    fun setQqs2x1ActiveCornerDp(context: Context, cornerDp: Float) {
+        val clamped = cornerDp.coerceIn(0.0f, 40.0f)
+        _qqs2x1ActiveCornerDp.value = clamped
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(KEY_QQS_2X1_ACTIVE_CORNER_DP, clamped)
+            .putFloat(getStyleKey(KEY_QQS_2X1_ACTIVE_CORNER_DP), clamped)
+            .apply()
+    }
+
+    fun setQqs2x1InactiveCornerDp(context: Context, cornerDp: Float) {
+        val clamped = cornerDp.coerceIn(0.0f, 40.0f)
+        _qqs2x1InactiveCornerDp.value = clamped
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(KEY_QQS_2X1_INACTIVE_CORNER_DP, clamped)
+            .putFloat(getStyleKey(KEY_QQS_2X1_INACTIVE_CORNER_DP), clamped)
+            .apply()
+    }
+
+    fun setQqs2x1TileHeightDp(context: Context, heightDp: Int) {
+        val clamped = heightDp.coerceIn(40, 84)
+        _qqs2x1TileHeightDp.value = clamped
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putInt(KEY_QQS_2X1_TILE_HEIGHT_DP, clamped)
+            .putInt(getStyleKey(KEY_QQS_2X1_TILE_HEIGHT_DP), clamped)
+            .apply()
+    }
+
+    fun toggleQqs2x1ComplicationId(context: Context, id: String) {
+        val current = _qqs2x1ComplicationIds.value.toMutableList()
+        if (current.contains(id)) {
+            if (current.size > 1) {
+                current.remove(id)
+            }
+        } else {
+            current.add(id)
+        }
+        setQqs2x1ComplicationIds(context, current)
+    }
+
+    fun moveQqs2x1ComplicationId(context: Context, fromIndex: Int, toIndex: Int) {
+        val current = _qqs2x1ComplicationIds.value.toMutableList()
+        if (fromIndex !in current.indices || toIndex !in current.indices || fromIndex == toIndex) return
+        val item = current.removeAt(fromIndex)
+        current.add(toIndex, item)
+        setQqs2x1ComplicationIds(context, current)
+    }
+
+    fun insertQqs2x1ComplicationId(context: Context, id: String, targetIndex: Int? = null) {
+        val cleanId = id.trim()
+        if (cleanId.isEmpty()) return
+        val current = _qqs2x1ComplicationIds.value.toMutableList()
+        val existingIdx = current.indexOf(cleanId)
+        if (existingIdx != -1) {
+            if (targetIndex != null && targetIndex in current.indices && existingIdx != targetIndex) {
+                current.removeAt(existingIdx)
+                current.add(targetIndex.coerceIn(0, current.size), cleanId)
+            }
+        } else {
+            val insertIdx = targetIndex?.coerceIn(0, current.size) ?: current.size
+            current.add(insertIdx, cleanId)
+        }
+        setQqs2x1ComplicationIds(context, current)
+    }
+
+    fun removeQqs2x1ComplicationId(context: Context, id: String) {
+        val current = _qqs2x1ComplicationIds.value.toMutableList()
+        if (current.contains(id) && current.size > 1) {
+            current.remove(id)
+            setQqs2x1ComplicationIds(context, current)
+        }
     }
 
     fun setEnablePanelShadows(context: Context, enable: Boolean) {
@@ -4180,6 +4577,147 @@ object PanelPreferences {
         prefs.edit().putInt(if (isDark) KEY_ELEM_CLEAR_ALL_CUSTOM_COLOR_DARK else KEY_ELEM_CLEAR_ALL_CUSTOM_COLOR_LIGHT, color).apply()
     }
 
+    // Active Complication Arcs Getters & Setters
+    fun getActiveCompArcMode(isDark: Boolean): StateFlow<ComplicationArcMonetMode> =
+        if (isDark) activeCompArcModeDark else activeCompArcModeLight
+    fun getActiveCompArcHue(isDark: Boolean): StateFlow<Float> =
+        if (isDark) activeCompArcHueDark else activeCompArcHueLight
+    fun getActiveCompArcSat(isDark: Boolean): StateFlow<Float> =
+        if (isDark) activeCompArcSatDark else activeCompArcSatLight
+    fun getActiveCompArcVal(isDark: Boolean): StateFlow<Float> =
+        if (isDark) activeCompArcValDark else activeCompArcValLight
+    fun getActiveCompArcUseCustom(isDark: Boolean): StateFlow<Boolean> =
+        if (isDark) activeCompArcUseCustomDark else activeCompArcUseCustomLight
+    fun getActiveCompArcCustomColor(isDark: Boolean): StateFlow<Int> =
+        if (isDark) activeCompArcCustomColorDark else activeCompArcCustomColorLight
+
+    fun setActiveCompArcMode(context: Context, isDark: Boolean, mode: ComplicationArcMonetMode) {
+        if (isDark) _activeCompArcModeDark.value = mode else _activeCompArcModeLight.value = mode
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(if (isDark) KEY_ELEM_ACTIVE_COMP_ARC_MODE_DARK else KEY_ELEM_ACTIVE_COMP_ARC_MODE_LIGHT, mode.id).apply()
+    }
+    fun setActiveCompArcHsb(context: Context, isDark: Boolean, hue: Float, sat: Float, valFactor: Float) {
+        if (isDark) {
+            _activeCompArcHueDark.value = hue
+            _activeCompArcSatDark.value = sat
+            _activeCompArcValDark.value = valFactor
+        } else {
+            _activeCompArcHueLight.value = hue
+            _activeCompArcSatLight.value = sat
+            _activeCompArcValLight.value = valFactor
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(if (isDark) KEY_ELEM_ACTIVE_COMP_ARC_HUE_DARK else KEY_ELEM_ACTIVE_COMP_ARC_HUE_LIGHT, hue)
+            .putFloat(if (isDark) KEY_ELEM_ACTIVE_COMP_ARC_SAT_DARK else KEY_ELEM_ACTIVE_COMP_ARC_SAT_LIGHT, sat)
+            .putFloat(if (isDark) KEY_ELEM_ACTIVE_COMP_ARC_VAL_DARK else KEY_ELEM_ACTIVE_COMP_ARC_VAL_LIGHT, valFactor)
+            .apply()
+    }
+    fun setActiveCompArcUseCustom(context: Context, isDark: Boolean, useCustom: Boolean) {
+        if (isDark) _activeCompArcUseCustomDark.value = useCustom else _activeCompArcUseCustomLight.value = useCustom
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(if (isDark) KEY_ELEM_ACTIVE_COMP_ARC_USE_CUSTOM_DARK else KEY_ELEM_ACTIVE_COMP_ARC_USE_CUSTOM_LIGHT, useCustom).apply()
+    }
+    fun setActiveCompArcCustomColor(context: Context, isDark: Boolean, color: Int) {
+        if (isDark) _activeCompArcCustomColorDark.value = color else _activeCompArcCustomColorLight.value = color
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(if (isDark) KEY_ELEM_ACTIVE_COMP_ARC_CUSTOM_COLOR_DARK else KEY_ELEM_ACTIVE_COMP_ARC_CUSTOM_COLOR_LIGHT, color).apply()
+    }
+
+    // Inactive Complication Arcs Getters & Setters
+    fun getInactiveCompArcMode(isDark: Boolean): StateFlow<ComplicationArcMonetMode> =
+        if (isDark) inactiveCompArcModeDark else inactiveCompArcModeLight
+    fun getInactiveCompArcHue(isDark: Boolean): StateFlow<Float> =
+        if (isDark) inactiveCompArcHueDark else inactiveCompArcHueLight
+    fun getInactiveCompArcSat(isDark: Boolean): StateFlow<Float> =
+        if (isDark) inactiveCompArcSatDark else inactiveCompArcSatLight
+    fun getInactiveCompArcVal(isDark: Boolean): StateFlow<Float> =
+        if (isDark) inactiveCompArcValDark else inactiveCompArcValLight
+    fun getInactiveCompArcUseCustom(isDark: Boolean): StateFlow<Boolean> =
+        if (isDark) inactiveCompArcUseCustomDark else inactiveCompArcUseCustomLight
+    fun getInactiveCompArcCustomColor(isDark: Boolean): StateFlow<Int> =
+        if (isDark) inactiveCompArcCustomColorDark else inactiveCompArcCustomColorLight
+
+    fun setInactiveCompArcMode(context: Context, isDark: Boolean, mode: ComplicationArcMonetMode) {
+        if (isDark) _inactiveCompArcModeDark.value = mode else _inactiveCompArcModeLight.value = mode
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(if (isDark) KEY_ELEM_INACTIVE_COMP_ARC_MODE_DARK else KEY_ELEM_INACTIVE_COMP_ARC_MODE_LIGHT, mode.id).apply()
+    }
+    fun setInactiveCompArcHsb(context: Context, isDark: Boolean, hue: Float, sat: Float, valFactor: Float) {
+        if (isDark) {
+            _inactiveCompArcHueDark.value = hue
+            _inactiveCompArcSatDark.value = sat
+            _inactiveCompArcValDark.value = valFactor
+        } else {
+            _inactiveCompArcHueLight.value = hue
+            _inactiveCompArcSatLight.value = sat
+            _inactiveCompArcValLight.value = valFactor
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(if (isDark) KEY_ELEM_INACTIVE_COMP_ARC_HUE_DARK else KEY_ELEM_INACTIVE_COMP_ARC_HUE_LIGHT, hue)
+            .putFloat(if (isDark) KEY_ELEM_INACTIVE_COMP_ARC_SAT_DARK else KEY_ELEM_INACTIVE_COMP_ARC_SAT_LIGHT, sat)
+            .putFloat(if (isDark) KEY_ELEM_INACTIVE_COMP_ARC_VAL_DARK else KEY_ELEM_INACTIVE_COMP_ARC_VAL_LIGHT, valFactor)
+            .apply()
+    }
+    fun setInactiveCompArcUseCustom(context: Context, isDark: Boolean, useCustom: Boolean) {
+        if (isDark) _inactiveCompArcUseCustomDark.value = useCustom else _inactiveCompArcUseCustomLight.value = useCustom
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(if (isDark) KEY_ELEM_INACTIVE_COMP_ARC_USE_CUSTOM_DARK else KEY_ELEM_INACTIVE_COMP_ARC_USE_CUSTOM_LIGHT, useCustom).apply()
+    }
+    fun setInactiveCompArcCustomColor(context: Context, isDark: Boolean, color: Int) {
+        if (isDark) _inactiveCompArcCustomColorDark.value = color else _inactiveCompArcCustomColorLight.value = color
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(if (isDark) KEY_ELEM_INACTIVE_COMP_ARC_CUSTOM_COLOR_DARK else KEY_ELEM_INACTIVE_COMP_ARC_CUSTOM_COLOR_LIGHT, color).apply()
+    }
+
+    // Complication Arc Tracks Getters & Setters
+    fun getCompArcTrackMode(isDark: Boolean): StateFlow<ComplicationArcMonetMode> =
+        if (isDark) compArcTrackModeDark else compArcTrackModeLight
+    fun getCompArcTrackHue(isDark: Boolean): StateFlow<Float> =
+        if (isDark) compArcTrackHueDark else compArcTrackHueLight
+    fun getCompArcTrackSat(isDark: Boolean): StateFlow<Float> =
+        if (isDark) compArcTrackSatDark else compArcTrackSatLight
+    fun getCompArcTrackVal(isDark: Boolean): StateFlow<Float> =
+        if (isDark) compArcTrackValDark else compArcTrackValLight
+    fun getCompArcTrackUseCustom(isDark: Boolean): StateFlow<Boolean> =
+        if (isDark) compArcTrackUseCustomDark else compArcTrackUseCustomLight
+    fun getCompArcTrackCustomColor(isDark: Boolean): StateFlow<Int> =
+        if (isDark) compArcTrackCustomColorDark else compArcTrackCustomColorLight
+
+    fun setCompArcTrackMode(context: Context, isDark: Boolean, mode: ComplicationArcMonetMode) {
+        if (isDark) _compArcTrackModeDark.value = mode else _compArcTrackModeLight.value = mode
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(if (isDark) KEY_ELEM_COMP_ARC_TRACK_MODE_DARK else KEY_ELEM_COMP_ARC_TRACK_MODE_LIGHT, mode.id).apply()
+    }
+    fun setCompArcTrackHsb(context: Context, isDark: Boolean, hue: Float, sat: Float, valFactor: Float) {
+        if (isDark) {
+            _compArcTrackHueDark.value = hue
+            _compArcTrackSatDark.value = sat
+            _compArcTrackValDark.value = valFactor
+        } else {
+            _compArcTrackHueLight.value = hue
+            _compArcTrackSatLight.value = sat
+            _compArcTrackValLight.value = valFactor
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(if (isDark) KEY_ELEM_COMP_ARC_TRACK_HUE_DARK else KEY_ELEM_COMP_ARC_TRACK_HUE_LIGHT, hue)
+            .putFloat(if (isDark) KEY_ELEM_COMP_ARC_TRACK_SAT_DARK else KEY_ELEM_COMP_ARC_TRACK_SAT_LIGHT, sat)
+            .putFloat(if (isDark) KEY_ELEM_COMP_ARC_TRACK_VAL_DARK else KEY_ELEM_COMP_ARC_TRACK_VAL_LIGHT, valFactor)
+            .apply()
+    }
+    fun setCompArcTrackUseCustom(context: Context, isDark: Boolean, useCustom: Boolean) {
+        if (isDark) _compArcTrackUseCustomDark.value = useCustom else _compArcTrackUseCustomLight.value = useCustom
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(if (isDark) KEY_ELEM_COMP_ARC_TRACK_USE_CUSTOM_DARK else KEY_ELEM_COMP_ARC_TRACK_USE_CUSTOM_LIGHT, useCustom).apply()
+    }
+    fun setCompArcTrackCustomColor(context: Context, isDark: Boolean, color: Int) {
+        if (isDark) _compArcTrackCustomColorDark.value = color else _compArcTrackCustomColorLight.value = color
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(if (isDark) KEY_ELEM_COMP_ARC_TRACK_CUSTOM_COLOR_DARK else KEY_ELEM_COMP_ARC_TRACK_CUSTOM_COLOR_LIGHT, color).apply()
+    }
+
     fun syncElementColors(context: Context, fromDark: Boolean) {
         val toDark = !fromDark
         setSurfaceBgColorTertiary(context, toDark, getSurfaceBgColorTertiary(fromDark).value)
@@ -4217,6 +4755,21 @@ object PanelPreferences {
         setMiscElementsCustomColor(context, toDark, getMiscElementsCustomColor(fromDark).value)
         setClearAllUseCustom(context, toDark, getClearAllUseCustom(fromDark).value)
         setClearAllCustomColor(context, toDark, getClearAllCustomColor(fromDark).value)
+
+        setActiveCompArcMode(context, toDark, getActiveCompArcMode(fromDark).value)
+        setActiveCompArcHsb(context, toDark, getActiveCompArcHue(fromDark).value, getActiveCompArcSat(fromDark).value, getActiveCompArcVal(fromDark).value)
+        setActiveCompArcUseCustom(context, toDark, getActiveCompArcUseCustom(fromDark).value)
+        setActiveCompArcCustomColor(context, toDark, getActiveCompArcCustomColor(fromDark).value)
+
+        setInactiveCompArcMode(context, toDark, getInactiveCompArcMode(fromDark).value)
+        setInactiveCompArcHsb(context, toDark, getInactiveCompArcHue(fromDark).value, getInactiveCompArcSat(fromDark).value, getInactiveCompArcVal(fromDark).value)
+        setInactiveCompArcUseCustom(context, toDark, getInactiveCompArcUseCustom(fromDark).value)
+        setInactiveCompArcCustomColor(context, toDark, getInactiveCompArcCustomColor(fromDark).value)
+
+        setCompArcTrackMode(context, toDark, getCompArcTrackMode(fromDark).value)
+        setCompArcTrackHsb(context, toDark, getCompArcTrackHue(fromDark).value, getCompArcTrackSat(fromDark).value, getCompArcTrackVal(fromDark).value)
+        setCompArcTrackUseCustom(context, toDark, getCompArcTrackUseCustom(fromDark).value)
+        setCompArcTrackCustomColor(context, toDark, getCompArcTrackCustomColor(fromDark).value)
     }
 
     fun setShowQsTileGradient(context: Context, enabled: Boolean) {

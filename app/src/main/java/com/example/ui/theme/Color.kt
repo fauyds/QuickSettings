@@ -125,11 +125,8 @@ fun applyHsvAdjustments(color: Color, hueShift: Float, satScale: Float, brightSc
 fun getQsMonetSurfaceBackgroundColor(isDark: Boolean): Color {
     val customColor = PanelPreferences.qsPanelBackgroundColor.collectAsState().value
         ?: PanelPreferences.qsBackgroundColor.collectAsState().value
-    val surfaceTertiary = PanelPreferences.getSurfaceBgColorTertiary(isDark).collectAsState().value
     val baseColor = if (customColor != null) {
         Color(customColor)
-    } else if (surfaceTertiary) {
-        androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer
     } else {
         androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
     }
@@ -145,8 +142,8 @@ fun getQsMonetSurfaceBackgroundColor(isDark: Boolean): Color {
     val valFactor = PanelPreferences.getSurfaceBgVal(isDark).collectAsState().value
     val useCustom = PanelPreferences.getSurfaceBgUseCustom(isDark).collectAsState().value
     if (useCustom) {
-        val customColor = PanelPreferences.getSurfaceBgCustomColor(isDark).collectAsState().value
-        return Color(customColor)
+        val customColorPref = PanelPreferences.getSurfaceBgCustomColor(isDark).collectAsState().value
+        return Color(customColorPref)
     }
     return applyHsvAdjustments(solidBg, hue, sat, valFactor)
 }
@@ -161,12 +158,7 @@ fun getQsCardContainerColor(isDark: Boolean): Color {
         val customColor = PanelPreferences.getPanelContainerCustomColor(isDark).collectAsState().value
         return Color(customColor)
     }
-    val panelTertiary = PanelPreferences.getPanelContainerColorTertiary(isDark).collectAsState().value
-    return if (panelTertiary) {
-        androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer
-    } else {
-        androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
-    }
+    return androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
 }
 
 /**
@@ -180,10 +172,10 @@ fun getQsPanelBackgroundColor(isDark: Boolean): Color {
         val customColor = PanelPreferences.getPanelContainerCustomColor(isDark).collectAsState().value
         return Color(customColor)
     }
-    val customColor = PanelPreferences.qsPanelBackgroundColor.collectAsState().value
+    val customColorPref = PanelPreferences.qsPanelBackgroundColor.collectAsState().value
         ?: PanelPreferences.qsBackgroundColor.collectAsState().value
-    val baseColor = if (customColor != null) {
-        Color(customColor)
+    val baseColor = if (customColorPref != null) {
+        Color(customColorPref)
     } else {
         getQsCardContainerColor(isDark)
     }
@@ -216,12 +208,7 @@ fun getQsTilesElementColor(isDark: Boolean): Color {
         val customColor = PanelPreferences.getQsTilesCustomColor(isDark).collectAsState().value
         return Color(customColor)
     }
-    val isTertiary = PanelPreferences.getQsTilesColorTertiary(isDark).collectAsState().value
-    val baseColor = if (isTertiary) {
-        androidx.compose.material3.MaterialTheme.colorScheme.tertiary
-    } else {
-        androidx.compose.material3.MaterialTheme.colorScheme.primary
-    }
+    val baseColor = androidx.compose.material3.MaterialTheme.colorScheme.primary
     val hue = PanelPreferences.getQsTilesHue(isDark).collectAsState().value
     val sat = PanelPreferences.getQsTilesSat(isDark).collectAsState().value
     val valFactor = PanelPreferences.getQsTilesVal(isDark).collectAsState().value
@@ -235,8 +222,6 @@ fun getInactiveTilesElementColor(isDark: Boolean): Color {
         val customColor = PanelPreferences.getInactiveTilesCustomColor(isDark).collectAsState().value
         return Color(customColor)
     }
-    val isPrimary = PanelPreferences.getInactiveTilesColorPrimary(isDark).collectAsState().value
-    val isTertiary = PanelPreferences.getInactiveTilesColorTertiary(isDark).collectAsState().value
     val cardContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
     val defaultInactiveBg = if (isDark) {
         Color(
@@ -248,11 +233,7 @@ fun getInactiveTilesElementColor(isDark: Boolean): Color {
     } else {
         Color.White
     }
-    val baseColor = when {
-        isTertiary -> androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer
-        isPrimary -> androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer
-        else -> defaultInactiveBg
-    }
+    val baseColor = defaultInactiveBg
     val hue = PanelPreferences.getInactiveTilesHue(isDark).collectAsState().value
     val sat = PanelPreferences.getInactiveTilesSat(isDark).collectAsState().value
     val valFactor = PanelPreferences.getInactiveTilesVal(isDark).collectAsState().value
@@ -266,12 +247,7 @@ fun getSlidersElementColor(isDark: Boolean): Color {
         val customColor = PanelPreferences.getSlidersCustomColor(isDark).collectAsState().value
         return Color(customColor)
     }
-    val isTertiary = PanelPreferences.getSlidersColorTertiary(isDark).collectAsState().value
-    val baseColor = if (isTertiary) {
-        androidx.compose.material3.MaterialTheme.colorScheme.tertiary
-    } else {
-        androidx.compose.material3.MaterialTheme.colorScheme.primary
-    }
+    val baseColor = androidx.compose.material3.MaterialTheme.colorScheme.primary
     val hue = PanelPreferences.getSlidersHue(isDark).collectAsState().value
     val sat = PanelPreferences.getSlidersSat(isDark).collectAsState().value
     val valFactor = PanelPreferences.getSlidersVal(isDark).collectAsState().value
@@ -285,13 +261,10 @@ fun getHeaderGradientElementColor(isDark: Boolean): Color {
         val customColor = PanelPreferences.getHeaderGradientCustomColor(isDark).collectAsState().value
         return Color(customColor)
     }
-    val isTertiary = PanelPreferences.getHeaderGradientColorTertiary(isDark).collectAsState().value
     val baseColor = if (isDark) {
-        if (isTertiary) androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer
-        else androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer
+        androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer
     } else {
-        if (isTertiary) androidx.compose.material3.MaterialTheme.colorScheme.tertiary
-        else androidx.compose.material3.MaterialTheme.colorScheme.primary
+        androidx.compose.material3.MaterialTheme.colorScheme.primary
     }
     val hue = PanelPreferences.getHeaderGradientHue(isDark).collectAsState().value
     val sat = PanelPreferences.getHeaderGradientSat(isDark).collectAsState().value
@@ -306,12 +279,7 @@ fun getMiscElementColor(isDark: Boolean): Color {
         val customColor = PanelPreferences.getMiscElementsCustomColor(isDark).collectAsState().value
         return Color(customColor)
     }
-    val isTertiary = PanelPreferences.getMiscElementsColorTertiary(isDark).collectAsState().value
-    val baseColor = if (isTertiary) {
-        androidx.compose.material3.MaterialTheme.colorScheme.tertiary
-    } else {
-        androidx.compose.material3.MaterialTheme.colorScheme.primary
-    }
+    val baseColor = androidx.compose.material3.MaterialTheme.colorScheme.primary
     val hue = PanelPreferences.getMiscElementsHue(isDark).collectAsState().value
     val sat = PanelPreferences.getMiscElementsSat(isDark).collectAsState().value
     val valFactor = PanelPreferences.getMiscElementsVal(isDark).collectAsState().value
@@ -325,16 +293,98 @@ fun getClearAllElementColor(isDark: Boolean): Color {
         val customColor = PanelPreferences.getClearAllCustomColor(isDark).collectAsState().value
         return Color(customColor)
     }
-    val isTertiary = PanelPreferences.getClearAllColorTertiary(isDark).collectAsState().value
-    val baseColor = if (isTertiary) {
-        androidx.compose.material3.MaterialTheme.colorScheme.tertiary
-    } else {
-        androidx.compose.material3.MaterialTheme.colorScheme.primary
-    }
+    val baseColor = androidx.compose.material3.MaterialTheme.colorScheme.primary
     val hue = PanelPreferences.getClearAllHue(isDark).collectAsState().value
     val sat = PanelPreferences.getClearAllSat(isDark).collectAsState().value
     val valFactor = PanelPreferences.getClearAllVal(isDark).collectAsState().value
     return applyHsvAdjustments(baseColor, hue, sat, valFactor)
+}
+
+@Composable
+fun resolveActiveComplicationArcOverride(isDark: Boolean): Color? {
+    val mode = PanelPreferences.getActiveCompArcMode(isDark).collectAsState().value
+    val hue = PanelPreferences.getActiveCompArcHue(isDark).collectAsState().value
+    val sat = PanelPreferences.getActiveCompArcSat(isDark).collectAsState().value
+    val valFactor = PanelPreferences.getActiveCompArcVal(isDark).collectAsState().value
+    if (mode == com.example.data.ComplicationArcMonetMode.CUSTOM) {
+        val customColor = PanelPreferences.getActiveCompArcCustomColor(isDark).collectAsState().value
+        return Color(customColor)
+    }
+    if (mode == com.example.data.ComplicationArcMonetMode.PRIMARY &&
+        hue == 0f && sat == 1f && valFactor == 1f
+    ) {
+        return null
+    }
+    val baseColor = when (mode) {
+        com.example.data.ComplicationArcMonetMode.PRIMARY -> androidx.compose.material3.MaterialTheme.colorScheme.onPrimary
+        com.example.data.ComplicationArcMonetMode.TERTIARY -> androidx.compose.material3.MaterialTheme.colorScheme.tertiary
+        else -> androidx.compose.material3.MaterialTheme.colorScheme.onPrimary
+    }
+    return applyHsvAdjustments(baseColor, hue, sat, valFactor)
+}
+
+@Composable
+fun resolveInactiveComplicationArcOverride(isDark: Boolean): Color? {
+    val mode = PanelPreferences.getInactiveCompArcMode(isDark).collectAsState().value
+    val hue = PanelPreferences.getInactiveCompArcHue(isDark).collectAsState().value
+    val sat = PanelPreferences.getInactiveCompArcSat(isDark).collectAsState().value
+    val valFactor = PanelPreferences.getInactiveCompArcVal(isDark).collectAsState().value
+    if (mode == com.example.data.ComplicationArcMonetMode.CUSTOM) {
+        val customColor = PanelPreferences.getInactiveCompArcCustomColor(isDark).collectAsState().value
+        return Color(customColor)
+    }
+    if (mode == com.example.data.ComplicationArcMonetMode.PRIMARY &&
+        hue == 0f && sat == 1f && valFactor == 1f
+    ) {
+        return null
+    }
+    val baseColor = when (mode) {
+        com.example.data.ComplicationArcMonetMode.PRIMARY -> androidx.compose.material3.MaterialTheme.colorScheme.primary
+        com.example.data.ComplicationArcMonetMode.TERTIARY -> androidx.compose.material3.MaterialTheme.colorScheme.tertiary
+        else -> if (isDark) Color(0xFFCCCCCC) else Color(0xFF555555)
+    }
+    return applyHsvAdjustments(baseColor, hue, sat, valFactor)
+}
+
+@Composable
+fun resolveComplicationArcTrackOverride(isDark: Boolean): Color? {
+    val mode = PanelPreferences.getCompArcTrackMode(isDark).collectAsState().value
+    val hue = PanelPreferences.getCompArcTrackHue(isDark).collectAsState().value
+    val sat = PanelPreferences.getCompArcTrackSat(isDark).collectAsState().value
+    val valFactor = PanelPreferences.getCompArcTrackVal(isDark).collectAsState().value
+    if (mode == com.example.data.ComplicationArcMonetMode.CUSTOM) {
+        val customColor = PanelPreferences.getCompArcTrackCustomColor(isDark).collectAsState().value
+        return Color(customColor)
+    }
+    if (mode == com.example.data.ComplicationArcMonetMode.PRIMARY &&
+        hue == 0f && sat == 1f && valFactor == 1f
+    ) {
+        return null
+    }
+    val baseColor = when (mode) {
+        com.example.data.ComplicationArcMonetMode.PRIMARY -> androidx.compose.material3.MaterialTheme.colorScheme.primary.copy(alpha = 0.30f)
+        com.example.data.ComplicationArcMonetMode.TERTIARY -> androidx.compose.material3.MaterialTheme.colorScheme.tertiary.copy(alpha = 0.30f)
+        else -> (if (isDark) Color.White else Color.Black).copy(alpha = 0.22f)
+    }
+    return applyHsvAdjustments(baseColor, hue, sat, valFactor)
+}
+
+@Composable
+fun getActiveComplicationArcPreviewColor(isDark: Boolean): Color {
+    return resolveActiveComplicationArcOverride(isDark)
+        ?: androidx.compose.material3.MaterialTheme.colorScheme.onPrimary
+}
+
+@Composable
+fun getInactiveComplicationArcPreviewColor(isDark: Boolean): Color {
+    return resolveInactiveComplicationArcOverride(isDark)
+        ?: if (isDark) Color(0xFFCCCCCC) else Color(0xFF555555)
+}
+
+@Composable
+fun getComplicationArcTrackPreviewColor(isDark: Boolean): Color {
+    return resolveComplicationArcTrackOverride(isDark)
+        ?: (if (isDark) Color.White.copy(alpha = 0.28f) else Color.Black.copy(alpha = 0.22f))
 }
 
 /**

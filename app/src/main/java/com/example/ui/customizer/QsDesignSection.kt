@@ -13,6 +13,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -119,8 +121,11 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.RoundedCorner
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.Layers
+import com.example.data.ComplicationCommandRepository
 import com.example.data.MediaNotificationStyle
+import com.example.ui.theme.ExpressiveTheme
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -148,6 +153,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val qqsTileSizeValue by PanelPreferences.qqsTileSize.collectAsState()
     val qqsTileCount by PanelPreferences.qqsTileCount.collectAsState()
     val enableQqsHorizontalScroll by PanelPreferences.enableQqsHorizontalScroll.collectAsState()
+    val enableQqsComplicationsRow by PanelPreferences.enableQqsComplicationsRow.collectAsState()
+    val qqs2x1ComplicationIds by PanelPreferences.qqs2x1ComplicationIds.collectAsState()
+    val qqs2x1HorizontalLine by PanelPreferences.qqs2x1HorizontalLine.collectAsState()
+    val qqs2x1PerimeterProgress by PanelPreferences.qqs2x1PerimeterProgress.collectAsState()
+    val qqs2x1ActiveCornerDp by PanelPreferences.qqs2x1ActiveCornerDp.collectAsState()
+    val qqs2x1InactiveCornerDp by PanelPreferences.qqs2x1InactiveCornerDp.collectAsState()
+    val qqs2x1TileHeightDp by PanelPreferences.qqs2x1TileHeightDp.collectAsState()
     val currentEnabledTileShapeId by PanelPreferences.enabledTileShapeId.collectAsState()
     val currentDisabledTileShapeId by PanelPreferences.disabledTileShapeId.collectAsState()
     val tileOutlineEnabled by PanelPreferences.tileOutlineEnabled.collectAsState()
@@ -570,6 +582,394 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         ),
                         modifier = Modifier.testTag("enable_qqs_horizontal_scroll_switch")
                     )
+                }
+            }
+        }
+    }
+
+    // 2.4b. Additional 2x1 Complications QQS Row Card
+    val qqsComplicationsRowCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("qqs_complications_row_card", CustomizeCategory.QS_DESIGN, "QQS 2x1 Complications Row") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("qqs_complications_row_card")
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ViewAgenda,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text(
+                                    text = "2x1 Complications Row",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    style = TextStyle(
+                                        platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                        lineHeightStyle = LineHeightStyle(
+                                            alignment = LineHeightStyle.Alignment.Center,
+                                            trim = LineHeightStyle.Trim.Both
+                                        )
+                                    )
+                                )
+                                Text(
+                                    text = "Show an additional QQS row with 2x1 live complication tiles beneath quick toggles.",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = TextStyle(
+                                        platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                        lineHeightStyle = LineHeightStyle(
+                                            alignment = LineHeightStyle.Alignment.Center,
+                                            trim = LineHeightStyle.Trim.Both
+                                        )
+                                    )
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = enableQqsComplicationsRow,
+                            onCheckedChange = { PanelPreferences.setEnableQqsComplicationsRow(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("enable_qqs_complications_row_switch")
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = enableQqsComplicationsRow,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(ExpressiveTheme.colors.nestedElementSurface)
+                                    .clickable { PanelPreferences.setQqs2x1HorizontalLine(context, !qqs2x1HorizontalLine) }
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(end = 12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
+                                    Text(
+                                        text = "Horizontal Progress Line",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                    )
+                                    Text(
+                                        text = "Replace the circular progress arc with a horizontal line in the 2x1 complication row.",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                    )
+                                }
+                                Switch(
+                                    checked = qqs2x1HorizontalLine,
+                                    onCheckedChange = { PanelPreferences.setQqs2x1HorizontalLine(context, it) },
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                        uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                        uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                                    ),
+                                    modifier = Modifier.testTag("qqs_2x1_horizontal_line_switch")
+                                )
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(ExpressiveTheme.colors.nestedElementSurface)
+                                    .clickable { PanelPreferences.setQqs2x1PerimeterProgress(context, !qqs2x1PerimeterProgress) }
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(end = 12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
+                                    Text(
+                                        text = "Progress Bar Around 2x1 Tiles",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                    )
+                                    Text(
+                                        text = "Draw a progress bar tracing the outer perimeter of each 2x1 complication card.",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                    )
+                                }
+                                Switch(
+                                    checked = qqs2x1PerimeterProgress,
+                                    onCheckedChange = { PanelPreferences.setQqs2x1PerimeterProgress(context, it) },
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                        uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                        uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                                    ),
+                                    modifier = Modifier.testTag("qqs_2x1_perimeter_progress_switch")
+                                )
+                            }
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(ExpressiveTheme.colors.nestedElementSurface)
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "2x1 Tile Height",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                        )
+                                        Text(
+                                            text = "$qqs2x1TileHeightDp dp",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                        )
+                                    }
+                                    Slider(
+                                        value = qqs2x1TileHeightDp.toFloat(),
+                                        onValueChange = {
+                                            PanelPreferences.setQqs2x1TileHeightDp(context, kotlin.math.round(it).toInt())
+                                        },
+                                        valueRange = 40f..84f,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .testTag("qqs_2x1_tile_height_slider"),
+                                        colors = SliderDefaults.colors(
+                                            thumbColor = MaterialTheme.colorScheme.primary,
+                                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                                            inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                        )
+                                    )
+                                }
+
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Active 2x1 Corner Radius",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                        )
+                                        Text(
+                                            text = "${kotlin.math.round(qqs2x1ActiveCornerDp).toInt()} dp",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                        )
+                                    }
+                                    Slider(
+                                        value = qqs2x1ActiveCornerDp,
+                                        onValueChange = {
+                                            PanelPreferences.setQqs2x1ActiveCornerDp(context, kotlin.math.round(it))
+                                        },
+                                        valueRange = 0f..40f,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .testTag("qqs_2x1_active_corner_slider"),
+                                        colors = SliderDefaults.colors(
+                                            thumbColor = MaterialTheme.colorScheme.primary,
+                                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                                            inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                        )
+                                    )
+                                }
+
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Inactive 2x1 Corner Radius",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                        )
+                                        Text(
+                                            text = "${kotlin.math.round(qqs2x1InactiveCornerDp).toInt()} dp",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                        )
+                                    }
+                                    Slider(
+                                        value = qqs2x1InactiveCornerDp,
+                                        onValueChange = {
+                                            PanelPreferences.setQqs2x1InactiveCornerDp(context, kotlin.math.round(it))
+                                        },
+                                        valueRange = 0f..40f,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .testTag("qqs_2x1_inactive_corner_slider"),
+                                        colors = SliderDefaults.colors(
+                                            thumbColor = MaterialTheme.colorScheme.primary,
+                                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                                            inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                        )
+                                    )
+                                }
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "2x1 ROW COMPLICATIONS",
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 0.8.sp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                )
+                                Text(
+                                    text = "${qqs2x1ComplicationIds.size} selected",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                )
+                            }
+                            Text(
+                                text = "Two 2x1 tiles appear side by side; selecting more scrolls horizontally in the same row.",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                            )
+                            @OptIn(ExperimentalLayoutApi::class)
+                            FlowRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                ComplicationCommandRepository.knownComplications.forEach { def ->
+                                    val isSelected = qqs2x1ComplicationIds.contains(def.id)
+                                    val pillBg = if (isSelected) {
+                                        ExpressiveTheme.colors.selectorSelected
+                                    } else {
+                                        ExpressiveTheme.colors.nestedElementSurface
+                                    }
+                                    val pillFg = if (isSelected) {
+                                        MaterialTheme.colorScheme.onPrimary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    }
+                                    Row(
+                                        modifier = Modifier
+                                            .heightIn(min = 38.dp)
+                                            .clip(RoundedCornerShape(percent = 50))
+                                            .background(pillBg)
+                                            .clickable {
+                                                PanelPreferences.toggleQqs2x1ComplicationId(context, def.id)
+                                            }
+                                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                                            .testTag("qqs_2x1_picker_${def.id}"),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = def.icon,
+                                            contentDescription = def.title,
+                                            tint = pillFg,
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                        Text(
+                                            text = def.title,
+                                            fontSize = 12.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = pillFg,
+                                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                        )
+                                        if (isSelected) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = "Selected",
+                                                tint = pillFg,
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -4941,6 +5341,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         "qqs_icon_size_card" to qqsIconSizeCard,
         "qqs_icon_quantity_card" to qqsIconQuantityCard,
         "enable_qqs_horizontal_scroll_card" to enableQqsHorizontalScrollCard,
+        "qqs_complications_row_card" to qqsComplicationsRowCard,
         "legacy_tile_shapes_support_card" to legacyTileShapesSupportCard,
         "tile_shape_selection_card" to tileShapeSelectionCard,
         "complication_arc_thickness_card" to complicationArcThicknessCard,
@@ -4985,7 +5386,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 "qs_tile_gradient_card",
                 "qqs_icon_size_card",
                 "qqs_icon_quantity_card",
-                "enable_qqs_horizontal_scroll_card"
+                "enable_qqs_horizontal_scroll_card",
+                "qqs_complications_row_card"
             )
             if (!enableLegacyTileShapes) {
                 list.add("tile_shape_selection_card")
@@ -4999,6 +5401,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 "qqs_icon_size_card",
                 "qqs_icon_quantity_card",
                 "enable_qqs_horizontal_scroll_card",
+                "qqs_complications_row_card",
                 "clear_all_fab_card",
                 "custom_header_monet_gradient_card",
                 "element_colors_preference_card",
@@ -5034,6 +5437,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         if (!hiddenDesignIds.contains("qqs_icon_size_card") && !pinnedIds.contains("qqs_icon_size_card")) unpinnedTileShapes.add(qqsIconSizeCard)
         if (!hiddenDesignIds.contains("qqs_icon_quantity_card") && !pinnedIds.contains("qqs_icon_quantity_card")) unpinnedTileShapes.add(qqsIconQuantityCard)
         if (!hiddenDesignIds.contains("enable_qqs_horizontal_scroll_card") && !pinnedIds.contains("enable_qqs_horizontal_scroll_card")) unpinnedTileShapes.add(enableQqsHorizontalScrollCard)
+        if (!hiddenDesignIds.contains("qqs_complications_row_card") && !pinnedIds.contains("qqs_complications_row_card")) unpinnedTileShapes.add(qqsComplicationsRowCard)
         if (!hiddenDesignIds.contains("legacy_tile_shapes_support_card") && !pinnedIds.contains("legacy_tile_shapes_support_card")) unpinnedTileShapes.add(legacyTileShapesSupportCard)
         if (!hiddenDesignIds.contains("tile_shape_selection_card") && !pinnedIds.contains("tile_shape_selection_card")) unpinnedTileShapes.add(tileShapeSelectionCard)
         if (!hiddenDesignIds.contains("complication_arc_thickness_card") && !pinnedIds.contains("complication_arc_thickness_card")) unpinnedTileShapes.add(complicationArcThicknessCard)

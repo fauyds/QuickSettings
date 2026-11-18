@@ -257,6 +257,13 @@ enum class FavoriteFeature(
         description = "Scale the visual diameter of quick setting tiles",
         icon = Icons.Default.AspectRatio
     ),
+    DESIGN_QQS_2X1_COMPLICATIONS(
+        id = "design_qqs_2x1_complications",
+        title = "QQS 2x1 Complications Row",
+        category = CustomizeCategory.QS_DESIGN,
+        description = "Show an additional QQS row of 2x1 live complication tiles",
+        icon = Icons.Default.ViewAgenda
+    ),
     DESIGN_TILE_STROKE(
         id = "design_tile_stroke",
         title = "Tile Stroke / Outline",
@@ -1325,6 +1332,116 @@ fun FavoriteFeatureActionContent(
                     valueRange = 24f..64f,
                     modifier = Modifier.width(160.dp)
                 )
+            }
+        }
+        FavoriteFeature.DESIGN_QQS_2X1_COMPLICATIONS -> {
+            val enabled by PanelPreferences.enableQqsComplicationsRow.collectAsState()
+            val useHorizontalLine by PanelPreferences.qqs2x1HorizontalLine.collectAsState()
+            val usePerimeterProgress by PanelPreferences.qqs2x1PerimeterProgress.collectAsState()
+            val tileHeightDp by PanelPreferences.qqs2x1TileHeightDp.collectAsState()
+            val activeCornerDp by PanelPreferences.qqs2x1ActiveCornerDp.collectAsState()
+            val inactiveCornerDp by PanelPreferences.qqs2x1InactiveCornerDp.collectAsState()
+            Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("2x1 Complications QQS Row", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Switch(
+                        checked = enabled,
+                        onCheckedChange = { PanelPreferences.setEnableQqsComplicationsRow(context, it) }
+                    )
+                }
+                if (enabled) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Horizontal Progress Line",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Switch(
+                            checked = useHorizontalLine,
+                            onCheckedChange = { PanelPreferences.setQqs2x1HorizontalLine(context, it) }
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Progress Bar Around 2x1 Tiles",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Switch(
+                            checked = usePerimeterProgress,
+                            onCheckedChange = { PanelPreferences.setQqs2x1PerimeterProgress(context, it) }
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Tile Height ($tileHeightDp dp)",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Slider(
+                            value = tileHeightDp.toFloat(),
+                            onValueChange = {
+                                PanelPreferences.setQqs2x1TileHeightDp(context, kotlin.math.round(it).toInt())
+                            },
+                            valueRange = 40f..84f,
+                            modifier = Modifier.width(150.dp)
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Active Corner (${kotlin.math.round(activeCornerDp).toInt()} dp)",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Slider(
+                            value = activeCornerDp,
+                            onValueChange = {
+                                PanelPreferences.setQqs2x1ActiveCornerDp(context, kotlin.math.round(it))
+                            },
+                            valueRange = 0f..40f,
+                            modifier = Modifier.width(150.dp)
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Inactive Corner (${kotlin.math.round(inactiveCornerDp).toInt()} dp)",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Slider(
+                            value = inactiveCornerDp,
+                            onValueChange = {
+                                PanelPreferences.setQqs2x1InactiveCornerDp(context, kotlin.math.round(it))
+                            },
+                            valueRange = 0f..40f,
+                            modifier = Modifier.width(150.dp)
+                        )
+                    }
+                }
             }
         }
         FavoriteFeature.TWEAKS_VIBRATION -> {
