@@ -1152,72 +1152,84 @@ class ExampleRobolectricTest {
 
         // Reset both Light and Dark modes to defaults
         for (isDark in listOf(false, true)) {
-            com.example.data.PanelPreferences.setActiveCompArcMode(app, isDark, com.example.data.ComplicationArcMonetMode.PRIMARY)
+            com.example.data.PanelPreferences.setActiveCompArcMode(app, isDark, com.example.data.ComplicationArcMonetMode.DEFAULT)
             com.example.data.PanelPreferences.setActiveCompArcHsb(app, isDark, 0f, 1f, 1f)
+            com.example.data.PanelPreferences.setActiveCompArcUseCustom(app, isDark, false)
             com.example.data.PanelPreferences.setActiveCompArcCustomColor(app, isDark, 0xFFFFFFFF.toInt())
 
-            com.example.data.PanelPreferences.setInactiveCompArcMode(app, isDark, com.example.data.ComplicationArcMonetMode.PRIMARY)
+            com.example.data.PanelPreferences.setInactiveCompArcMode(app, isDark, com.example.data.ComplicationArcMonetMode.DEFAULT)
             com.example.data.PanelPreferences.setInactiveCompArcHsb(app, isDark, 0f, 1f, 1f)
+            com.example.data.PanelPreferences.setInactiveCompArcUseCustom(app, isDark, false)
             com.example.data.PanelPreferences.setInactiveCompArcCustomColor(app, isDark, 0xFF673AB7.toInt())
 
-            com.example.data.PanelPreferences.setCompArcTrackMode(app, isDark, com.example.data.ComplicationArcMonetMode.PRIMARY)
+            com.example.data.PanelPreferences.setCompArcTrackMode(app, isDark, com.example.data.ComplicationArcMonetMode.DEFAULT)
             com.example.data.PanelPreferences.setCompArcTrackHsb(app, isDark, 0f, 1f, 1f)
+            com.example.data.PanelPreferences.setCompArcTrackUseCustom(app, isDark, false)
             com.example.data.PanelPreferences.setCompArcTrackCustomColor(app, isDark, 0xFF334155.toInt())
         }
 
         // Verify defaults
-        assertEquals(com.example.data.ComplicationArcMonetMode.PRIMARY, com.example.data.PanelPreferences.getActiveCompArcMode(false).value)
-        assertEquals(com.example.data.ComplicationArcMonetMode.PRIMARY, com.example.data.PanelPreferences.getInactiveCompArcMode(true).value)
-        assertEquals(com.example.data.ComplicationArcMonetMode.PRIMARY, com.example.data.PanelPreferences.getCompArcTrackMode(false).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.DEFAULT, com.example.data.PanelPreferences.getActiveCompArcMode(false).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.DEFAULT, com.example.data.PanelPreferences.getInactiveCompArcMode(true).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.DEFAULT, com.example.data.PanelPreferences.getCompArcTrackMode(false).value)
 
         // Modify Dark mode settings and verify Light mode remains isolated
-        com.example.data.PanelPreferences.setActiveCompArcMode(app, true, com.example.data.ComplicationArcMonetMode.CUSTOM)
+        com.example.data.PanelPreferences.setActiveCompArcMode(app, true, com.example.data.ComplicationArcMonetMode.TERTIARY)
         com.example.data.PanelPreferences.setActiveCompArcHsb(app, true, 45f, 1.4f, 0.9f)
+        com.example.data.PanelPreferences.setActiveCompArcUseCustom(app, true, true)
         com.example.data.PanelPreferences.setActiveCompArcCustomColor(app, true, 0xFF00E5FF.toInt())
 
-        com.example.data.PanelPreferences.setInactiveCompArcMode(app, true, com.example.data.ComplicationArcMonetMode.TERTIARY)
+        com.example.data.PanelPreferences.setInactiveCompArcMode(app, true, com.example.data.ComplicationArcMonetMode.SECONDARY)
         com.example.data.PanelPreferences.setInactiveCompArcHsb(app, true, -30f, 0.8f, 1.2f)
+        com.example.data.PanelPreferences.setInactiveCompArcUseCustom(app, true, false)
 
-        com.example.data.PanelPreferences.setCompArcTrackMode(app, true, com.example.data.ComplicationArcMonetMode.CUSTOM)
+        com.example.data.PanelPreferences.setCompArcTrackMode(app, true, com.example.data.ComplicationArcMonetMode.PRIMARY)
+        com.example.data.PanelPreferences.setCompArcTrackUseCustom(app, true, true)
         com.example.data.PanelPreferences.setCompArcTrackCustomColor(app, true, 0xFF223344.toInt())
 
-        assertEquals(com.example.data.ComplicationArcMonetMode.CUSTOM, com.example.data.PanelPreferences.getActiveCompArcMode(true).value)
-        assertEquals(com.example.data.ComplicationArcMonetMode.PRIMARY, com.example.data.PanelPreferences.getActiveCompArcMode(false).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.TERTIARY, com.example.data.PanelPreferences.getActiveCompArcMode(true).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.DEFAULT, com.example.data.PanelPreferences.getActiveCompArcMode(false).value)
+        org.junit.Assert.assertTrue(com.example.data.PanelPreferences.getActiveCompArcUseCustom(true).value)
+        org.junit.Assert.assertFalse(com.example.data.PanelPreferences.getActiveCompArcUseCustom(false).value)
         assertEquals(0xFF00E5FF.toInt(), com.example.data.PanelPreferences.getActiveCompArcCustomColor(true).value)
-        assertEquals(com.example.data.ComplicationArcMonetMode.TERTIARY, com.example.data.PanelPreferences.getInactiveCompArcMode(true).value)
-        assertEquals(com.example.data.ComplicationArcMonetMode.PRIMARY, com.example.data.PanelPreferences.getInactiveCompArcMode(false).value)
-        assertEquals(com.example.data.ComplicationArcMonetMode.CUSTOM, com.example.data.PanelPreferences.getCompArcTrackMode(true).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.SECONDARY, com.example.data.PanelPreferences.getInactiveCompArcMode(true).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.DEFAULT, com.example.data.PanelPreferences.getInactiveCompArcMode(false).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.PRIMARY, com.example.data.PanelPreferences.getCompArcTrackMode(true).value)
         assertEquals(0xFF223344.toInt(), com.example.data.PanelPreferences.getCompArcTrackCustomColor(true).value)
 
         // Re-initialize from SharedPreferences and confirm persistence
         com.example.data.PanelPreferences.init(app)
-        assertEquals(com.example.data.ComplicationArcMonetMode.CUSTOM, com.example.data.PanelPreferences.getActiveCompArcMode(true).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.TERTIARY, com.example.data.PanelPreferences.getActiveCompArcMode(true).value)
         assertEquals(45f, com.example.data.PanelPreferences.getActiveCompArcHue(true).value, 0.001f)
         assertEquals(1.4f, com.example.data.PanelPreferences.getActiveCompArcSat(true).value, 0.001f)
         assertEquals(0.9f, com.example.data.PanelPreferences.getActiveCompArcVal(true).value, 0.001f)
         assertEquals(0xFF00E5FF.toInt(), com.example.data.PanelPreferences.getActiveCompArcCustomColor(true).value)
-        assertEquals(com.example.data.ComplicationArcMonetMode.TERTIARY, com.example.data.PanelPreferences.getInactiveCompArcMode(true).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.SECONDARY, com.example.data.PanelPreferences.getInactiveCompArcMode(true).value)
         assertEquals(-30f, com.example.data.PanelPreferences.getInactiveCompArcHue(true).value, 0.001f)
-        assertEquals(com.example.data.ComplicationArcMonetMode.CUSTOM, com.example.data.PanelPreferences.getCompArcTrackMode(true).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.PRIMARY, com.example.data.PanelPreferences.getCompArcTrackMode(true).value)
         assertEquals(0xFF223344.toInt(), com.example.data.PanelPreferences.getCompArcTrackCustomColor(true).value)
 
         // Verify syncElementColors copies Dark -> Light cleanly
         com.example.data.PanelPreferences.syncElementColors(app, fromDark = true)
-        assertEquals(com.example.data.ComplicationArcMonetMode.CUSTOM, com.example.data.PanelPreferences.getActiveCompArcMode(false).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.TERTIARY, com.example.data.PanelPreferences.getActiveCompArcMode(false).value)
         assertEquals(45f, com.example.data.PanelPreferences.getActiveCompArcHue(false).value, 0.001f)
+        org.junit.Assert.assertTrue(com.example.data.PanelPreferences.getActiveCompArcUseCustom(false).value)
         assertEquals(0xFF00E5FF.toInt(), com.example.data.PanelPreferences.getActiveCompArcCustomColor(false).value)
-        assertEquals(com.example.data.ComplicationArcMonetMode.TERTIARY, com.example.data.PanelPreferences.getInactiveCompArcMode(false).value)
-        assertEquals(com.example.data.ComplicationArcMonetMode.CUSTOM, com.example.data.PanelPreferences.getCompArcTrackMode(false).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.SECONDARY, com.example.data.PanelPreferences.getInactiveCompArcMode(false).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.PRIMARY, com.example.data.PanelPreferences.getCompArcTrackMode(false).value)
         assertEquals(0xFF223344.toInt(), com.example.data.PanelPreferences.getCompArcTrackCustomColor(false).value)
 
         // Restore defaults
         for (isDark in listOf(false, true)) {
-            com.example.data.PanelPreferences.setActiveCompArcMode(app, isDark, com.example.data.ComplicationArcMonetMode.PRIMARY)
+            com.example.data.PanelPreferences.setActiveCompArcMode(app, isDark, com.example.data.ComplicationArcMonetMode.DEFAULT)
             com.example.data.PanelPreferences.setActiveCompArcHsb(app, isDark, 0f, 1f, 1f)
-            com.example.data.PanelPreferences.setInactiveCompArcMode(app, isDark, com.example.data.ComplicationArcMonetMode.PRIMARY)
+            com.example.data.PanelPreferences.setActiveCompArcUseCustom(app, isDark, false)
+            com.example.data.PanelPreferences.setInactiveCompArcMode(app, isDark, com.example.data.ComplicationArcMonetMode.DEFAULT)
             com.example.data.PanelPreferences.setInactiveCompArcHsb(app, isDark, 0f, 1f, 1f)
-            com.example.data.PanelPreferences.setCompArcTrackMode(app, isDark, com.example.data.ComplicationArcMonetMode.PRIMARY)
+            com.example.data.PanelPreferences.setInactiveCompArcUseCustom(app, isDark, false)
+            com.example.data.PanelPreferences.setCompArcTrackMode(app, isDark, com.example.data.ComplicationArcMonetMode.DEFAULT)
             com.example.data.PanelPreferences.setCompArcTrackHsb(app, isDark, 0f, 1f, 1f)
+            com.example.data.PanelPreferences.setCompArcTrackUseCustom(app, isDark, false)
         }
     }
 }

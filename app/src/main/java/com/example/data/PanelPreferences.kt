@@ -23,13 +23,14 @@ enum class ThemeMode(val id: String, val displayName: String) {
 }
 
 enum class ComplicationArcMonetMode(val id: String, val label: String) {
+    DEFAULT("default", "Auto (Default)"),
     PRIMARY("primary", "Primary"),
-    TERTIARY("tertiary", "Tertiary"),
-    CUSTOM("custom", "Custom");
+    SECONDARY("secondary", "Secondary"),
+    TERTIARY("tertiary", "Tertiary");
 
     companion object {
         fun fromId(id: String?): ComplicationArcMonetMode =
-            entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: PRIMARY
+            entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: DEFAULT
     }
 }
 
@@ -1292,9 +1293,9 @@ object PanelPreferences {
     val clearAllCustomColorDark: StateFlow<Int> = _clearAllCustomColorDark.asStateFlow()
 
     // Active Complication Arcs StateFlows (Light & Dark)
-    private val _activeCompArcModeLight = MutableStateFlow(ComplicationArcMonetMode.PRIMARY)
+    private val _activeCompArcModeLight = MutableStateFlow(ComplicationArcMonetMode.DEFAULT)
     val activeCompArcModeLight: StateFlow<ComplicationArcMonetMode> = _activeCompArcModeLight.asStateFlow()
-    private val _activeCompArcModeDark = MutableStateFlow(ComplicationArcMonetMode.PRIMARY)
+    private val _activeCompArcModeDark = MutableStateFlow(ComplicationArcMonetMode.DEFAULT)
     val activeCompArcModeDark: StateFlow<ComplicationArcMonetMode> = _activeCompArcModeDark.asStateFlow()
     private val _activeCompArcHueLight = MutableStateFlow(0f)
     val activeCompArcHueLight: StateFlow<Float> = _activeCompArcHueLight.asStateFlow()
@@ -1318,9 +1319,9 @@ object PanelPreferences {
     val activeCompArcCustomColorDark: StateFlow<Int> = _activeCompArcCustomColorDark.asStateFlow()
 
     // Inactive Complication Arcs StateFlows (Light & Dark)
-    private val _inactiveCompArcModeLight = MutableStateFlow(ComplicationArcMonetMode.PRIMARY)
+    private val _inactiveCompArcModeLight = MutableStateFlow(ComplicationArcMonetMode.DEFAULT)
     val inactiveCompArcModeLight: StateFlow<ComplicationArcMonetMode> = _inactiveCompArcModeLight.asStateFlow()
-    private val _inactiveCompArcModeDark = MutableStateFlow(ComplicationArcMonetMode.PRIMARY)
+    private val _inactiveCompArcModeDark = MutableStateFlow(ComplicationArcMonetMode.DEFAULT)
     val inactiveCompArcModeDark: StateFlow<ComplicationArcMonetMode> = _inactiveCompArcModeDark.asStateFlow()
     private val _inactiveCompArcHueLight = MutableStateFlow(0f)
     val inactiveCompArcHueLight: StateFlow<Float> = _inactiveCompArcHueLight.asStateFlow()
@@ -1344,9 +1345,9 @@ object PanelPreferences {
     val inactiveCompArcCustomColorDark: StateFlow<Int> = _inactiveCompArcCustomColorDark.asStateFlow()
 
     // Complication Arc Tracks StateFlows (Light & Dark)
-    private val _compArcTrackModeLight = MutableStateFlow(ComplicationArcMonetMode.PRIMARY)
+    private val _compArcTrackModeLight = MutableStateFlow(ComplicationArcMonetMode.DEFAULT)
     val compArcTrackModeLight: StateFlow<ComplicationArcMonetMode> = _compArcTrackModeLight.asStateFlow()
-    private val _compArcTrackModeDark = MutableStateFlow(ComplicationArcMonetMode.PRIMARY)
+    private val _compArcTrackModeDark = MutableStateFlow(ComplicationArcMonetMode.DEFAULT)
     val compArcTrackModeDark: StateFlow<ComplicationArcMonetMode> = _compArcTrackModeDark.asStateFlow()
     private val _compArcTrackHueLight = MutableStateFlow(0f)
     val compArcTrackHueLight: StateFlow<Float> = _compArcTrackHueLight.asStateFlow()
@@ -2273,10 +2274,10 @@ object PanelPreferences {
         _clearAllCustomColorDark.value = prefs.getInt(KEY_ELEM_CLEAR_ALL_CUSTOM_COLOR_DARK, 0xFF673AB7.toInt())
 
         _activeCompArcModeLight.value = ComplicationArcMonetMode.fromId(
-            prefs.getString(KEY_ELEM_ACTIVE_COMP_ARC_MODE_LIGHT, ComplicationArcMonetMode.PRIMARY.id)
+            prefs.getString(KEY_ELEM_ACTIVE_COMP_ARC_MODE_LIGHT, ComplicationArcMonetMode.DEFAULT.id)
         )
         _activeCompArcModeDark.value = ComplicationArcMonetMode.fromId(
-            prefs.getString(KEY_ELEM_ACTIVE_COMP_ARC_MODE_DARK, ComplicationArcMonetMode.PRIMARY.id)
+            prefs.getString(KEY_ELEM_ACTIVE_COMP_ARC_MODE_DARK, ComplicationArcMonetMode.DEFAULT.id)
         )
         _activeCompArcHueLight.value = prefs.getFloat(KEY_ELEM_ACTIVE_COMP_ARC_HUE_LIGHT, 0f)
         _activeCompArcSatLight.value = prefs.getFloat(KEY_ELEM_ACTIVE_COMP_ARC_SAT_LIGHT, 1f)
@@ -2290,10 +2291,10 @@ object PanelPreferences {
         _activeCompArcCustomColorDark.value = prefs.getInt(KEY_ELEM_ACTIVE_COMP_ARC_CUSTOM_COLOR_DARK, 0xFFFFFFFF.toInt())
 
         _inactiveCompArcModeLight.value = ComplicationArcMonetMode.fromId(
-            prefs.getString(KEY_ELEM_INACTIVE_COMP_ARC_MODE_LIGHT, ComplicationArcMonetMode.PRIMARY.id)
+            prefs.getString(KEY_ELEM_INACTIVE_COMP_ARC_MODE_LIGHT, ComplicationArcMonetMode.DEFAULT.id)
         )
         _inactiveCompArcModeDark.value = ComplicationArcMonetMode.fromId(
-            prefs.getString(KEY_ELEM_INACTIVE_COMP_ARC_MODE_DARK, ComplicationArcMonetMode.PRIMARY.id)
+            prefs.getString(KEY_ELEM_INACTIVE_COMP_ARC_MODE_DARK, ComplicationArcMonetMode.DEFAULT.id)
         )
         _inactiveCompArcHueLight.value = prefs.getFloat(KEY_ELEM_INACTIVE_COMP_ARC_HUE_LIGHT, 0f)
         _inactiveCompArcSatLight.value = prefs.getFloat(KEY_ELEM_INACTIVE_COMP_ARC_SAT_LIGHT, 1f)
@@ -2307,10 +2308,10 @@ object PanelPreferences {
         _inactiveCompArcCustomColorDark.value = prefs.getInt(KEY_ELEM_INACTIVE_COMP_ARC_CUSTOM_COLOR_DARK, 0xFF4EE3D0.toInt())
 
         _compArcTrackModeLight.value = ComplicationArcMonetMode.fromId(
-            prefs.getString(KEY_ELEM_COMP_ARC_TRACK_MODE_LIGHT, ComplicationArcMonetMode.PRIMARY.id)
+            prefs.getString(KEY_ELEM_COMP_ARC_TRACK_MODE_LIGHT, ComplicationArcMonetMode.DEFAULT.id)
         )
         _compArcTrackModeDark.value = ComplicationArcMonetMode.fromId(
-            prefs.getString(KEY_ELEM_COMP_ARC_TRACK_MODE_DARK, ComplicationArcMonetMode.PRIMARY.id)
+            prefs.getString(KEY_ELEM_COMP_ARC_TRACK_MODE_DARK, ComplicationArcMonetMode.DEFAULT.id)
         )
         _compArcTrackHueLight.value = prefs.getFloat(KEY_ELEM_COMP_ARC_TRACK_HUE_LIGHT, 0f)
         _compArcTrackSatLight.value = prefs.getFloat(KEY_ELEM_COMP_ARC_TRACK_SAT_LIGHT, 1f)
