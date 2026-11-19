@@ -2623,18 +2623,21 @@ fun MarshmallowTileEditorScreen(
     val baseSurfaceBg = MonetThemeHelper.getSurfaceBackground(context, isDark)
 
     val isPanelContainerCustomized = customPanelBg != null ||
-        PanelPreferences.getPanelContainerColorTertiary(isDark).collectAsState().value ||
+        PanelPreferences.getPanelContainerUseCustom(isDark).collectAsState().value ||
+        PanelPreferences.getPanelContainerColorMode(isDark).collectAsState().value != com.example.data.ComplicationArcMonetMode.DEFAULT ||
         PanelPreferences.getPanelContainerHue(isDark).collectAsState().value != 0f ||
         PanelPreferences.getPanelContainerSat(isDark).collectAsState().value != 1f ||
         PanelPreferences.getPanelContainerVal(isDark).collectAsState().value != 1f ||
         PanelPreferences.showMonetSurfaceBackground.collectAsState().value
 
-    val isHeaderGradientCustomized = PanelPreferences.getHeaderGradientColorTertiary(isDark).collectAsState().value ||
+    val isHeaderGradientCustomized = PanelPreferences.getHeaderGradientUseCustom(isDark).collectAsState().value ||
+        PanelPreferences.getHeaderGradientColorMode(isDark).collectAsState().value != com.example.data.ComplicationArcMonetMode.PRIMARY ||
         PanelPreferences.getHeaderGradientHue(isDark).collectAsState().value != 0f ||
         PanelPreferences.getHeaderGradientSat(isDark).collectAsState().value != 1f ||
         PanelPreferences.getHeaderGradientVal(isDark).collectAsState().value != 1f
 
-    val isMiscCustomized = PanelPreferences.getMiscElementsColorTertiary(isDark).collectAsState().value ||
+    val isMiscCustomized = PanelPreferences.getMiscElementsUseCustom(isDark).collectAsState().value ||
+        PanelPreferences.getMiscElementsColorMode(isDark).collectAsState().value != com.example.data.ComplicationArcMonetMode.PRIMARY ||
         PanelPreferences.getMiscElementsHue(isDark).collectAsState().value != 0f ||
         PanelPreferences.getMiscElementsSat(isDark).collectAsState().value != 1f ||
         PanelPreferences.getMiscElementsVal(isDark).collectAsState().value != 1f
@@ -5160,7 +5163,8 @@ fun UnifiedQsPanel(
             val mediaAccentColor = com.example.ui.theme.getMiscElementColor(isDark)
             val effectiveCornerRadius = if (isAndroidOreoStyle) 0.dp else panelOuterCorner.dp
             val isPanelCustomizedForMedia = PanelPreferences.qsPanelBackgroundColor.collectAsState().value != null ||
-                PanelPreferences.getPanelContainerColorTertiary(isDark).collectAsState().value ||
+                PanelPreferences.getPanelContainerUseCustom(isDark).collectAsState().value ||
+                PanelPreferences.getPanelContainerColorMode(isDark).collectAsState().value != com.example.data.ComplicationArcMonetMode.DEFAULT ||
                 PanelPreferences.getPanelContainerHue(isDark).collectAsState().value != 0f ||
                 PanelPreferences.getPanelContainerSat(isDark).collectAsState().value != 1f ||
                 PanelPreferences.getPanelContainerVal(isDark).collectAsState().value != 1f ||
@@ -5227,18 +5231,21 @@ fun UnifiedQsPanel(
                 ?: PanelPreferences.qsBackgroundColor.collectAsState().value
 
             val isPanelContainerCustomized = customPanelBg != null ||
-                PanelPreferences.getPanelContainerColorTertiary(isDark).collectAsState().value ||
+                PanelPreferences.getPanelContainerUseCustom(isDark).collectAsState().value ||
+                PanelPreferences.getPanelContainerColorMode(isDark).collectAsState().value != com.example.data.ComplicationArcMonetMode.DEFAULT ||
                 PanelPreferences.getPanelContainerHue(isDark).collectAsState().value != 0f ||
                 PanelPreferences.getPanelContainerSat(isDark).collectAsState().value != 1f ||
                 PanelPreferences.getPanelContainerVal(isDark).collectAsState().value != 1f ||
                 PanelPreferences.showMonetSurfaceBackground.collectAsState().value
 
-            val isHeaderGradientCustomized = PanelPreferences.getHeaderGradientColorTertiary(isDark).collectAsState().value ||
+            val isHeaderGradientCustomized = PanelPreferences.getHeaderGradientUseCustom(isDark).collectAsState().value ||
+                PanelPreferences.getHeaderGradientColorMode(isDark).collectAsState().value != com.example.data.ComplicationArcMonetMode.PRIMARY ||
                 PanelPreferences.getHeaderGradientHue(isDark).collectAsState().value != 0f ||
                 PanelPreferences.getHeaderGradientSat(isDark).collectAsState().value != 1f ||
                 PanelPreferences.getHeaderGradientVal(isDark).collectAsState().value != 1f
 
-            val isMiscCustomized = PanelPreferences.getMiscElementsColorTertiary(isDark).collectAsState().value ||
+            val isMiscCustomized = PanelPreferences.getMiscElementsUseCustom(isDark).collectAsState().value ||
+                PanelPreferences.getMiscElementsColorMode(isDark).collectAsState().value != com.example.data.ComplicationArcMonetMode.PRIMARY ||
                 PanelPreferences.getMiscElementsHue(isDark).collectAsState().value != 0f ||
                 PanelPreferences.getMiscElementsSat(isDark).collectAsState().value != 1f ||
                 PanelPreferences.getMiscElementsVal(isDark).collectAsState().value != 1f
@@ -5881,13 +5888,15 @@ fun UnifiedQsPanel(
             }
         } else if (isAndroidOreoStyle) {
             val isPanelCustomizedOreo = PanelPreferences.qsPanelBackgroundColor.collectAsState().value != null ||
-                PanelPreferences.getPanelContainerColorTertiary(isDark).collectAsState().value ||
+                PanelPreferences.getPanelContainerUseCustom(isDark).collectAsState().value ||
+                PanelPreferences.getPanelContainerColorMode(isDark).collectAsState().value != com.example.data.ComplicationArcMonetMode.DEFAULT ||
                 PanelPreferences.getPanelContainerHue(isDark).collectAsState().value != 0f ||
                 PanelPreferences.getPanelContainerSat(isDark).collectAsState().value != 1f ||
                 PanelPreferences.getPanelContainerVal(isDark).collectAsState().value != 1f ||
                 PanelPreferences.showMonetSurfaceBackground.collectAsState().value
 
-            val isMiscCustomizedOreo = PanelPreferences.getMiscElementsColorTertiary(isDark).collectAsState().value ||
+            val isMiscCustomizedOreo = PanelPreferences.getMiscElementsUseCustom(isDark).collectAsState().value ||
+                PanelPreferences.getMiscElementsColorMode(isDark).collectAsState().value != com.example.data.ComplicationArcMonetMode.PRIMARY ||
                 PanelPreferences.getMiscElementsHue(isDark).collectAsState().value != 0f ||
                 PanelPreferences.getMiscElementsSat(isDark).collectAsState().value != 1f ||
                 PanelPreferences.getMiscElementsVal(isDark).collectAsState().value != 1f
@@ -7989,7 +7998,8 @@ fun NotificationItemRow(
     val isFlatLegacyStyle = isAndroidOreoStyle || isAndroidMarshmallowStyle
 
     val isPanelContainerCustomizedNotif = PanelPreferences.qsPanelBackgroundColor.collectAsState().value != null ||
-        PanelPreferences.getPanelContainerColorTertiary(isDark).collectAsState().value ||
+        PanelPreferences.getPanelContainerUseCustom(isDark).collectAsState().value ||
+        PanelPreferences.getPanelContainerColorMode(isDark).collectAsState().value != com.example.data.ComplicationArcMonetMode.DEFAULT ||
         PanelPreferences.getPanelContainerHue(isDark).collectAsState().value != 0f ||
         PanelPreferences.getPanelContainerSat(isDark).collectAsState().value != 1f ||
         PanelPreferences.getPanelContainerVal(isDark).collectAsState().value != 1f ||
@@ -8609,13 +8619,8 @@ fun Qqs2x1ComplicationCard(
     val isActive = tile.state == TileState.ACTIVE
     val isUnavailable = tile.state == TileState.UNAVAILABLE
 
-    val qsTilesColorTertiary by PanelPreferences.qsTilesColorTertiary.collectAsState()
     val primaryColor = com.example.ui.theme.getQsTilesElementColor(isDark)
-    val onPrimaryColor = if (qsTilesColorTertiary) {
-        MaterialTheme.colorScheme.onTertiary
-    } else {
-        MaterialTheme.colorScheme.onPrimary
-    }
+    val onPrimaryColor = com.example.ui.theme.getQsTilesOnElementColor(isDark)
     val inactiveTileColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
     val tileOutlineEnabled by PanelPreferences.tileOutlineEnabled.collectAsState()
     val tileOutlineThicknessDp by PanelPreferences.tileOutlineThicknessDp.collectAsState()
@@ -9039,13 +9044,8 @@ fun CircularQsTile(
     val isUnavailable = tile.state == TileState.UNAVAILABLE
 
     val isDark = LocalIsDarkTheme.current
-    val qsTilesColorTertiary by PanelPreferences.qsTilesColorTertiary.collectAsState()
     val primaryColor = com.example.ui.theme.getQsTilesElementColor(isDark)
-    val onPrimaryColor = if (qsTilesColorTertiary) {
-        androidx.compose.material3.MaterialTheme.colorScheme.onTertiary
-    } else {
-        androidx.compose.material3.MaterialTheme.colorScheme.onPrimary
-    }
+    val onPrimaryColor = com.example.ui.theme.getQsTilesOnElementColor(isDark)
     val cardContainerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
     val systemOutlineColor = androidx.compose.material3.MaterialTheme.colorScheme.outline
 
@@ -9061,7 +9061,7 @@ fun CircularQsTile(
         when (tile.state) {
             TileState.ACTIVE -> primaryColor
             TileState.INACTIVE -> inactiveTileColor
-            TileState.UNAVAILABLE -> inactiveTileColor.copy(alpha = 0.5f)
+            TileState.UNAVAILABLE -> (if (isDark) Color(0xFF8E918F) else Color(0xFF9E9E9E)).copy(alpha = 0.38f)
         }
     }
 
@@ -9102,26 +9102,27 @@ fun CircularQsTile(
     val enableLegacyTileShapes by PanelPreferences.enableLegacyTileShapes.collectAsState()
     val renderShapeBg = (!isAndroidOreoStyle && !isAndroidMarshmallowStyle) || enableLegacyTileShapes
 
-    val isInactiveTilesCustomized = PanelPreferences.getInactiveTilesColorPrimary(isDark).collectAsState().value ||
-        PanelPreferences.getInactiveTilesColorTertiary(isDark).collectAsState().value ||
+    val isInactiveTilesCustomized = PanelPreferences.getInactiveTilesUseCustom(isDark).collectAsState().value ||
+        PanelPreferences.getInactiveTilesColorMode(isDark).collectAsState().value != com.example.data.ComplicationArcMonetMode.DEFAULT ||
         PanelPreferences.getInactiveTilesHue(isDark).collectAsState().value != 0f ||
         PanelPreferences.getInactiveTilesSat(isDark).collectAsState().value != 1f ||
         PanelPreferences.getInactiveTilesVal(isDark).collectAsState().value != 1f
 
     val (backgroundColor, iconColor) = remember(tile.state, isDark, primaryColor, onPrimaryColor, cardContainerColor, tileOutlineEnabled, inactiveTileColor, renderShapeBg, isInactiveTilesCustomized) {
+        val disabledGrayTint = (if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)).copy(alpha = 0.50f)
         if (!renderShapeBg) {
             val inactiveFg = if (isInactiveTilesCustomized) inactiveTileColor else (if (isDark) Color(0xFFCCCCCC) else Color(0xFF555555))
             val fg = when (tile.state) {
                 TileState.ACTIVE -> primaryColor
                 TileState.INACTIVE -> inactiveFg
-                TileState.UNAVAILABLE -> inactiveFg.copy(alpha = 0.4f)
+                TileState.UNAVAILABLE -> disabledGrayTint
             }
             Pair(Color.Transparent, fg)
         } else {
             val inactiveBg = inactiveTileColor
             val inactiveText = if (isDark) Color.White.copy(alpha = 0.90f) else Color(0xFF1E293B)
-            val unavailableBg = inactiveBg.copy(alpha = 0.5f)
-            val unavailableText = inactiveText.copy(alpha = 0.4f)
+            val unavailableBg = (if (isDark) Color(0xFF555555) else Color(0xFFBDBDBD)).copy(alpha = 0.35f)
+            val unavailableText = disabledGrayTint
 
             val bg = if (tileOutlineEnabled) {
                 Color.Transparent
@@ -9279,12 +9280,17 @@ fun CircularQsTile(
             val qsTileLabelFontSize by PanelPreferences.qsTileLabelFontSize.collectAsState()
             val qsTileSubtitleFontSize by PanelPreferences.qsTileSubtitleFontSize.collectAsState()
 
-            val tileLabelColor = if (isAndroidOreoStyle) {
-                if (isActive) primaryColor else (if (isInactiveTilesCustomized) inactiveTileColor else (if (isDark) Color(0xFFCCCCCC) else Color(0xFF555555)))
-            } else {
-                if (isDark) Color(0xFFCCCCCC) else Color(0xFF333333)
+            val tileLabelColor = when {
+                isUnavailable -> (if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)).copy(alpha = 0.50f)
+                isAndroidOreoStyle -> if (isActive) primaryColor else (if (isInactiveTilesCustomized) inactiveTileColor else (if (isDark) Color(0xFFCCCCCC) else Color(0xFF555555)))
+                else -> if (isDark) Color(0xFFCCCCCC) else Color(0xFF333333)
             }
-            val tileSubtitleColor = if (isActive) androidx.compose.material3.MaterialTheme.colorScheme.primary.copy(alpha = 0.8f) else if (isDark) Color.Gray else Color(0xFF333333).copy(alpha = 0.8f)
+            val tileSubtitleColor = when {
+                isUnavailable -> (if (isDark) Color(0xFF8E918F) else Color(0xFF757575)).copy(alpha = 0.45f)
+                isActive -> androidx.compose.material3.MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                isDark -> Color.Gray
+                else -> Color(0xFF333333).copy(alpha = 0.8f)
+            }
 
             Text(
                 text = tile.label,
@@ -9995,6 +10001,7 @@ private fun MarshmallowTileItem(
     val context = LocalContext.current
     val isDark = LocalIsDarkTheme.current
     val isActive = tile.state == TileState.ACTIVE
+    val isUnavailable = tile.state == TileState.UNAVAILABLE
 
     val nativeMgr = com.example.system.NativeTileManager.instance
     val liveWifiSsid by (nativeMgr?.wifiSsid ?: remember { kotlinx.coroutines.flow.MutableStateFlow<String?>(null) }).collectAsState()
@@ -10018,8 +10025,8 @@ private fun MarshmallowTileItem(
         com.example.ui.shape.QsShapeManager.getComposeShape(chosenShapeId)
     }
 
-    val isInactiveTilesCustomized = PanelPreferences.getInactiveTilesColorPrimary(isDark).collectAsState().value ||
-        PanelPreferences.getInactiveTilesColorTertiary(isDark).collectAsState().value ||
+    val isInactiveTilesCustomized = PanelPreferences.getInactiveTilesUseCustom(isDark).collectAsState().value ||
+        PanelPreferences.getInactiveTilesColorMode(isDark).collectAsState().value != com.example.data.ComplicationArcMonetMode.DEFAULT ||
         PanelPreferences.getInactiveTilesHue(isDark).collectAsState().value != 0f ||
         PanelPreferences.getInactiveTilesSat(isDark).collectAsState().value != 1f ||
         PanelPreferences.getInactiveTilesVal(isDark).collectAsState().value != 1f
@@ -10027,28 +10034,48 @@ private fun MarshmallowTileItem(
     val textPrimary = Color(MonetThemeHelper.getTextPrimary(context, isDark))
     val textSecondary = Color(MonetThemeHelper.getTextSecondary(context, isDark))
     val inactiveTileColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
+    val disabledGrayTint = (if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)).copy(alpha = 0.50f)
 
-    val iconTint = if (enableLegacyTileShapes) {
-        if (isActive) {
-            if (tileOutlineEnabled) primaryAccent else Color.White
-        } else {
-            if (isInactiveTilesCustomized) inactiveTileColor else textSecondary
+    val iconTint = when {
+        isUnavailable -> disabledGrayTint
+        enableLegacyTileShapes -> {
+            if (isActive) {
+                if (tileOutlineEnabled) primaryAccent else Color.White
+            } else {
+                if (isInactiveTilesCustomized) inactiveTileColor else textSecondary
+            }
         }
-    } else {
-        if (isActive) primaryAccent else (if (isInactiveTilesCustomized) inactiveTileColor else textSecondary)
+        else -> {
+            if (isActive) primaryAccent else (if (isInactiveTilesCustomized) inactiveTileColor else textSecondary)
+        }
     }
-    val textTint = if (isActive) textPrimary else (if (isInactiveTilesCustomized) inactiveTileColor else textSecondary)
-    val tileBgColor = if (tileOutlineEnabled) Color.Transparent else if (isActive) primaryAccent else inactiveTileColor
-    val legacyOutlineColor = if (isActive) primaryAccent else inactiveTileColor
+    val textTint = when {
+        isUnavailable -> disabledGrayTint
+        isActive -> textPrimary
+        else -> if (isInactiveTilesCustomized) inactiveTileColor else textSecondary
+    }
+    val tileBgColor = when {
+        tileOutlineEnabled -> Color.Transparent
+        isUnavailable -> (if (isDark) Color(0xFF555555) else Color(0xFFBDBDBD)).copy(alpha = 0.35f)
+        isActive -> primaryAccent
+        else -> inactiveTileColor
+    }
+    val legacyOutlineColor = when {
+        isUnavailable -> disabledGrayTint.copy(alpha = 0.38f)
+        isActive -> primaryAccent
+        else -> inactiveTileColor
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
             .combinedClickable(
+                enabled = !isUnavailable,
                 onClick = { onTileClick(tile) },
                 onLongClick = { onTileLongClick(tile) }
             )
             .padding(vertical = if (isTopTile) 4.dp else 6.dp)
+            .testTag("tile_${tile.id}")
     ) {
         val compSpec = tile.complicationSpec
         if (compSpec != null) {

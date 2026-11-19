@@ -211,9 +211,13 @@ object QsTileViewHelper {
         val labelFontSize = PanelPreferences.qsTileLabelFontSize.value
         val subtitleFontSize = PanelPreferences.qsTileSubtitleFontSize.value
 
+        view.isEnabled = !isUnavailable
+        view.alpha = if (isUnavailable) 0.55f else 1f
+        val unavailableLabelColor = Color.argb(120, Color.red(textSecondary), Color.green(textSecondary), Color.blue(textSecondary))
+
         tvLabel.includeFontPadding = false
         tvLabel.text = tile.label
-        tvLabel.setTextColor(textPrimary)
+        tvLabel.setTextColor(if (isUnavailable) unavailableLabelColor else textPrimary)
         tvLabel.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, labelFontSize)
         if (!isMarshmallow && tileIndex == 1) {
             tvLabel.translationY = -8f * density
@@ -228,7 +232,7 @@ object QsTileViewHelper {
         if (showSubtitle) {
             tvSubtitle.visibility = View.VISIBLE
             tvSubtitle.text = tile.subtitle
-            tvSubtitle.setTextColor(textSecondary)
+            tvSubtitle.setTextColor(if (isUnavailable) unavailableLabelColor else textSecondary)
             tvSubtitle.maxLines = 1
             tvSubtitle.ellipsize = android.text.TextUtils.TruncateAt.END
             tvSubtitle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, subtitleFontSize)

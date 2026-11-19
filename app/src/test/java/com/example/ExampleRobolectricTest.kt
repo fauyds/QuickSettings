@@ -1232,6 +1232,117 @@ class ExampleRobolectricTest {
             com.example.data.PanelPreferences.setCompArcTrackUseCustom(app, isDark, false)
         }
     }
+
+    @Test
+    fun `verify per-element color mode isolation persistence sync and legacy compatibility`() {
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        com.example.data.PanelPreferences.init(app)
+
+        // Configure Dark mode modes for elements 1..8
+        com.example.data.PanelPreferences.setSurfaceBgColorMode(app, true, com.example.data.ComplicationArcMonetMode.TERTIARY)
+        com.example.data.PanelPreferences.setPanelContainerColorMode(app, true, com.example.data.ComplicationArcMonetMode.SECONDARY)
+        com.example.data.PanelPreferences.setHeaderGradientColorMode(app, true, com.example.data.ComplicationArcMonetMode.TERTIARY)
+        com.example.data.PanelPreferences.setQsTilesColorMode(app, true, com.example.data.ComplicationArcMonetMode.SECONDARY)
+        com.example.data.PanelPreferences.setInactiveTilesColorMode(app, true, com.example.data.ComplicationArcMonetMode.PRIMARY)
+        com.example.data.PanelPreferences.setSlidersColorMode(app, true, com.example.data.ComplicationArcMonetMode.TERTIARY)
+        com.example.data.PanelPreferences.setMiscElementsColorMode(app, true, com.example.data.ComplicationArcMonetMode.SECONDARY)
+        com.example.data.PanelPreferences.setClearAllColorMode(app, true, com.example.data.ComplicationArcMonetMode.TERTIARY)
+
+        // Configure distinct Light mode modes
+        com.example.data.PanelPreferences.setSurfaceBgColorMode(app, false, com.example.data.ComplicationArcMonetMode.PRIMARY)
+        com.example.data.PanelPreferences.setPanelContainerColorMode(app, false, com.example.data.ComplicationArcMonetMode.DEFAULT)
+        com.example.data.PanelPreferences.setHeaderGradientColorMode(app, false, com.example.data.ComplicationArcMonetMode.PRIMARY)
+        com.example.data.PanelPreferences.setQsTilesColorMode(app, false, com.example.data.ComplicationArcMonetMode.TERTIARY)
+        com.example.data.PanelPreferences.setInactiveTilesColorMode(app, false, com.example.data.ComplicationArcMonetMode.TERTIARY)
+        com.example.data.PanelPreferences.setSlidersColorMode(app, false, com.example.data.ComplicationArcMonetMode.PRIMARY)
+        com.example.data.PanelPreferences.setMiscElementsColorMode(app, false, com.example.data.ComplicationArcMonetMode.PRIMARY)
+        com.example.data.PanelPreferences.setClearAllColorMode(app, false, com.example.data.ComplicationArcMonetMode.SECONDARY)
+
+        // Verify legacy booleans stay synchronized with ColorMode
+        org.junit.Assert.assertTrue(com.example.data.PanelPreferences.getSurfaceBgColorTertiary(true).value)
+        org.junit.Assert.assertFalse(com.example.data.PanelPreferences.getSurfaceBgColorTertiary(false).value)
+        org.junit.Assert.assertTrue(com.example.data.PanelPreferences.getQsTilesColorTertiary(false).value)
+        org.junit.Assert.assertFalse(com.example.data.PanelPreferences.getQsTilesColorTertiary(true).value)
+        org.junit.Assert.assertTrue(com.example.data.PanelPreferences.getInactiveTilesColorPrimary(true).value)
+        org.junit.Assert.assertTrue(com.example.data.PanelPreferences.getInactiveTilesColorTertiary(false).value)
+
+        // Re-init from SharedPreferences and verify persistence + Light/Dark isolation
+        com.example.data.PanelPreferences.init(app)
+        assertEquals(com.example.data.ComplicationArcMonetMode.TERTIARY, com.example.data.PanelPreferences.getSurfaceBgColorMode(true).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.PRIMARY, com.example.data.PanelPreferences.getSurfaceBgColorMode(false).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.SECONDARY, com.example.data.PanelPreferences.getPanelContainerColorMode(true).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.DEFAULT, com.example.data.PanelPreferences.getPanelContainerColorMode(false).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.SECONDARY, com.example.data.PanelPreferences.getQsTilesColorMode(true).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.TERTIARY, com.example.data.PanelPreferences.getQsTilesColorMode(false).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.PRIMARY, com.example.data.PanelPreferences.getInactiveTilesColorMode(true).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.TERTIARY, com.example.data.PanelPreferences.getInactiveTilesColorMode(false).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.TERTIARY, com.example.data.PanelPreferences.getSlidersColorMode(true).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.SECONDARY, com.example.data.PanelPreferences.getMiscElementsColorMode(true).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.TERTIARY, com.example.data.PanelPreferences.getClearAllColorMode(true).value)
+
+        // Sync Dark -> Light and verify
+        com.example.data.PanelPreferences.syncElementColors(app, fromDark = true)
+        assertEquals(com.example.data.ComplicationArcMonetMode.TERTIARY, com.example.data.PanelPreferences.getSurfaceBgColorMode(false).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.SECONDARY, com.example.data.PanelPreferences.getPanelContainerColorMode(false).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.SECONDARY, com.example.data.PanelPreferences.getQsTilesColorMode(false).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.PRIMARY, com.example.data.PanelPreferences.getInactiveTilesColorMode(false).value)
+        assertEquals(com.example.data.ComplicationArcMonetMode.TERTIARY, com.example.data.PanelPreferences.getClearAllColorMode(false).value)
+
+        // Restore defaults
+        for (isDark in listOf(false, true)) {
+            com.example.data.PanelPreferences.setSurfaceBgColorMode(app, isDark, com.example.data.ComplicationArcMonetMode.DEFAULT)
+            com.example.data.PanelPreferences.setPanelContainerColorMode(app, isDark, com.example.data.ComplicationArcMonetMode.DEFAULT)
+            com.example.data.PanelPreferences.setHeaderGradientColorMode(app, isDark, com.example.data.ComplicationArcMonetMode.PRIMARY)
+            com.example.data.PanelPreferences.setQsTilesColorMode(app, isDark, com.example.data.ComplicationArcMonetMode.PRIMARY)
+            com.example.data.PanelPreferences.setInactiveTilesColorMode(app, isDark, com.example.data.ComplicationArcMonetMode.DEFAULT)
+            com.example.data.PanelPreferences.setSlidersColorMode(app, isDark, com.example.data.ComplicationArcMonetMode.PRIMARY)
+            com.example.data.PanelPreferences.setMiscElementsColorMode(app, isDark, com.example.data.ComplicationArcMonetMode.PRIMARY)
+            com.example.data.PanelPreferences.setClearAllColorMode(app, isDark, com.example.data.ComplicationArcMonetMode.PRIMARY)
+        }
+    }
+
+    @Test
+    fun `verify authentic monet tertiary and secondary colors are not softened`() {
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        com.example.data.PanelPreferences.init(app)
+
+        for (isDark in listOf(false, true)) {
+            val scheme = com.example.ui.theme.getDynamicColorScheme(app, isDark = isDark, dynamicColor = true)
+
+            assertEquals(
+                scheme.primary.toArgb(),
+                com.example.ui.notification.MonetThemeHelper.getPrimaryAccent(app, isDark)
+            )
+            assertEquals(
+                scheme.secondary.toArgb(),
+                com.example.ui.notification.MonetThemeHelper.getSecondaryAccent(app, isDark)
+            )
+            assertEquals(
+                scheme.tertiary.toArgb(),
+                com.example.ui.notification.MonetThemeHelper.getTertiaryAccent(app, isDark)
+            )
+
+            // Verify QS Tiles element resolves exact Monet Primary, Secondary, Tertiary without desaturation
+            com.example.data.PanelPreferences.setQsTilesUseCustom(app, isDark, false)
+            com.example.data.PanelPreferences.setQsTilesHsb(app, isDark, 0f, 1f, 1f)
+
+            com.example.data.PanelPreferences.setQsTilesColorMode(app, isDark, com.example.data.ComplicationArcMonetMode.TERTIARY)
+            assertEquals(scheme.tertiary.toArgb(), com.example.ui.notification.MonetThemeHelper.getQsTilesAccent(app, isDark))
+
+            com.example.data.PanelPreferences.setQsTilesColorMode(app, isDark, com.example.data.ComplicationArcMonetMode.SECONDARY)
+            assertEquals(scheme.secondary.toArgb(), com.example.ui.notification.MonetThemeHelper.getQsTilesAccent(app, isDark))
+
+            // Verify Inactive Tiles resolves exact tertiaryContainer / secondaryContainer / primaryContainer
+            com.example.data.PanelPreferences.setInactiveTilesUseCustom(app, isDark, false)
+            com.example.data.PanelPreferences.setInactiveTilesHsb(app, isDark, 0f, 1f, 1f)
+            com.example.data.PanelPreferences.setInactiveTilesColorMode(app, isDark, com.example.data.ComplicationArcMonetMode.TERTIARY)
+            assertEquals(scheme.tertiaryContainer.toArgb(), com.example.ui.notification.MonetThemeHelper.getInactiveTilesColor(app, isDark))
+
+            // Restore defaults
+            com.example.data.PanelPreferences.setQsTilesColorMode(app, isDark, com.example.data.ComplicationArcMonetMode.PRIMARY)
+            com.example.data.PanelPreferences.setInactiveTilesColorMode(app, isDark, com.example.data.ComplicationArcMonetMode.DEFAULT)
+        }
+    }
 }
 
 

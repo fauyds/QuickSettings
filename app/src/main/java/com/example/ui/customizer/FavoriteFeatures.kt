@@ -439,18 +439,18 @@ enum class FavoriteFeature(
         icon = Icons.Default.AutoAwesome
     ),
 
-    // Additional Quick Settings Design
+    // Quick Settings Tweaks — SIM Card Carrier
     DESIGN_SIM_CARRIER(
         id = "design_sim_carrier",
         title = "SIM Card Carrier Display",
-        category = CustomizeCategory.QS_DESIGN,
+        category = CustomizeCategory.QS_TWEAKS,
         description = "Show or hide carrier label name in panel header",
         icon = Icons.Default.PhoneAndroid
     ),
     DESIGN_CARRIER_DIVIDER(
         id = "design_carrier_divider",
         title = "Carrier Divider Line",
-        category = CustomizeCategory.QS_DESIGN,
+        category = CustomizeCategory.QS_TWEAKS,
         description = "Divider separating carrier name from quick settings tiles",
         icon = Icons.Default.LinearScale
     ),

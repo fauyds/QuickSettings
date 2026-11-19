@@ -1119,6 +1119,7 @@ class KitKatShadeHostView @JvmOverloads constructor(
 
                 // Regular System Quick Settings Tile
                 val isActive = tile.state == TileState.ACTIVE
+                val isUnavailable = tile.state == TileState.UNAVAILABLE
                 val textPrimary = MonetThemeHelper.getTextPrimary(context, isDark)
                 val textSecondary = MonetThemeHelper.getTextSecondary(context, isDark)
 
@@ -1130,11 +1131,16 @@ class KitKatShadeHostView @JvmOverloads constructor(
                 val inactiveIconColor = if (isDark) Color.parseColor("#999999") else textSecondary
                 val inactiveTextColor = if (isDark) Color.parseColor("#AAAAAA") else textSecondary
                 val activeBgColor = androidx.compose.ui.graphics.Color(tileAccent)
+                val disabledGrayTint = (if (isDark) androidx.compose.ui.graphics.Color(0xFF9E9E9E) else androidx.compose.ui.graphics.Color(0xFF757575)).copy(alpha = 0.50f)
 
-                val iconTint = if (enableLegacyTileShapes) {
-                    if (isActive) androidx.compose.ui.graphics.Color.White else androidx.compose.ui.graphics.Color(inactiveIconColor)
-                } else {
-                    if (isActive) androidx.compose.ui.graphics.Color(tileAccent) else androidx.compose.ui.graphics.Color(inactiveIconColor)
+                val iconTint = when {
+                    isUnavailable -> disabledGrayTint
+                    enableLegacyTileShapes -> {
+                        if (isActive) androidx.compose.ui.graphics.Color.White else androidx.compose.ui.graphics.Color(inactiveIconColor)
+                    }
+                    else -> {
+                        if (isActive) androidx.compose.ui.graphics.Color(tileAccent) else androidx.compose.ui.graphics.Color(inactiveIconColor)
+                    }
                 }
 
                 // 1. Jetpack Compose Tile Icon (Complication ring or shape background when legacy shapes enabled)
@@ -1209,10 +1215,19 @@ class KitKatShadeHostView @JvmOverloads constructor(
                 }
                 holder.cardRoot.background = cardDrawable
                 holder.cardRoot.clipToOutline = true
-                holder.cardRoot.setOnClickListener { onTileClick(tile) }
+                holder.cardRoot.alpha = if (isUnavailable) 0.45f else 1f
+                holder.cardRoot.isEnabled = !isUnavailable
+                holder.cardRoot.isClickable = !isUnavailable
+                holder.cardRoot.setOnClickListener {
+                    if (!isUnavailable) onTileClick(tile)
+                }
                 holder.cardRoot.setOnLongClickListener {
-                    onTileLongClick(tile)
-                    true
+                    if (!isUnavailable) {
+                        onTileLongClick(tile)
+                        true
+                    } else {
+                        false
+                    }
                 }
             }
         }

@@ -2,6 +2,8 @@ package com.example.ui.customizer
 
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -63,13 +65,16 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import com.example.data.PanelPreferences
 import com.example.data.ProgressBarStyle
+import com.example.data.QsPageIndicatorStyle
 import com.example.data.QsSliderTarget
 import com.example.data.TileShape
 import com.example.data.ClearAllFabPosition
 import com.example.data.ClearAllFabShape
 import com.example.data.ClearAllFabIcon
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.NotificationsOff
 import com.example.ui.components.QsProgressSlider
+import com.example.ui.overlay.QsPageIndicator
 import com.example.ui.theme.ExpressiveCardShapes
 import com.example.ui.theme.SegmentedButtonShapes
 import com.example.ui.theme.MonetPrimary
@@ -112,15 +117,11 @@ import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.CropFree
 import androidx.compose.material.icons.filled.Gradient
-import androidx.compose.material.icons.filled.SimCard
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.HorizontalRule
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.VerticalAlignBottom
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.RoundedCorner
-import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.Layers
 import com.example.data.ComplicationCommandRepository
@@ -152,7 +153,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val qqsTileSizeValue by PanelPreferences.qqsTileSize.collectAsState()
     val qqsTileCount by PanelPreferences.qqsTileCount.collectAsState()
-    val enableQqsHorizontalScroll by PanelPreferences.enableQqsHorizontalScroll.collectAsState()
     val enableQqsComplicationsRow by PanelPreferences.enableQqsComplicationsRow.collectAsState()
     val qqs2x1ComplicationIds by PanelPreferences.qqs2x1ComplicationIds.collectAsState()
     val qqs2x1HorizontalLine by PanelPreferences.qqs2x1HorizontalLine.collectAsState()
@@ -166,13 +166,11 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val tileOutlineThicknessDp by PanelPreferences.tileOutlineThicknessDp.collectAsState()
     val complicationOutlineEnabled by PanelPreferences.complicationOutlineEnabled.collectAsState()
     val allShapes by QsShapeManager.allShapes.collectAsState()
-    val showCarrier by PanelPreferences.showCarrier.collectAsState()
-    val showCarrierDivider by PanelPreferences.showCarrierDivider.collectAsState()
-    val carrierDividerAsLine by PanelPreferences.carrierDividerAsLine.collectAsState()
-    val hideCarrierInExpanded by PanelPreferences.hideCarrierInExpanded.collectAsState()
+    val pageIndicatorStyle by PanelPreferences.qsPageIndicatorStyle.collectAsState()
     val brightnessAtBottom by PanelPreferences.brightnessAtBottom.collectAsState()
     val brightnessInQqs by PanelPreferences.brightnessInQqs.collectAsState()
     val showBrightnessGradient by PanelPreferences.showBrightnessGradient.collectAsState()
+    val showBrightnessControlsBackground by PanelPreferences.showBrightnessControlsBackground.collectAsState()
     val showCustomHeaderImage by PanelPreferences.showCustomHeaderImage.collectAsState()
     val customHeaderImageUri by PanelPreferences.customHeaderImageUri.collectAsState()
     val customHeaderImageHeight by PanelPreferences.customHeaderImageHeight.collectAsState()
@@ -505,86 +503,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             }
         }
     }
-    }
-
-    // 2.4. QQS Tile Horizontal Scroll Card
-    val enableQqsHorizontalScrollCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
-        PinnableCardWrapper("enable_qqs_horizontal_scroll_card", CustomizeCategory.QS_DESIGN, "QQS Horizontal Scroll") {
-            SettingsCard(
-                shape = shape,
-                modifier = Modifier.testTag("enable_qqs_horizontal_scroll_card")
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.SwapHoriz,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = "Horizontal Scroll QS Tiles",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
-                            )
-                            Text(
-                                text = "Allow horizontally scrolling through all active QQS tiles in collapsed header.",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
-                            )
-                        }
-                    }
-                    Switch(
-                        checked = enableQqsHorizontalScroll,
-                        onCheckedChange = { PanelPreferences.setEnableQqsHorizontalScroll(context, it) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                            uncheckedTrackColor = MaterialTheme.colorScheme.surface
-                        ),
-                        modifier = Modifier.testTag("enable_qqs_horizontal_scroll_switch")
-                    )
-                }
-            }
-        }
     }
 
     // 2.4b. Additional 2x1 Complications QQS Row Card
@@ -2067,266 +1985,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     }
     }
 
-    // --- 2. SIM CARD CARRIER CARDS ---
-
-    // Show SIM Card Carrier Card
-    val showCarrierCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
-        PinnableCardWrapper("show_carrier_card", CustomizeCategory.QS_DESIGN, "Show SIM Card Carrier") {
-            SettingsCard(
-                shape = shape
-            ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.SimCard,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = "Show SIM Card Carrier",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Show the dynamic SIM card network operator name on the bottom left of the QQS container.",
-                            fontSize = 12.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                Switch(
-                    checked = showCarrier,
-                    onCheckedChange = { PanelPreferences.setShowCarrier(context, it) },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                        checkedTrackColor = MaterialTheme.colorScheme.primary,
-                        uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surface
-                    ),
-                    modifier = Modifier.testTag("show_carrier_toggle")
-                )
-            }
-        }
-    }
-    }
-
-    // Divider Between Carrier & QQS Tiles Card
-    val carrierDividerCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
-        PinnableCardWrapper("carrier_divider_card", CustomizeCategory.QS_DESIGN, "Carrier Divider") {
-            SettingsCard(
-                shape = shape,
-                modifier = Modifier.testTag("carrier_divider_card")
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            modifier = Modifier.weight(1f),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primaryContainer),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.HorizontalRule,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = "Divider Between Carrier & QQS Tiles",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Show a divider separating the SIM card carrier name and QQS tiles",
-                                    fontSize = 12.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        Switch(
-                            checked = showCarrierDivider,
-                            onCheckedChange = { PanelPreferences.setShowCarrierDivider(context, it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
-                            ),
-                            modifier = Modifier.testTag("show_carrier_divider_toggle")
-                        )
-                    }
-
-                    androidx.compose.material3.HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(end = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(3.dp)
-                        ) {
-                            Text(
-                                text = "Replace Carrier Divider with Line",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Keep carrier and tiles inside one card with a crisp divider line instead of splitting cards",
-                                fontSize = 11.5.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        Switch(
-                            checked = carrierDividerAsLine,
-                            onCheckedChange = { PanelPreferences.setCarrierDividerAsLine(context, it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
-                            ),
-                            modifier = Modifier.testTag("carrier_divider_as_line_toggle")
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    // Hide Carrier in Expanded QS Card
-    val hideCarrierInExpandedCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
-        PinnableCardWrapper("hide_carrier_in_expanded_card", CustomizeCategory.QS_DESIGN, "Hide Carrier in Expanded QS") {
-            SettingsCard(
-                shape = shape,
-                modifier = Modifier.testTag("hide_carrier_in_expanded_card")
-            ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            modifier = Modifier.weight(1f),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primaryContainer),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.VisibilityOff,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = "Hide Carrier in Expanded QS",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Hide the SIM card carrier label when Quick Settings is fully expanded",
-                                    fontSize = 12.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        Switch(
-                            checked = hideCarrierInExpanded,
-                            onCheckedChange = { PanelPreferences.setHideCarrierInExpanded(context, it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
-                            ),
-                            modifier = Modifier.testTag("hide_carrier_in_expanded_toggle")
-                        )
-                    }
-                }
-        }
-    }
-
-    // --- 3. HEADER & BACKGROUNDS CARDS ---
+    // --- 2. HEADER & BACKGROUNDS CARDS ---
 
     // Custom Header Image Banner Card
     val customHeaderImageCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
@@ -4773,131 +4432,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     }
     }
 
-    val disableClearAllLabelCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
-        val disableClearAllLabel by PanelPreferences.disableClearAllLabel.collectAsState()
-        val clearAllIconSize by PanelPreferences.clearAllIconSize.collectAsState()
-        val clearAllFabIcon by PanelPreferences.clearAllFabIcon.collectAsState()
-
-        PinnableCardWrapper("disable_clear_all_label_card", CustomizeCategory.QS_DESIGN, "Disable Clear All Label") {
-            SettingsCard(
-                shape = shape,
-                modifier = Modifier.testTag("disable_clear_all_label_card")
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primaryContainer),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.NotificationsOff,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(1.dp)
-                            ) {
-                                Text(
-                                    text = "Disable Clear All Label",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    lineHeight = 17.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Hide the 'Clear All' text label, remove pill background, and keep only the clear icon.",
-                                    fontSize = 12.sp,
-                                    lineHeight = 15.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        Switch(
-                            checked = disableClearAllLabel,
-                            onCheckedChange = { PanelPreferences.setDisableClearAllLabel(context, it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
-                            ),
-                            modifier = Modifier.testTag("disable_clear_all_label_toggle")
-                        )
-                    }
-
-                    AnimatedVisibility(
-                        visible = disableClearAllLabel,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut()
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                            // 1. Icon Size Slider
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "Clear All Icon Size",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "${clearAllIconSize}dp",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                                Slider(
-                                    value = clearAllIconSize.toFloat(),
-                                    onValueChange = { PanelPreferences.setClearAllIconSize(context, kotlin.math.round(it).toInt()) },
-                                    valueRange = 16f..48f,
-                                    steps = 31,
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = MaterialTheme.colorScheme.primary,
-                                        activeTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
-                                    modifier = Modifier.testTag("clear_all_icon_size_slider")
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     val clearAllFabCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         var clearAllFabExpanded by rememberSaveable { mutableStateOf(false) }
         PinnableCardWrapper("clear_all_fab_card", CustomizeCategory.QS_DESIGN, "Clear All FAB Button") {
@@ -5336,31 +4870,961 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
     val compactMediaNotificationCard = showMediaInNotifContainerCard
 
+    val footerIconBackgroundCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("footer_icon_background_card", CustomizeCategory.QS_DESIGN, "Footer Icon Backgrounds") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("footer_icon_background_card")
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                        ) {
+                            Text(
+                                text = "Footer Icon Backgrounds",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 17.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Enable M3 rounded backgrounds for QS footer action buttons with 10dp outer and 3dp inner corners.",
+                                fontSize = 12.sp,
+                                lineHeight = 15.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    val footerIconBgEnabled by PanelPreferences.footerIconBackground.collectAsState()
+                    val footerOuterSpacingEnabled by PanelPreferences.footerOuterSpacing.collectAsState()
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Enable Footer Icon Backgrounds",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Switch(
+                            checked = footerIconBgEnabled,
+                            onCheckedChange = { PanelPreferences.setFooterIconBackground(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("footer_icon_bg_toggle")
+                        )
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Outer 3dp Spacing Between Buttons",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Adds 3dp spacing with 3dp inner corners. When disabled, spacing and inner corners are 0dp.",
+                                fontSize = 11.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = footerOuterSpacingEnabled,
+                            onCheckedChange = { PanelPreferences.setFooterOuterSpacing(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("footer_outer_spacing_toggle")
+                        )
+                    }
+
+                    if (footerIconBgEnabled) {
+                        val footerOuterCorner by PanelPreferences.footerOuterCorner.collectAsState()
+                        val footerInnerCorner by PanelPreferences.footerInnerCorner.collectAsState()
+                        val footerSpacing by PanelPreferences.footerSpacing.collectAsState()
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                        // 1. Outer Corner Radius Slider
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "Outer Corner Radius",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Exposed ends corner curvature",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    text = "${footerOuterCorner.toInt()} dp",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Slider(
+                                value = footerOuterCorner,
+                                onValueChange = { PanelPreferences.setFooterOuterCorner(context, Math.round(it).toFloat()) },
+                                valueRange = 0f..24f,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("footer_outer_corner_slider"),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                )
+                            )
+                        }
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                        // 2. Inner Corner Radius Slider
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "Inner Corner Radius",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Adjacent inner edges curvature",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    text = "${footerInnerCorner.toInt()} dp",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Slider(
+                                value = footerInnerCorner,
+                                onValueChange = { PanelPreferences.setFooterInnerCorner(context, Math.round(it).toFloat()) },
+                                valueRange = 0f..20f,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("footer_inner_corner_slider"),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                )
+                            )
+                        }
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                        // 3. Spacing Between Buttons Slider
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "Button Spacing",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Gap between footer button backgrounds",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    text = "${footerSpacing.toInt()} dp",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Slider(
+                                value = footerSpacing,
+                                onValueChange = { PanelPreferences.setFooterSpacing(context, Math.round(it).toFloat()) },
+                                valueRange = 0f..20f,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("footer_spacing_slider"),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val headerStatusBackgroundCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("header_status_background_card", CustomizeCategory.QS_DESIGN, "Header & Status Backgrounds") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("header_status_background_card")
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                        ) {
+                            Text(
+                                text = "Header & Status Backgrounds",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 17.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Toggle rounded backgrounds and corner radius separately for date, battery, clock, and carrier.",
+                                fontSize = 12.sp,
+                                lineHeight = 15.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    val dateBgEnabled by PanelPreferences.dateBackgroundEnabled.collectAsState()
+                    val dateBgCorner by PanelPreferences.dateBackgroundCorner.collectAsState()
+                    val batteryBgEnabled by PanelPreferences.batteryBackgroundEnabled.collectAsState()
+                    val batteryBgCorner by PanelPreferences.batteryBackgroundCorner.collectAsState()
+                    val clockBgEnabled by PanelPreferences.clockBackgroundEnabled.collectAsState()
+                    val clockBgCorner by PanelPreferences.clockBackgroundCorner.collectAsState()
+                    val carrierBgEnabled by PanelPreferences.carrierBackgroundEnabled.collectAsState()
+                    val carrierBgCorner by PanelPreferences.carrierBackgroundCorner.collectAsState()
+
+                    // 1. Date Background & Corner
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Date Background",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Switch(
+                            checked = dateBgEnabled,
+                            onCheckedChange = { PanelPreferences.setDateBackgroundEnabled(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("date_bg_toggle")
+                        )
+                    }
+                    AnimatedVisibility(visible = dateBgEnabled) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Date Corner Radius",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "${dateBgCorner.toInt()} dp",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Slider(
+                                value = dateBgCorner,
+                                onValueChange = { PanelPreferences.setDateBackgroundCorner(context, Math.round(it).toFloat()) },
+                                valueRange = 0f..24f,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("date_bg_corner_slider"),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                )
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    // 2. Battery Background & Corner
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Battery Background",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Switch(
+                            checked = batteryBgEnabled,
+                            onCheckedChange = { PanelPreferences.setBatteryBackgroundEnabled(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("battery_bg_toggle")
+                        )
+                    }
+                    AnimatedVisibility(visible = batteryBgEnabled) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Battery Corner Radius",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "${batteryBgCorner.toInt()} dp",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Slider(
+                                value = batteryBgCorner,
+                                onValueChange = { PanelPreferences.setBatteryBackgroundCorner(context, Math.round(it).toFloat()) },
+                                valueRange = 0f..24f,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("battery_bg_corner_slider"),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                )
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    // 3. Clock Background & Corner
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Clock Background",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Switch(
+                            checked = clockBgEnabled,
+                            onCheckedChange = { PanelPreferences.setClockBackgroundEnabled(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("clock_bg_toggle")
+                        )
+                    }
+                    AnimatedVisibility(visible = clockBgEnabled) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Clock Corner Radius",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "${clockBgCorner.toInt()} dp",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Slider(
+                                value = clockBgCorner,
+                                onValueChange = { PanelPreferences.setClockBackgroundCorner(context, Math.round(it).toFloat()) },
+                                valueRange = 0f..24f,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("clock_bg_corner_slider"),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                )
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    // 4. Carrier Label Background & Corner
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Carrier Label Background",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Switch(
+                            checked = carrierBgEnabled,
+                            onCheckedChange = { PanelPreferences.setCarrierBackgroundEnabled(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("carrier_bg_toggle")
+                        )
+                    }
+                    AnimatedVisibility(visible = carrierBgEnabled) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Carrier Label Corner Radius",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "${carrierBgCorner.toInt()} dp",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Slider(
+                                value = carrierBgCorner,
+                                onValueChange = { PanelPreferences.setCarrierBackgroundCorner(context, Math.round(it).toFloat()) },
+                                valueRange = 0f..24f,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("carrier_bg_corner_slider"),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val pageIndicatorStyleCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("qs_page_indicator_style_card", CustomizeCategory.QS_DESIGN, "QS Page Indicator Style") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("qs_page_indicator_style_card")
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DragHandle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                        ) {
+                            Text(
+                                text = "QS Page Indicator Style",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 17.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = pageIndicatorStyle.description,
+                                fontSize = 12.sp,
+                                lineHeight = 15.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    val piActiveLineThickness by PanelPreferences.piActiveLineThickness.collectAsState()
+                    val piInactiveLineThickness by PanelPreferences.piInactiveLineThickness.collectAsState()
+                    val piActiveLineWidth by PanelPreferences.piActiveLineWidth.collectAsState()
+                    val piInactiveLineWidth by PanelPreferences.piInactiveLineWidth.collectAsState()
+                    val piActiveDotRadius by PanelPreferences.piActiveDotRadius.collectAsState()
+                    val piInactiveDotRadius by PanelPreferences.piInactiveDotRadius.collectAsState()
+                    val piActiveSlidingThickness by PanelPreferences.piActiveSlidingThickness.collectAsState()
+                    val piInactiveSlidingThickness by PanelPreferences.piInactiveSlidingThickness.collectAsState()
+
+                    // Live interactive preview of the selected indicator style
+                    var previewPage by remember { mutableIntStateOf(0) }
+                    val animatedPreviewPos by animateFloatAsState(
+                        targetValue = previewPage.toFloat(),
+                        animationSpec = tween(durationMillis = 240),
+                        label = "preview_page_indicator"
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.background)
+                            .clickable { previewPage = (previewPage + 1) % 3 }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Preview (tap)",
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        QsPageIndicator(
+                            pageCount = 3,
+                            scrollPosition = animatedPreviewPos,
+                            style = pageIndicatorStyle,
+                            activeColor = MaterialTheme.colorScheme.primary,
+                            inactiveColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f),
+                            onPageClick = { previewPage = it },
+                            modifier = Modifier.testTag("page_indicator_preview"),
+                            activeLineThickness = piActiveLineThickness,
+                            inactiveLineThickness = piInactiveLineThickness,
+                            activeLineWidth = piActiveLineWidth,
+                            inactiveLineWidth = piInactiveLineWidth,
+                            activeDotRadius = piActiveDotRadius,
+                            inactiveDotRadius = piInactiveDotRadius,
+                            activeSlidingThickness = piActiveSlidingThickness,
+                            inactiveSlidingThickness = piInactiveSlidingThickness
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val allIndicatorStyles = QsPageIndicatorStyle.entries
+                        allIndicatorStyles.forEach { style ->
+                            val isSelected = pageIndicatorStyle == style
+                            val chipShape = SegmentedButtonShapes.getShape(
+                                item = style,
+                                items = allIndicatorStyles,
+                                selectedItem = pageIndicatorStyle
+                            )
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { PanelPreferences.setQsPageIndicatorStyle(context, style) },
+                                label = { Text(style.label, fontSize = 11.sp) },
+                                shape = chipShape,
+                                border = null,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                    containerColor = MaterialTheme.colorScheme.background,
+                                    labelColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                modifier = Modifier.testTag("page_indicator_style_${style.id}")
+                            )
+                        }
+                    }
+
+                    @Composable
+                    fun indicatorSlider(
+                        title: String,
+                        value: Float,
+                        valueRange: ClosedFloatingPointRange<Float>,
+                        stepHalfDp: Boolean,
+                        testTagName: String,
+                        onValueChange: (Float) -> Unit
+                    ) {
+                        val displayVal = if (value % 1f == 0f) {
+                            "${value.toInt()} dp"
+                        } else {
+                            "${String.format(java.util.Locale.US, "%.1f", value)} dp"
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = title,
+                                    fontSize = 12.5.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = displayVal,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Slider(
+                                value = value,
+                                onValueChange = { raw ->
+                                    val snapped = if (stepHalfDp) {
+                                        kotlin.math.round(raw * 2f) / 2f
+                                    } else {
+                                        kotlin.math.round(raw)
+                                    }
+                                    onValueChange(snapped)
+                                },
+                                valueRange = valueRange,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag(testTagName),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                )
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                    when (pageIndicatorStyle) {
+                        QsPageIndicatorStyle.DOTS -> {
+                            indicatorSlider(
+                                title = "Active Dot Radius",
+                                value = piActiveDotRadius,
+                                valueRange = 1.5f..8f,
+                                stepHalfDp = true,
+                                testTagName = "pi_active_dot_radius_slider"
+                            ) { PanelPreferences.setPiActiveDotRadius(context, it) }
+
+                            indicatorSlider(
+                                title = "Inactive Dot Radius",
+                                value = piInactiveDotRadius,
+                                valueRange = 1.0f..6f,
+                                stepHalfDp = true,
+                                testTagName = "pi_inactive_dot_radius_slider"
+                            ) { PanelPreferences.setPiInactiveDotRadius(context, it) }
+                        }
+                        QsPageIndicatorStyle.HORIZONTAL_LINES -> {
+                            indicatorSlider(
+                                title = "Active Line Thickness",
+                                value = piActiveLineThickness,
+                                valueRange = 1f..10f,
+                                stepHalfDp = true,
+                                testTagName = "pi_active_line_thickness_slider"
+                            ) { PanelPreferences.setPiActiveLineThickness(context, it) }
+
+                            indicatorSlider(
+                                title = "Inactive Line Thickness",
+                                value = piInactiveLineThickness,
+                                valueRange = 1f..10f,
+                                stepHalfDp = true,
+                                testTagName = "pi_inactive_line_thickness_slider"
+                            ) { PanelPreferences.setPiInactiveLineThickness(context, it) }
+
+                            indicatorSlider(
+                                title = "Active Line Width",
+                                value = piActiveLineWidth,
+                                valueRange = 8f..48f,
+                                stepHalfDp = false,
+                                testTagName = "pi_active_line_width_slider"
+                            ) { PanelPreferences.setPiActiveLineWidth(context, it) }
+
+                            indicatorSlider(
+                                title = "Inactive Line Width",
+                                value = piInactiveLineWidth,
+                                valueRange = 4f..32f,
+                                stepHalfDp = false,
+                                testTagName = "pi_inactive_line_width_slider"
+                            ) { PanelPreferences.setPiInactiveLineWidth(context, it) }
+                        }
+                        QsPageIndicatorStyle.DOTS_WITH_ACTIVE_LINE -> {
+                            indicatorSlider(
+                                title = "Active Line Thickness",
+                                value = piActiveLineThickness,
+                                valueRange = 1f..10f,
+                                stepHalfDp = true,
+                                testTagName = "pi_active_line_thickness_slider"
+                            ) { PanelPreferences.setPiActiveLineThickness(context, it) }
+
+                            indicatorSlider(
+                                title = "Active Line Width",
+                                value = piActiveLineWidth,
+                                valueRange = 8f..48f,
+                                stepHalfDp = false,
+                                testTagName = "pi_active_line_width_slider"
+                            ) { PanelPreferences.setPiActiveLineWidth(context, it) }
+
+                            indicatorSlider(
+                                title = "Inactive Dot Radius",
+                                value = piInactiveDotRadius,
+                                valueRange = 1.0f..6f,
+                                stepHalfDp = true,
+                                testTagName = "pi_inactive_dot_radius_slider"
+                            ) { PanelPreferences.setPiInactiveDotRadius(context, it) }
+                        }
+                        QsPageIndicatorStyle.SLIDING_TRACK -> {
+                            indicatorSlider(
+                                title = "Active Sliding Line Thickness",
+                                value = piActiveSlidingThickness,
+                                valueRange = 1f..12f,
+                                stepHalfDp = true,
+                                testTagName = "pi_active_sliding_thickness_slider"
+                            ) { PanelPreferences.setPiActiveSlidingThickness(context, it) }
+
+                            indicatorSlider(
+                                title = "Inactive Sliding Line Thickness",
+                                value = piInactiveSlidingThickness,
+                                valueRange = 1f..12f,
+                                stepHalfDp = true,
+                                testTagName = "pi_inactive_sliding_thickness_slider"
+                            ) { PanelPreferences.setPiInactiveSlidingThickness(context, it) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val showBrightnessControlsBackgroundCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("show_brightness_controls_background_card", CustomizeCategory.QS_DESIGN, "Brightness Controls Background") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("show_brightness_controls_background_card")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.BrightnessMedium,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                        ) {
+                            Text(
+                                text = "Brightness Controls Background",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 17.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Place the brightness icon, -/+ buttons, and percentage inside pill backgrounds.",
+                                fontSize = 12.sp,
+                                lineHeight = 15.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Switch(
+                        checked = showBrightnessControlsBackground,
+                        onCheckedChange = { PanelPreferences.setShowBrightnessControlsBackground(context, it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                        ),
+                        modifier = Modifier.testTag("show_brightness_controls_background_toggle")
+                    )
+                }
+            }
+        }
+    }
+
     val pinnedCardsMap = mapOf<String, @Composable (androidx.compose.ui.graphics.Shape) -> Unit>(
         "android_oreo_style_card" to androidOreoStyleCard,
         "qqs_icon_size_card" to qqsIconSizeCard,
         "qqs_icon_quantity_card" to qqsIconQuantityCard,
-        "enable_qqs_horizontal_scroll_card" to enableQqsHorizontalScrollCard,
         "qqs_complications_row_card" to qqsComplicationsRowCard,
         "legacy_tile_shapes_support_card" to legacyTileShapesSupportCard,
         "tile_shape_selection_card" to tileShapeSelectionCard,
         "complication_arc_thickness_card" to complicationArcThicknessCard,
         "tile_outline_card" to tileOutlineCard,
         "qs_tile_gradient_card" to qsTileGradientCard,
-        "disable_clear_all_label_card" to disableClearAllLabelCard,
+        "qs_page_indicator_style_card" to pageIndicatorStyleCard,
         "clear_all_fab_card" to clearAllFabCard,
         "show_media_in_notif_container_card" to showMediaInNotifContainerCard,
         "compact_media_notification_card" to compactMediaNotificationCard,
-        "show_carrier_card" to showCarrierCard,
-        "carrier_divider_card" to carrierDividerCard,
-        "hide_carrier_in_expanded_card" to hideCarrierInExpandedCard,
         "custom_header_image_card" to customHeaderImageCard,
         "custom_header_monet_gradient_card" to customHeaderMonetGradientCard,
         "element_colors_preference_card" to elementColorsPreferenceCard,
+        "header_status_background_card" to headerStatusBackgroundCard,
+        "footer_icon_background_card" to footerIconBackgroundCard,
         "header_complication_tiles_card" to headerComplicationTilesCard,
         "move_brightness_bottom_card" to moveBrightnessBottomCard,
         "brightness_in_qqs_card" to brightnessInQqsCard,
         "brightness_gradient_card" to brightnessGradientCard,
+        "show_brightness_controls_background_card" to showBrightnessControlsBackgroundCard,
         "progress_bar_slider_style_card" to progressBarSliderStyleCard,
         "panel_corner_styling_card" to panelCornerStylingCard
     )
@@ -5370,9 +5834,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             val list = mutableListOf(
                 "tile_outline_card",
                 "qs_tile_gradient_card",
-                "show_carrier_card",
-                "carrier_divider_card",
-                "hide_carrier_in_expanded_card",
                 "panel_corner_styling_card"
             )
             if (!enableLegacyTileShapes) {
@@ -5386,8 +5847,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 "qs_tile_gradient_card",
                 "qqs_icon_size_card",
                 "qqs_icon_quantity_card",
-                "enable_qqs_horizontal_scroll_card",
-                "qqs_complications_row_card"
+                "qqs_complications_row_card",
+                "qs_page_indicator_style_card"
             )
             if (!enableLegacyTileShapes) {
                 list.add("tile_shape_selection_card")
@@ -5400,13 +5861,11 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 "qs_tile_gradient_card",
                 "qqs_icon_size_card",
                 "qqs_icon_quantity_card",
-                "enable_qqs_horizontal_scroll_card",
                 "qqs_complications_row_card",
+                "qs_page_indicator_style_card",
                 "clear_all_fab_card",
                 "custom_header_monet_gradient_card",
-                "element_colors_preference_card",
-                "carrier_divider_card",
-                "hide_carrier_in_expanded_card"
+                "element_colors_preference_card"
             )
             if (!enableLegacyTileShapes) {
                 list.add("tile_shape_selection_card")
@@ -5436,14 +5895,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         if (!hiddenDesignIds.contains("android_oreo_style_card") && !pinnedIds.contains("android_oreo_style_card")) unpinnedTileShapes.add(androidOreoStyleCard)
         if (!hiddenDesignIds.contains("qqs_icon_size_card") && !pinnedIds.contains("qqs_icon_size_card")) unpinnedTileShapes.add(qqsIconSizeCard)
         if (!hiddenDesignIds.contains("qqs_icon_quantity_card") && !pinnedIds.contains("qqs_icon_quantity_card")) unpinnedTileShapes.add(qqsIconQuantityCard)
-        if (!hiddenDesignIds.contains("enable_qqs_horizontal_scroll_card") && !pinnedIds.contains("enable_qqs_horizontal_scroll_card")) unpinnedTileShapes.add(enableQqsHorizontalScrollCard)
         if (!hiddenDesignIds.contains("qqs_complications_row_card") && !pinnedIds.contains("qqs_complications_row_card")) unpinnedTileShapes.add(qqsComplicationsRowCard)
         if (!hiddenDesignIds.contains("legacy_tile_shapes_support_card") && !pinnedIds.contains("legacy_tile_shapes_support_card")) unpinnedTileShapes.add(legacyTileShapesSupportCard)
         if (!hiddenDesignIds.contains("tile_shape_selection_card") && !pinnedIds.contains("tile_shape_selection_card")) unpinnedTileShapes.add(tileShapeSelectionCard)
         if (!hiddenDesignIds.contains("complication_arc_thickness_card") && !pinnedIds.contains("complication_arc_thickness_card")) unpinnedTileShapes.add(complicationArcThicknessCard)
         if (!hiddenDesignIds.contains("tile_outline_card") && !pinnedIds.contains("tile_outline_card")) unpinnedTileShapes.add(tileOutlineCard)
         if (!hiddenDesignIds.contains("qs_tile_gradient_card") && !pinnedIds.contains("qs_tile_gradient_card")) unpinnedTileShapes.add(qsTileGradientCard)
-        if (!hiddenDesignIds.contains("disable_clear_all_label_card") && !pinnedIds.contains("disable_clear_all_label_card")) unpinnedTileShapes.add(disableClearAllLabelCard)
+        if (!hiddenDesignIds.contains("qs_page_indicator_style_card") && !pinnedIds.contains("qs_page_indicator_style_card")) unpinnedTileShapes.add(pageIndicatorStyleCard)
         if (!hiddenDesignIds.contains("clear_all_fab_card") && !pinnedIds.contains("clear_all_fab_card")) unpinnedTileShapes.add(clearAllFabCard)
         if (!hiddenDesignIds.contains("show_media_in_notif_container_card") && !pinnedIds.contains("show_media_in_notif_container_card")) unpinnedTileShapes.add(showMediaInNotifContainerCard)
 
@@ -5458,32 +5916,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             }
         }
 
-        // 3. SIM Card Carrier
-        val unpinnedCarrier = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (!hiddenDesignIds.contains("show_carrier_card")) {
-            if (!pinnedIds.contains("show_carrier_card")) unpinnedCarrier.add(showCarrierCard)
-            if (showCarrier) {
-                if (!pinnedIds.contains("carrier_divider_card")) unpinnedCarrier.add(carrierDividerCard)
-                if (!pinnedIds.contains("hide_carrier_in_expanded_card")) unpinnedCarrier.add(hideCarrierInExpandedCard)
-            }
-        }
-
-        if (unpinnedCarrier.isNotEmpty()) {
-            CollapsibleSubheaderSection(
-                title = "SIM Card Carrier",
-                icon = Icons.Default.SimCard
-            ) {
-                unpinnedCarrier.forEachIndexed { index, card ->
-                    card(CustomizeCardShapes.getShapeForIndex(index, unpinnedCarrier.size))
-                }
-            }
-        }
-
-        // 4. Header & Backgrounds
+        // 3. Header & Backgrounds
         val unpinnedHeader = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
         if (!hiddenDesignIds.contains("custom_header_image_card") && !pinnedIds.contains("custom_header_image_card")) unpinnedHeader.add(customHeaderImageCard)
         if (!hiddenDesignIds.contains("custom_header_monet_gradient_card") && !pinnedIds.contains("custom_header_monet_gradient_card")) unpinnedHeader.add(customHeaderMonetGradientCard)
         if (!hiddenDesignIds.contains("element_colors_preference_card") && !pinnedIds.contains("element_colors_preference_card")) unpinnedHeader.add(elementColorsPreferenceCard)
+        if (!hiddenDesignIds.contains("header_status_background_card") && !pinnedIds.contains("header_status_background_card")) unpinnedHeader.add(headerStatusBackgroundCard)
+        if (!hiddenDesignIds.contains("footer_icon_background_card") && !pinnedIds.contains("footer_icon_background_card")) unpinnedHeader.add(footerIconBackgroundCard)
         if (!hiddenDesignIds.contains("header_complication_tiles_card") && !pinnedIds.contains("header_complication_tiles_card")) unpinnedHeader.add(headerComplicationTilesCard)
 
         if (unpinnedHeader.isNotEmpty()) {
@@ -5497,11 +5936,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             }
         }
 
-        // 5. Brightness & Sliders
+        // 4. Brightness & Sliders
         val unpinnedBrightness = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
         if (!pinnedIds.contains("move_brightness_bottom_card")) unpinnedBrightness.add(moveBrightnessBottomCard)
         if (!pinnedIds.contains("brightness_in_qqs_card")) unpinnedBrightness.add(brightnessInQqsCard)
         if (!pinnedIds.contains("brightness_gradient_card")) unpinnedBrightness.add(brightnessGradientCard)
+        if (!pinnedIds.contains("show_brightness_controls_background_card")) unpinnedBrightness.add(showBrightnessControlsBackgroundCard)
         if (!pinnedIds.contains("progress_bar_slider_style_card")) unpinnedBrightness.add(progressBarSliderStyleCard)
 
         if (unpinnedBrightness.isNotEmpty()) {
@@ -5515,7 +5955,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             }
         }
 
-        // 6. Panel Corner Styling
+        // 5. Panel Corner Styling
         val unpinnedCorners = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
         if (!isAndroidOreoStyle && !pinnedIds.contains("panel_corner_styling_card")) unpinnedCorners.add(panelCornerStylingCard)
 

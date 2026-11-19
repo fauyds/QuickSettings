@@ -1561,6 +1561,8 @@ class NativeTileManager(
      * 4. Automatic State Mirroring.
      */
     fun handleUniversalTileClick(tile: QsTileModel) {
+        if (tile.state == TileState.UNAVAILABLE) return
+        if (tile.id == "dark_mode" && _isBatterySaverEnabled.value) return
         val specifier = getTileSpecifier(tile.id)
 
         scope.launch {
@@ -2105,6 +2107,7 @@ class NativeTileManager(
     }
 
     fun toggleDarkMode() {
+        if (_isBatterySaverEnabled.value) return
         val target = !_isDarkThemeEnabled.value
         _isDarkThemeEnabled.value = target
         ignoreDarkModeObserverUntil = System.currentTimeMillis() + 2500L

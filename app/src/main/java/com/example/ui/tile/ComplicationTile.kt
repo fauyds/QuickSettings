@@ -387,8 +387,8 @@ fun ComplicationTileView(
     )
 
     val inactiveTileColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
-    val isInactiveTilesCustomized = PanelPreferences.getInactiveTilesColorPrimary(isDark).collectAsState().value ||
-        PanelPreferences.getInactiveTilesColorTertiary(isDark).collectAsState().value ||
+    val isInactiveTilesCustomized = PanelPreferences.getInactiveTilesUseCustom(isDark).collectAsState().value ||
+        PanelPreferences.getInactiveTilesColorMode(isDark).collectAsState().value != com.example.data.ComplicationArcMonetMode.DEFAULT ||
         PanelPreferences.getInactiveTilesHue(isDark).collectAsState().value != 0f ||
         PanelPreferences.getInactiveTilesSat(isDark).collectAsState().value != 1f ||
         PanelPreferences.getInactiveTilesVal(isDark).collectAsState().value != 1f
@@ -444,17 +444,18 @@ fun ComplicationTileView(
         label = "complication_arc_${model.id}"
     )
 
+    val activeOnTileColor = com.example.ui.theme.getQsTilesOnElementColor(isDark)
     val iconTint = if (isTransparentInner) {
         if (model.isActive) animatedAccent else (if (isInactiveTilesCustomized) inactiveTileColor else (if (isDark) Color(0xFFCCCCCC) else Color(0xFF555555)))
     } else if (model.isActive) {
-        colorScheme.onPrimary
+        activeOnTileColor
     } else {
         if (isInactiveTilesCustomized) inactiveTileColor else colorScheme.onSurface
     }
     val sublineColor = if (isTransparentInner) {
         if (model.isActive) animatedAccent else (if (isInactiveTilesCustomized) inactiveTileColor else (if (isDark) Color(0xFFCCCCCC) else colorScheme.onSurfaceVariant))
     } else if (model.isActive) {
-        colorScheme.onPrimary.copy(alpha = 0.92f)
+        activeOnTileColor.copy(alpha = 0.92f)
     } else {
         if (isInactiveTilesCustomized) inactiveTileColor else colorScheme.onSurfaceVariant
     }

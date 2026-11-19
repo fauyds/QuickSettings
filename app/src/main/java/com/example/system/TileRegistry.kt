@@ -164,6 +164,21 @@ class TileRegistry(
             return if (!cleaned.isNullOrBlank()) cleaned else "On"
         }
 
+        internal fun resolveDarkModeTileState(
+            darkThemeOn: Boolean,
+            batterySaverOn: Boolean
+        ): Triple<TileState, androidx.compose.ui.graphics.vector.ImageVector, String> {
+            return if (batterySaverOn) {
+                Triple(TileState.UNAVAILABLE, Icons.Default.DarkMode, "Battery Saver")
+            } else {
+                Triple(
+                    if (darkThemeOn) TileState.ACTIVE else TileState.INACTIVE,
+                    Icons.Default.DarkMode,
+                    if (darkThemeOn) "On" else "Off"
+                )
+            }
+        }
+
         internal fun resolveMarshmallowTileLabel(
             tile: QsTileModel,
             wifiSsidName: String? = null,
@@ -439,7 +454,7 @@ class TileRegistry(
                     "hotspot" -> Triple(if (hotspotOn) TileState.ACTIVE else TileState.INACTIVE, Icons.Default.WifiTethering, if (hotspotOn) "Active" else "Off")
                     "battery_saver" -> Triple(if (batterySaverOn) TileState.ACTIVE else TileState.INACTIVE, Icons.Default.BatterySaver, if (batterySaverOn) "On" else "Off")
                     "nfc" -> Triple(if (nfcOn) TileState.ACTIVE else TileState.INACTIVE, Icons.Default.Nfc, if (nfcOn) "On" else "Off")
-                    "dark_mode" -> Triple(if (darkThemeOn) TileState.ACTIVE else TileState.INACTIVE, Icons.Default.DarkMode, if (darkThemeOn) "On" else "Off")
+                    "dark_mode" -> resolveDarkModeTileState(darkThemeOn = darkThemeOn, batterySaverOn = batterySaverOn)
 
                     // Custom ROM / System Tiles
                     "caffeine" -> Triple(if (caffeineOn) TileState.ACTIVE else TileState.INACTIVE, Icons.Default.LocalCafe, if (caffeineOn) "Active" else "Off")
@@ -835,6 +850,11 @@ class TileRegistry(
                     sub = if (isForcedActive) "Forced On" else "Forced Off"
                 }
 
+                if (entity.tileId == "dark_mode" && batterySaverOn) {
+                    state = TileState.UNAVAILABLE
+                    sub = "Battery Saver"
+                }
+
                 val resolvedLabel = when (entity.tileId) {
                     "comp_countdown" -> compSnap.countdown.eventName
                     "comp_media_progress" -> activeMedia?.title?.takeIf { it.isNotBlank() } ?: entity.label
@@ -901,6 +921,12 @@ class TileRegistry(
      * Handles click via Universal System Tile Interoperability Protocol & Action Override Engine
      */
     fun handleTileClick(tile: QsTileModel) {
+        if (tile.state == TileState.UNAVAILABLE) {
+            return
+        }
+        if (tile.id == "dark_mode" && nativeTileManager.isBatterySaverEnabled.value) {
+            return
+        }
         val config = TileCommandRepository.getConfig(tile.id)
         if (config.blockStateChanging) {
             return

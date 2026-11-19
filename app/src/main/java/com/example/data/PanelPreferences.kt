@@ -860,6 +860,24 @@ object PanelPreferences {
     private const val KEY_ELEM_CLEAR_ALL_CUSTOM_COLOR_LIGHT = "elem_clear_all_custom_color_light"
     private const val KEY_ELEM_CLEAR_ALL_CUSTOM_COLOR_DARK = "elem_clear_all_custom_color_dark"
 
+    // Unified Per-Element Color Mode Keys (Light & Dark)
+    private const val KEY_ELEM_SURFACE_BG_MODE_LIGHT = "elem_surface_bg_mode_light"
+    private const val KEY_ELEM_SURFACE_BG_MODE_DARK = "elem_surface_bg_mode_dark"
+    private const val KEY_ELEM_PANEL_CONTAINER_MODE_LIGHT = "elem_panel_container_mode_light"
+    private const val KEY_ELEM_PANEL_CONTAINER_MODE_DARK = "elem_panel_container_mode_dark"
+    private const val KEY_ELEM_HEADER_GRADIENT_MODE_LIGHT = "elem_header_gradient_mode_light"
+    private const val KEY_ELEM_HEADER_GRADIENT_MODE_DARK = "elem_header_gradient_mode_dark"
+    private const val KEY_ELEM_QS_TILES_MODE_LIGHT = "elem_qs_tiles_mode_light"
+    private const val KEY_ELEM_QS_TILES_MODE_DARK = "elem_qs_tiles_mode_dark"
+    private const val KEY_ELEM_INACTIVE_TILES_MODE_LIGHT = "elem_inactive_tiles_mode_light"
+    private const val KEY_ELEM_INACTIVE_TILES_MODE_DARK = "elem_inactive_tiles_mode_dark"
+    private const val KEY_ELEM_SLIDERS_MODE_LIGHT = "elem_sliders_mode_light"
+    private const val KEY_ELEM_SLIDERS_MODE_DARK = "elem_sliders_mode_dark"
+    private const val KEY_ELEM_MISC_ELEMENTS_MODE_LIGHT = "elem_misc_elements_mode_light"
+    private const val KEY_ELEM_MISC_ELEMENTS_MODE_DARK = "elem_misc_elements_mode_dark"
+    private const val KEY_ELEM_CLEAR_ALL_MODE_LIGHT = "elem_clear_all_mode_light"
+    private const val KEY_ELEM_CLEAR_ALL_MODE_DARK = "elem_clear_all_mode_dark"
+
     // Active / Inactive Complication Arc & Track Per-Element Color Keys (Light & Dark)
     private const val KEY_ELEM_ACTIVE_COMP_ARC_MODE_LIGHT = "elem_active_comp_arc_mode_light"
     private const val KEY_ELEM_ACTIVE_COMP_ARC_MODE_DARK = "elem_active_comp_arc_mode_dark"
@@ -1291,6 +1309,47 @@ object PanelPreferences {
     val clearAllUseCustomDark: StateFlow<Boolean> = _clearAllUseCustomDark.asStateFlow()
     private val _clearAllCustomColorDark = MutableStateFlow(0xFF673AB7.toInt())
     val clearAllCustomColorDark: StateFlow<Int> = _clearAllCustomColorDark.asStateFlow()
+
+    // Unified Per-Element Color Mode StateFlows (Light & Dark)
+    private val _surfaceBgColorModeLight = MutableStateFlow(ComplicationArcMonetMode.DEFAULT)
+    val surfaceBgColorModeLight: StateFlow<ComplicationArcMonetMode> = _surfaceBgColorModeLight.asStateFlow()
+    private val _surfaceBgColorModeDark = MutableStateFlow(ComplicationArcMonetMode.DEFAULT)
+    val surfaceBgColorModeDark: StateFlow<ComplicationArcMonetMode> = _surfaceBgColorModeDark.asStateFlow()
+
+    private val _panelContainerColorModeLight = MutableStateFlow(ComplicationArcMonetMode.DEFAULT)
+    val panelContainerColorModeLight: StateFlow<ComplicationArcMonetMode> = _panelContainerColorModeLight.asStateFlow()
+    private val _panelContainerColorModeDark = MutableStateFlow(ComplicationArcMonetMode.DEFAULT)
+    val panelContainerColorModeDark: StateFlow<ComplicationArcMonetMode> = _panelContainerColorModeDark.asStateFlow()
+
+    private val _headerGradientColorModeLight = MutableStateFlow(ComplicationArcMonetMode.PRIMARY)
+    val headerGradientColorModeLight: StateFlow<ComplicationArcMonetMode> = _headerGradientColorModeLight.asStateFlow()
+    private val _headerGradientColorModeDark = MutableStateFlow(ComplicationArcMonetMode.PRIMARY)
+    val headerGradientColorModeDark: StateFlow<ComplicationArcMonetMode> = _headerGradientColorModeDark.asStateFlow()
+
+    private val _qsTilesColorModeLight = MutableStateFlow(ComplicationArcMonetMode.PRIMARY)
+    val qsTilesColorModeLight: StateFlow<ComplicationArcMonetMode> = _qsTilesColorModeLight.asStateFlow()
+    private val _qsTilesColorModeDark = MutableStateFlow(ComplicationArcMonetMode.PRIMARY)
+    val qsTilesColorModeDark: StateFlow<ComplicationArcMonetMode> = _qsTilesColorModeDark.asStateFlow()
+
+    private val _inactiveTilesColorModeLight = MutableStateFlow(ComplicationArcMonetMode.DEFAULT)
+    val inactiveTilesColorModeLight: StateFlow<ComplicationArcMonetMode> = _inactiveTilesColorModeLight.asStateFlow()
+    private val _inactiveTilesColorModeDark = MutableStateFlow(ComplicationArcMonetMode.DEFAULT)
+    val inactiveTilesColorModeDark: StateFlow<ComplicationArcMonetMode> = _inactiveTilesColorModeDark.asStateFlow()
+
+    private val _slidersColorModeLight = MutableStateFlow(ComplicationArcMonetMode.PRIMARY)
+    val slidersColorModeLight: StateFlow<ComplicationArcMonetMode> = _slidersColorModeLight.asStateFlow()
+    private val _slidersColorModeDark = MutableStateFlow(ComplicationArcMonetMode.PRIMARY)
+    val slidersColorModeDark: StateFlow<ComplicationArcMonetMode> = _slidersColorModeDark.asStateFlow()
+
+    private val _miscElementsColorModeLight = MutableStateFlow(ComplicationArcMonetMode.PRIMARY)
+    val miscElementsColorModeLight: StateFlow<ComplicationArcMonetMode> = _miscElementsColorModeLight.asStateFlow()
+    private val _miscElementsColorModeDark = MutableStateFlow(ComplicationArcMonetMode.PRIMARY)
+    val miscElementsColorModeDark: StateFlow<ComplicationArcMonetMode> = _miscElementsColorModeDark.asStateFlow()
+
+    private val _clearAllColorModeLight = MutableStateFlow(ComplicationArcMonetMode.PRIMARY)
+    val clearAllColorModeLight: StateFlow<ComplicationArcMonetMode> = _clearAllColorModeLight.asStateFlow()
+    private val _clearAllColorModeDark = MutableStateFlow(ComplicationArcMonetMode.PRIMARY)
+    val clearAllColorModeDark: StateFlow<ComplicationArcMonetMode> = _clearAllColorModeDark.asStateFlow()
 
     // Active Complication Arcs StateFlows (Light & Dark)
     private val _activeCompArcModeLight = MutableStateFlow(ComplicationArcMonetMode.DEFAULT)
@@ -2272,6 +2331,70 @@ object PanelPreferences {
         _clearAllUseCustomDark.value = prefs.getBoolean(KEY_ELEM_CLEAR_ALL_USE_CUSTOM_DARK, false)
         _clearAllCustomColorLight.value = prefs.getInt(KEY_ELEM_CLEAR_ALL_CUSTOM_COLOR_LIGHT, 0xFF673AB7.toInt())
         _clearAllCustomColorDark.value = prefs.getInt(KEY_ELEM_CLEAR_ALL_CUSTOM_COLOR_DARK, 0xFF673AB7.toInt())
+
+        _surfaceBgColorModeLight.value = prefs.getString(KEY_ELEM_SURFACE_BG_MODE_LIGHT, null)?.let {
+            ComplicationArcMonetMode.fromId(it)
+        } ?: if (_surfaceBgColorTertiaryLight.value) ComplicationArcMonetMode.TERTIARY else ComplicationArcMonetMode.DEFAULT
+        _surfaceBgColorModeDark.value = prefs.getString(KEY_ELEM_SURFACE_BG_MODE_DARK, null)?.let {
+            ComplicationArcMonetMode.fromId(it)
+        } ?: if (_surfaceBgColorTertiaryDark.value) ComplicationArcMonetMode.TERTIARY else ComplicationArcMonetMode.DEFAULT
+
+        _panelContainerColorModeLight.value = prefs.getString(KEY_ELEM_PANEL_CONTAINER_MODE_LIGHT, null)?.let {
+            ComplicationArcMonetMode.fromId(it)
+        } ?: if (_panelContainerColorTertiaryLight.value) ComplicationArcMonetMode.TERTIARY else ComplicationArcMonetMode.DEFAULT
+        _panelContainerColorModeDark.value = prefs.getString(KEY_ELEM_PANEL_CONTAINER_MODE_DARK, null)?.let {
+            ComplicationArcMonetMode.fromId(it)
+        } ?: if (_panelContainerColorTertiaryDark.value) ComplicationArcMonetMode.TERTIARY else ComplicationArcMonetMode.DEFAULT
+
+        _headerGradientColorModeLight.value = prefs.getString(KEY_ELEM_HEADER_GRADIENT_MODE_LIGHT, null)?.let {
+            ComplicationArcMonetMode.fromId(it)
+        } ?: if (_headerGradientColorTertiaryLight.value) ComplicationArcMonetMode.TERTIARY else ComplicationArcMonetMode.PRIMARY
+        _headerGradientColorModeDark.value = prefs.getString(KEY_ELEM_HEADER_GRADIENT_MODE_DARK, null)?.let {
+            ComplicationArcMonetMode.fromId(it)
+        } ?: if (_headerGradientColorTertiaryDark.value) ComplicationArcMonetMode.TERTIARY else ComplicationArcMonetMode.PRIMARY
+
+        _qsTilesColorModeLight.value = prefs.getString(KEY_ELEM_QS_TILES_MODE_LIGHT, null)?.let {
+            ComplicationArcMonetMode.fromId(it)
+        } ?: if (_qsTilesColorTertiaryLight.value) ComplicationArcMonetMode.TERTIARY else ComplicationArcMonetMode.PRIMARY
+        _qsTilesColorModeDark.value = prefs.getString(KEY_ELEM_QS_TILES_MODE_DARK, null)?.let {
+            ComplicationArcMonetMode.fromId(it)
+        } ?: if (_qsTilesColorTertiaryDark.value) ComplicationArcMonetMode.TERTIARY else ComplicationArcMonetMode.PRIMARY
+
+        _inactiveTilesColorModeLight.value = prefs.getString(KEY_ELEM_INACTIVE_TILES_MODE_LIGHT, null)?.let {
+            ComplicationArcMonetMode.fromId(it)
+        } ?: when {
+            _inactiveTilesColorTertiaryLight.value -> ComplicationArcMonetMode.TERTIARY
+            _inactiveTilesColorPrimaryLight.value -> ComplicationArcMonetMode.PRIMARY
+            else -> ComplicationArcMonetMode.DEFAULT
+        }
+        _inactiveTilesColorModeDark.value = prefs.getString(KEY_ELEM_INACTIVE_TILES_MODE_DARK, null)?.let {
+            ComplicationArcMonetMode.fromId(it)
+        } ?: when {
+            _inactiveTilesColorTertiaryDark.value -> ComplicationArcMonetMode.TERTIARY
+            _inactiveTilesColorPrimaryDark.value -> ComplicationArcMonetMode.PRIMARY
+            else -> ComplicationArcMonetMode.DEFAULT
+        }
+
+        _slidersColorModeLight.value = prefs.getString(KEY_ELEM_SLIDERS_MODE_LIGHT, null)?.let {
+            ComplicationArcMonetMode.fromId(it)
+        } ?: if (_slidersColorTertiaryLight.value) ComplicationArcMonetMode.TERTIARY else ComplicationArcMonetMode.PRIMARY
+        _slidersColorModeDark.value = prefs.getString(KEY_ELEM_SLIDERS_MODE_DARK, null)?.let {
+            ComplicationArcMonetMode.fromId(it)
+        } ?: if (_slidersColorTertiaryDark.value) ComplicationArcMonetMode.TERTIARY else ComplicationArcMonetMode.PRIMARY
+
+        _miscElementsColorModeLight.value = prefs.getString(KEY_ELEM_MISC_ELEMENTS_MODE_LIGHT, null)?.let {
+            ComplicationArcMonetMode.fromId(it)
+        } ?: if (_miscElementsColorTertiaryLight.value) ComplicationArcMonetMode.TERTIARY else ComplicationArcMonetMode.PRIMARY
+        _miscElementsColorModeDark.value = prefs.getString(KEY_ELEM_MISC_ELEMENTS_MODE_DARK, null)?.let {
+            ComplicationArcMonetMode.fromId(it)
+        } ?: if (_miscElementsColorTertiaryDark.value) ComplicationArcMonetMode.TERTIARY else ComplicationArcMonetMode.PRIMARY
+
+        _clearAllColorModeLight.value = prefs.getString(KEY_ELEM_CLEAR_ALL_MODE_LIGHT, null)?.let {
+            ComplicationArcMonetMode.fromId(it)
+        } ?: if (_clearAllColorTertiaryLight.value) ComplicationArcMonetMode.TERTIARY else ComplicationArcMonetMode.PRIMARY
+        _clearAllColorModeDark.value = prefs.getString(KEY_ELEM_CLEAR_ALL_MODE_DARK, null)?.let {
+            ComplicationArcMonetMode.fromId(it)
+        } ?: if (_clearAllColorTertiaryDark.value) ComplicationArcMonetMode.TERTIARY else ComplicationArcMonetMode.PRIMARY
 
         _activeCompArcModeLight.value = ComplicationArcMonetMode.fromId(
             prefs.getString(KEY_ELEM_ACTIVE_COMP_ARC_MODE_LIGHT, ComplicationArcMonetMode.DEFAULT.id)
@@ -4159,125 +4282,306 @@ object PanelPreferences {
     }
 
     fun setSurfaceBgColorTertiary(context: Context, isDark: Boolean, enabled: Boolean) {
+        val mode = if (enabled) ComplicationArcMonetMode.TERTIARY else ComplicationArcMonetMode.DEFAULT
         if (isDark) {
             _surfaceBgColorTertiaryDark.value = enabled
+            _surfaceBgColorModeDark.value = mode
         } else {
             _surfaceBgColorTertiaryLight.value = enabled
+            _surfaceBgColorModeLight.value = mode
         }
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(
-            if (isDark) KEY_ELEM_SURFACE_BG_TERTIARY_DARK else KEY_ELEM_SURFACE_BG_TERTIARY_LIGHT,
-            enabled
-        ).apply()
+        prefs.edit()
+            .putBoolean(if (isDark) KEY_ELEM_SURFACE_BG_TERTIARY_DARK else KEY_ELEM_SURFACE_BG_TERTIARY_LIGHT, enabled)
+            .putString(if (isDark) KEY_ELEM_SURFACE_BG_MODE_DARK else KEY_ELEM_SURFACE_BG_MODE_LIGHT, mode.id)
+            .apply()
     }
 
     fun setPanelContainerColorTertiary(context: Context, isDark: Boolean, enabled: Boolean) {
+        val mode = if (enabled) ComplicationArcMonetMode.TERTIARY else ComplicationArcMonetMode.DEFAULT
         if (isDark) {
             _panelContainerColorTertiaryDark.value = enabled
+            _panelContainerColorModeDark.value = mode
         } else {
             _panelContainerColorTertiaryLight.value = enabled
+            _panelContainerColorModeLight.value = mode
         }
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(
-            if (isDark) KEY_ELEM_PANEL_CONTAINER_TERTIARY_DARK else KEY_ELEM_PANEL_CONTAINER_TERTIARY_LIGHT,
-            enabled
-        ).apply()
+        prefs.edit()
+            .putBoolean(if (isDark) KEY_ELEM_PANEL_CONTAINER_TERTIARY_DARK else KEY_ELEM_PANEL_CONTAINER_TERTIARY_LIGHT, enabled)
+            .putString(if (isDark) KEY_ELEM_PANEL_CONTAINER_MODE_DARK else KEY_ELEM_PANEL_CONTAINER_MODE_LIGHT, mode.id)
+            .apply()
     }
 
     fun setHeaderGradientColorTertiary(context: Context, isDark: Boolean, enabled: Boolean) {
         _headerGradientColorTertiary.value = enabled
+        val mode = if (enabled) ComplicationArcMonetMode.TERTIARY else ComplicationArcMonetMode.PRIMARY
         if (isDark) {
             _headerGradientColorTertiaryDark.value = enabled
+            _headerGradientColorModeDark.value = mode
         } else {
             _headerGradientColorTertiaryLight.value = enabled
+            _headerGradientColorModeLight.value = mode
         }
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_ELEM_HEADER_GRADIENT_TERTIARY, enabled).putBoolean(
-            if (isDark) KEY_ELEM_HEADER_GRADIENT_TERTIARY_DARK else KEY_ELEM_HEADER_GRADIENT_TERTIARY_LIGHT,
-            enabled
-        ).apply()
+        prefs.edit().putBoolean(KEY_ELEM_HEADER_GRADIENT_TERTIARY, enabled)
+            .putBoolean(if (isDark) KEY_ELEM_HEADER_GRADIENT_TERTIARY_DARK else KEY_ELEM_HEADER_GRADIENT_TERTIARY_LIGHT, enabled)
+            .putString(if (isDark) KEY_ELEM_HEADER_GRADIENT_MODE_DARK else KEY_ELEM_HEADER_GRADIENT_MODE_LIGHT, mode.id)
+            .apply()
     }
 
     fun setQsTilesColorTertiary(context: Context, isDark: Boolean, enabled: Boolean) {
+        val mode = if (enabled) ComplicationArcMonetMode.TERTIARY else ComplicationArcMonetMode.PRIMARY
         if (isDark) {
             _qsTilesColorTertiaryDark.value = enabled
+            _qsTilesColorModeDark.value = mode
         } else {
             _qsTilesColorTertiaryLight.value = enabled
+            _qsTilesColorModeLight.value = mode
         }
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(
-            if (isDark) KEY_ELEM_QS_TILES_TERTIARY_DARK else KEY_ELEM_QS_TILES_TERTIARY_LIGHT,
-            enabled
-        ).apply()
+        prefs.edit()
+            .putBoolean(if (isDark) KEY_ELEM_QS_TILES_TERTIARY_DARK else KEY_ELEM_QS_TILES_TERTIARY_LIGHT, enabled)
+            .putString(if (isDark) KEY_ELEM_QS_TILES_MODE_DARK else KEY_ELEM_QS_TILES_MODE_LIGHT, mode.id)
+            .apply()
     }
 
     fun setInactiveTilesColorTertiary(context: Context, isDark: Boolean, enabled: Boolean) {
+        val curPrimary = if (isDark) _inactiveTilesColorPrimaryDark.value else _inactiveTilesColorPrimaryLight.value
+        val mode = when {
+            enabled -> ComplicationArcMonetMode.TERTIARY
+            curPrimary -> ComplicationArcMonetMode.PRIMARY
+            else -> ComplicationArcMonetMode.DEFAULT
+        }
         if (isDark) {
             _inactiveTilesColorTertiaryDark.value = enabled
+            _inactiveTilesColorModeDark.value = mode
         } else {
             _inactiveTilesColorTertiaryLight.value = enabled
+            _inactiveTilesColorModeLight.value = mode
         }
         _inactiveTilesColorTertiary.value = enabled
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(
-            if (isDark) KEY_ELEM_INACTIVE_TILES_TERTIARY_DARK else KEY_ELEM_INACTIVE_TILES_TERTIARY_LIGHT,
-            enabled
-        ).apply()
+        prefs.edit()
+            .putBoolean(if (isDark) KEY_ELEM_INACTIVE_TILES_TERTIARY_DARK else KEY_ELEM_INACTIVE_TILES_TERTIARY_LIGHT, enabled)
+            .putString(if (isDark) KEY_ELEM_INACTIVE_TILES_MODE_DARK else KEY_ELEM_INACTIVE_TILES_MODE_LIGHT, mode.id)
+            .apply()
     }
 
     fun setInactiveTilesColorPrimary(context: Context, isDark: Boolean, enabled: Boolean) {
+        val curTertiary = if (isDark) _inactiveTilesColorTertiaryDark.value else _inactiveTilesColorTertiaryLight.value
+        val mode = when {
+            enabled -> ComplicationArcMonetMode.PRIMARY
+            curTertiary -> ComplicationArcMonetMode.TERTIARY
+            else -> ComplicationArcMonetMode.DEFAULT
+        }
         if (isDark) {
             _inactiveTilesColorPrimaryDark.value = enabled
+            _inactiveTilesColorModeDark.value = mode
         } else {
             _inactiveTilesColorPrimaryLight.value = enabled
+            _inactiveTilesColorModeLight.value = mode
         }
         _inactiveTilesColorPrimary.value = enabled
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(
-            if (isDark) KEY_ELEM_INACTIVE_TILES_PRIMARY_DARK else KEY_ELEM_INACTIVE_TILES_PRIMARY_LIGHT,
-            enabled
-        ).apply()
+        prefs.edit()
+            .putBoolean(if (isDark) KEY_ELEM_INACTIVE_TILES_PRIMARY_DARK else KEY_ELEM_INACTIVE_TILES_PRIMARY_LIGHT, enabled)
+            .putString(if (isDark) KEY_ELEM_INACTIVE_TILES_MODE_DARK else KEY_ELEM_INACTIVE_TILES_MODE_LIGHT, mode.id)
+            .apply()
     }
 
     fun setSlidersColorTertiary(context: Context, isDark: Boolean, enabled: Boolean) {
+        val mode = if (enabled) ComplicationArcMonetMode.TERTIARY else ComplicationArcMonetMode.PRIMARY
         if (isDark) {
             _slidersColorTertiaryDark.value = enabled
+            _slidersColorModeDark.value = mode
         } else {
             _slidersColorTertiaryLight.value = enabled
+            _slidersColorModeLight.value = mode
         }
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(
-            if (isDark) KEY_ELEM_SLIDERS_TERTIARY_DARK else KEY_ELEM_SLIDERS_TERTIARY_LIGHT,
-            enabled
-        ).apply()
+        prefs.edit()
+            .putBoolean(if (isDark) KEY_ELEM_SLIDERS_TERTIARY_DARK else KEY_ELEM_SLIDERS_TERTIARY_LIGHT, enabled)
+            .putString(if (isDark) KEY_ELEM_SLIDERS_MODE_DARK else KEY_ELEM_SLIDERS_MODE_LIGHT, mode.id)
+            .apply()
     }
 
     fun setMiscElementsColorTertiary(context: Context, isDark: Boolean, enabled: Boolean) {
         _miscElementsColorTertiary.value = enabled
+        val mode = if (enabled) ComplicationArcMonetMode.TERTIARY else ComplicationArcMonetMode.PRIMARY
         if (isDark) {
             _miscElementsColorTertiaryDark.value = enabled
+            _miscElementsColorModeDark.value = mode
         } else {
             _miscElementsColorTertiaryLight.value = enabled
+            _miscElementsColorModeLight.value = mode
         }
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_ELEM_MISC_ELEMENTS_TERTIARY, enabled).putBoolean(
-            if (isDark) KEY_ELEM_MISC_ELEMENTS_TERTIARY_DARK else KEY_ELEM_MISC_ELEMENTS_TERTIARY_LIGHT,
-            enabled
-        ).apply()
+        prefs.edit().putBoolean(KEY_ELEM_MISC_ELEMENTS_TERTIARY, enabled)
+            .putBoolean(if (isDark) KEY_ELEM_MISC_ELEMENTS_TERTIARY_DARK else KEY_ELEM_MISC_ELEMENTS_TERTIARY_LIGHT, enabled)
+            .putString(if (isDark) KEY_ELEM_MISC_ELEMENTS_MODE_DARK else KEY_ELEM_MISC_ELEMENTS_MODE_LIGHT, mode.id)
+            .apply()
     }
 
     fun setClearAllColorTertiary(context: Context, isDark: Boolean, enabled: Boolean) {
         _clearAllColorTertiary.value = enabled
+        val mode = if (enabled) ComplicationArcMonetMode.TERTIARY else ComplicationArcMonetMode.PRIMARY
         if (isDark) {
             _clearAllColorTertiaryDark.value = enabled
+            _clearAllColorModeDark.value = mode
         } else {
             _clearAllColorTertiaryLight.value = enabled
+            _clearAllColorModeLight.value = mode
         }
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_ELEM_CLEAR_ALL_TERTIARY, enabled).putBoolean(
-            if (isDark) KEY_ELEM_CLEAR_ALL_TERTIARY_DARK else KEY_ELEM_CLEAR_ALL_TERTIARY_LIGHT,
-            enabled
-        ).apply()
+        prefs.edit().putBoolean(KEY_ELEM_CLEAR_ALL_TERTIARY, enabled)
+            .putBoolean(if (isDark) KEY_ELEM_CLEAR_ALL_TERTIARY_DARK else KEY_ELEM_CLEAR_ALL_TERTIARY_LIGHT, enabled)
+            .putString(if (isDark) KEY_ELEM_CLEAR_ALL_MODE_DARK else KEY_ELEM_CLEAR_ALL_MODE_LIGHT, mode.id)
+            .apply()
+    }
+
+    fun setSurfaceBgColorMode(context: Context, isDark: Boolean, mode: ComplicationArcMonetMode) {
+        val isTertiary = mode == ComplicationArcMonetMode.TERTIARY
+        if (isDark) {
+            _surfaceBgColorModeDark.value = mode
+            _surfaceBgColorTertiaryDark.value = isTertiary
+        } else {
+            _surfaceBgColorModeLight.value = mode
+            _surfaceBgColorTertiaryLight.value = isTertiary
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString(if (isDark) KEY_ELEM_SURFACE_BG_MODE_DARK else KEY_ELEM_SURFACE_BG_MODE_LIGHT, mode.id)
+            .putBoolean(if (isDark) KEY_ELEM_SURFACE_BG_TERTIARY_DARK else KEY_ELEM_SURFACE_BG_TERTIARY_LIGHT, isTertiary)
+            .apply()
+    }
+
+    fun setPanelContainerColorMode(context: Context, isDark: Boolean, mode: ComplicationArcMonetMode) {
+        val isTertiary = mode == ComplicationArcMonetMode.TERTIARY
+        if (isDark) {
+            _panelContainerColorModeDark.value = mode
+            _panelContainerColorTertiaryDark.value = isTertiary
+        } else {
+            _panelContainerColorModeLight.value = mode
+            _panelContainerColorTertiaryLight.value = isTertiary
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString(if (isDark) KEY_ELEM_PANEL_CONTAINER_MODE_DARK else KEY_ELEM_PANEL_CONTAINER_MODE_LIGHT, mode.id)
+            .putBoolean(if (isDark) KEY_ELEM_PANEL_CONTAINER_TERTIARY_DARK else KEY_ELEM_PANEL_CONTAINER_TERTIARY_LIGHT, isTertiary)
+            .apply()
+    }
+
+    fun setHeaderGradientColorMode(context: Context, isDark: Boolean, mode: ComplicationArcMonetMode) {
+        val isTertiary = mode == ComplicationArcMonetMode.TERTIARY
+        _headerGradientColorTertiary.value = isTertiary
+        if (isDark) {
+            _headerGradientColorModeDark.value = mode
+            _headerGradientColorTertiaryDark.value = isTertiary
+        } else {
+            _headerGradientColorModeLight.value = mode
+            _headerGradientColorTertiaryLight.value = isTertiary
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString(if (isDark) KEY_ELEM_HEADER_GRADIENT_MODE_DARK else KEY_ELEM_HEADER_GRADIENT_MODE_LIGHT, mode.id)
+            .putBoolean(if (isDark) KEY_ELEM_HEADER_GRADIENT_TERTIARY_DARK else KEY_ELEM_HEADER_GRADIENT_TERTIARY_LIGHT, isTertiary)
+            .putBoolean(KEY_ELEM_HEADER_GRADIENT_TERTIARY, isTertiary)
+            .apply()
+    }
+
+    fun setQsTilesColorMode(context: Context, isDark: Boolean, mode: ComplicationArcMonetMode) {
+        val isTertiary = mode == ComplicationArcMonetMode.TERTIARY
+        _qsTilesColorTertiary.value = isTertiary
+        if (isDark) {
+            _qsTilesColorModeDark.value = mode
+            _qsTilesColorTertiaryDark.value = isTertiary
+        } else {
+            _qsTilesColorModeLight.value = mode
+            _qsTilesColorTertiaryLight.value = isTertiary
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString(if (isDark) KEY_ELEM_QS_TILES_MODE_DARK else KEY_ELEM_QS_TILES_MODE_LIGHT, mode.id)
+            .putBoolean(if (isDark) KEY_ELEM_QS_TILES_TERTIARY_DARK else KEY_ELEM_QS_TILES_TERTIARY_LIGHT, isTertiary)
+            .putBoolean(KEY_ELEM_QS_TILES_TERTIARY, isTertiary)
+            .apply()
+    }
+
+    fun setInactiveTilesColorMode(context: Context, isDark: Boolean, mode: ComplicationArcMonetMode) {
+        val isPrimary = mode == ComplicationArcMonetMode.PRIMARY
+        val isTertiary = mode == ComplicationArcMonetMode.TERTIARY
+        _inactiveTilesColorPrimary.value = isPrimary
+        _inactiveTilesColorTertiary.value = isTertiary
+        if (isDark) {
+            _inactiveTilesColorModeDark.value = mode
+            _inactiveTilesColorPrimaryDark.value = isPrimary
+            _inactiveTilesColorTertiaryDark.value = isTertiary
+        } else {
+            _inactiveTilesColorModeLight.value = mode
+            _inactiveTilesColorPrimaryLight.value = isPrimary
+            _inactiveTilesColorTertiaryLight.value = isTertiary
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString(if (isDark) KEY_ELEM_INACTIVE_TILES_MODE_DARK else KEY_ELEM_INACTIVE_TILES_MODE_LIGHT, mode.id)
+            .putBoolean(if (isDark) KEY_ELEM_INACTIVE_TILES_PRIMARY_DARK else KEY_ELEM_INACTIVE_TILES_PRIMARY_LIGHT, isPrimary)
+            .putBoolean(if (isDark) KEY_ELEM_INACTIVE_TILES_TERTIARY_DARK else KEY_ELEM_INACTIVE_TILES_TERTIARY_LIGHT, isTertiary)
+            .apply()
+    }
+
+    fun setSlidersColorMode(context: Context, isDark: Boolean, mode: ComplicationArcMonetMode) {
+        val isTertiary = mode == ComplicationArcMonetMode.TERTIARY
+        _slidersColorTertiary.value = isTertiary
+        if (isDark) {
+            _slidersColorModeDark.value = mode
+            _slidersColorTertiaryDark.value = isTertiary
+        } else {
+            _slidersColorModeLight.value = mode
+            _slidersColorTertiaryLight.value = isTertiary
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString(if (isDark) KEY_ELEM_SLIDERS_MODE_DARK else KEY_ELEM_SLIDERS_MODE_LIGHT, mode.id)
+            .putBoolean(if (isDark) KEY_ELEM_SLIDERS_TERTIARY_DARK else KEY_ELEM_SLIDERS_TERTIARY_LIGHT, isTertiary)
+            .putBoolean(KEY_ELEM_SLIDERS_TERTIARY, isTertiary)
+            .apply()
+    }
+
+    fun setMiscElementsColorMode(context: Context, isDark: Boolean, mode: ComplicationArcMonetMode) {
+        val isTertiary = mode == ComplicationArcMonetMode.TERTIARY
+        _miscElementsColorTertiary.value = isTertiary
+        if (isDark) {
+            _miscElementsColorModeDark.value = mode
+            _miscElementsColorTertiaryDark.value = isTertiary
+        } else {
+            _miscElementsColorModeLight.value = mode
+            _miscElementsColorTertiaryLight.value = isTertiary
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString(if (isDark) KEY_ELEM_MISC_ELEMENTS_MODE_DARK else KEY_ELEM_MISC_ELEMENTS_MODE_LIGHT, mode.id)
+            .putBoolean(if (isDark) KEY_ELEM_MISC_ELEMENTS_TERTIARY_DARK else KEY_ELEM_MISC_ELEMENTS_TERTIARY_LIGHT, isTertiary)
+            .putBoolean(KEY_ELEM_MISC_ELEMENTS_TERTIARY, isTertiary)
+            .apply()
+    }
+
+    fun setClearAllColorMode(context: Context, isDark: Boolean, mode: ComplicationArcMonetMode) {
+        val isTertiary = mode == ComplicationArcMonetMode.TERTIARY
+        _clearAllColorTertiary.value = isTertiary
+        if (isDark) {
+            _clearAllColorModeDark.value = mode
+            _clearAllColorTertiaryDark.value = isTertiary
+        } else {
+            _clearAllColorModeLight.value = mode
+            _clearAllColorTertiaryLight.value = isTertiary
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString(if (isDark) KEY_ELEM_CLEAR_ALL_MODE_DARK else KEY_ELEM_CLEAR_ALL_MODE_LIGHT, mode.id)
+            .putBoolean(if (isDark) KEY_ELEM_CLEAR_ALL_TERTIARY_DARK else KEY_ELEM_CLEAR_ALL_TERTIARY_LIGHT, isTertiary)
+            .putBoolean(KEY_ELEM_CLEAR_ALL_TERTIARY, isTertiary)
+            .apply()
     }
 
     fun setSurfaceBgHsb(context: Context, isDark: Boolean, hue: Float, sat: Float, valFactor: Float) {
@@ -4433,6 +4737,15 @@ object PanelPreferences {
     fun getSlidersColorTertiary(isDark: Boolean): StateFlow<Boolean> = if (isDark) slidersColorTertiaryDark else slidersColorTertiaryLight
     fun getMiscElementsColorTertiary(isDark: Boolean): StateFlow<Boolean> = if (isDark) miscElementsColorTertiaryDark else miscElementsColorTertiaryLight
     fun getClearAllColorTertiary(isDark: Boolean): StateFlow<Boolean> = if (isDark) clearAllColorTertiaryDark else clearAllColorTertiaryLight
+
+    fun getSurfaceBgColorMode(isDark: Boolean): StateFlow<ComplicationArcMonetMode> = if (isDark) surfaceBgColorModeDark else surfaceBgColorModeLight
+    fun getPanelContainerColorMode(isDark: Boolean): StateFlow<ComplicationArcMonetMode> = if (isDark) panelContainerColorModeDark else panelContainerColorModeLight
+    fun getHeaderGradientColorMode(isDark: Boolean): StateFlow<ComplicationArcMonetMode> = if (isDark) headerGradientColorModeDark else headerGradientColorModeLight
+    fun getQsTilesColorMode(isDark: Boolean): StateFlow<ComplicationArcMonetMode> = if (isDark) qsTilesColorModeDark else qsTilesColorModeLight
+    fun getInactiveTilesColorMode(isDark: Boolean): StateFlow<ComplicationArcMonetMode> = if (isDark) inactiveTilesColorModeDark else inactiveTilesColorModeLight
+    fun getSlidersColorMode(isDark: Boolean): StateFlow<ComplicationArcMonetMode> = if (isDark) slidersColorModeDark else slidersColorModeLight
+    fun getMiscElementsColorMode(isDark: Boolean): StateFlow<ComplicationArcMonetMode> = if (isDark) miscElementsColorModeDark else miscElementsColorModeLight
+    fun getClearAllColorMode(isDark: Boolean): StateFlow<ComplicationArcMonetMode> = if (isDark) clearAllColorModeDark else clearAllColorModeLight
 
     fun getSurfaceBgHue(isDark: Boolean): StateFlow<Float> = if (isDark) surfaceBgHueDark else surfaceBgHueLight
     fun getSurfaceBgSat(isDark: Boolean): StateFlow<Float> = if (isDark) surfaceBgSatDark else surfaceBgSatLight
@@ -4721,15 +5034,14 @@ object PanelPreferences {
 
     fun syncElementColors(context: Context, fromDark: Boolean) {
         val toDark = !fromDark
-        setSurfaceBgColorTertiary(context, toDark, getSurfaceBgColorTertiary(fromDark).value)
-        setPanelContainerColorTertiary(context, toDark, getPanelContainerColorTertiary(fromDark).value)
-        setHeaderGradientColorTertiary(context, toDark, getHeaderGradientColorTertiary(fromDark).value)
-        setQsTilesColorTertiary(context, toDark, getQsTilesColorTertiary(fromDark).value)
-        setInactiveTilesColorTertiary(context, toDark, getInactiveTilesColorTertiary(fromDark).value)
-        setInactiveTilesColorPrimary(context, toDark, getInactiveTilesColorPrimary(fromDark).value)
-        setSlidersColorTertiary(context, toDark, getSlidersColorTertiary(fromDark).value)
-        setMiscElementsColorTertiary(context, toDark, getMiscElementsColorTertiary(fromDark).value)
-        setClearAllColorTertiary(context, toDark, getClearAllColorTertiary(fromDark).value)
+        setSurfaceBgColorMode(context, toDark, getSurfaceBgColorMode(fromDark).value)
+        setPanelContainerColorMode(context, toDark, getPanelContainerColorMode(fromDark).value)
+        setHeaderGradientColorMode(context, toDark, getHeaderGradientColorMode(fromDark).value)
+        setQsTilesColorMode(context, toDark, getQsTilesColorMode(fromDark).value)
+        setInactiveTilesColorMode(context, toDark, getInactiveTilesColorMode(fromDark).value)
+        setSlidersColorMode(context, toDark, getSlidersColorMode(fromDark).value)
+        setMiscElementsColorMode(context, toDark, getMiscElementsColorMode(fromDark).value)
+        setClearAllColorMode(context, toDark, getClearAllColorMode(fromDark).value)
 
         setSurfaceBgHsb(context, toDark, getSurfaceBgHue(fromDark).value, getSurfaceBgSat(fromDark).value, getSurfaceBgVal(fromDark).value)
         setPanelContainerHsb(context, toDark, getPanelContainerHue(fromDark).value, getPanelContainerSat(fromDark).value, getPanelContainerVal(fromDark).value)

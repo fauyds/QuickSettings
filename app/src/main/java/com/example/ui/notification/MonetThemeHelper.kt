@@ -15,8 +15,15 @@ import androidx.core.content.ContextCompat
  */
 object MonetThemeHelper {
 
+    private fun getColorScheme(context: Context, isDark: Boolean): androidx.compose.material3.ColorScheme {
+        return com.example.ui.theme.getDynamicColorScheme(context = context, isDark = isDark, dynamicColor = true)
+    }
+
     fun getPrimaryAccent(context: Context, isDark: Boolean): Int {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            try {
+                return getColorScheme(context, isDark).primary.toArgb()
+            } catch (_: Throwable) {}
             try {
                 val resId = if (isDark) android.R.color.system_accent1_200 else android.R.color.system_accent1_600
                 val color = ContextCompat.getColor(context, resId)
@@ -26,13 +33,26 @@ object MonetThemeHelper {
         return if (isDark) Color.parseColor("#D0BCFF") else Color.parseColor("#6750A4")
     }
 
+    private fun resolveAccentByMode(
+        context: Context,
+        isDark: Boolean,
+        mode: com.example.data.ComplicationArcMonetMode
+    ): Int {
+        return when (mode) {
+            com.example.data.ComplicationArcMonetMode.SECONDARY -> getSecondaryAccent(context, isDark)
+            com.example.data.ComplicationArcMonetMode.TERTIARY -> getTertiaryAccent(context, isDark)
+            com.example.data.ComplicationArcMonetMode.PRIMARY,
+            com.example.data.ComplicationArcMonetMode.DEFAULT -> getPrimaryAccent(context, isDark)
+        }
+    }
+
     fun getClearAllAccent(context: Context, isDark: Boolean): Int {
         val useCustom = com.example.data.PanelPreferences.getClearAllUseCustom(isDark).value
         if (useCustom) {
             return com.example.data.PanelPreferences.getClearAllCustomColor(isDark).value
         }
-        val isTertiary = com.example.data.PanelPreferences.getClearAllColorTertiary(isDark).value
-        val baseColor = if (isTertiary) getTertiaryAccent(context, isDark) else getPrimaryAccent(context, isDark)
+        val mode = com.example.data.PanelPreferences.getClearAllColorMode(isDark).value
+        val baseColor = resolveAccentByMode(context, isDark, mode)
         val hue = com.example.data.PanelPreferences.getClearAllHue(isDark).value
         val sat = com.example.data.PanelPreferences.getClearAllSat(isDark).value
         val valFactor = com.example.data.PanelPreferences.getClearAllVal(isDark).value
@@ -54,8 +74,8 @@ object MonetThemeHelper {
         if (useCustom) {
             return com.example.data.PanelPreferences.getQsTilesCustomColor(isDark).value
         }
-        val isTertiary = com.example.data.PanelPreferences.getQsTilesColorTertiary(isDark).value
-        val baseColor = if (isTertiary) getTertiaryAccent(context, isDark) else getPrimaryAccent(context, isDark)
+        val mode = com.example.data.PanelPreferences.getQsTilesColorMode(isDark).value
+        val baseColor = resolveAccentByMode(context, isDark, mode)
         val hue = com.example.data.PanelPreferences.getQsTilesHue(isDark).value
         val sat = com.example.data.PanelPreferences.getQsTilesSat(isDark).value
         val valFactor = com.example.data.PanelPreferences.getQsTilesVal(isDark).value
@@ -77,8 +97,8 @@ object MonetThemeHelper {
         if (useCustom) {
             return com.example.data.PanelPreferences.getSlidersCustomColor(isDark).value
         }
-        val isTertiary = com.example.data.PanelPreferences.getSlidersColorTertiary(isDark).value
-        val baseColor = if (isTertiary) getTertiaryAccent(context, isDark) else getPrimaryAccent(context, isDark)
+        val mode = com.example.data.PanelPreferences.getSlidersColorMode(isDark).value
+        val baseColor = resolveAccentByMode(context, isDark, mode)
         val hue = com.example.data.PanelPreferences.getSlidersHue(isDark).value
         val sat = com.example.data.PanelPreferences.getSlidersSat(isDark).value
         val valFactor = com.example.data.PanelPreferences.getSlidersVal(isDark).value
@@ -100,12 +120,13 @@ object MonetThemeHelper {
         if (useCustom) {
             return com.example.data.PanelPreferences.getInactiveTilesCustomColor(isDark).value
         }
-        val isPrimary = com.example.data.PanelPreferences.getInactiveTilesColorPrimary(isDark).value
-        val isTertiary = com.example.data.PanelPreferences.getInactiveTilesColorTertiary(isDark).value
-        val baseColor = when {
-            isTertiary -> getTertiaryAccent(context, isDark)
-            isPrimary -> getPrimaryAccent(context, isDark)
-            else -> getActionBackground(context, isDark)
+        val mode = com.example.data.PanelPreferences.getInactiveTilesColorMode(isDark).value
+        val scheme = getColorScheme(context, isDark)
+        val baseColor = when (mode) {
+            com.example.data.ComplicationArcMonetMode.PRIMARY -> scheme.primaryContainer.toArgb()
+            com.example.data.ComplicationArcMonetMode.SECONDARY -> scheme.secondaryContainer.toArgb()
+            com.example.data.ComplicationArcMonetMode.TERTIARY -> scheme.tertiaryContainer.toArgb()
+            com.example.data.ComplicationArcMonetMode.DEFAULT -> getActionBackground(context, isDark)
         }
         val hue = com.example.data.PanelPreferences.getInactiveTilesHue(isDark).value
         val sat = com.example.data.PanelPreferences.getInactiveTilesSat(isDark).value
@@ -128,12 +149,8 @@ object MonetThemeHelper {
         if (useCustom) {
             return com.example.data.PanelPreferences.getHeaderGradientCustomColor(isDark).value
         }
-        val isTertiary = com.example.data.PanelPreferences.getHeaderGradientColorTertiary(isDark).value
-        val baseColor = if (isDark) {
-            if (isTertiary) getTertiaryAccent(context, isDark) else getPrimaryAccent(context, isDark)
-        } else {
-            if (isTertiary) getTertiaryAccent(context, isDark) else getPrimaryAccent(context, isDark)
-        }
+        val mode = com.example.data.PanelPreferences.getHeaderGradientColorMode(isDark).value
+        val baseColor = resolveAccentByMode(context, isDark, mode)
         val hue = com.example.data.PanelPreferences.getHeaderGradientHue(isDark).value
         val sat = com.example.data.PanelPreferences.getHeaderGradientSat(isDark).value
         val valFactor = com.example.data.PanelPreferences.getHeaderGradientVal(isDark).value
@@ -153,6 +170,9 @@ object MonetThemeHelper {
     fun getSecondaryAccent(context: Context, isDark: Boolean): Int {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
+                return getColorScheme(context, isDark).secondary.toArgb()
+            } catch (_: Throwable) {}
+            try {
                 val resId = if (isDark) android.R.color.system_accent2_200 else android.R.color.system_accent2_600
                 val color = ContextCompat.getColor(context, resId)
                 if (color != 0) return color
@@ -161,28 +181,19 @@ object MonetThemeHelper {
         return if (isDark) Color.parseColor("#CCC2DC") else Color.parseColor("#625B71")
     }
 
-    fun desaturateAndSoften(colorInt: Int, isDark: Boolean): Int {
-        val hsv = FloatArray(3)
-        Color.colorToHSV(colorInt, hsv)
-        hsv[1] = (hsv[1] * 0.50f).coerceIn(0f, 1f)
-        if (isDark) {
-            hsv[2] = hsv[2].coerceAtMost(0.78f)
-        } else {
-            hsv[2] = (hsv[2] * 0.90f).coerceIn(0f, 1f)
-        }
-        return Color.HSVToColor(Color.alpha(colorInt), hsv)
-    }
-
     fun getTertiaryAccent(context: Context, isDark: Boolean): Int {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
+                return getColorScheme(context, isDark).tertiary.toArgb()
+            } catch (_: Throwable) {}
+            try {
                 val resId = if (isDark) android.R.color.system_accent3_200 else android.R.color.system_accent3_600
                 val color = ContextCompat.getColor(context, resId)
-                if (color != 0) return desaturateAndSoften(color, isDark)
+                if (color != 0) return color
             } catch (_: Throwable) {}
         }
-        val fallback = if (isDark) Color.parseColor("#CF889A") else Color.parseColor("#7D4E62")
-        return desaturateAndSoften(fallback, isDark)
+        val scheme = if (isDark) com.example.ui.theme.ExpressiveDarkColorScheme else com.example.ui.theme.ExpressiveLightColorScheme
+        return scheme.tertiary.toArgb()
     }
 
     fun brightenColor(colorInt: Int, isDark: Boolean): Int {
@@ -205,26 +216,23 @@ object MonetThemeHelper {
     }
 
     fun getCardBackground(context: Context, isDark: Boolean): Int {
+        val usePanelCustom = com.example.data.PanelPreferences.getPanelContainerUseCustom(isDark).value
+        if (usePanelCustom) {
+            return com.example.data.PanelPreferences.getPanelContainerCustomColor(isDark).value
+        }
         val customColor = com.example.data.PanelPreferences.qsPanelBackgroundColor.value
             ?: com.example.data.PanelPreferences.qsBackgroundColor.value
-        val isPanelTertiary = com.example.data.PanelPreferences.panelContainerColorTertiary.value
+        val panelMode = com.example.data.PanelPreferences.getPanelContainerColorMode(isDark).value
         val baseColor = if (customColor != null) {
             customColor
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            try {
-                val scheme = if (isDark) androidx.compose.material3.dynamicDarkColorScheme(context)
-                else androidx.compose.material3.dynamicLightColorScheme(context)
-                val color = if (isPanelTertiary) desaturateAndSoften(scheme.tertiaryContainer.toArgb(), isDark) else scheme.surfaceVariant.toArgb()
-                color
-            } catch (_: Throwable) {
-                val scheme = if (isDark) com.example.ui.theme.ExpressiveDarkColorScheme else com.example.ui.theme.ExpressiveLightColorScheme
-                val color = if (isPanelTertiary) desaturateAndSoften(scheme.tertiaryContainer.toArgb(), isDark) else scheme.surfaceVariant.toArgb()
-                color
-            }
         } else {
-            val scheme = if (isDark) com.example.ui.theme.ExpressiveDarkColorScheme else com.example.ui.theme.ExpressiveLightColorScheme
-            val color = if (isPanelTertiary) desaturateAndSoften(scheme.tertiaryContainer.toArgb(), isDark) else scheme.surfaceVariant.toArgb()
-            color
+            val scheme = getColorScheme(context, isDark)
+            when (panelMode) {
+                com.example.data.ComplicationArcMonetMode.PRIMARY -> scheme.primaryContainer.toArgb()
+                com.example.data.ComplicationArcMonetMode.SECONDARY -> scheme.secondaryContainer.toArgb()
+                com.example.data.ComplicationArcMonetMode.TERTIARY -> scheme.tertiaryContainer.toArgb()
+                com.example.data.ComplicationArcMonetMode.DEFAULT -> scheme.surfaceVariant.toArgb()
+            }
         }
 
         val isSolidMonet = com.example.data.PanelPreferences.showMonetSurfaceBackground.value

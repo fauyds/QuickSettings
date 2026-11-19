@@ -11,11 +11,13 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -39,6 +41,8 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.ComplicationArcMonetMode
@@ -74,16 +78,20 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
     var selectedTab by remember { mutableStateOf(if (systemInDark) ModeTab.DARK else ModeTab.LIGHT) }
     val isEditingDark = selectedTab == ModeTab.DARK
 
-    // Monet Accent Toggles
-    val surfaceBgColorTertiary by PanelPreferences.getSurfaceBgColorTertiary(isEditingDark).collectAsState()
-    val panelContainerColorTertiary by PanelPreferences.getPanelContainerColorTertiary(isEditingDark).collectAsState()
-    val headerGradientColorTertiary by PanelPreferences.getHeaderGradientColorTertiary(isEditingDark).collectAsState()
-    val qsTilesColorTertiary by PanelPreferences.getQsTilesColorTertiary(isEditingDark).collectAsState()
-    val inactiveTilesColorTertiary by PanelPreferences.getInactiveTilesColorTertiary(isEditingDark).collectAsState()
-    val inactiveTilesColorPrimary by PanelPreferences.getInactiveTilesColorPrimary(isEditingDark).collectAsState()
-    val slidersColorTertiary by PanelPreferences.getSlidersColorTertiary(isEditingDark).collectAsState()
-    val miscElementsColorTertiary by PanelPreferences.getMiscElementsColorTertiary(isEditingDark).collectAsState()
-    val clearAllColorTertiary by PanelPreferences.getClearAllColorTertiary(isEditingDark).collectAsState()
+    // Target ColorScheme matching the selected Light/Dark tab so swatch previews reflect the edited mode accurately
+    val editingColorScheme = remember(context, isEditingDark) {
+        com.example.ui.theme.getDynamicColorScheme(context = context, isDark = isEditingDark, dynamicColor = true)
+    }
+
+    // Monet Color Modes
+    val surfaceBgColorMode by PanelPreferences.getSurfaceBgColorMode(isEditingDark).collectAsState()
+    val panelContainerColorMode by PanelPreferences.getPanelContainerColorMode(isEditingDark).collectAsState()
+    val headerGradientColorMode by PanelPreferences.getHeaderGradientColorMode(isEditingDark).collectAsState()
+    val qsTilesColorMode by PanelPreferences.getQsTilesColorMode(isEditingDark).collectAsState()
+    val inactiveTilesColorMode by PanelPreferences.getInactiveTilesColorMode(isEditingDark).collectAsState()
+    val slidersColorMode by PanelPreferences.getSlidersColorMode(isEditingDark).collectAsState()
+    val miscElementsColorMode by PanelPreferences.getMiscElementsColorMode(isEditingDark).collectAsState()
+    val clearAllColorMode by PanelPreferences.getClearAllColorMode(isEditingDark).collectAsState()
 
     // HSB values
     val surfaceBgHue by PanelPreferences.getSurfaceBgHue(isEditingDark).collectAsState()
@@ -336,7 +344,23 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing)
             ) {
+                val allModes = remember { ComplicationArcMonetMode.entries }
+                val accentModes = remember {
+                    listOf(
+                        ComplicationArcMonetMode.PRIMARY,
+                        ComplicationArcMonetMode.SECONDARY,
+                        ComplicationArcMonetMode.TERTIARY
+                    )
+                }
+
                 // 1. Surface background
+                val surfaceFactor = if (isEditingDark) 0.90f else 0.87f
+                fun darkenSurface(color: Color) = Color(
+                    red = (color.red * surfaceFactor).coerceIn(0f, 1f),
+                    green = (color.green * surfaceFactor).coerceIn(0f, 1f),
+                    blue = (color.blue * surfaceFactor).coerceIn(0f, 1f),
+                    alpha = 1f
+                )
                 ExpandableElementColorCard(
                     title = "1. Surface Background",
                     subtitle = "Behind panel containers and background layers",
@@ -344,8 +368,13 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                     onUseCustomChange = { PanelPreferences.setSurfaceBgUseCustom(context, isEditingDark, it) },
                     customColor = surfaceBgCustomColor,
                     onCustomColorChange = { PanelPreferences.setSurfaceBgCustomColor(context, isEditingDark, it) },
-                    isTertiary = surfaceBgColorTertiary,
-                    onTertiaryChange = { PanelPreferences.setSurfaceBgColorTertiary(context, isEditingDark, it) },
+                    colorMode = surfaceBgColorMode,
+                    onColorModeChange = { PanelPreferences.setSurfaceBgColorMode(context, isEditingDark, it) },
+                    availableModes = allModes,
+                    defaultColor = darkenSurface(editingColorScheme.surfaceVariant),
+                    primaryColor = darkenSurface(editingColorScheme.primaryContainer),
+                    secondaryColor = darkenSurface(editingColorScheme.secondaryContainer),
+                    tertiaryColor = darkenSurface(editingColorScheme.tertiaryContainer),
                     hue = surfaceBgHue,
                     sat = surfaceBgSat,
                     valFactor = surfaceBgVal,
@@ -362,8 +391,13 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                     onUseCustomChange = { PanelPreferences.setPanelContainerUseCustom(context, isEditingDark, it) },
                     customColor = panelContainerCustomColor,
                     onCustomColorChange = { PanelPreferences.setPanelContainerCustomColor(context, isEditingDark, it) },
-                    isTertiary = panelContainerColorTertiary,
-                    onTertiaryChange = { PanelPreferences.setPanelContainerColorTertiary(context, isEditingDark, it) },
+                    colorMode = panelContainerColorMode,
+                    onColorModeChange = { PanelPreferences.setPanelContainerColorMode(context, isEditingDark, it) },
+                    availableModes = allModes,
+                    defaultColor = editingColorScheme.surfaceVariant,
+                    primaryColor = editingColorScheme.primaryContainer,
+                    secondaryColor = editingColorScheme.secondaryContainer,
+                    tertiaryColor = editingColorScheme.tertiaryContainer,
                     hue = panelContainerHue,
                     sat = panelContainerSat,
                     valFactor = panelContainerVal,
@@ -380,8 +414,13 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                     onUseCustomChange = { PanelPreferences.setHeaderGradientUseCustom(context, isEditingDark, it) },
                     customColor = headerGradientCustomColor,
                     onCustomColorChange = { PanelPreferences.setHeaderGradientCustomColor(context, isEditingDark, it) },
-                    isTertiary = headerGradientColorTertiary,
-                    onTertiaryChange = { PanelPreferences.setHeaderGradientColorTertiary(context, isEditingDark, it) },
+                    colorMode = headerGradientColorMode,
+                    onColorModeChange = { PanelPreferences.setHeaderGradientColorMode(context, isEditingDark, it) },
+                    availableModes = accentModes,
+                    defaultColor = if (isEditingDark) editingColorScheme.primaryContainer else editingColorScheme.primary,
+                    primaryColor = if (isEditingDark) editingColorScheme.primaryContainer else editingColorScheme.primary,
+                    secondaryColor = if (isEditingDark) editingColorScheme.secondaryContainer else editingColorScheme.secondary,
+                    tertiaryColor = if (isEditingDark) editingColorScheme.tertiaryContainer else editingColorScheme.tertiary,
                     hue = headerGradientHue,
                     sat = headerGradientSat,
                     valFactor = headerGradientVal,
@@ -398,8 +437,13 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                     onUseCustomChange = { PanelPreferences.setQsTilesUseCustom(context, isEditingDark, it) },
                     customColor = qsTilesCustomColor,
                     onCustomColorChange = { PanelPreferences.setQsTilesCustomColor(context, isEditingDark, it) },
-                    isTertiary = qsTilesColorTertiary,
-                    onTertiaryChange = { PanelPreferences.setQsTilesColorTertiary(context, isEditingDark, it) },
+                    colorMode = qsTilesColorMode,
+                    onColorModeChange = { PanelPreferences.setQsTilesColorMode(context, isEditingDark, it) },
+                    availableModes = accentModes,
+                    defaultColor = editingColorScheme.primary,
+                    primaryColor = editingColorScheme.primary,
+                    secondaryColor = editingColorScheme.secondary,
+                    tertiaryColor = editingColorScheme.tertiary,
                     hue = qsTilesHue,
                     sat = qsTilesSat,
                     valFactor = qsTilesVal,
@@ -409,27 +453,31 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                 )
 
                 // 5. Inactive QS Tiles
-                ExpandableInactiveTilesColorCard(
+                val defaultInactiveTileBg = if (isEditingDark) {
+                    val sv = editingColorScheme.surfaceVariant
+                    Color(
+                        red = (sv.red * 0.72f).coerceIn(0f, 1f),
+                        green = (sv.green * 0.72f).coerceIn(0f, 1f),
+                        blue = (sv.blue * 0.72f).coerceIn(0f, 1f),
+                        alpha = sv.alpha
+                    )
+                } else {
+                    Color.White
+                }
+                ExpandableElementColorCard(
                     title = "5. Inactive QS Tiles",
                     subtitle = "Quick settings inactive tiles background and icons",
                     useCustom = inactiveTilesUseCustom,
                     onUseCustomChange = { PanelPreferences.setInactiveTilesUseCustom(context, isEditingDark, it) },
                     customColor = inactiveTilesCustomColor,
                     onCustomColorChange = { PanelPreferences.setInactiveTilesCustomColor(context, isEditingDark, it) },
-                    isPrimary = inactiveTilesColorPrimary,
-                    onPrimaryChange = { enabled ->
-                        PanelPreferences.setInactiveTilesColorPrimary(context, isEditingDark, enabled)
-                        if (enabled) {
-                            PanelPreferences.setInactiveTilesColorTertiary(context, isEditingDark, false)
-                        }
-                    },
-                    isTertiary = inactiveTilesColorTertiary,
-                    onTertiaryChange = { enabled ->
-                        PanelPreferences.setInactiveTilesColorTertiary(context, isEditingDark, enabled)
-                        if (enabled) {
-                            PanelPreferences.setInactiveTilesColorPrimary(context, isEditingDark, false)
-                        }
-                    },
+                    colorMode = inactiveTilesColorMode,
+                    onColorModeChange = { PanelPreferences.setInactiveTilesColorMode(context, isEditingDark, it) },
+                    availableModes = allModes,
+                    defaultColor = defaultInactiveTileBg,
+                    primaryColor = editingColorScheme.primaryContainer,
+                    secondaryColor = editingColorScheme.secondaryContainer,
+                    tertiaryColor = editingColorScheme.tertiaryContainer,
                     hue = inactiveTilesHue,
                     sat = inactiveTilesSat,
                     valFactor = inactiveTilesVal,
@@ -446,8 +494,13 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                     onUseCustomChange = { PanelPreferences.setSlidersUseCustom(context, isEditingDark, it) },
                     customColor = slidersCustomColor,
                     onCustomColorChange = { PanelPreferences.setSlidersCustomColor(context, isEditingDark, it) },
-                    isTertiary = slidersColorTertiary,
-                    onTertiaryChange = { PanelPreferences.setSlidersColorTertiary(context, isEditingDark, it) },
+                    colorMode = slidersColorMode,
+                    onColorModeChange = { PanelPreferences.setSlidersColorMode(context, isEditingDark, it) },
+                    availableModes = accentModes,
+                    defaultColor = editingColorScheme.primary,
+                    primaryColor = editingColorScheme.primary,
+                    secondaryColor = editingColorScheme.secondary,
+                    tertiaryColor = editingColorScheme.tertiary,
                     hue = slidersHue,
                     sat = slidersSat,
                     valFactor = slidersVal,
@@ -464,8 +517,13 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                     onUseCustomChange = { PanelPreferences.setMiscElementsUseCustom(context, isEditingDark, it) },
                     customColor = miscElementsCustomColor,
                     onCustomColorChange = { PanelPreferences.setMiscElementsCustomColor(context, isEditingDark, it) },
-                    isTertiary = miscElementsColorTertiary,
-                    onTertiaryChange = { PanelPreferences.setMiscElementsColorTertiary(context, isEditingDark, it) },
+                    colorMode = miscElementsColorMode,
+                    onColorModeChange = { PanelPreferences.setMiscElementsColorMode(context, isEditingDark, it) },
+                    availableModes = accentModes,
+                    defaultColor = editingColorScheme.primary,
+                    primaryColor = editingColorScheme.primary,
+                    secondaryColor = editingColorScheme.secondary,
+                    tertiaryColor = editingColorScheme.tertiary,
                     hue = miscElementsHue,
                     sat = miscElementsSat,
                     valFactor = miscElementsVal,
@@ -482,8 +540,13 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                     onUseCustomChange = { PanelPreferences.setClearAllUseCustom(context, isEditingDark, it) },
                     customColor = clearAllCustomColor,
                     onCustomColorChange = { PanelPreferences.setClearAllCustomColor(context, isEditingDark, it) },
-                    isTertiary = clearAllColorTertiary,
-                    onTertiaryChange = { PanelPreferences.setClearAllColorTertiary(context, isEditingDark, it) },
+                    colorMode = clearAllColorMode,
+                    onColorModeChange = { PanelPreferences.setClearAllColorMode(context, isEditingDark, it) },
+                    availableModes = accentModes,
+                    defaultColor = editingColorScheme.primary,
+                    primaryColor = editingColorScheme.primary,
+                    secondaryColor = editingColorScheme.secondary,
+                    tertiaryColor = editingColorScheme.tertiary,
                     hue = clearAllHue,
                     sat = clearAllSat,
                     valFactor = clearAllVal,
@@ -493,59 +556,73 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                 )
 
                 // 9. Active Complication Arcs
-                ExpandableComplicationArcColorCard(
+                ExpandableElementColorCard(
                     title = "9. Active Complication Arcs",
                     subtitle = "Progress arc, horizontal line, and perimeter bar for active complications",
                     useCustom = activeCompArcUseCustom,
                     onUseCustomChange = { PanelPreferences.setActiveCompArcUseCustom(context, isEditingDark, it) },
                     customColor = activeCompArcCustomColor,
                     onCustomColorChange = { PanelPreferences.setActiveCompArcCustomColor(context, isEditingDark, it) },
-                    monetMode = activeCompArcMode,
-                    onMonetModeChange = { PanelPreferences.setActiveCompArcMode(context, isEditingDark, it) },
+                    colorMode = activeCompArcMode,
+                    onColorModeChange = { PanelPreferences.setActiveCompArcMode(context, isEditingDark, it) },
+                    availableModes = allModes,
+                    defaultColor = editingColorScheme.onPrimary,
+                    primaryColor = editingColorScheme.primary,
+                    secondaryColor = editingColorScheme.secondary,
+                    tertiaryColor = editingColorScheme.tertiary,
+                    defaultModeShortLabel = "Auto",
                     hue = activeCompArcHue,
                     sat = activeCompArcSat,
                     valFactor = activeCompArcVal,
                     onHsbChange = { h, s, v -> PanelPreferences.setActiveCompArcHsb(context, isEditingDark, h, s, v) },
-                    defaultBaseColor = MaterialTheme.colorScheme.onPrimary,
                     shape = CustomizeCardShapes.CenterCard,
                     testTag = "activity_active_comp_arc_color"
                 )
 
                 // 10. Inactive Complication Arcs
-                ExpandableComplicationArcColorCard(
+                ExpandableElementColorCard(
                     title = "10. Inactive Complication Arcs",
                     subtitle = "Progress arc, horizontal line, and perimeter bar for inactive complications",
                     useCustom = inactiveCompArcUseCustom,
                     onUseCustomChange = { PanelPreferences.setInactiveCompArcUseCustom(context, isEditingDark, it) },
                     customColor = inactiveCompArcCustomColor,
                     onCustomColorChange = { PanelPreferences.setInactiveCompArcCustomColor(context, isEditingDark, it) },
-                    monetMode = inactiveCompArcMode,
-                    onMonetModeChange = { PanelPreferences.setInactiveCompArcMode(context, isEditingDark, it) },
+                    colorMode = inactiveCompArcMode,
+                    onColorModeChange = { PanelPreferences.setInactiveCompArcMode(context, isEditingDark, it) },
+                    availableModes = allModes,
+                    defaultColor = if (isEditingDark) Color(0xFFCCCCCC) else Color(0xFF555555),
+                    primaryColor = editingColorScheme.primary,
+                    secondaryColor = editingColorScheme.secondary,
+                    tertiaryColor = editingColorScheme.tertiary,
+                    defaultModeShortLabel = "Auto",
                     hue = inactiveCompArcHue,
                     sat = inactiveCompArcSat,
                     valFactor = inactiveCompArcVal,
                     onHsbChange = { h, s, v -> PanelPreferences.setInactiveCompArcHsb(context, isEditingDark, h, s, v) },
-                    defaultBaseColor = if (isEditingDark) Color(0xFFCCCCCC) else Color(0xFF555555),
                     shape = CustomizeCardShapes.CenterCard,
                     testTag = "activity_inactive_comp_arc_color"
                 )
 
                 // 11. Complication Arc Tracks
-                ExpandableComplicationArcColorCard(
+                ExpandableElementColorCard(
                     title = "11. Complication Arc Tracks",
                     subtitle = "Unfilled background track behind complication arcs, lines, and perimeter bars",
                     useCustom = compArcTrackUseCustom,
                     onUseCustomChange = { PanelPreferences.setCompArcTrackUseCustom(context, isEditingDark, it) },
                     customColor = compArcTrackCustomColor,
                     onCustomColorChange = { PanelPreferences.setCompArcTrackCustomColor(context, isEditingDark, it) },
-                    monetMode = compArcTrackMode,
-                    onMonetModeChange = { PanelPreferences.setCompArcTrackMode(context, isEditingDark, it) },
+                    colorMode = compArcTrackMode,
+                    onColorModeChange = { PanelPreferences.setCompArcTrackMode(context, isEditingDark, it) },
+                    availableModes = allModes,
+                    defaultColor = (if (isEditingDark) Color.White else Color.Black).copy(alpha = 0.22f),
+                    primaryColor = editingColorScheme.primary.copy(alpha = 0.30f),
+                    secondaryColor = editingColorScheme.secondary.copy(alpha = 0.30f),
+                    tertiaryColor = editingColorScheme.tertiary.copy(alpha = 0.30f),
+                    defaultModeShortLabel = "Auto",
                     hue = compArcTrackHue,
                     sat = compArcTrackSat,
                     valFactor = compArcTrackVal,
                     onHsbChange = { h, s, v -> PanelPreferences.setCompArcTrackHsb(context, isEditingDark, h, s, v) },
-                    defaultBaseColor = (if (isEditingDark) Color.White else Color.Black).copy(alpha = 0.22f),
-                    monetTrackAlpha = 0.30f,
                     shape = CustomizeCardShapes.BottomCard,
                     testTag = "activity_comp_arc_track_color"
                 )
@@ -595,6 +672,138 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
 }
 
 @Composable
+private fun ColorModeSegmentedBar(
+    selectedMode: ComplicationArcMonetMode,
+    useCustom: Boolean,
+    availableModes: List<ComplicationArcMonetMode>,
+    defaultLabel: String,
+    onModeSelected: (ComplicationArcMonetMode) -> Unit,
+    onCustomSelected: () -> Unit,
+    testTagPrefix: String
+) {
+    val totalSegments = availableModes.size + 1
+    val labelFontSize = if (totalSegments >= 5) 10.sp else 11.sp
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = "Color Mode",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("${testTagPrefix}_color_mode_bar"),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            availableModes.forEachIndexed { idx, mode ->
+                val selected = !useCustom && selectedMode == mode
+                val segShape = if (selected) {
+                    RoundedCornerShape(percent = 50)
+                } else {
+                    val outerCorner = CornerSize(50)
+                    val innerCorner = CornerSize(4.dp)
+                    RoundedCornerShape(
+                        topStart = if (idx == 0) outerCorner else innerCorner,
+                        bottomStart = if (idx == 0) outerCorner else innerCorner,
+                        topEnd = innerCorner,
+                        bottomEnd = innerCorner
+                    )
+                }
+                val label = if (mode == ComplicationArcMonetMode.DEFAULT) defaultLabel else mode.label
+                Surface(
+                    onClick = { onModeSelected(mode) },
+                    shape = segShape,
+                    color = if (selected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
+                    contentColor = if (selected) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 48.dp)
+                        .testTag("${testTagPrefix}_mode_${mode.id}")
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.padding(horizontal = 2.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = label,
+                            fontSize = labelFontSize,
+                            letterSpacing = (-0.2).sp,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+
+            // Custom Color Segment at the end of the bar
+            val customSelected = useCustom
+            val customShape = if (customSelected) {
+                RoundedCornerShape(percent = 50)
+            } else {
+                val outerCorner = CornerSize(50)
+                val innerCorner = CornerSize(4.dp)
+                RoundedCornerShape(
+                    topStart = innerCorner,
+                    bottomStart = innerCorner,
+                    topEnd = outerCorner,
+                    bottomEnd = outerCorner
+                )
+            }
+            Surface(
+                onClick = onCustomSelected,
+                shape = customShape,
+                color = if (customSelected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                },
+                contentColor = if (customSelected) {
+                    MaterialTheme.colorScheme.onPrimary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 48.dp)
+                    .testTag("${testTagPrefix}_mode_custom")
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.padding(horizontal = 2.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = "Custom",
+                        fontSize = labelFontSize,
+                        letterSpacing = (-0.2).sp,
+                        fontWeight = if (customSelected) FontWeight.Bold else FontWeight.Medium,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun ExpandableElementColorCard(
     title: String,
     subtitle: String,
@@ -602,8 +811,14 @@ private fun ExpandableElementColorCard(
     onUseCustomChange: (Boolean) -> Unit,
     customColor: Int,
     onCustomColorChange: (Int) -> Unit,
-    isTertiary: Boolean,
-    onTertiaryChange: (Boolean) -> Unit,
+    colorMode: ComplicationArcMonetMode,
+    onColorModeChange: (ComplicationArcMonetMode) -> Unit,
+    availableModes: List<ComplicationArcMonetMode>,
+    defaultColor: Color,
+    primaryColor: Color,
+    secondaryColor: Color,
+    tertiaryColor: Color,
+    defaultModeShortLabel: String = "Default",
     hue: Float,
     sat: Float,
     valFactor: Float,
@@ -613,670 +828,11 @@ private fun ExpandableElementColorCard(
 ) {
     var isExpanded by remember { mutableStateOf(false) }
 
-    val baseThemeColor = if (isTertiary) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
-    val activeColor = if (useCustom) {
-        Color(customColor)
-    } else {
-        remember(baseThemeColor, hue, sat, valFactor) {
-            applyHsvAdjustments(baseThemeColor, hue, sat, valFactor)
-        }
-    }
-
-    SettingsCard(
-        shape = shape,
-        modifier = Modifier.testTag("${testTag}_card")
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { isExpanded = !isExpanded }
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    Text(
-                        text = title,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = subtitle,
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.padding(top = 4.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(14.dp)
-                                .clip(CircleShape)
-                                .background(activeColor)
-                        )
-                        Text(
-                            text = if (useCustom) {
-                                String.format("Custom Color (#%06X)", (0xFFFFFF and customColor))
-                            } else {
-                                if (isTertiary) "Tertiary Color Accent" else "Primary Color Accent"
-                            },
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = activeColor
-                        )
-                    }
-                }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    IconButton(
-                        onClick = { isExpanded = !isExpanded },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                            contentDescription = if (isExpanded) "Collapse Options" else "Expand Options",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            AnimatedVisibility(
-                visible = isExpanded,
-                enter = expandVertically(),
-                exit = shrinkVertically()
-            ) {
-                val expandedBg = com.example.ui.theme.getSettingsCardBackgroundColor(isSystemInDarkTheme())
-                Column(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
-                        thickness = 1.dp
-                    )
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(expandedBg)
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        // Toggle: Custom Color vs Monet Accent
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                                Text(
-                                    text = "Set Custom Color",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Use exact custom color instead of Monet theme accent",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Switch(
-                                checked = useCustom,
-                                onCheckedChange = onUseCustomChange,
-                                modifier = Modifier.testTag("${testTag}_use_custom_switch")
-                            )
-                        }
-
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
-                            thickness = 1.dp
-                        )
-
-                        if (useCustom) {
-                            TwoTabColorPicker(
-                                selectedColor = customColor,
-                                onColorSelected = onCustomColorChange
-                            )
-                        } else {
-                            // Monet Accent & Saturation/Hue/Brightness Sliders
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                                        Text(
-                                            text = "Tertiary Monet Accent",
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "Switch between Primary and Tertiary Monet theme accent",
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Switch(
-                                        checked = isTertiary,
-                                        onCheckedChange = onTertiaryChange,
-                                        modifier = Modifier.testTag(testTag)
-                                    )
-                                }
-
-                                HorizontalDivider(
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                                    thickness = 1.dp
-                                )
-
-                                val isCustomized = hue != 0f || sat != 1f || valFactor != 1f
-
-                                // 1. Hue Shift Slider
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "Hue Shift",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = if (hue == 0f) "0° (Default)" else "${if (hue > 0) "+" else ""}${hue.roundToInt()}°",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                    ThickElementSlider(
-                                        value = hue,
-                                        onValueChange = { onHsbChange(it, sat, valFactor) },
-                                        valueRange = -180f..180f,
-                                        steps = 359,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-
-                                // 2. Saturation Slider
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "Saturation",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "${(sat * 100).roundToInt()}%",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                    ThickElementSlider(
-                                        value = sat,
-                                        onValueChange = { onHsbChange(hue, it, valFactor) },
-                                        valueRange = 0f..2.0f,
-                                        steps = 39,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-
-                                // 3. Brightness Slider
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "Brightness",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "${(valFactor * 100).roundToInt()}%",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                    ThickElementSlider(
-                                        value = valFactor,
-                                        onValueChange = { onHsbChange(hue, sat, it) },
-                                        valueRange = 0.5f..1.5f,
-                                        steps = 19,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-
-                                if (isCustomized) {
-                                    OutlinedButton(
-                                        onClick = { onHsbChange(0f, 1f, 1f) },
-                                        modifier = Modifier.align(Alignment.End),
-                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Refresh,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = "Reset Color Sliders",
-                                            fontSize = 12.sp
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ExpandableInactiveTilesColorCard(
-    title: String,
-    subtitle: String,
-    useCustom: Boolean,
-    onUseCustomChange: (Boolean) -> Unit,
-    customColor: Int,
-    onCustomColorChange: (Int) -> Unit,
-    isPrimary: Boolean,
-    onPrimaryChange: (Boolean) -> Unit,
-    isTertiary: Boolean,
-    onTertiaryChange: (Boolean) -> Unit,
-    hue: Float,
-    sat: Float,
-    valFactor: Float,
-    onHsbChange: (hue: Float, sat: Float, valFactor: Float) -> Unit,
-    shape: androidx.compose.ui.graphics.Shape,
-    testTag: String
-) {
-    var isExpanded by remember { mutableStateOf(false) }
-
-    val isDark = isSystemInDarkTheme()
-    val cardContainerColor = MaterialTheme.colorScheme.surfaceVariant
-    val defaultInactiveBg = if (isDark) {
-        Color(
-            red = (cardContainerColor.red * 0.72f).coerceIn(0f, 1f),
-            green = (cardContainerColor.green * 0.72f).coerceIn(0f, 1f),
-            blue = (cardContainerColor.blue * 0.72f).coerceIn(0f, 1f),
-            alpha = cardContainerColor.alpha
-        )
-    } else {
-        Color.White
-    }
-
-    val baseInactiveBg = when {
-        isTertiary -> MaterialTheme.colorScheme.tertiaryContainer
-        isPrimary -> MaterialTheme.colorScheme.primaryContainer
-        else -> defaultInactiveBg
-    }
-
-    val activeColor = if (useCustom) {
-        Color(customColor)
-    } else {
-        remember(baseInactiveBg, hue, sat, valFactor) {
-            applyHsvAdjustments(baseInactiveBg, hue, sat, valFactor)
-        }
-    }
-
-    SettingsCard(
-        shape = shape,
-        modifier = Modifier.testTag("${testTag}_card")
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { isExpanded = !isExpanded }
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    Text(
-                        text = title,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = subtitle,
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.padding(top = 4.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(14.dp)
-                                .clip(CircleShape)
-                                .background(activeColor)
-                        )
-                        Text(
-                            text = if (useCustom) {
-                                String.format("Custom Color (#%06X)", (0xFFFFFF and customColor))
-                            } else {
-                                when {
-                                    isTertiary -> "Tertiary Container Accent"
-                                    isPrimary -> "Primary Container Accent"
-                                    else -> "Default Surface Variant"
-                                }
-                            },
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    IconButton(
-                        onClick = { isExpanded = !isExpanded },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                            contentDescription = if (isExpanded) "Collapse Options" else "Expand Options",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            AnimatedVisibility(
-                visible = isExpanded,
-                enter = expandVertically(),
-                exit = shrinkVertically()
-            ) {
-                val expandedBg = com.example.ui.theme.getSettingsCardBackgroundColor(isSystemInDarkTheme())
-                Column(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
-                        thickness = 1.dp
-                    )
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(expandedBg)
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        // Custom Color Toggle
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                                Text(
-                                    text = "Set Custom Color",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Use exact custom color for inactive tiles instead of Monet theme accent",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Switch(
-                                checked = useCustom,
-                                onCheckedChange = onUseCustomChange,
-                                modifier = Modifier.testTag("${testTag}_use_custom_switch")
-                            )
-                        }
-
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
-                            thickness = 1.dp
-                        )
-
-                        if (useCustom) {
-                            TwoTabColorPicker(
-                                selectedColor = customColor,
-                                onColorSelected = onCustomColorChange
-                            )
-                        } else {
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                                        Text(
-                                            text = "Primary Container Accent",
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "Use Primary Container Monet color for inactive tiles",
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Switch(
-                                        checked = isPrimary,
-                                        onCheckedChange = onPrimaryChange
-                                    )
-                                }
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                                        Text(
-                                            text = "Tertiary Container Accent",
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "Use Tertiary Container Monet color for inactive tiles",
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Switch(
-                                        checked = isTertiary,
-                                        onCheckedChange = onTertiaryChange
-                                    )
-                                }
-
-                                HorizontalDivider(
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                                    thickness = 1.dp
-                                )
-
-                                val isCustomized = hue != 0f || sat != 1f || valFactor != 1f
-
-                                // 1. Hue Shift Slider
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "Hue Shift",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = if (hue == 0f) "0° (Default)" else "${if (hue > 0) "+" else ""}${hue.roundToInt()}°",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                    ThickElementSlider(
-                                        value = hue,
-                                        onValueChange = { onHsbChange(it, sat, valFactor) },
-                                        valueRange = -180f..180f,
-                                        steps = 359,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-
-                                // 2. Saturation Slider
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "Saturation",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "${(sat * 100).roundToInt()}%",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                    ThickElementSlider(
-                                        value = sat,
-                                        onValueChange = { onHsbChange(hue, it, valFactor) },
-                                        valueRange = 0f..2.0f,
-                                        steps = 39,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-
-                                // 3. Brightness Slider
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "Brightness",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "${(valFactor * 100).roundToInt()}%",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                    ThickElementSlider(
-                                        value = valFactor,
-                                        onValueChange = { onHsbChange(hue, sat, it) },
-                                        valueRange = 0.5f..1.5f,
-                                        steps = 19,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-
-                                if (isCustomized) {
-                                    OutlinedButton(
-                                        onClick = { onHsbChange(0f, 1f, 1f) },
-                                        modifier = Modifier.align(Alignment.End),
-                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Refresh,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = "Reset Color Sliders",
-                                            fontSize = 12.sp
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ExpandableComplicationArcColorCard(
-    title: String,
-    subtitle: String,
-    useCustom: Boolean,
-    onUseCustomChange: (Boolean) -> Unit,
-    customColor: Int,
-    onCustomColorChange: (Int) -> Unit,
-    monetMode: ComplicationArcMonetMode,
-    onMonetModeChange: (ComplicationArcMonetMode) -> Unit,
-    hue: Float,
-    sat: Float,
-    valFactor: Float,
-    onHsbChange: (hue: Float, sat: Float, valFactor: Float) -> Unit,
-    defaultBaseColor: Color,
-    monetTrackAlpha: Float = 1.0f,
-    shape: androidx.compose.ui.graphics.Shape,
-    testTag: String
-) {
-    var isExpanded by remember { mutableStateOf(false) }
-
-    val baseThemeColor = when (monetMode) {
-        ComplicationArcMonetMode.PRIMARY -> MaterialTheme.colorScheme.primary.copy(alpha = monetTrackAlpha)
-        ComplicationArcMonetMode.SECONDARY -> MaterialTheme.colorScheme.secondary.copy(alpha = monetTrackAlpha)
-        ComplicationArcMonetMode.TERTIARY -> MaterialTheme.colorScheme.tertiary.copy(alpha = monetTrackAlpha)
-        ComplicationArcMonetMode.DEFAULT -> defaultBaseColor
+    val baseThemeColor = when (colorMode) {
+        ComplicationArcMonetMode.PRIMARY -> primaryColor
+        ComplicationArcMonetMode.SECONDARY -> secondaryColor
+        ComplicationArcMonetMode.TERTIARY -> tertiaryColor
+        ComplicationArcMonetMode.DEFAULT -> defaultColor
     }
     val activeColor = if (useCustom) {
         Color(customColor)
@@ -1288,11 +844,11 @@ private fun ExpandableComplicationArcColorCard(
 
     val statusText = when {
         useCustom -> String.format("Custom Color (#%06X)", (0xFFFFFF and customColor))
-        monetMode == ComplicationArcMonetMode.PRIMARY -> "Primary Monet Accent"
-        monetMode == ComplicationArcMonetMode.SECONDARY -> "Secondary Monet Accent"
-        monetMode == ComplicationArcMonetMode.TERTIARY -> "Tertiary Monet Accent"
-        hue != 0f || sat != 1f || valFactor != 1f -> "Default (HSB Adjusted)"
-        else -> "Auto (Default Contrast)"
+        colorMode == ComplicationArcMonetMode.PRIMARY -> "Primary Monet Accent"
+        colorMode == ComplicationArcMonetMode.SECONDARY -> "Secondary Monet Accent"
+        colorMode == ComplicationArcMonetMode.TERTIARY -> "Tertiary Monet Accent"
+        hue != 0f || sat != 1f || valFactor != 1f -> "$defaultModeShortLabel (HSB Adjusted)"
+        else -> "$defaultModeShortLabel Color"
     }
 
     SettingsCard(
@@ -1335,6 +891,11 @@ private fun ExpandableComplicationArcColorCard(
                                 .size(14.dp)
                                 .clip(CircleShape)
                                 .background(activeColor)
+                                .border(
+                                    width = 0.75.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                                    shape = CircleShape
+                                )
                         )
                         Text(
                             text = statusText,
@@ -1381,30 +942,20 @@ private fun ExpandableComplicationArcColorCard(
                             .padding(horizontal = 12.dp, vertical = 10.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                                Text(
-                                    text = "Set Custom Color",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Use exact custom color instead of Monet theme accent",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Switch(
-                                checked = useCustom,
-                                onCheckedChange = onUseCustomChange,
-                                modifier = Modifier.testTag("${testTag}_use_custom_switch")
-                            )
-                        }
+                        ColorModeSegmentedBar(
+                            selectedMode = colorMode,
+                            useCustom = useCustom,
+                            availableModes = availableModes,
+                            defaultLabel = defaultModeShortLabel,
+                            onModeSelected = { mode ->
+                                if (useCustom) onUseCustomChange(false)
+                                onColorModeChange(mode)
+                            },
+                            onCustomSelected = {
+                                if (!useCustom) onUseCustomChange(true)
+                            },
+                            testTagPrefix = testTag
+                        )
 
                         HorizontalDivider(
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
@@ -1421,69 +972,9 @@ private fun ExpandableComplicationArcColorCard(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Text(
-                                    text = "Monet Accent Source",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                val modes = ComplicationArcMonetMode.entries
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    modes.forEachIndexed { idx, mode ->
-                                        val selected = monetMode == mode
-                                        val segShape = if (selected) {
-                                            RoundedCornerShape(percent = 50)
-                                        } else {
-                                            RoundedCornerShape(
-                                                topStartPercent = if (idx == 0) 50 else 12,
-                                                bottomStartPercent = if (idx == 0) 50 else 12,
-                                                topEndPercent = if (idx == modes.lastIndex) 50 else 12,
-                                                bottomEndPercent = if (idx == modes.lastIndex) 50 else 12
-                                            )
-                                        }
-                                        Surface(
-                                            onClick = { onMonetModeChange(mode) },
-                                            shape = segShape,
-                                            color = if (selected) {
-                                                MaterialTheme.colorScheme.primary
-                                            } else {
-                                                MaterialTheme.colorScheme.surfaceVariant
-                                            },
-                                            contentColor = if (selected) {
-                                                MaterialTheme.colorScheme.onPrimary
-                                            } else {
-                                                MaterialTheme.colorScheme.onSurfaceVariant
-                                            },
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .heightIn(min = 48.dp)
-                                                .testTag("${testTag}_mode_${mode.id}")
-                                        ) {
-                                            Box(
-                                                contentAlignment = Alignment.Center,
-                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
-                                            ) {
-                                                Text(
-                                                    text = if (mode == ComplicationArcMonetMode.DEFAULT) "Auto" else mode.label,
-                                                    fontSize = 11.sp,
-                                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                                    maxLines = 1
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-
-                                HorizontalDivider(
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                                    thickness = 1.dp
-                                )
-
                                 val isCustomized = hue != 0f || sat != 1f || valFactor != 1f
 
+                                // 1. Hue Shift Slider
                                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -1512,6 +1003,7 @@ private fun ExpandableComplicationArcColorCard(
                                     )
                                 }
 
+                                // 2. Saturation Slider
                                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -1540,6 +1032,7 @@ private fun ExpandableComplicationArcColorCard(
                                     )
                                 }
 
+                                // 3. Brightness Slider
                                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),

@@ -160,6 +160,28 @@ object ExpressiveTheme {
         get() = LocalExpressiveColors.current
 }
 
+/**
+ * Resolves the authentic Material 3 / Monet ColorScheme for the requested [isDark] mode.
+ */
+fun getDynamicColorScheme(
+    context: android.content.Context,
+    isDark: Boolean,
+    dynamicColor: Boolean = true
+): androidx.compose.material3.ColorScheme {
+    return when {
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            val base = if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            if (isDark) {
+                base.copy(background = DarkUiBackground)
+            } else {
+                base
+            }
+        }
+        isDark -> ExpressiveDarkColorScheme
+        else -> ExpressiveLightColorScheme
+    }
+}
+
 @Composable
 fun QuickPanelTheme(
     darkTheme: Boolean? = null,
@@ -185,29 +207,11 @@ fun QuickPanelTheme(
         ThemeMode.DARK -> true
     }
 
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val base = if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            val softenedT = softenTertiaryColor(base.tertiary, isDark)
-            val softenedTC = softenTertiaryContainerColor(base.tertiaryContainer, isDark)
-            if (isDark) {
-                base.copy(
-                    tertiary = softenedT,
-                    tertiaryContainer = softenedTC,
-                    background = DarkUiBackground,
-                    surface = base.surface,
-                    surfaceVariant = base.surfaceVariant
-                )
-            } else {
-                base.copy(
-                    tertiary = softenedT,
-                    tertiaryContainer = softenedTC
-                )
-            }
-        }
-        isDark -> ExpressiveDarkColorScheme
-        else -> ExpressiveLightColorScheme
-    }
+    val colorScheme = getDynamicColorScheme(
+        context = context,
+        isDark = isDark,
+        dynamicColor = dynamicColor
+    )
 
     val appBg = if (isDark) Color(0xFF262626) else Color(0xFFCCCCCC)
     val cardSurf = if (isDark) Color(0xFF404040) else Color(0xFFFFFFFF)
