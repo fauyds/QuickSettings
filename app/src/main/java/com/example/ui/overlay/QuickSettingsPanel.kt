@@ -6380,11 +6380,12 @@ fun UnifiedQsPanel(
                             val footerInnerCorner by PanelPreferences.footerInnerCorner.collectAsState()
                             val footerSpacing by PanelPreferences.footerSpacing.collectAsState()
                             val footerBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
-                            val resolvedOreoFooterIconTint = if (footerIconBgEnabled) {
-                                MaterialTheme.colorScheme.onSurface
-                            } else {
-                                footerIconTint
-                            }
+                            val inactiveOnTileColor = com.example.ui.theme.getInactiveTilesOnElementColor(isDark)
+                            val resolvedOreoFooterIconTint = resolveFooterButtonIconTint(
+                                footerIconBgEnabled = footerIconBgEnabled,
+                                inactiveOnTileColor = inactiveOnTileColor,
+                                defaultIconTint = footerIconTint
+                            )
                             val oreoSpacingVal = if (footerIconBgEnabled) {
                                 footerSpacing.dp
                             } else {
@@ -6977,11 +6978,12 @@ fun UnifiedQsPanel(
                         val footerInnerCorner by PanelPreferences.footerInnerCorner.collectAsState()
                         val footerSpacing by PanelPreferences.footerSpacing.collectAsState()
                         val footerBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
-                        val resolvedFooterIconTint = if (footerIconBgEnabled) {
-                            MaterialTheme.colorScheme.onSurface
-                        } else {
-                            footerTint
-                        }
+                        val inactiveOnTileColor = com.example.ui.theme.getInactiveTilesOnElementColor(isDark)
+                        val resolvedFooterIconTint = resolveFooterButtonIconTint(
+                            footerIconBgEnabled = footerIconBgEnabled,
+                            inactiveOnTileColor = inactiveOnTileColor,
+                            defaultIconTint = footerTint
+                        )
                         val qqsSettingsLoc by PanelPreferences.settingsIconLocation.collectAsState()
 
                         Box(
@@ -7455,8 +7457,13 @@ fun UnifiedQsPanel(
                         val footerInnerCorner by PanelPreferences.footerInnerCorner.collectAsState()
                         val footerSpacing by PanelPreferences.footerSpacing.collectAsState()
                         val footerBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
+                        val inactiveOnTileColor = com.example.ui.theme.getInactiveTilesOnElementColor(isDark)
                         val defaultIconColor = if (isDark) Color.LightGray.copy(alpha = 0.9f) else Color(0xFF333333)
-                        val resolvedIconColor = if (footerIconBgEnabled) MaterialTheme.colorScheme.onSurface else defaultIconColor
+                        val resolvedIconColor = resolveFooterButtonIconTint(
+                            footerIconBgEnabled = footerIconBgEnabled,
+                            inactiveOnTileColor = inactiveOnTileColor,
+                            defaultIconTint = defaultIconColor
+                        )
                         val spacingVal = if (footerIconBgEnabled) footerSpacing.dp else 4.dp
 
                         Row(
@@ -9472,6 +9479,8 @@ fun BrightnessSliderRow(
         ) {
             val sliderAccentColor = com.example.ui.theme.getSlidersElementColor(isDark)
             val inactiveTrackColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
+            val inactiveOnTileColor = com.example.ui.theme.getInactiveTilesOnElementColor(isDark)
+            val brightnessControlsFg = if (showBrightnessControlsBackground) inactiveOnTileColor else sliderAccentColor
             val brightnessGradientBrush = remember(sliderAccentColor, tertiaryThemeColor) {
                 Brush.horizontalGradient(listOf(sliderAccentColor, tertiaryThemeColor))
             }
@@ -9500,7 +9509,7 @@ fun BrightnessSliderRow(
                         showBackground = showBrightnessControlsBackground,
                         isAtLimit = isAtMin,
                         bgColor = inactiveTrackColor,
-                        accentColor = sliderAccentColor,
+                        accentColor = brightnessControlsFg,
                         controlSize = controlSize,
                         testTag = "brightness_minus_button",
                         onClick = { onBrightnessChange((brightness - 15).coerceAtLeast(minBrightness)) }
@@ -9528,7 +9537,7 @@ fun BrightnessSliderRow(
                         showBackground = showBrightnessControlsBackground,
                         isAtLimit = isAtMax,
                         bgColor = inactiveTrackColor,
-                        accentColor = sliderAccentColor,
+                        accentColor = brightnessControlsFg,
                         controlSize = controlSize,
                         testTag = "brightness_plus_button",
                         onClick = { onBrightnessChange((brightness + 15).coerceAtMost(maxBrightness)) }
@@ -9536,7 +9545,14 @@ fun BrightnessSliderRow(
                 }
 
                 if (!hideBrightnessPercentage) {
-                    val percentageColor = if (isDark) Color.White else Color(0xFF333333)
+                    val inactiveOnTileColor = com.example.ui.theme.getInactiveTilesOnElementColor(isDark)
+                    val percentageColor = if (showBrightnessControlsBackground) {
+                        inactiveOnTileColor
+                    } else if (isDark) {
+                        Color.White
+                    } else {
+                        Color(0xFF333333)
+                    }
                     val range = (maxBrightness - minBrightness).coerceAtLeast(1)
                     val pct = (((clampedBrightness - minBrightness).toFloat() / range) * 100).toInt().coerceIn(0, 100)
 
@@ -10296,4 +10312,12 @@ private fun MarshmallowTilesGrid(
             }
         }
     }
+}
+
+internal fun resolveFooterButtonIconTint(
+    footerIconBgEnabled: Boolean,
+    inactiveOnTileColor: Color,
+    defaultIconTint: Color
+): Color {
+    return if (footerIconBgEnabled) inactiveOnTileColor else defaultIconTint
 }

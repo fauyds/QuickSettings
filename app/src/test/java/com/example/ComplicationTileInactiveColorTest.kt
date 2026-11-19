@@ -10,10 +10,18 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.ComplicationArcMonetMode
 import com.example.data.PanelPreferences
+import com.example.data.SettingsIconLocation
 import com.example.model.ComplicationAction
 import com.example.model.ComplicationLayoutMode
 import com.example.model.ComplicationSublinePlacement
 import com.example.model.ComplicationTileModel
+import com.example.model.QsGridLayout
+import com.example.model.QsTileModel
+import com.example.model.TileCategory
+import com.example.model.TileState
+import com.example.ui.overlay.QsExpansionStage
+import com.example.ui.overlay.UnifiedQsPanel
+import com.example.ui.overlay.resolveFooterButtonIconTint
 import com.example.ui.theme.QuickPanelTheme
 import com.example.ui.theme.computeContrastForegroundForColor
 import com.example.ui.theme.getInactiveTilesElementColor
@@ -166,5 +174,79 @@ class ComplicationTileInactiveColorTest {
         // Reset custom flag
         PanelPreferences.setInactiveTilesUseCustom(context, isDark = true, useCustom = false)
         PanelPreferences.setInactiveTilesColorMode(context, isDark = true, mode = ComplicationArcMonetMode.DEFAULT)
+    }
+
+    @Test
+    fun `footer button icons use contrasting color when footer icon backgrounds and custom inactive color are active`() {
+        val brightCustomBg = Color.White
+        val brightContrastTint = computeContrastForegroundForColor(brightCustomBg)
+        assertEquals(Color(0xFF1A1A1A), brightContrastTint)
+
+        val resolvedWhenBgEnabled = resolveFooterButtonIconTint(
+            footerIconBgEnabled = true,
+            inactiveOnTileColor = brightContrastTint,
+            defaultIconTint = Color.White
+        )
+        assertEquals(Color(0xFF1A1A1A), resolvedWhenBgEnabled)
+
+        val resolvedWhenBgDisabled = resolveFooterButtonIconTint(
+            footerIconBgEnabled = false,
+            inactiveOnTileColor = brightContrastTint,
+            defaultIconTint = Color(0xFFCCCCCC)
+        )
+        assertEquals(Color(0xFFCCCCCC), resolvedWhenBgDisabled)
+
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        PanelPreferences.init(context)
+        PanelPreferences.setFooterIconBackground(context, true)
+        PanelPreferences.setSettingsIconLocation(context, SettingsIconLocation.EXPANDED_QS)
+        PanelPreferences.setMoveCollapseToQqsFooter(context, true)
+        PanelPreferences.setShowCarrier(context, false)
+        PanelPreferences.setInactiveTilesUseCustom(context, isDark = true, useCustom = true)
+        PanelPreferences.setInactiveTilesCustomColor(context, isDark = true, color = 0xFFFFFFFF.toInt())
+
+        val sampleTiles = listOf(
+            QsTileModel(id = "wifi", label = "Wi-Fi", subtitle = "Off", state = TileState.INACTIVE, category = TileCategory.CONNECTIVITY)
+        )
+        var resolvedFooterBg: Color? = null
+        var resolvedFooterFg: Color? = null
+
+        composeTestRule.setContent {
+            QuickPanelTheme(darkTheme = true) {
+                resolvedFooterBg = getInactiveTilesElementColor(isDark = true)
+                resolvedFooterFg = getInactiveTilesOnElementColor(isDark = true)
+                UnifiedQsPanel(
+                    expansionStage = QsExpansionStage.FULL_QS,
+                    tiles = sampleTiles,
+                    gridLayout = QsGridLayout.DEFAULT,
+                    brightness = 128,
+                    onBrightnessChange = {},
+                    onTileClick = {},
+                    onTileLongClick = {},
+                    onExpandFull = {},
+                    onCollapseToQqs = {},
+                    onClosePanel = {},
+                    notifications = emptyList(),
+                    isNotificationPermissionGranted = true,
+                    onNotificationClick = {},
+                    onNotificationDismiss = {},
+                    onNotificationActionClick = {},
+                    onDismissAllNotifications = {},
+                    onRequestNotificationAccess = {}
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        assertEquals(Color.White, resolvedFooterBg)
+        assertEquals(Color(0xFF1A1A1A), resolvedFooterFg)
+        composeTestRule.onNodeWithTag("collapse_to_qqs_button").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("footer_edit_tiles_btn").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("footer_settings_button").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("footer_power_button").assertIsDisplayed()
+
+        // Clean up preferences
+        PanelPreferences.setInactiveTilesUseCustom(context, isDark = true, useCustom = false)
+        PanelPreferences.setFooterIconBackground(context, false)
     }
 }

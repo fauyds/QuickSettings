@@ -21,6 +21,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -32,6 +34,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -48,6 +53,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -78,7 +84,8 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
             // ==========================================
             // SCREEN 1: CATEGORY BUTTONS HUB (NO TABS)
             // ==========================================
-            val pinnedIds by com.example.data.PanelPreferences.pinnedFeatures.collectAsState()
+             val pinnedIds by com.example.data.PanelPreferences.pinnedFeatures.collectAsState()
+            var globalSearchQuery by remember { mutableStateOf("") }
             val allCategories = listOf(
                 CustomizeCategory.HEADS_UP,
                 CustomizeCategory.HEADS_UP_DESIGN,
@@ -96,6 +103,15 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                 allCategories.filter { !pinnedIds.contains("cat_${it.name.lowercase()}") }
             }
 
+            val matchingFeatures = remember(globalSearchQuery) {
+                if (globalSearchQuery.isBlank()) emptyList()
+                else FavoriteFeature.entries.filter { feat ->
+                    feat.title.contains(globalSearchQuery, ignoreCase = true) ||
+                        feat.description.contains(globalSearchQuery, ignoreCase = true) ||
+                        feat.category.title.contains(globalSearchQuery, ignoreCase = true)
+                }
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -108,7 +124,7 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 16.dp, bottom = 6.dp, start = 4.dp, end = 4.dp),
+                        .padding(top = 16.dp, bottom = 4.dp, start = 4.dp, end = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
@@ -127,45 +143,125 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                     )
                 }
 
-                if (pinnedCategories.isNotEmpty()) {
+                // Global Search Bar across all settings and features
+                androidx.compose.material3.OutlinedTextField(
+                    value = globalSearchQuery,
+                    onValueChange = { globalSearchQuery = it },
+                    placeholder = { Text("Search all toggles & features...", fontSize = 13.sp) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    trailingIcon = {
+                        if (globalSearchQuery.isNotEmpty()) {
+                            IconButton(onClick = { globalSearchQuery = "" }) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Clear search",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = CircleShape,
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                        unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                        disabledBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                        errorBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .testTag("global_customize_search_input")
+                )
+
+                if (globalSearchQuery.isNotBlank()) {
                     Text(
-                        text = "PINNED CATEGORIES",
+                        text = "SEARCH RESULTS (${matchingFeatures.size})",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.1.sp,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp, start = 4.dp)
+                        modifier = Modifier.padding(top = 4.dp, bottom = 2.dp, start = 4.dp)
                     )
-                    pinnedCategories.forEachIndexed { index, category ->
-                        val cardShape = CustomizeCardShapes.getShapeForIndex(index, pinnedCategories.size)
-                        CategoryButton(
-                            category = category,
-                            itemCount = 1,
-                            shape = cardShape,
-                            onClick = { selectedCategory = category }
-                        )
+                    if (matchingFeatures.isEmpty()) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "No matching toggles or features found",
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    } else {
+                        matchingFeatures.forEachIndexed { index, feat ->
+                            val cardShape = CustomizeCardShapes.getShapeForIndex(index, matchingFeatures.size)
+                            GenericPinnedFeatureCard(
+                                feature = feat,
+                                shape = cardShape,
+                                modifier = Modifier.testTag("search_result_${feat.id}")
+                            )
+                        }
                     }
-                }
-
-                if (unpinnedCategories.isNotEmpty()) {
+                } else {
                     if (pinnedCategories.isNotEmpty()) {
                         Text(
-                            text = "ALL CATEGORIES",
+                            text = "PINNED CATEGORIES",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.1.sp,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 10.dp, bottom = 2.dp, start = 4.dp)
+                            modifier = Modifier.padding(top = 8.dp, bottom = 2.dp, start = 4.dp)
                         )
+                        pinnedCategories.forEachIndexed { index, category ->
+                            val cardShape = CustomizeCardShapes.getShapeForIndex(index, pinnedCategories.size)
+                            CategoryButton(
+                                category = category,
+                                itemCount = 1,
+                                shape = cardShape,
+                                onClick = { selectedCategory = category }
+                            )
+                        }
                     }
-                    unpinnedCategories.forEachIndexed { index, category ->
-                        val cardShape = CustomizeCardShapes.getShapeForIndex(index, unpinnedCategories.size)
-                        CategoryButton(
-                            category = category,
-                            itemCount = 1,
-                            shape = cardShape,
-                            onClick = { selectedCategory = category }
-                        )
+
+                    if (unpinnedCategories.isNotEmpty()) {
+                        if (pinnedCategories.isNotEmpty()) {
+                            Text(
+                                text = "ALL CATEGORIES",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.1.sp,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(top = 10.dp, bottom = 2.dp, start = 4.dp)
+                            )
+                        }
+                        unpinnedCategories.forEachIndexed { index, category ->
+                            val cardShape = CustomizeCardShapes.getShapeForIndex(index, unpinnedCategories.size)
+                            CategoryButton(
+                                category = category,
+                                itemCount = 1,
+                                shape = cardShape,
+                                onClick = { selectedCategory = category }
+                            )
+                        }
                     }
                 }
 
