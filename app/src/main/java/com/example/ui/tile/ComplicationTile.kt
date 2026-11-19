@@ -362,6 +362,7 @@ fun ComplicationTileView(
     showInsideSubline: Boolean = showRingBackground || showProgressArc,
     customRingSize: Dp? = null,
     customIconSize: Dp? = null,
+    inactiveIconTintOverride: Color? = null,
     onClickOverride: (() -> Unit)? = null,
     onLongClickOverride: (() -> Unit)? = null,
     onAction: ((ComplicationAction) -> Unit)? = null,
@@ -445,20 +446,23 @@ fun ComplicationTileView(
     )
 
     val activeOnTileColor = com.example.ui.theme.getQsTilesOnElementColor(isDark)
-    val iconTint = if (isTransparentInner) {
-        if (model.isActive) animatedAccent else (if (isInactiveTilesCustomized) inactiveTileColor else (if (isDark) Color(0xFFCCCCCC) else Color(0xFF555555)))
-    } else if (model.isActive) {
-        activeOnTileColor
-    } else {
-        if (isInactiveTilesCustomized) inactiveTileColor else colorScheme.onSurface
-    }
-    val sublineColor = if (isTransparentInner) {
-        if (model.isActive) animatedAccent else (if (isInactiveTilesCustomized) inactiveTileColor else (if (isDark) Color(0xFFCCCCCC) else colorScheme.onSurfaceVariant))
-    } else if (model.isActive) {
-        activeOnTileColor.copy(alpha = 0.92f)
-    } else {
-        if (isInactiveTilesCustomized) inactiveTileColor else colorScheme.onSurfaceVariant
-    }
+    val inactiveOnTileColor = com.example.ui.theme.getInactiveTilesOnElementColor(isDark)
+    val foregroundColors = resolveComplicationForegroundColors(
+        isDark = isDark,
+        isActive = model.isActive,
+        isTransparentInner = isTransparentInner,
+        isInactiveTilesCustomized = isInactiveTilesCustomized,
+        animatedAccent = animatedAccent,
+        inactiveTileColor = inactiveTileColor,
+        activeOnTileColor = activeOnTileColor,
+        inactiveOnTileColor = inactiveOnTileColor,
+        onSurfaceColor = colorScheme.onSurface,
+        onSurfaceVariantColor = colorScheme.onSurfaceVariant,
+        inactiveIconTintOverride = inactiveIconTintOverride
+    )
+    val iconTint = foregroundColors.iconTint
+    val insideSublineColor = foregroundColors.insideSublineColor
+    val belowSublineColor = foregroundColors.belowSublineColor
 
     val handleTap = {
         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -747,7 +751,7 @@ fun ComplicationTileView(
                             text = model.subline,
                             fontSize = if (isCompactHeader) 9.sp else 10.5.sp,
                             fontWeight = FontWeight.Bold,
-                            color = sublineColor,
+                            color = insideSublineColor,
                             maxLines = 1,
                             overflow = TextOverflow.Clip,
                             style = TextStyle(
@@ -794,7 +798,7 @@ fun ComplicationTileView(
                     text = model.subline,
                     fontSize = if (isCompactHeader) 10.sp else 10.5.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = sublineColor,
+                    color = belowSublineColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
@@ -806,6 +810,82 @@ fun ComplicationTileView(
             }
         }
     }
+}
+
+internal data class ComplicationForegroundColors(
+    val iconTint: Color,
+    val insideSublineColor: Color,
+    val belowSublineColor: Color
+)
+
+internal fun resolveComplicationForegroundColors(
+    isDark: Boolean,
+    isActive: Boolean,
+    isTransparentInner: Boolean,
+    isInactiveTilesCustomized: Boolean,
+    animatedAccent: Color,
+    inactiveTileColor: Color,
+    activeOnTileColor: Color,
+    inactiveOnTileColor: Color,
+    onSurfaceColor: Color,
+    onSurfaceVariantColor: Color,
+    inactiveIconTintOverride: Color? = null
+): ComplicationForegroundColors {
+    val iconTint = if (isTransparentInner) {
+        if (isActive) {
+            animatedAccent
+        } else {
+            inactiveIconTintOverride ?: if (isInactiveTilesCustomized) {
+                inactiveTileColor
+            } else if (isDark) {
+                Color(0xFFCCCCCC)
+            } else {
+                Color(0xFF555555)
+            }
+        }
+    } else if (isActive) {
+        activeOnTileColor
+    } else {
+        inactiveIconTintOverride ?: if (isInactiveTilesCustomized) {
+            inactiveOnTileColor
+        } else {
+            onSurfaceColor
+        }
+    }
+
+    val insideSublineColor = if (isTransparentInner) {
+        if (isActive) {
+            animatedAccent
+        } else {
+            inactiveIconTintOverride?.copy(alpha = 0.92f) ?: if (isInactiveTilesCustomized) {
+                inactiveTileColor
+            } else if (isDark) {
+                Color(0xFFCCCCCC)
+            } else {
+                onSurfaceVariantColor
+            }
+        }
+    } else if (isActive) {
+        activeOnTileColor.copy(alpha = 0.92f)
+    } else {
+        inactiveIconTintOverride?.copy(alpha = 0.92f) ?: if (isInactiveTilesCustomized) {
+            inactiveOnTileColor.copy(alpha = 0.92f)
+        } else {
+            onSurfaceVariantColor
+        }
+    }
+
+    val belowSublineColor = if (isDark) {
+        Color.White.copy(alpha = 0.72f)
+    } else {
+        onSurfaceVariantColor
+    }
+
+    return ComplicationForegroundColors(
+        iconTint = iconTint,
+        insideSublineColor = insideSublineColor,
+        belowSublineColor = belowSublineColor
+    )
 }
 
 @Composable

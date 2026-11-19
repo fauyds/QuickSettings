@@ -3543,7 +3543,17 @@ fun MarshmallowEditTileCard(
         ) {
             val isThirdParty = tile.isExternal || tile.category == TileCategory.THIRD_PARTY || tile.category == TileCategory.EXTERNAL || tile.id.contains("/")
             val compSpec = tile.complicationSpec
-            val iconTint = if (isActive) monetAccent else Color(MonetThemeHelper.getTextSecondary(context, isDark))
+            val isInactiveTilesCustomized = PanelPreferences.getInactiveTilesUseCustom(isDark).collectAsState().value ||
+                PanelPreferences.getInactiveTilesColorMode(isDark).collectAsState().value != com.example.data.ComplicationArcMonetMode.DEFAULT ||
+                PanelPreferences.getInactiveTilesHue(isDark).collectAsState().value != 0f ||
+                PanelPreferences.getInactiveTilesSat(isDark).collectAsState().value != 1f ||
+                PanelPreferences.getInactiveTilesVal(isDark).collectAsState().value != 1f
+            val inactiveOnTileColor = com.example.ui.theme.getInactiveTilesOnElementColor(isDark)
+            val iconTint = when {
+                isActive -> monetAccent
+                isInactiveTilesCustomized -> inactiveOnTileColor
+                else -> Color(MonetThemeHelper.getTextSecondary(context, isDark))
+            }
             if (compSpec != null) {
                 com.example.ui.tile.ComplicationTileView(
                     model = compSpec.copy(
@@ -3556,7 +3566,8 @@ fun MarshmallowEditTileCard(
                     showBelowSubline = false,
                     showRingBackground = enableLegacyTileShapes,
                     showInsideSubline = true,
-                    customRingSize = if (enableLegacyTileShapes) 42.dp else 28.dp
+                    customRingSize = if (enableLegacyTileShapes) 42.dp else 28.dp,
+                    inactiveIconTintOverride = if (!enableLegacyTileShapes && !isActive) inactiveOnTileColor else null
                 )
             } else if (isThirdParty) {
                 val pkg = tile.packageName ?: if (tile.id.contains("/")) tile.id.substringBefore('/') else null
@@ -8622,6 +8633,12 @@ fun Qqs2x1ComplicationCard(
     val primaryColor = com.example.ui.theme.getQsTilesElementColor(isDark)
     val onPrimaryColor = com.example.ui.theme.getQsTilesOnElementColor(isDark)
     val inactiveTileColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
+    val inactiveOnTileColor = com.example.ui.theme.getInactiveTilesOnElementColor(isDark)
+    val isInactiveTilesCustomized = PanelPreferences.getInactiveTilesUseCustom(isDark).collectAsState().value ||
+        PanelPreferences.getInactiveTilesColorMode(isDark).collectAsState().value != com.example.data.ComplicationArcMonetMode.DEFAULT ||
+        PanelPreferences.getInactiveTilesHue(isDark).collectAsState().value != 0f ||
+        PanelPreferences.getInactiveTilesSat(isDark).collectAsState().value != 1f ||
+        PanelPreferences.getInactiveTilesVal(isDark).collectAsState().value != 1f
     val tileOutlineEnabled by PanelPreferences.tileOutlineEnabled.collectAsState()
     val tileOutlineThicknessDp by PanelPreferences.tileOutlineThicknessDp.collectAsState()
     val showQsTileGradient by PanelPreferences.showQsTileGradient.collectAsState()
@@ -8671,7 +8688,8 @@ fun Qqs2x1ComplicationCard(
     val titleColor = when {
         isActive && tileOutlineEnabled -> primaryColor
         isActive -> onPrimaryColor
-        isUnavailable -> (if (isDark) Color.White else Color(0xFF1E293B)).copy(alpha = 0.45f)
+        isUnavailable -> (if (isInactiveTilesCustomized && !tileOutlineEnabled) inactiveOnTileColor else (if (isDark) Color.White else Color(0xFF1E293B))).copy(alpha = 0.45f)
+        isInactiveTilesCustomized && !tileOutlineEnabled -> inactiveOnTileColor
         else -> if (isDark) Color.White.copy(alpha = 0.92f) else Color(0xFF1E293B)
     }
     val sublineColor = titleColor.copy(alpha = if (isActive) 0.85f else 0.72f)
@@ -8888,7 +8906,8 @@ fun Qqs2x1ComplicationCard(
             showProgressArc = progressDisplayMode.showIconArc,
             showInsideSubline = false,
             customRingSize = scaledRingSize,
-            customIconSize = scaledIconSize
+            customIconSize = scaledIconSize,
+            inactiveIconTintOverride = if (!isActive && !tileOutlineEnabled && isInactiveTilesCustomized) inactiveOnTileColor else null
         )
 
         if (progressDisplayMode.showHorizontalLine) {
@@ -9056,6 +9075,7 @@ fun CircularQsTile(
     }
 
     val inactiveTileColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
+    val inactiveOnTileColor = com.example.ui.theme.getInactiveTilesOnElementColor(isDark)
 
     val outlineColor = remember(tile.state, isDark, primaryColor, inactiveTileColor) {
         when (tile.state) {
@@ -9108,7 +9128,7 @@ fun CircularQsTile(
         PanelPreferences.getInactiveTilesSat(isDark).collectAsState().value != 1f ||
         PanelPreferences.getInactiveTilesVal(isDark).collectAsState().value != 1f
 
-    val (backgroundColor, iconColor) = remember(tile.state, isDark, primaryColor, onPrimaryColor, cardContainerColor, tileOutlineEnabled, inactiveTileColor, renderShapeBg, isInactiveTilesCustomized) {
+    val (backgroundColor, iconColor) = remember(tile.state, isDark, primaryColor, onPrimaryColor, cardContainerColor, tileOutlineEnabled, inactiveTileColor, inactiveOnTileColor, renderShapeBg, isInactiveTilesCustomized) {
         val disabledGrayTint = (if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)).copy(alpha = 0.50f)
         if (!renderShapeBg) {
             val inactiveFg = if (isInactiveTilesCustomized) inactiveTileColor else (if (isDark) Color(0xFFCCCCCC) else Color(0xFF555555))
@@ -9120,7 +9140,13 @@ fun CircularQsTile(
             Pair(Color.Transparent, fg)
         } else {
             val inactiveBg = inactiveTileColor
-            val inactiveText = if (isDark) Color.White.copy(alpha = 0.90f) else Color(0xFF1E293B)
+            val inactiveText = if (!tileOutlineEnabled && isInactiveTilesCustomized) {
+                inactiveOnTileColor
+            } else if (isDark) {
+                Color.White.copy(alpha = 0.90f)
+            } else {
+                Color(0xFF1E293B)
+            }
             val unavailableBg = (if (isDark) Color(0xFF555555) else Color(0xFFBDBDBD)).copy(alpha = 0.35f)
             val unavailableText = disabledGrayTint
 

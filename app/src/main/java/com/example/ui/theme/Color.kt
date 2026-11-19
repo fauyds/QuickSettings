@@ -3,6 +3,7 @@ package com.example.ui.theme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import com.example.data.PanelPreferences
 
 // Expressive Dark Palette with rich Monet containers
@@ -287,6 +288,37 @@ fun getInactiveTilesElementColor(isDark: Boolean): Color {
     val sat = PanelPreferences.getInactiveTilesSat(isDark).collectAsState().value
     val valFactor = PanelPreferences.getInactiveTilesVal(isDark).collectAsState().value
     return applyHsvAdjustments(baseColor, hue, sat, valFactor)
+}
+
+fun computeContrastForegroundForColor(bgColor: Color): Color {
+    return if (androidx.core.graphics.ColorUtils.calculateLuminance(bgColor.toArgb()) > 0.45) {
+        Color(0xFF1A1A1A)
+    } else {
+        Color.White
+    }
+}
+
+@Composable
+fun getInactiveTilesOnElementColor(isDark: Boolean): Color {
+    val useCustom = PanelPreferences.getInactiveTilesUseCustom(isDark).collectAsState().value
+    val mode = PanelPreferences.getInactiveTilesColorMode(isDark).collectAsState().value
+    val hue = PanelPreferences.getInactiveTilesHue(isDark).collectAsState().value
+    val sat = PanelPreferences.getInactiveTilesSat(isDark).collectAsState().value
+    val valFactor = PanelPreferences.getInactiveTilesVal(isDark).collectAsState().value
+    val isHsvAdjusted = hue != 0f || sat != 1f || valFactor != 1f
+    val scheme = androidx.compose.material3.MaterialTheme.colorScheme
+
+    if (useCustom || isHsvAdjusted) {
+        val resolvedBg = getInactiveTilesElementColor(isDark)
+        return computeContrastForegroundForColor(resolvedBg)
+    }
+
+    return when (mode) {
+        com.example.data.ComplicationArcMonetMode.PRIMARY -> scheme.onPrimaryContainer
+        com.example.data.ComplicationArcMonetMode.SECONDARY -> scheme.onSecondaryContainer
+        com.example.data.ComplicationArcMonetMode.TERTIARY -> scheme.onTertiaryContainer
+        com.example.data.ComplicationArcMonetMode.DEFAULT -> scheme.onSurface
+    }
 }
 
 @Composable
