@@ -531,6 +531,14 @@ enum class FavoriteFeature(
         icon = Icons.Default.RoundedCorner,
         keywords = "corner radius rounding outer inner panel"
     ),
+    DESIGN_PANEL_TOP_RIM(
+        id = "design_panel_top_rim",
+        title = "Panel Top Rim",
+        category = CustomizeCategory.QS_DESIGN,
+        description = "Draw a top rim highlight on panel cards with vertical gradient from 20% to 0% alpha",
+        icon = Icons.Default.AutoAwesome,
+        keywords = "rim top gradient alpha 20 0 highlight border glass panel outline stroke"
+    ),
     DESIGN_HEADER_IMAGE(
         id = "design_header_image",
         title = "Custom Header Image",

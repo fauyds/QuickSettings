@@ -147,6 +147,7 @@ import androidx.compose.material.icons.filled.Speed
 import com.example.ui.shape.QsShapeItem
 import com.example.ui.shape.QsShapeManager
 import com.example.ui.shape.insideShapeBorder
+import com.example.ui.shape.panelTopRim
 
 @Composable
 fun QsDesignSection(modifier: Modifier = Modifier) {
@@ -182,6 +183,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val panelGlobalCornerEnabled by PanelPreferences.panelGlobalCornerEnabled.collectAsState()
     val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
     val panelInnerCorner by PanelPreferences.panelInnerCorner.collectAsState()
+    val enablePanelTopRim by PanelPreferences.enablePanelTopRim.collectAsState()
     val collapseExpandOptions by PanelPreferences.collapseExpandOptions.collectAsState()
     val useClearAllFab by PanelPreferences.useClearAllFab.collectAsState()
     val clearAllFabPosition by PanelPreferences.clearAllFabPosition.collectAsState()
@@ -4432,6 +4434,108 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     }
     }
 
+    val panelTopRimCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        val previewSurfaceColor = MaterialTheme.colorScheme.surfaceVariant
+        val previewRimShape = RoundedCornerShape(14.dp)
+        PinnableCardWrapper("panel_top_rim_card", CustomizeCategory.QS_DESIGN, "Panel Top Rim") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("panel_top_rim_card")
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text(
+                                    text = "Panel Top Rim",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    lineHeight = 17.sp,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Draw a rim highlight on top of panel cards fading from 20% to 0% opacity.",
+                                    fontSize = 12.sp,
+                                    lineHeight = 15.sp,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Switch(
+                            checked = enablePanelTopRim,
+                            onCheckedChange = { PanelPreferences.setEnablePanelTopRim(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("panel_top_rim_toggle")
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = enablePanelTopRim,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .panelTopRim(enabled = true, shape = previewRimShape)
+                                .clip(previewRimShape)
+                                .background(
+                                    if (isSystemInDarkTheme()) Color(0xFF20252C) else previewSurfaceColor
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Top Rim Preview (20% -> 0% Alpha)",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isSystemInDarkTheme()) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     val clearAllFabCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         var clearAllFabExpanded by rememberSaveable { mutableStateOf(false) }
         PinnableCardWrapper("clear_all_fab_card", CustomizeCategory.QS_DESIGN, "Clear All FAB Button") {
@@ -5826,7 +5930,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         "brightness_gradient_card" to brightnessGradientCard,
         "show_brightness_controls_background_card" to showBrightnessControlsBackgroundCard,
         "progress_bar_slider_style_card" to progressBarSliderStyleCard,
-        "panel_corner_styling_card" to panelCornerStylingCard
+        "panel_corner_styling_card" to panelCornerStylingCard,
+        "panel_top_rim_card" to panelTopRimCard
     )
     val hiddenDesignIds = buildSet {
         add("header_complication_tiles_card")
@@ -5958,6 +6063,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         // 5. Panel Corner Styling
         val unpinnedCorners = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
         if (!isAndroidOreoStyle && !pinnedIds.contains("panel_corner_styling_card")) unpinnedCorners.add(panelCornerStylingCard)
+        if (!pinnedIds.contains("panel_top_rim_card")) unpinnedCorners.add(panelTopRimCard)
 
         if (unpinnedCorners.isNotEmpty()) {
             CollapsibleSubheaderSection(

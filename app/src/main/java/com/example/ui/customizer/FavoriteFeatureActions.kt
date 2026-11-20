@@ -1273,6 +1273,17 @@ internal fun RenderQsDesignFeatureActions(feature: FavoriteFeature, modifier: Mo
             }
         }
 
+        FavoriteFeature.DESIGN_PANEL_TOP_RIM -> {
+            val enableTopRim by PanelPreferences.enablePanelTopRim.collectAsState()
+            FeatureSwitchRow(
+                label = "Panel Top Rim (20% -> 0% Alpha)",
+                subtitle = "Draws a top-to-bottom gradient rim highlight on top of panel cards.",
+                checked = enableTopRim,
+                onCheckedChange = { PanelPreferences.setEnablePanelTopRim(context, it) },
+                switchTestTag = "feature_panel_top_rim_switch"
+            )
+        }
+
         FavoriteFeature.DESIGN_HEADER_IMAGE -> {
             val headerImg by PanelPreferences.showCustomHeaderImage.collectAsState()
             val height by PanelPreferences.customHeaderImageHeight.collectAsState()

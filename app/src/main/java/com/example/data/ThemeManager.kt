@@ -36,7 +36,8 @@ data class ThemePreviewData(
     val slidersColorTertiary: Boolean = false,
     val qsTilesColorTertiary: Boolean = false,
     val surfaceBgColorTertiary: Boolean = false,
-    val panelContainerColorTertiary: Boolean = false
+    val panelContainerColorTertiary: Boolean = false,
+    val enablePanelTopRim: Boolean = false
 ) {
     val themeModeLabel: String
         get() = when (themeMode.lowercase()) {
@@ -93,7 +94,8 @@ data class SavedTheme(
                     slidersColorTertiary = json.optBoolean("elem_sliders_tertiary", false),
                     qsTilesColorTertiary = json.optBoolean("elem_qs_tiles_tertiary", false),
                     surfaceBgColorTertiary = json.optBoolean("elem_surface_bg_tertiary", false),
-                    panelContainerColorTertiary = json.optBoolean("elem_panel_container_tertiary", false)
+                    panelContainerColorTertiary = json.optBoolean("elem_panel_container_tertiary", false),
+                    enablePanelTopRim = json.optBoolean("enable_panel_top_rim", false)
                 )
             } catch (_: Exception) {
                 ThemePreviewData()

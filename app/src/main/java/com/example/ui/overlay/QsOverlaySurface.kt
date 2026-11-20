@@ -63,6 +63,7 @@ import com.example.data.SavedTheme
 import com.example.ui.components.QsProgressSlider
 import com.example.ui.shape.QsShapeManager
 import com.example.ui.shape.insideShapeBorder
+import com.example.ui.shape.panelTopRim
 import org.json.JSONObject
 
 /**
@@ -121,7 +122,8 @@ data class QsOverlaySurfaceConfig(
     val showBrightnessPlusMinus: Boolean = false,
     val showBrightnessControlsBackground: Boolean = false,
     val minBrightness: Int = 1,
-    val maxBrightness: Int = 2047
+    val maxBrightness: Int = 2047,
+    val enablePanelTopRim: Boolean = false
 ) {
     @Composable
     fun getSliderElementColor(isDark: Boolean): Color {
@@ -161,6 +163,7 @@ data class QsOverlaySurfaceConfig(
             val showBrightnessControlsBackground by PanelPreferences.showBrightnessControlsBackground.collectAsState()
             val minBrightness by PanelPreferences.minBrightness.collectAsState()
             val maxBrightness by PanelPreferences.maxBrightness.collectAsState()
+            val enablePanelTopRim by PanelPreferences.enablePanelTopRim.collectAsState()
 
             val showHeaderImg by PanelPreferences.showCustomHeaderImage.collectAsState()
             val headerImgUri by PanelPreferences.customHeaderImageUri.collectAsState()
@@ -253,7 +256,8 @@ data class QsOverlaySurfaceConfig(
                 showBrightnessPlusMinus = showBrightnessPlusMinus,
                 showBrightnessControlsBackground = showBrightnessControlsBackground,
                 minBrightness = minBrightness,
-                maxBrightness = maxBrightness
+                maxBrightness = maxBrightness,
+                enablePanelTopRim = enablePanelTopRim
             )
         }
 
@@ -282,6 +286,7 @@ data class QsOverlaySurfaceConfig(
                     showBrightnessControlsBackground = json.optBoolean("show_brightness_controls_background", false),
                     minBrightness = json.optInt("min_brightness", 1),
                     maxBrightness = json.optInt("max_brightness", 2047),
+                    enablePanelTopRim = json.optBoolean("enable_panel_top_rim", false),
                     sliderSyncAll = json.optBoolean("slider_sync_all", true),
                     panelOuterCorner = outerCorner,
                     panelInnerCorner = innerCorner,
@@ -431,11 +436,13 @@ fun QsOverlaySurface(
     var previewAutoBrightness by remember { mutableStateOf(false) }
 
     // Main Quick Settings Panel Surface Container
+    val panelShape = RoundedCornerShape(outerCorner)
     Box(
         modifier = modifier
             .fillMaxWidth()
             .offset(y = qqsContainerOffset)
-            .clip(RoundedCornerShape(outerCorner))
+            .panelTopRim(enabled = config.enablePanelTopRim, shape = panelShape)
+            .clip(panelShape)
             .background(monetSurfaceBg)
             .testTag(testTagPrefix)
     ) {

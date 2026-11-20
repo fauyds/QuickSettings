@@ -4,13 +4,16 @@ import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.ColorFilter
+import android.graphics.LinearGradient
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PixelFormat
 import android.graphics.Rect
+import android.graphics.Shader
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.LayerDrawable
+import android.os.Build
 import android.view.View
 import androidx.core.graphics.PathParser
 import kotlin.math.max
@@ -228,4 +231,144 @@ object CustomShadowHelper {
 
         view.background = LayerDrawable(arrayOf(shadowDrawable, contentDrawable))
     }
+
+    /**
+     * Applies a vertical gradient rim highlight (20% alpha at top down to 0% alpha at bottom)
+     * in the View's foreground so it renders on top of card background and content.
+     */
+    fun applyPanelTopRimForeground(
+        view: View,
+        enabled: Boolean,
+        radii: FloatArray? = null,
+        cornerRadius: Float = 0f,
+        strokeWidthDp: Float = 1f
+    ) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+        if (!enabled) {
+            if (view.foreground is TopRimOutlineDrawable) {
+                view.foreground = null
+            }
+            return
+        }
+        val density = view.resources.displayMetrics.density
+        val strokePx = (strokeWidthDp * density).coerceAtLeast(1f)
+        val existing = view.foreground as? TopRimOutlineDrawable
+        if (existing != null) {
+            existing.updateShape(radii = radii, cornerRadius = cornerRadius, strokeWidthPx = strokePx)
+        } else {
+            view.foreground = TopRimOutlineDrawable(
+                radii = radii?.copyOf(),
+                cornerRadius = cornerRadius,
+                strokeWidthPx = strokePx
+            )
+        }
+    }
+}
+
+/**
+ * Draws a crisp inner border rim with a top-to-bottom vertical gradient from
+ * 20% opacity white at the top to 0% opacity at the bottom.
+ */
+class TopRimOutlineDrawable(
+    private var radii: FloatArray? = null,
+    private var cornerRadius: Float = 0f,
+    private var strokeWidthPx: Float = 2f
+) : Drawable() {
+
+    private val rimPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
+    private val cachedPath = Path()
+
+    fun updateShape(radii: FloatArray?, cornerRadius: Float, strokeWidthPx: Float) {
+        val radiiChanged = when {
+            this.radii == null && radii == null -> false
+            this.radii != null && radii != null -> !this.radii.contentEquals(radii)
+            else -> true
+        }
+        if (radiiChanged || this.cornerRadius != cornerRadius || this.strokeWidthPx != strokeWidthPx) {
+            this.radii = radii?.copyOf()
+            this.cornerRadius = cornerRadius
+            this.strokeWidthPx = strokeWidthPx
+            updateCachedPath(bounds)
+            updateShader(bounds)
+            invalidateSelf()
+        }
+    }
+
+    override fun onBoundsChange(bounds: Rect) {
+        super.onBoundsChange(bounds)
+        updateCachedPath(bounds)
+        updateShader(bounds)
+    }
+
+    private fun updateCachedPath(bounds: Rect) {
+        cachedPath.reset()
+        if (bounds.width() <= 0 || bounds.height() <= 0) return
+        val r = radii
+        when {
+            r != null && r.size >= 8 -> {
+                cachedPath.addRoundRect(
+                    bounds.left.toFloat(), bounds.top.toFloat(),
+                    bounds.right.toFloat(), bounds.bottom.toFloat(),
+                    r,
+                    Path.Direction.CW
+                )
+            }
+            cornerRadius > 0f -> {
+                cachedPath.addRoundRect(
+                    bounds.left.toFloat(), bounds.top.toFloat(),
+                    bounds.right.toFloat(), bounds.bottom.toFloat(),
+                    cornerRadius, cornerRadius,
+                    Path.Direction.CW
+                )
+            }
+            else -> {
+                cachedPath.addRect(
+                    bounds.left.toFloat(), bounds.top.toFloat(),
+                    bounds.right.toFloat(), bounds.bottom.toFloat(),
+                    Path.Direction.CW
+                )
+            }
+        }
+    }
+
+    private fun updateShader(bounds: Rect) {
+        if (bounds.height() <= 0) {
+            rimPaint.shader = null
+            return
+        }
+        rimPaint.shader = LinearGradient(
+            bounds.left.toFloat(),
+            bounds.top.toFloat(),
+            bounds.left.toFloat(),
+            bounds.bottom.toFloat(),
+            Color.argb(51, 255, 255, 255),
+            Color.argb(0, 255, 255, 255),
+            Shader.TileMode.CLAMP
+        )
+    }
+
+    override fun draw(canvas: Canvas) {
+        if (cachedPath.isEmpty || bounds.width() <= 0 || bounds.height() <= 0) return
+        if (rimPaint.shader == null) updateShader(bounds)
+        rimPaint.strokeWidth = strokeWidthPx * 2f
+        canvas.save()
+        canvas.clipPath(cachedPath)
+        canvas.drawPath(cachedPath, rimPaint)
+        canvas.restore()
+    }
+
+    override fun setAlpha(alpha: Int) {
+        rimPaint.alpha = alpha
+    }
+
+    override fun setColorFilter(colorFilter: ColorFilter?) {
+        rimPaint.colorFilter = colorFilter
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
 }

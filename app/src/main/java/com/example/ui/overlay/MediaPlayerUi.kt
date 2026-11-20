@@ -1,6 +1,7 @@
 package com.example.ui.overlay
 
 import com.example.data.MediaNotificationStyle
+import com.example.ui.shape.panelTopRim
 import android.os.Build
 import androidx.core.graphics.ColorUtils
 import android.graphics.Color as AndroidColor
@@ -428,6 +429,7 @@ fun AdaptiveMediaPlayerCard(
     val cardColor = artworkColor ?: backgroundColor
 
     val enablePanelShadows by PanelPreferences.enablePanelShadows.collectAsState()
+    val enablePanelTopRim by PanelPreferences.enablePanelTopRim.collectAsState()
     val panelShadowElevation by PanelPreferences.panelShadowElevation.collectAsState()
     val panelShadowOffsetY by PanelPreferences.panelShadowOffsetY.collectAsState()
     val panelShadowAlpha by PanelPreferences.panelShadowAlpha.collectAsState()
@@ -494,14 +496,16 @@ fun AdaptiveMediaPlayerCard(
             .fillMaxWidth()
             .then(shadowModifier)
     ) {
+        val effectiveShape = if (isClassicStyle) RoundedCornerShape(0.dp) else cardShape
         Surface(
-            shape = if (isClassicStyle) RoundedCornerShape(0.dp) else cardShape,
+            shape = effectiveShape,
             color = cardColor,
             tonalElevation = 0.dp,
             shadowElevation = 0.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(if (isClassicStyle) RoundedCornerShape(0.dp) else cardShape)
+                .panelTopRim(enabled = enablePanelTopRim, shape = effectiveShape)
+                .clip(effectiveShape)
                 .then(
                     if (isClassicStyle) {
                         Modifier.drawBehind {

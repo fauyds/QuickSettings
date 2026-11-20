@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.core.graphics.PathParser
 import com.example.R
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -245,6 +246,30 @@ fun Modifier.insideShapeBorder(
             }
         }
     }
+}
+
+/**
+ * Draws a subtle inner rim ON TOP of content with a vertical gradient from
+ * 20% alpha at the top down to 0% alpha at the bottom.
+ */
+fun Modifier.panelTopRim(
+    enabled: Boolean,
+    shape: Shape,
+    width: Dp = 1.dp,
+    rimColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.White
+): Modifier = if (!enabled) {
+    this
+} else {
+    insideShapeBorder(
+        width = width,
+        brush = Brush.verticalGradient(
+            colors = listOf(
+                rimColor.copy(alpha = 0.20f),
+                rimColor.copy(alpha = 0.0f)
+            )
+        ),
+        shape = shape
+    )
 }
 
 object QsShapeManager {

@@ -564,6 +564,7 @@ class NotificationListView @JvmOverloads constructor(
         val cardRadius = PanelPreferences.panelOuterCorner.value * density
         val cardBg = panelCardBackgroundColor ?: MonetThemeHelper.getCardBackground(context, isDark)
         val permDrawable = MonetThemeHelper.createMonetCardDrawable(context, isDark, cardRadius, customBgColor = cardBg)
+        val enablePanelTopRim = PanelPreferences.enablePanelTopRim.value
         CustomShadowHelper.applyCustomShadowBackground(
             flPermissionCard,
             permDrawable,
@@ -572,6 +573,11 @@ class NotificationListView @JvmOverloads constructor(
             isDark = isDark,
             customAlpha = panelShadowAlpha,
             customOffsetY = shadowOffsetY
+        )
+        CustomShadowHelper.applyPanelTopRimForeground(
+            flPermissionCard,
+            enabled = enablePanelTopRim,
+            cornerRadius = cardRadius
         )
         flPermissionCard.elevation = 0f
         flPermissionCard.translationY = 0f
@@ -587,6 +593,7 @@ class NotificationListView @JvmOverloads constructor(
         val isKitKatStyle = PanelPreferences.isAndroidKitKatStyle(context)
         if (isOreoStyle || isMarshmallowStyle || isKitKatStyle) {
             flEmptyCard.background = null
+            CustomShadowHelper.applyPanelTopRimForeground(flEmptyCard, enabled = false)
             flEmptyCard.elevation = 0f
             flEmptyCard.translationY = 0f
             tvEmptyText.text = "No notifications"
@@ -609,6 +616,11 @@ class NotificationListView @JvmOverloads constructor(
                 isDark = isDark,
                 customAlpha = panelShadowAlpha,
                 customOffsetY = shadowOffsetY
+            )
+            CustomShadowHelper.applyPanelTopRimForeground(
+                flEmptyCard,
+                enabled = enablePanelTopRim,
+                cornerRadius = cardRadius
             )
             flEmptyCard.elevation = 0f
             flEmptyCard.translationY = 0f
@@ -760,6 +772,7 @@ class NotificationListView @JvmOverloads constructor(
                 PanelPreferences.panelOuterCorner.value,
                 PanelPreferences.panelInnerCorner.value,
                 PanelPreferences.enablePanelShadows.value,
+                PanelPreferences.enablePanelTopRim.value,
                 PanelPreferences.panelShadowElevation.value,
                 PanelPreferences.mediaNotificationStyle.value,
                 PanelPreferences.disableClearAllBackground.value,

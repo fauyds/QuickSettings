@@ -64,6 +64,7 @@ import com.example.model.TileCategory
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.drawOutline
 import com.example.ui.shape.insideShapeBorder
+import com.example.ui.shape.panelTopRim
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -9764,6 +9765,7 @@ fun BlurredContainerCard(
     content: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit
 ) {
     val enablePanelShadows by PanelPreferences.enablePanelShadows.collectAsState()
+    val enablePanelTopRim by PanelPreferences.enablePanelTopRim.collectAsState()
     val panelShadowElevation by PanelPreferences.panelShadowElevation.collectAsState()
     val panelShadowOffsetY by PanelPreferences.panelShadowOffsetY.collectAsState()
     val panelShadowAlpha by PanelPreferences.panelShadowAlpha.collectAsState()
@@ -9836,6 +9838,7 @@ fun BlurredContainerCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight()
+                .panelTopRim(enabled = enablePanelTopRim, shape = shape)
                 .clip(shape)
                 .background(containerColor)
                 .then(

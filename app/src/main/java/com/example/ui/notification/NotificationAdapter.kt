@@ -523,6 +523,11 @@ class NotificationAdapter(
                 customAlpha = panelShadowAlpha,
                 customOffsetY = panelShadowOffsetY
             )
+            CustomShadowHelper.applyPanelTopRimForeground(
+                view = flRoot,
+                enabled = PanelPreferences.enablePanelTopRim.value && !isKitKatStyle,
+                radii = radii
+            )
             flRoot.elevation = 0f
             flRoot.translationY = 0f
 
@@ -908,6 +913,11 @@ class NotificationAdapter(
                 customAlpha = panelShadowAlpha,
                 customOffsetY = panelShadowOffsetY
             )
+            CustomShadowHelper.applyPanelTopRimForeground(
+                view = flRoot,
+                enabled = PanelPreferences.enablePanelTopRim.value,
+                radii = radii
+            )
             flRoot.elevation = 0f
             flRoot.translationY = 0f
             flRoot.clipChildren = false
@@ -1291,6 +1301,11 @@ class NotificationAdapter(
                 customAlpha = panelShadowAlpha,
                 customOffsetY = panelShadowOffsetY
             )
+            CustomShadowHelper.applyPanelTopRimForeground(
+                view = flRoot,
+                enabled = PanelPreferences.enablePanelTopRim.value,
+                radii = radii
+            )
             flRoot.elevation = 0f
             flRoot.translationY = 0f
             flRoot.clipChildren = false
@@ -1462,6 +1477,11 @@ class NotificationAdapter(
                 isDark = isDark,
                 customAlpha = panelShadowAlpha,
                 customOffsetY = panelShadowOffsetY
+            )
+            CustomShadowHelper.applyPanelTopRimForeground(
+                view = flRoot,
+                enabled = com.example.data.PanelPreferences.enablePanelTopRim.value && !isKitKatStyle,
+                radii = radii
             )
             flRoot.elevation = 0f
             flRoot.translationY = 0f
