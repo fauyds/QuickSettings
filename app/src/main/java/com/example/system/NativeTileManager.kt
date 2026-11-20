@@ -341,15 +341,15 @@ class NativeTileManager(
         }
     }
 
-    private fun hasConnectivityPermissions(): Boolean {
+    private fun hasConnectivityPermissions(): Boolean = runCatching {
         val fineGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val btGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
         } else {
             true
         }
-        return fineGranted && btGranted
-    }
+        fineGranted && btGranted
+    }.getOrDefault(false)
 
     private fun ensureConnectivityPermissionsGranted(): Boolean {
         if (hasConnectivityPermissions()) return true
@@ -834,23 +834,27 @@ class NativeTileManager(
             return
         }
         scope.launch(Dispatchers.IO) {
-            val wifi = wifiManager?.isWifiEnabled == true
-            val bt = bluetoothManager?.adapter?.isEnabled == true
+            val wifi = runCatching { wifiManager?.isWifiEnabled == true }.getOrDefault(false)
+            val bt = runCatching { bluetoothManager?.adapter?.isEnabled == true }.getOrDefault(false)
             val mobile = isMobileDataActive(context)
             val hotspot = isHotspotActive(context)
             val autoRotate = Settings.System.getInt(contentResolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 1
             val airplane = Settings.Global.getInt(contentResolver, Settings.Global.AIRPLANE_MODE_ON, 0) == 1
             val dndFilter = notificationManager?.currentInterruptionFilter ?: NotificationManager.INTERRUPTION_FILTER_ALL
             val dnd = dndFilter != NotificationManager.INTERRUPTION_FILTER_ALL
-            val loc = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                locationManager?.isLocationEnabled == true
-            } else {
-                locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true ||
-                locationManager?.isProviderEnabled(LocationManager.NETWORK_PROVIDER) == true
-            }
-            val powerSave = powerManager?.isPowerSaveMode == true ||
+            val loc = runCatching {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    locationManager?.isLocationEnabled == true
+                } else {
+                    locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true ||
+                    locationManager?.isProviderEnabled(LocationManager.NETWORK_PROVIDER) == true
+                }
+            }.getOrDefault(false)
+            val powerSave = runCatching {
+                powerManager?.isPowerSaveMode == true ||
                     Settings.Global.getInt(contentResolver, "low_power", 0) == 1
-            val nfc = nfcAdapter?.isEnabled == true
+            }.getOrDefault(false)
+            val nfc = runCatching { nfcAdapter?.isEnabled == true }.getOrDefault(false)
             val currentBrightness = Settings.System.getInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, 128)
             val autoBrightness = try {
                 Settings.System.getInt(
@@ -888,10 +892,10 @@ class NativeTileManager(
                 curNotif = am.getStreamVolume(AudioManager.STREAM_NOTIFICATION).toFloat() / maxNotif
             }
 
-            val wifiConnected = if (wifi) checkWifiConnected() else false
-            val resolvedWifiSsid = if (wifiConnected) resolveWifiSsid() else null
-            val resolvedBtName = if (bt) resolveConnectedBluetoothDevice() else null
-            val resolvedBtBat = if (bt && !resolvedBtName.isNullOrBlank()) resolveConnectedBluetoothBatteryLevel() else null
+            val wifiConnected = if (wifi) runCatching { checkWifiConnected() }.getOrDefault(false) else false
+            val resolvedWifiSsid = if (wifiConnected) runCatching { resolveWifiSsid() }.getOrNull() else null
+            val resolvedBtName = if (bt) runCatching { resolveConnectedBluetoothDevice() }.getOrNull() else null
+            val resolvedBtBat = if (bt && !resolvedBtName.isNullOrBlank()) runCatching { resolveConnectedBluetoothBatteryLevel() }.getOrNull() else null
 
             _isWifiEnabled.value = wifi
             _isWifiConnected.value = wifiConnected

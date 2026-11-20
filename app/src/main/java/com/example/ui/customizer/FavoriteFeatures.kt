@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -38,6 +39,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Compress
 import androidx.compose.material.icons.filled.CropSquare
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.FilterList
@@ -45,19 +47,30 @@ import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.Gradient
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.BatteryStd
+import androidx.compose.material.icons.filled.BrightnessHigh
+import androidx.compose.material.icons.filled.BrightnessLow
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LinearScale
 import androidx.compose.material.icons.filled.MenuOpen
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.RoundedCorner
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SettingsSuggest
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarOutline
+import androidx.compose.material.icons.filled.Style
 import androidx.compose.material.icons.filled.SyncAlt
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TouchApp
@@ -68,6 +81,7 @@ import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
@@ -95,8 +109,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -107,484 +125,887 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.PanelPreferences
+import com.example.ui.shape.QsShapeManager
+import com.example.ui.theme.LocalIsDarkTheme
+import com.example.ui.theme.SegmentedButtonShapes
+import com.example.ui.theme.getSettingsScreenBackgroundColor
 
 /**
- * Registry of user-customizable features eligible for favoriting and pinning
- * to the top of their respective customization sections.
+ * Registry of user-customizable features eligible for favoriting, pinning,
+ * and searching from the Customize screen.
  */
 enum class FavoriteFeature(
     val id: String,
     val title: String,
     val category: CustomizeCategory,
     val description: String,
-    val icon: ImageVector
+    val icon: ImageVector,
+    val keywords: String = "",
+    val isSearchable: Boolean = true
 ) {
-    // Basic Settings
+    // =====================================================
+    // BASIC SETTINGS
+    // =====================================================
     BASIC_THEME_MODE(
         id = "basic_theme_mode",
         title = "App Theme Mode",
         category = CustomizeCategory.BASIC,
-        description = "Switch settings theme between System, Light, and Dark mode",
-        icon = Icons.Default.Palette
+        description = "Switch app settings theme between System, Light, and Dark mode",
+        icon = Icons.Default.Palette,
+        keywords = "dark light system appearance monet"
     ),
     BASIC_COLLAPSE_OPTIONS(
         id = "basic_collapse_options",
         title = "Collapse & Expand Options",
         category = CustomizeCategory.BASIC,
         description = "Toggle option cards between full view and compact chips",
-        icon = Icons.Default.UnfoldLess
+        icon = Icons.Default.UnfoldLess,
+        keywords = "compact view fold cards"
     ),
     BASIC_COLLAPSE_SUBHEADERS(
         id = "basic_collapse_subheaders",
         title = "Collapse & Expand Subheaders",
         category = CustomizeCategory.BASIC,
         description = "Quick toggle to collapse or expand all list subheaders",
-        icon = Icons.Default.MenuOpen
+        icon = Icons.Default.MenuOpen,
+        keywords = "sections headers accordion"
     ),
     BASIC_BACKUP_RESTORE(
         id = "basic_backup_restore",
-        title = "Configuration Backup",
+        title = "Backup & Restore Configuration",
         category = CustomizeCategory.BASIC,
-        description = "Backup your Quick Settings configurations to JSON or restore",
-        icon = Icons.Default.SyncAlt
+        description = "Export your Quick Settings configurations to JSON or import a backup",
+        icon = Icons.Default.SyncAlt,
+        keywords = "export import json settings backup restore file"
     ),
 
-    // Quick Settings Tweaks
+    // =====================================================
+    // QUICK SETTINGS TWEAKS
+    // =====================================================
     TWEAKS_GRID_LAYOUT(
         id = "tweaks_grid_layout",
         title = "QS Grid Layout Density",
         category = CustomizeCategory.QS_TWEAKS,
-        description = "Choose column and row dimensions for expanded Quick Settings tiles",
-        icon = Icons.Default.GridView
+        description = "Choose column and row dimensions (3x1 to 4x4) for expanded Quick Settings tiles",
+        icon = Icons.Default.GridView,
+        keywords = "columns rows 3x3 4x3 4x4 grid tiles"
+    ),
+    TWEAKS_QQS_HORIZONTAL_SCROLL(
+        id = "tweaks_qqs_horizontal_scroll",
+        title = "Horizontal Scroll QS Tiles",
+        category = CustomizeCategory.QS_TWEAKS,
+        description = "Scroll Quick Settings tiles horizontally in compact and expanded views",
+        icon = Icons.Default.SyncAlt,
+        keywords = "carousel pager scroll qqs swipe"
+    ),
+    TWEAKS_QQS_TILES(
+        id = "tweaks_qqs_tiles",
+        title = "Quick-Quick Settings (QQS) Tile Count",
+        category = CustomizeCategory.QS_TWEAKS,
+        description = "Configure compact top-row QQS tile count",
+        icon = Icons.Default.ViewAgenda,
+        keywords = "qqs row toggle count tiles",
+        isSearchable = false
     ),
     TWEAKS_DISABLE_LABELS(
         id = "tweaks_disable_labels",
         title = "Disable Labels in Expanded QS",
         category = CustomizeCategory.QS_TWEAKS,
         description = "Hide text labels in expanded QS and enlarge tiles automatically",
-        icon = Icons.Default.VisibilityOff
+        icon = Icons.Default.VisibilityOff,
+        keywords = "hide text tile labels compact icons"
     ),
     TWEAKS_HIDE_DATE(
         id = "tweaks_hide_date",
         title = "Hide Date in Expanded QS",
         category = CustomizeCategory.QS_TWEAKS,
         description = "Hide date display when Quick Settings panel is fully expanded",
-        icon = Icons.Default.EventBusy
+        icon = Icons.Default.EventBusy,
+        keywords = "clock header date visibility"
     ),
     TWEAKS_DRAG_HANDLE(
         id = "tweaks_drag_handle",
         title = "Drag Handle Options",
         category = CustomizeCategory.QS_TWEAKS,
-        description = "Customize drag handle pill length, offset, and visibility",
-        icon = Icons.Default.DragHandle
+        description = "Customize drag handle pill length and dimensions",
+        icon = Icons.Default.DragHandle,
+        keywords = "pill width handle bar"
     ),
     TWEAKS_FONT_SIZES(
         id = "tweaks_font_sizes",
         title = "Tile Label & Subtitle Font Size",
         category = CustomizeCategory.QS_TWEAKS,
-        description = "Fine-tune font scaling for Quick Settings labels and subtitles",
-        icon = Icons.Default.FormatSize
-    ),
-    TWEAKS_QQS_TILES(
-        id = "tweaks_qqs_tiles",
-        title = "Quick-Quick Settings (QQS) Tiles",
-        category = CustomizeCategory.QS_TWEAKS,
-        description = "Configure top-row tile count and dimensions",
-        icon = Icons.Default.ViewAgenda
+        description = "Fine-tune font scaling for Quick Settings tile labels and subtitles",
+        icon = Icons.Default.FormatSize,
+        keywords = "text size scale typography label subtitle"
     ),
     TWEAKS_VIBRATION(
         id = "tweaks_vibration",
         title = "Tile Click Vibration",
         category = CustomizeCategory.QS_TWEAKS,
         description = "Haptic feedback when pressing Quick Settings tiles",
-        icon = Icons.Default.Vibration
+        icon = Icons.Default.Vibration,
+        isSearchable = false
     ),
     TWEAKS_DATE_POSITION(
         id = "tweaks_date_position",
         title = "Date Position in Header",
         category = CustomizeCategory.QS_TWEAKS,
-        description = "Set date location in Quick Settings header (Left, Center, or Right)",
-        icon = Icons.Default.Tune
+        description = "Set date location in Quick Settings header (Next to Time, Below Time, Right, or Hidden)",
+        icon = Icons.Default.Tune,
+        keywords = "clock date placement header qqs"
     ),
     TWEAKS_EDIT_POSITION(
         id = "tweaks_edit_position",
         title = "Edit Pencil Icon Location",
         category = CustomizeCategory.QS_TWEAKS,
-        description = "Set edit icon location (Top Bar or Bottom Row)",
-        icon = Icons.Default.Tune
+        description = "Set edit tile button location (Footer, Header, Both, or Hidden)",
+        icon = Icons.Default.Tune,
+        keywords = "pencil edit tiles footer header"
+    ),
+    TWEAKS_COLLAPSE_QQS_FOOTER(
+        id = "tweaks_collapse_qqs_footer",
+        title = "Move Collapse Arrow to QQS Footer",
+        category = CustomizeCategory.QS_TWEAKS,
+        description = "Relocate the panel collapse chevron into the QQS footer bar",
+        icon = Icons.Default.UnfoldLess,
+        keywords = "collapse button arrow qqs footer"
+    ),
+    TWEAKS_BATTERY_PERCENT_LOCATION(
+        id = "tweaks_battery_percent_location",
+        title = "Battery Percentage Location",
+        category = CustomizeCategory.QS_TWEAKS,
+        description = "Show battery percentage in Header, QQS Right, or Hidden",
+        icon = Icons.Default.BatteryStd,
+        keywords = "battery level indicator percent header qqs"
+    ),
+    TWEAKS_SETTINGS_ICON_LOCATION(
+        id = "tweaks_settings_icon_location",
+        title = "Settings Icon Location",
+        category = CustomizeCategory.QS_TWEAKS,
+        description = "Choose where the settings gear button appears in the panel",
+        icon = Icons.Default.Settings,
+        keywords = "gear shortcut header expanded carrier"
     ),
     TWEAKS_HIDE_QQS_DRAG(
         id = "tweaks_hide_qqs_drag",
         title = "Hide QQS Drag Handle",
         category = CustomizeCategory.QS_TWEAKS,
         description = "Hide the drag pill handle in compact Quick-Quick Settings",
-        icon = Icons.Default.DragHandle
+        icon = Icons.Default.DragHandle,
+        keywords = "drag handle pill qqs hide"
+    ),
+    TWEAKS_HIDE_QQS_EMPTY_NOTIF(
+        id = "tweaks_hide_qqs_empty_notif",
+        title = "Hide Empty Notification Hint",
+        category = CustomizeCategory.QS_TWEAKS,
+        description = "Hide the 'No notifications' placeholder label below QQS",
+        icon = Icons.Default.VisibilityOff,
+        keywords = "empty notifications placeholder hide qqs"
+    ),
+    TWEAKS_HIDE_BRIGHTNESS_PERCENT(
+        id = "tweaks_hide_brightness_percent",
+        title = "Hide Brightness Percentage",
+        category = CustomizeCategory.QS_TWEAKS,
+        description = "Hide the numeric brightness percentage label next to the slider",
+        icon = Icons.Default.BrightnessLow,
+        keywords = "slider brightness label percentage hide"
+    ),
+    TWEAKS_HIDE_BRIGHTNESS_ICON(
+        id = "tweaks_hide_brightness_icon",
+        title = "Hide Auto-Brightness Icon",
+        category = CustomizeCategory.QS_TWEAKS,
+        description = "Hide the auto-brightness sun icon next to the brightness bar",
+        icon = Icons.Default.WbSunny,
+        keywords = "auto brightness sun button hide"
+    ),
+    TWEAKS_BRIGHTNESS_PLUS_MINUS(
+        id = "tweaks_brightness_plus_minus",
+        title = "Show Brightness - / + Buttons",
+        category = CustomizeCategory.QS_TWEAKS,
+        description = "Display quick minus and plus step buttons beside the brightness slider",
+        icon = Icons.Default.BrightnessHigh,
+        keywords = "minus plus step buttons brightness slider"
+    ),
+    TWEAKS_DISABLE_CLEAR_ALL_BG(
+        id = "tweaks_disable_clear_all_bg",
+        title = "Disable Clear All Background",
+        category = CustomizeCategory.QS_TWEAKS,
+        description = "Remove the pill background container behind the Clear All button",
+        icon = Icons.Default.Clear,
+        keywords = "clear all notifications transparent background"
+    ),
+    TWEAKS_DISABLE_CLEAR_ALL_LABEL(
+        id = "tweaks_disable_clear_all_label",
+        title = "Disable Clear All Label & Icon Size",
+        category = CustomizeCategory.QS_TWEAKS,
+        description = "Hide Clear All text for an icon-only button and adjust icon size",
+        icon = Icons.Default.Clear,
+        keywords = "clear all icon only text hide size"
+    ),
+    DESIGN_SIM_CARRIER(
+        id = "design_sim_carrier",
+        title = "SIM Card Carrier Display",
+        category = CustomizeCategory.QS_TWEAKS,
+        description = "Show or hide carrier network label in panel header",
+        icon = Icons.Default.PhoneAndroid,
+        keywords = "sim network carrier operator name"
+    ),
+    DESIGN_CARRIER_DIVIDER(
+        id = "design_carrier_divider",
+        title = "Carrier Divider Line",
+        category = CustomizeCategory.QS_TWEAKS,
+        description = "Divider or solid line separating carrier name from quick settings tiles",
+        icon = Icons.Default.LinearScale,
+        keywords = "carrier divider line separator"
+    ),
+    TWEAKS_HIDE_CARRIER_EXPANDED(
+        id = "tweaks_hide_carrier_expanded",
+        title = "Hide Carrier in Expanded QS",
+        category = CustomizeCategory.QS_TWEAKS,
+        description = "Hide the SIM carrier name when expanded into full Quick Settings",
+        icon = Icons.Default.VisibilityOff,
+        keywords = "sim carrier expanded qs hide"
+    ),
+    TWEAKS_PANEL_SHADOWS(
+        id = "tweaks_panel_shadows",
+        title = "Panel Depth Shadows",
+        category = CustomizeCategory.QS_TWEAKS,
+        description = "Enable custom drop shadows and adjust elevation, offset Y, and opacity",
+        icon = Icons.Default.Layers,
+        keywords = "shadow elevation depth opacity offset"
+    ),
+    TWEAKS_CLEAR_ALL_FAB_OFFSETS(
+        id = "tweaks_clear_all_fab_offsets",
+        title = "Clear All FAB Offsets & Size",
+        category = CustomizeCategory.QS_TWEAKS,
+        description = "Fine-tune Clear All FAB anchor, horizontal/vertical offset, and diameter",
+        icon = Icons.Default.Tune,
+        keywords = "clear all fab offset x y diameter size"
     ),
 
-    // Quick Settings Design
+    // =====================================================
+    // QUICK SETTINGS DESIGN
+    // =====================================================
+    DESIGN_PANEL_STYLE(
+        id = "design_panel_style",
+        title = "Quick Settings Panel Style",
+        category = CustomizeCategory.QS_DESIGN,
+        description = "Switch between Modern Compose, Android 8.0 Oreo, 6.0 Marshmallow, or 4.4 KitKat styles",
+        icon = Icons.Default.Style,
+        keywords = "oreo marshmallow kitkat classic theme style layout"
+    ),
     DESIGN_QQS_SIZE(
         id = "design_qqs_size",
-        title = "QQS Icon Size",
+        title = "QQS Icon & Tile Size",
         category = CustomizeCategory.QS_DESIGN,
-        description = "Adjust the size of the circular icons in the compact QQS panel",
-        icon = Icons.Default.FormatSize
+        description = "Adjust the diameter of compact Quick-Quick Settings tile icons",
+        icon = Icons.Default.FormatSize,
+        keywords = "qqs tile size diameter scale"
     ),
     DESIGN_QQS_QUANTITY(
         id = "design_qqs_quantity",
         title = "QQS Icon Quantity",
         category = CustomizeCategory.QS_DESIGN,
         description = "Choose how many quick setting icons are displayed in compact QQS row",
-        icon = Icons.Default.GridView
-    ),
-    DESIGN_ACTIVE_SHAPE(
-        id = "design_active_shape",
-        title = "Active QS Tile Shape",
-        category = CustomizeCategory.QS_DESIGN,
-        description = "Shape applied to active and connected Quick Settings tiles",
-        icon = Icons.Default.Star
-    ),
-    DESIGN_INACTIVE_SHAPE(
-        id = "design_inactive_shape",
-        title = "Inactive QS Tile Shape",
-        category = CustomizeCategory.QS_DESIGN,
-        description = "Shape applied to inactive Quick Settings tiles",
-        icon = Icons.Default.CropSquare
+        icon = Icons.Default.GridView,
+        keywords = "qqs count quantity compact toggles"
     ),
     DESIGN_TILE_SIZE(
         id = "design_tile_size",
         title = "QS Tile Size",
         category = CustomizeCategory.QS_DESIGN,
         description = "Scale the visual diameter of quick setting tiles",
-        icon = Icons.Default.AspectRatio
+        icon = Icons.Default.AspectRatio,
+        isSearchable = false
     ),
     DESIGN_QQS_2X1_COMPLICATIONS(
         id = "design_qqs_2x1_complications",
         title = "QQS 2x1 Complications Row",
         category = CustomizeCategory.QS_DESIGN,
-        description = "Show an additional QQS row of 2x1 live complication tiles",
-        icon = Icons.Default.ViewAgenda
+        description = "Show an additional QQS row of 2x1 live complication tiles with progress lines",
+        icon = Icons.Default.ViewAgenda,
+        keywords = "complication 2x1 qqs corners height progress line"
+    ),
+    DESIGN_LEGACY_TILE_SHAPES(
+        id = "design_legacy_tile_shapes",
+        title = "QS Tile Background Support",
+        category = CustomizeCategory.QS_DESIGN,
+        description = "Enable custom active and inactive tile background shape engine",
+        icon = Icons.Default.CropSquare,
+        keywords = "tile background shape support legacy shapes"
+    ),
+    DESIGN_ACTIVE_SHAPE(
+        id = "design_active_shape",
+        title = "Active QS Tile Shape",
+        category = CustomizeCategory.QS_DESIGN,
+        description = "Shape applied to active and connected Quick Settings tiles",
+        icon = Icons.Default.Star,
+        keywords = "circle squircle leaf arch octagon stamp cloud enabled tile shape"
+    ),
+    DESIGN_INACTIVE_SHAPE(
+        id = "design_inactive_shape",
+        title = "Inactive QS Tile Shape",
+        category = CustomizeCategory.QS_DESIGN,
+        description = "Shape applied to inactive Quick Settings tiles",
+        icon = Icons.Default.CropSquare,
+        keywords = "circle squircle square disabled tile shape"
+    ),
+    DESIGN_COMPLICATION_ACTIVE_SHAPE(
+        id = "design_complication_active_shape",
+        title = "Active Complication Tile Shape",
+        category = CustomizeCategory.QS_DESIGN,
+        description = "Choose shape applied to active live complication tiles",
+        icon = Icons.Default.Star,
+        keywords = "complication shape active ring"
+    ),
+    DESIGN_COMPLICATION_INACTIVE_SHAPE(
+        id = "design_complication_inactive_shape",
+        title = "Inactive Complication Tile Shape",
+        category = CustomizeCategory.QS_DESIGN,
+        description = "Choose shape applied to inactive complication tiles",
+        icon = Icons.Default.CropSquare,
+        keywords = "complication shape inactive"
+    ),
+    DESIGN_COMPLICATION_ARC_THICKNESS(
+        id = "design_complication_arc_thickness",
+        title = "Complication Arc Thickness",
+        category = CustomizeCategory.QS_DESIGN,
+        description = "Adjust stroke width of perimeter progress arcs around complication tiles",
+        icon = Icons.Default.LinearScale,
+        keywords = "complication arc progress stroke thickness"
     ),
     DESIGN_TILE_STROKE(
         id = "design_tile_stroke",
-        title = "Tile Stroke / Outline",
+        title = "Tile & Complication Stroke Outline",
         category = CustomizeCategory.QS_DESIGN,
-        description = "Toggle subtle border outlines for tiles",
-        icon = Icons.Default.BorderStyle
+        description = "Toggle and resize subtle border outlines for QS and complication tiles",
+        icon = Icons.Default.BorderStyle,
+        keywords = "outline border stroke thickness tiles"
     ),
     DESIGN_TILE_GRADIENT(
         id = "design_tile_gradient",
         title = "Monet Tile Gradient",
         category = CustomizeCategory.QS_DESIGN,
         description = "Apply dynamic dual-tone Monet gradient on active tiles",
-        icon = Icons.Default.Gradient
+        icon = Icons.Default.Gradient,
+        keywords = "monet gradient active tiles dual tone"
+    ),
+    DESIGN_PAGE_INDICATOR(
+        id = "design_page_indicator",
+        title = "QS Page Indicator Style",
+        category = CustomizeCategory.QS_DESIGN,
+        description = "Choose Dots, Lines, Dots + Line, or Sliding Line page indicators",
+        icon = Icons.Default.LinearScale,
+        keywords = "page indicator dots lines sliding pages"
+    ),
+    DESIGN_CLEAR_ALL_FAB(
+        id = "design_clear_all_fab",
+        title = "Clear All Icon FAB Style",
+        category = CustomizeCategory.QS_DESIGN,
+        description = "Enable floating Clear All button and customize anchor, shape, and icon",
+        icon = Icons.Default.Clear,
+        keywords = "clear all fab floating action button icon shape position"
+    ),
+    DESIGN_MEDIA_STYLE(
+        id = "design_media_style",
+        title = "Media Player Notification Style",
+        category = CustomizeCategory.QS_DESIGN,
+        description = "Switch media player card between Android 11, Android 10, and Android 6 styles",
+        icon = Icons.Default.Notifications,
+        keywords = "media music player style android 11 10 6 compact"
     ),
     DESIGN_PROGRESS_STYLE(
         id = "design_progress_style",
         title = "Sliders & Progress Bar Style",
         category = CustomizeCategory.QS_DESIGN,
-        description = "Choose Wavy, Android 12, Straight, or Default progress sliders",
-        icon = Icons.Default.LinearScale
+        description = "Choose M3, Straight, Wavy, or Android 12 progress sliders",
+        icon = Icons.Default.LinearScale,
+        keywords = "wavy squiggly m3 android 12 straight slider brightness media volume"
     ),
     DESIGN_PANEL_CORNERS(
         id = "design_panel_corners",
         title = "Panel Corner Radii",
         category = CustomizeCategory.QS_DESIGN,
-        description = "Adjust outer and inner corner rounding of the panel surface",
-        icon = Icons.Default.RoundedCorner
+        description = "Adjust outer and inner adjacent corner rounding of panel surfaces",
+        icon = Icons.Default.RoundedCorner,
+        keywords = "corner radius rounding outer inner panel"
     ),
     DESIGN_HEADER_IMAGE(
         id = "design_header_image",
         title = "Custom Header Image",
         category = CustomizeCategory.QS_DESIGN,
-        description = "Display custom image artwork or banner in expanded panel header",
-        icon = Icons.Default.Image
+        description = "Display custom image artwork in expanded header and adjust height & opacity",
+        icon = Icons.Default.Image,
+        keywords = "header banner artwork photo height opacity"
     ),
     DESIGN_MONET_GRADIENT(
         id = "design_monet_gradient",
-        title = "Header Monet Gradient",
+        title = "Header Monet Gradient & Surface",
         category = CustomizeCategory.QS_DESIGN,
-        description = "Atmospheric Monet color gradient background at the panel top",
-        icon = Icons.Default.AutoAwesome
+        description = "Configure header Monet atmospheric gradient height and Solid Monet Surface",
+        icon = Icons.Default.AutoAwesome,
+        keywords = "monet header gradient solid surface background"
     ),
     DESIGN_ELEMENT_COLORS(
         id = "design_element_colors",
         title = "Per-Element Accent Colors",
         category = CustomizeCategory.QS_DESIGN,
-        description = "Custom colors and Monet accents with 2-tab color picker for panel elements",
-        icon = Icons.Default.ColorLens
+        description = "Custom colors and Monet accents for tiles, sliders, icons, and backgrounds",
+        icon = Icons.Default.ColorLens,
+        keywords = "colors tint custom accent palette inactive active slider background"
     ),
-
-    // Heads-Up
-    HEADS_UP_MASTER(
-        id = "heads_up_master",
-        title = "Custom Heads-Up Overlay",
-        category = CustomizeCategory.HEADS_UP,
-        description = "Enable floating notification banner overlay engine",
-        icon = Icons.Default.NotificationsActive
+    DESIGN_HEADER_STATUS_BACKGROUNDS(
+        id = "design_header_status_backgrounds",
+        title = "Header & Status Backgrounds",
+        category = CustomizeCategory.QS_DESIGN,
+        description = "Add rounded pill backgrounds and corner radii to Date, Battery, Clock, and Carrier",
+        icon = Icons.Default.RoundedCorner,
+        keywords = "date battery clock carrier pill background corner"
     ),
-    HEADS_UP_TEST(
-        id = "heads_up_test",
-        title = "Independent Preview & Test",
-        category = CustomizeCategory.HEADS_UP,
-        description = "Inflates lightweight Compose layout preview at top of screen",
-        icon = Icons.Default.Notifications
-    ),
-    HEADS_UP_TIMEOUT(
-        id = "heads_up_timeout",
-        title = "Auto-Dismiss Timeout",
-        category = CustomizeCategory.HEADS_UP,
-        description = "Adjust seconds before incoming heads-up banners automatically hide",
-        icon = Icons.Default.Timer
-    ),
-    HEADS_UP_POSITION(
-        id = "heads_up_position",
-        title = "Banner Display Position",
-        category = CustomizeCategory.HEADS_UP,
-        description = "Show heads-up banners at the top or bottom of the screen",
-        icon = Icons.Default.VerticalAlignTop
-    ),
-    HEADS_UP_COMPACT(
-        id = "heads_up_compact",
-        title = "Compact Banner Mode",
-        category = CustomizeCategory.HEADS_UP,
-        description = "Single-line minimalist heads-up notification pill style",
-        icon = Icons.Default.Compress
-    ),
-    HEADS_UP_GESTURES(
-        id = "heads_up_gestures",
-        title = "Gesture Hints",
-        category = CustomizeCategory.HEADS_UP,
-        description = "Swipe left or right on floating banners to dismiss or mute",
-        icon = Icons.Default.TouchApp
-    ),
-    HEADS_UP_BLACKLIST(
-        id = "heads_up_blacklist",
-        title = "Blacklisted Apps",
-        category = CustomizeCategory.HEADS_UP,
-        description = "Exclude specific apps from generating heads-up overlays",
-        icon = Icons.Default.Block
-    ),
-
-    // Themes
-    THEMES_SAVE(
-        id = "themes_save",
-        title = "Save Current Theme Profile",
-        category = CustomizeCategory.THEMES,
-        description = "Capture a complete snapshot of all settings into a user theme",
-        icon = Icons.Default.Save
-    ),
-    THEMES_SAVED_LIST(
-        id = "themes_saved_list",
-        title = "Saved Theme Profiles",
-        category = CustomizeCategory.THEMES,
-        description = "Manage, apply, update, and export custom saved themes",
-        icon = Icons.Default.Bookmark
-    ),
-
-    // Miscellaneous
-    MISC_ANIMATION_SPEED(
-        id = "misc_animation_speed",
-        title = "Disable Panel Animations",
-        category = CustomizeCategory.MISCELLANEOUS,
-        description = "Adjust opening, expanding, and closing animation speeds",
-        icon = Icons.Default.Speed
-    ),
-    MISC_ANIMATION_DURATION(
-        id = "misc_animation_duration",
-        title = "Animation Duration Scale",
-        category = CustomizeCategory.MISCELLANEOUS,
-        description = "Fine-tune transition timing curve and millisecond durations",
-        icon = Icons.Default.Timer
-    ),
-    MISC_STATUS_BAR_GESTURES(
-        id = "misc_status_bar_gestures",
-        title = "Invisible Status Bar Trigger",
-        category = CustomizeCategory.MISCELLANEOUS,
-        description = "Swipe down anywhere on the status bar to expand panel",
-        icon = Icons.Default.TouchApp
-    ),
-    MISC_HARDWARE_BUTTONS(
-        id = "misc_hardware_buttons",
-        title = "Hide QS/QQS on Volume Key Press",
-        category = CustomizeCategory.MISCELLANEOUS,
-        description = "Use volume keys or shortcuts to trigger the Quick Settings panel",
-        icon = Icons.Default.VolumeUp
-    ),
-    MISC_LOCKSCREEN_BYPASS(
-        id = "misc_lockscreen_bypass",
-        title = "Lockscreen Bypass & Security",
-        category = CustomizeCategory.MISCELLANEOUS,
-        description = "Configure quick setting tile access on locked device screen",
-        icon = Icons.Default.Block
-    ),
-    MISC_DUAL_TONE_STATUS(
-        id = "misc_dual_tone_status",
-        title = "Dual Tone Status Bar",
-        category = CustomizeCategory.MISCELLANEOUS,
-        description = "Blend status bar tint with panel background Monet shades",
-        icon = Icons.Default.Palette
-    ),
-    MISC_QUICK_PULLDOWN(
-        id = "misc_quick_pulldown",
-        title = "Quick Pulldown",
-        category = CustomizeCategory.MISCELLANEOUS,
-        description = "Expand QS panel directly when pulling down from specified edge",
-        icon = Icons.Default.VerticalAlignTop
-    ),
-    MISC_SMART_PULLDOWN(
-        id = "misc_smart_pulldown",
-        title = "Smart Pulldown",
-        category = CustomizeCategory.MISCELLANEOUS,
-        description = "Automatically expand panel when there are no active notifications",
-        icon = Icons.Default.AutoAwesome
-    ),
-
-    // Quick Settings Tweaks — SIM Card Carrier
-    DESIGN_SIM_CARRIER(
-        id = "design_sim_carrier",
-        title = "SIM Card Carrier Display",
-        category = CustomizeCategory.QS_TWEAKS,
-        description = "Show or hide carrier label name in panel header",
-        icon = Icons.Default.PhoneAndroid
-    ),
-    DESIGN_CARRIER_DIVIDER(
-        id = "design_carrier_divider",
-        title = "Carrier Divider Line",
-        category = CustomizeCategory.QS_TWEAKS,
-        description = "Divider separating carrier name from quick settings tiles",
-        icon = Icons.Default.LinearScale
+    DESIGN_FOOTER_ICON_BACKGROUNDS(
+        id = "design_footer_icon_backgrounds",
+        title = "Footer Icon Backgrounds",
+        category = CustomizeCategory.QS_DESIGN,
+        description = "Customize pill backgrounds, corner radii, and spacing for footer action icons",
+        icon = Icons.Default.CropSquare,
+        keywords = "footer buttons power settings edit collapse background spacing"
     ),
     DESIGN_BRIGHTNESS_BOTTOM(
         id = "design_brightness_bottom",
         title = "Move Brightness to Bottom",
         category = CustomizeCategory.QS_DESIGN,
         description = "Position brightness slider bar at bottom of Quick Settings panel",
-        icon = Icons.Default.Tune
+        icon = Icons.Default.Tune,
+        keywords = "brightness bar bottom position"
     ),
     DESIGN_BRIGHTNESS_QQS(
         id = "design_brightness_qqs",
         title = "Show Brightness Slider in QQS",
         category = CustomizeCategory.QS_DESIGN,
         description = "Display brightness control in compact Quick-Quick Settings row",
-        icon = Icons.Default.Tune
+        icon = Icons.Default.Tune,
+        keywords = "brightness bar qqs compact"
+    ),
+    DESIGN_BRIGHTNESS_GRADIENT(
+        id = "design_brightness_gradient",
+        title = "Brightness Bar Gradient",
+        category = CustomizeCategory.QS_DESIGN,
+        description = "Apply subtle dynamic gradient fill along the active brightness slider track",
+        icon = Icons.Default.Gradient,
+        keywords = "brightness slider gradient fill"
+    ),
+    DESIGN_BRIGHTNESS_CONTROLS_BG(
+        id = "design_brightness_controls_bg",
+        title = "Brightness Controls Background",
+        category = CustomizeCategory.QS_DESIGN,
+        description = "Match background containers on percentage, +/- step, and auto-brightness icons",
+        icon = Icons.Default.WbSunny,
+        keywords = "brightness controls background auto icon percentage plus minus contrast"
     ),
 
-    // Additional Miscellaneous
+    // =====================================================
+    // HEADS-UP NOTIFICATIONS
+    // =====================================================
+    HEADS_UP_MASTER(
+        id = "heads_up_master",
+        title = "Custom Heads-Up Overlay",
+        category = CustomizeCategory.HEADS_UP,
+        description = "Enable custom floating notification banner overlay engine",
+        icon = Icons.Default.NotificationsActive,
+        keywords = "heads up banner popup floating overlay"
+    ),
+    HEADS_UP_SYSTEM(
+        id = "heads_up_system",
+        title = "System Heads-Up Fallback",
+        category = CustomizeCategory.HEADS_UP,
+        description = "Allow standard Android system heads-up notifications alongside or instead of custom",
+        icon = Icons.Default.Notifications,
+        keywords = "system heads up native fallback"
+    ),
+    HEADS_UP_PERMISSION(
+        id = "heads_up_permission",
+        title = "Notification Listener Access",
+        category = CustomizeCategory.HEADS_UP,
+        description = "Check and grant Notification Access required for floating heads-up banners",
+        icon = Icons.Default.NotificationsActive,
+        keywords = "permission listener access heads up"
+    ),
+    HEADS_UP_TEST(
+        id = "heads_up_test",
+        title = "Test Heads-Up Triggers",
+        category = CustomizeCategory.HEADS_UP,
+        description = "Preview floating Notification, Alarm clock, and Incoming Call banners",
+        icon = Icons.Default.Notifications,
+        keywords = "test preview demo notification alarm call banner"
+    ),
+    HEADS_UP_TIMEOUT(
+        id = "heads_up_timeout",
+        title = "Auto-Dismiss Timeout",
+        category = CustomizeCategory.HEADS_UP,
+        description = "Adjust seconds before incoming heads-up banners automatically hide",
+        icon = Icons.Default.Timer,
+        keywords = "duration timeout hide dismiss seconds"
+    ),
+    HEADS_UP_GESTURES(
+        id = "heads_up_gestures",
+        title = "Heads-Up Swipe Actions",
+        category = CustomizeCategory.HEADS_UP,
+        description = "Configure actions for Swipe Up, Down, Left, and Right on heads-up banners",
+        icon = Icons.Default.TouchApp,
+        keywords = "swipe up down left right dismiss snooze open shade heads up"
+    ),
+    HEADS_UP_TAP_ACTIONS(
+        id = "heads_up_tap_actions",
+        title = "Heads-Up Tap Actions",
+        category = CustomizeCategory.HEADS_UP,
+        description = "Configure actions for Single Tap, Double Tap, and Long Press on banners",
+        icon = Icons.Default.TouchApp,
+        keywords = "single tap double tap long press expand snooze open heads up"
+    ),
+    HEADS_UP_SNOOZE_DURATION(
+        id = "heads_up_snooze_duration",
+        title = "Heads-Up Snooze Duration",
+        category = CustomizeCategory.HEADS_UP,
+        description = "Set how many minutes apps stay muted when snoozed via banner gestures",
+        icon = Icons.Default.Timer,
+        keywords = "snooze mute duration minutes clear snooze"
+    ),
+    HEADS_UP_POSITION(
+        id = "heads_up_position",
+        title = "Banner Display Position",
+        category = CustomizeCategory.HEADS_UP,
+        description = "Show heads-up banners at the top or bottom of the screen",
+        icon = Icons.Default.VerticalAlignTop,
+        isSearchable = false
+    ),
+    HEADS_UP_COMPACT(
+        id = "heads_up_compact",
+        title = "Compact Banner Mode",
+        category = CustomizeCategory.HEADS_UP,
+        description = "Single-line minimalist heads-up notification pill style",
+        icon = Icons.Default.Compress,
+        isSearchable = false
+    ),
+    HEADS_UP_BLACKLIST(
+        id = "heads_up_blacklist",
+        title = "Blacklisted Apps",
+        category = CustomizeCategory.HEADS_UP,
+        description = "Exclude specific apps from generating heads-up overlays",
+        icon = Icons.Default.Block,
+        isSearchable = false
+    ),
+
+    // =====================================================
+    // HEADS-UP DESIGN
+    // =====================================================
+    HEADS_UP_DESIGN_TEST(
+        id = "heads_up_design_test",
+        title = "Heads-Up Appearance Preview",
+        category = CustomizeCategory.HEADS_UP_DESIGN,
+        description = "Trigger a live test banner to preview heads-up corner radius, elevation, and margins",
+        icon = Icons.Default.Notifications,
+        keywords = "preview test design banner appearance"
+    ),
+    HEADS_UP_DESIGN_EDGE_TO_EDGE(
+        id = "heads_up_design_edge_to_edge",
+        title = "Edge-to-Edge Banner",
+        category = CustomizeCategory.HEADS_UP_DESIGN,
+        description = "Stretch floating heads-up notification banner across full screen width",
+        icon = Icons.Default.AspectRatio,
+        keywords = "edge to edge full width banner design"
+    ),
+    HEADS_UP_DESIGN_CORNER_RADIUS(
+        id = "heads_up_design_corner_radius",
+        title = "Banner Corner Radius",
+        category = CustomizeCategory.HEADS_UP_DESIGN,
+        description = "Customize corner rounding of floating heads-up cards (0–24 dp)",
+        icon = Icons.Default.RoundedCorner,
+        keywords = "corner radius heads up banner roundness"
+    ),
+    HEADS_UP_DESIGN_ELEVATION(
+        id = "heads_up_design_elevation",
+        title = "Banner Elevation & Shadow",
+        category = CustomizeCategory.HEADS_UP_DESIGN,
+        description = "Adjust shadow depth and elevation of heads-up cards (0–24 dp)",
+        icon = Icons.Default.Layers,
+        keywords = "shadow depth elevation banner heads up"
+    ),
+    HEADS_UP_DESIGN_TOP_MARGIN(
+        id = "heads_up_design_top_margin",
+        title = "Banner Top Margin",
+        category = CustomizeCategory.HEADS_UP_DESIGN,
+        description = "Adjust top spacing distance below status bar for floating banners (0–24 dp)",
+        icon = Icons.Default.VerticalAlignTop,
+        keywords = "top margin spacing offset heads up"
+    ),
+
+    // =====================================================
+    // THEMES
+    // =====================================================
+    THEMES_SAVE(
+        id = "themes_save",
+        title = "Save Current Theme Profile",
+        category = CustomizeCategory.THEMES,
+        description = "Capture a complete snapshot of all settings into a reusable theme",
+        icon = Icons.Default.Save,
+        keywords = "save snapshot profile preset"
+    ),
+    THEMES_TRANSFER(
+        id = "themes_transfer",
+        title = "Import & Export Theme JSON",
+        category = CustomizeCategory.THEMES,
+        description = "Import shared theme JSON strings or copy your current theme snapshot",
+        icon = Icons.Default.SyncAlt,
+        keywords = "import export json copy share theme"
+    ),
+    THEMES_SAVED_LIST(
+        id = "themes_saved_list",
+        title = "Saved Theme Profiles",
+        category = CustomizeCategory.THEMES,
+        description = "Apply or remove your custom saved theme snapshots",
+        icon = Icons.Default.Bookmark,
+        keywords = "apply delete list saved themes"
+    ),
+
+    // =====================================================
+    // MISCELLANEOUS
+    // =====================================================
+    MISC_ANIMATION_SPEED(
+        id = "misc_animation_speed",
+        title = "Disable Panel Animations",
+        category = CustomizeCategory.MISCELLANEOUS,
+        description = "Disable Quick Settings expand and collapse animations for instant transitions",
+        icon = Icons.Default.Speed,
+        keywords = "disable animations instant open transition speed"
+    ),
+    MISC_ANIMATION_DURATION(
+        id = "misc_animation_duration",
+        title = "Animation Duration Scale",
+        category = CustomizeCategory.MISCELLANEOUS,
+        description = "Fine-tune transition timing curve and millisecond durations",
+        icon = Icons.Default.Timer,
+        isSearchable = false
+    ),
+    MISC_STATUS_BAR_GESTURES(
+        id = "misc_status_bar_gestures",
+        title = "Invisible Status Bar Trigger",
+        category = CustomizeCategory.MISCELLANEOUS,
+        description = "Swipe down anywhere on the status bar to expand panel",
+        icon = Icons.Default.TouchApp,
+        isSearchable = false
+    ),
+    MISC_HARDWARE_BUTTONS(
+        id = "misc_hardware_buttons",
+        title = "Hide QS/QQS on Volume Key Press",
+        category = CustomizeCategory.MISCELLANEOUS,
+        description = "Use volume keys or shortcuts to trigger the Quick Settings panel",
+        icon = Icons.Default.VolumeUp,
+        isSearchable = false
+    ),
+    MISC_LOCKSCREEN_BYPASS(
+        id = "misc_lockscreen_bypass",
+        title = "Lockscreen Bypass & Security",
+        category = CustomizeCategory.MISCELLANEOUS,
+        description = "Configure quick setting tile access on locked device screen",
+        icon = Icons.Default.Block,
+        isSearchable = false
+    ),
+    MISC_DUAL_TONE_STATUS(
+        id = "misc_dual_tone_status",
+        title = "Dual Tone Status Bar",
+        category = CustomizeCategory.MISCELLANEOUS,
+        description = "Blend status bar tint with panel background Monet shades",
+        icon = Icons.Default.Palette,
+        isSearchable = false
+    ),
+    MISC_QUICK_PULLDOWN(
+        id = "misc_quick_pulldown",
+        title = "Quick Pulldown",
+        category = CustomizeCategory.MISCELLANEOUS,
+        description = "Expand QS panel directly when pulling down from specified edge",
+        icon = Icons.Default.VerticalAlignTop,
+        isSearchable = false
+    ),
+    MISC_SMART_PULLDOWN(
+        id = "misc_smart_pulldown",
+        title = "Smart Pulldown",
+        category = CustomizeCategory.MISCELLANEOUS,
+        description = "Automatically expand panel when there are no active notifications",
+        icon = Icons.Default.AutoAwesome,
+        isSearchable = false
+    ),
     MISC_PRIME_CORE(
         id = "misc_prime_core",
         title = "Prime Core High Smoothness Mode",
         category = CustomizeCategory.MISCELLANEOUS,
-        description = "Pin UI animation threads to prime performance core",
-        icon = Icons.Default.Speed
+        description = "Pin UI animation threads to prime performance CPU core (requires Root)",
+        icon = Icons.Default.Speed,
+        keywords = "cpu prime core thread root smoothness"
     ),
     MISC_VOLUME_PANEL(
         id = "misc_volume_panel",
-        title = "Hide QS on Volume Key Press",
+        title = "Hide QS/QQS on Volume Key Press",
         category = CustomizeCategory.MISCELLANEOUS,
-        description = "Automatically close panel when pressing volume buttons",
-        icon = Icons.Default.VolumeUp
+        description = "Automatically dismiss Quick Settings panel when hardware volume keys are pressed",
+        icon = Icons.Default.VolumeUp,
+        keywords = "volume key button close hide panel"
     ),
     MISC_STATUS_TRIGGER(
         id = "misc_status_trigger",
         title = "Invisible Status Bar Trigger",
         category = CustomizeCategory.MISCELLANEOUS,
-        description = "Tap status bar corner to expand Quick Settings panel",
-        icon = Icons.Default.TouchApp
+        description = "Touch overlay bar along status bar to swipe down Quick Settings",
+        icon = Icons.Default.TouchApp,
+        keywords = "status bar pulldown swipe trigger touch"
     ),
     MISC_PANEL_AUTO_CLOSE(
         id = "misc_panel_auto_close",
-        title = "Use auto system panel closing",
+        title = "Use Auto System Panel Closing",
         category = CustomizeCategory.MISCELLANEOUS,
-        description = "Automatically dismiss stock system shade when custom panel opens",
-        icon = Icons.Default.Close
+        description = "Automatically collapse stock system shade when QuickSettings opens",
+        icon = Icons.Default.Close,
+        keywords = "system shade close dismiss automatic"
     ),
     MISC_REPLACEMENT_DELAY(
         id = "misc_replacement_delay",
         title = "Panel Replacement Delay",
         category = CustomizeCategory.MISCELLANEOUS,
-        description = "Delay milliseconds before overriding system shade",
-        icon = Icons.Default.Timer
+        description = "Delay milliseconds (0–1000 ms) before overriding stock system shade",
+        icon = Icons.Default.Timer,
+        keywords = "delay timing ms override system panel"
     ),
     MISC_SYSTEM_OVERRIDE(
         id = "misc_system_override",
         title = "Stock Shade Auto-Override",
         category = CustomizeCategory.MISCELLANEOUS,
-        description = "Full system status bar pulldown interception service",
-        icon = Icons.Default.AutoAwesome
+        description = "Intercept system status bar pulldowns with Shade Swipe Only option",
+        icon = Icons.Default.AutoAwesome,
+        keywords = "override intercept shade swipe accessibility detection"
     ),
     MISC_COOLDOWN(
         id = "misc_cooldown",
         title = "Detector Cooldown",
         category = CustomizeCategory.MISCELLANEOUS,
-        description = "Cooldown timer between status bar pulldown triggers",
-        icon = Icons.Default.Timer
+        description = "Cooldown delay between consecutive pulldown interceptions (10–1000 ms)",
+        icon = Icons.Default.Timer,
+        keywords = "cooldown throttle debounce trigger ms"
     ),
     MISC_MEDIA_PREVIEW(
         id = "misc_media_preview",
         title = "Force Media Player Preview",
         category = CustomizeCategory.MISCELLANEOUS,
-        description = "Always display media playback widget in panel",
-        icon = Icons.Default.Image
+        description = "Always display sample media playback card inside Quick Settings",
+        icon = Icons.Default.Image,
+        keywords = "media player music preview demo"
+    ),
+    MISC_MIN_BRIGHTNESS(
+        id = "misc_min_brightness",
+        title = "Minimum Hardware Brightness",
+        category = CustomizeCategory.MISCELLANEOUS,
+        description = "Calibrate the lowest hardware brightness value (1–2047)",
+        icon = Icons.Default.BrightnessLow,
+        keywords = "brightness calibrate min low dim slider range"
+    ),
+    MISC_MAX_BRIGHTNESS(
+        id = "misc_max_brightness",
+        title = "Maximum Hardware Brightness",
+        category = CustomizeCategory.MISCELLANEOUS,
+        description = "Calibrate the peak hardware brightness scale (255, 511, 1023, 2047)",
+        icon = Icons.Default.BrightnessHigh,
+        keywords = "brightness calibrate max high peak 255 1023 2047 slider range"
     ),
 
-    // Gestures
+    // Hidden / Internal Category Aliases
     GESTURE_VOLUME_KEY(
         id = "gesture_volume_key",
         title = "Volume Key Gesture Action",
         category = CustomizeCategory.GESTURES,
         description = "Hardware volume button gesture panel dismiss toggle",
-        icon = Icons.Default.VolumeUp
+        icon = Icons.Default.VolumeUp,
+        isSearchable = false
     ),
-
-    // Trigger
     TRIGGER_STATUS_BAR(
         id = "trigger_status_bar",
         title = "Invisible Status Bar Trigger",
         category = CustomizeCategory.TRIGGER,
         description = "Invisible touch bar at top of screen for opening panel",
-        icon = Icons.Default.TouchApp
+        icon = Icons.Default.TouchApp,
+        isSearchable = false
     ),
     TRIGGER_IMMERSIVE(
         id = "trigger_immersive",
         title = "Force Immersive Trigger",
         category = CustomizeCategory.TRIGGER,
         description = "Enable trigger overlay even in full-screen games and apps",
-        icon = Icons.Default.AspectRatio
+        icon = Icons.Default.AspectRatio,
+        isSearchable = false
     ),
     TRIGGER_COOLDOWN(
         id = "trigger_cooldown",
         title = "Detector Cooldown",
         category = CustomizeCategory.TRIGGER,
         description = "Minimum milliseconds between pulldown gesture detections",
-        icon = Icons.Default.Timer
+        icon = Icons.Default.Timer,
+        isSearchable = false
     ),
     TRIGGER_DELAY(
         id = "trigger_delay",
         title = "Panel Replacement Delay",
         category = CustomizeCategory.TRIGGER,
         description = "Time delay before replacing system quick settings",
-        icon = Icons.Default.Timer
+        icon = Icons.Default.Timer,
+        isSearchable = false
     ),
 
-    // About
+    // =====================================================
+    // ABOUT
+    // =====================================================
     ABOUT_INFO(
         id = "about_info",
-        title = "App Architecture Info",
+        title = "QuickSettings App Info",
         category = CustomizeCategory.ABOUT,
-        description = "Build version, system status, and overlay engine details",
-        icon = Icons.Default.AutoAwesome
+        description = "Version 2.0.1 — control center architecture and overview",
+        icon = Icons.Default.Info,
+        keywords = "version 2.0.1 about app info"
+    ),
+    ABOUT_DEVELOPER(
+        id = "about_developer",
+        title = "Developer Credits",
+        category = CustomizeCategory.ABOUT,
+        description = "Maxim Tarna — Creator & Lead Developer of QuickSettings",
+        icon = Icons.Default.Person,
+        keywords = "author creator maxim tarna developer"
+    ),
+    ABOUT_TELEGRAM(
+        id = "about_telegram",
+        title = "Telegram Channel",
+        category = CustomizeCategory.ABOUT,
+        description = "Join t.me/allphonecustomization for custom themes, guides, and updates",
+        icon = Icons.Default.Send,
+        keywords = "community link url updates support telegram"
+    ),
+    ABOUT_KEY_FEATURES(
+        id = "about_key_features",
+        title = "Key Features Overview",
+        category = CustomizeCategory.ABOUT,
+        description = "Summary of shapes, Monet theming, interactive sliders, and heads-up engine",
+        icon = Icons.Default.Build,
+        keywords = "highlights capabilities overview"
     ),
     ABOUT_PERMISSIONS(
         id = "about_permissions",
         title = "Permission Status",
         category = CustomizeCategory.ABOUT,
         description = "Accessibility and overlay permission statuses",
-        icon = Icons.Default.Block
+        icon = Icons.Default.Block,
+        isSearchable = false
     );
 
     companion object {
         fun fromId(id: String): FavoriteFeature? = entries.firstOrNull { it.id == id }
-        fun getByCategory(category: CustomizeCategory): List<FavoriteFeature> = entries.filter { it.category == category }
+        fun getByCategory(category: CustomizeCategory): List<FavoriteFeature> =
+            entries.filter { it.category == category && it.isSearchable }
     }
 }
 
@@ -751,18 +1172,22 @@ fun ManageFavoriteFeaturesDialog(
             CustomizeCategory.HEADS_UP_DESIGN to "Heads-Up Design",
             CustomizeCategory.BASIC to "Basic",
             CustomizeCategory.THEMES to "Themes",
-            CustomizeCategory.MISCELLANEOUS to "Misc"
+            CustomizeCategory.MISCELLANEOUS to "Misc",
+            CustomizeCategory.ABOUT to "About"
         )
     }
 
     val filteredFeatures = remember(searchQuery, selectedCategoryFilter) {
+        val tokens = searchQuery.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
         FavoriteFeature.entries.filter { feat ->
-            val matchesCategory = (selectedCategoryFilter == null || feat.category == selectedCategoryFilter)
-            val matchesQuery = searchQuery.isBlank() ||
-                feat.title.contains(searchQuery, ignoreCase = true) ||
-                feat.description.contains(searchQuery, ignoreCase = true) ||
-                feat.category.title.contains(searchQuery, ignoreCase = true)
-            matchesCategory && matchesQuery
+            feat.isSearchable &&
+                (selectedCategoryFilter == null || feat.category == selectedCategoryFilter) &&
+                (tokens.isEmpty() || tokens.all { token ->
+                    feat.title.contains(token, ignoreCase = true) ||
+                        feat.description.contains(token, ignoreCase = true) ||
+                        feat.category.title.contains(token, ignoreCase = true) ||
+                        feat.keywords.contains(token, ignoreCase = true)
+                })
         }
     }
 
@@ -1105,11 +1530,14 @@ fun GenericPinnedFeatureCard(
     feature: FavoriteFeature,
     modifier: Modifier = Modifier,
     shape: Shape = CustomizeCardShapes.SingleCard,
+    showPinnedBadge: Boolean = true,
     actionContent: (@Composable () -> Unit)? = null
 ) {
     SettingsCard(
         shape = shape,
-        modifier = modifier.testTag("pinned_feature_${feature.id}"),
+        modifier = modifier.then(
+            if (showPinnedBadge) Modifier.testTag("pinned_feature_${feature.id}") else Modifier
+        ),
         featureId = feature.id
     ) {
         Column(
@@ -1152,17 +1580,19 @@ fun GenericPinnedFeatureCard(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
-                        ) {
-                            Text(
-                                text = "PINNED",
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                            )
+                        if (showPinnedBadge) {
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
+                            ) {
+                                Text(
+                                    text = "PINNED",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                )
+                            }
                         }
                     }
                     Text(
@@ -1188,652 +1618,16 @@ fun FavoriteFeatureActionContent(
     feature: FavoriteFeature,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-
-    when (feature) {
-        // --- BASIC ---
-        FavoriteFeature.BASIC_THEME_MODE -> {
-            val themeMode by PanelPreferences.themeMode.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                ThemeMode.entries.forEach { mode ->
-                    FilterChip(
-                        selected = themeMode == mode,
-                        onClick = { PanelPreferences.setThemeMode(context, mode) },
-                        label = { Text(mode.displayName, fontSize = 12.sp) }
-                    )
-                }
-            }
-        }
-        FavoriteFeature.BASIC_COLLAPSE_OPTIONS -> {
-            val collapseExpandOptions by PanelPreferences.collapseExpandOptions.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Compact Chips View", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Switch(
-                    checked = collapseExpandOptions,
-                    onCheckedChange = { PanelPreferences.setCollapseExpandOptions(context, it) }
-                )
-            }
-        }
-        FavoriteFeature.BASIC_COLLAPSE_SUBHEADERS -> {
-            val collapseExpandSubheaders by PanelPreferences.collapseExpandSubheaders.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Collapse Subheaders", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Switch(
-                    checked = collapseExpandSubheaders,
-                    onCheckedChange = { PanelPreferences.setCollapseExpandSubheaders(context, it) }
-                )
-            }
-        }
-        FavoriteFeature.BASIC_BACKUP_RESTORE -> {
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Button(
-                    onClick = {
-                        android.widget.Toast.makeText(context, "Backup functionality available in Basic Settings", android.widget.Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("Export Config", fontSize = 12.sp)
-                }
-            }
-        }
-
-        // --- QS TWEAKS ---
-        FavoriteFeature.TWEAKS_GRID_LAYOUT,
-        FavoriteFeature.TWEAKS_QQS_TILES,
-        FavoriteFeature.DESIGN_QQS_QUANTITY -> {
-            val qqsTileCount by PanelPreferences.qqsTileCount.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("QQS Tile Count ($qqsTileCount)", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Slider(
-                    value = qqsTileCount.toFloat(),
-                    onValueChange = { PanelPreferences.setQqsTileCount(context, it.toInt()) },
-                    valueRange = 2f..12f,
-                    steps = 9,
-                    modifier = Modifier.width(160.dp)
-                )
-            }
-        }
-        FavoriteFeature.TWEAKS_DISABLE_LABELS -> {
-            val disableLabelsInExpanded by PanelPreferences.disableLabelsInExpanded.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Disable Tile Labels", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Switch(
-                    checked = disableLabelsInExpanded,
-                    onCheckedChange = { PanelPreferences.setDisableLabelsInExpanded(context, it) }
-                )
-            }
-        }
-        FavoriteFeature.TWEAKS_HIDE_DATE -> {
-            val hideDateInExpanded by PanelPreferences.hideDateInExpanded.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Hide Date Display", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Switch(
-                    checked = hideDateInExpanded,
-                    onCheckedChange = { PanelPreferences.setHideDateInExpanded(context, it) }
-                )
-            }
-        }
-        FavoriteFeature.TWEAKS_DRAG_HANDLE -> {
-            val handleLength by PanelPreferences.dragHandleLength.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Handle Width (${handleLength.toInt()}dp)", fontSize = 12.sp)
-                Slider(
-                    value = handleLength,
-                    onValueChange = { PanelPreferences.setDragHandleLength(context, it) },
-                    valueRange = 20f..120f,
-                    modifier = Modifier.width(160.dp)
-                )
-            }
-        }
-        FavoriteFeature.TWEAKS_FONT_SIZES,
-        FavoriteFeature.DESIGN_TILE_SIZE,
-        FavoriteFeature.DESIGN_QQS_SIZE -> {
-            val qqsTileSize by PanelPreferences.qqsTileSize.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Tile Size (${qqsTileSize} dp)", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Slider(
-                    value = qqsTileSize.toFloat(),
-                    onValueChange = { PanelPreferences.setQqsTileSize(context, it.toInt()) },
-                    valueRange = 24f..64f,
-                    modifier = Modifier.width(160.dp)
-                )
-            }
-        }
-        FavoriteFeature.DESIGN_QQS_2X1_COMPLICATIONS -> {
-            val enabled by PanelPreferences.enableQqsComplicationsRow.collectAsState()
-            val useHorizontalLine by PanelPreferences.qqs2x1HorizontalLine.collectAsState()
-            val usePerimeterProgress by PanelPreferences.qqs2x1PerimeterProgress.collectAsState()
-            val tileHeightDp by PanelPreferences.qqs2x1TileHeightDp.collectAsState()
-            val activeCornerDp by PanelPreferences.qqs2x1ActiveCornerDp.collectAsState()
-            val inactiveCornerDp by PanelPreferences.qqs2x1InactiveCornerDp.collectAsState()
-            Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("2x1 Complications QQS Row", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                    Switch(
-                        checked = enabled,
-                        onCheckedChange = { PanelPreferences.setEnableQqsComplicationsRow(context, it) }
-                    )
-                }
-                if (enabled) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "Horizontal Progress Line",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Switch(
-                            checked = useHorizontalLine,
-                            onCheckedChange = { PanelPreferences.setQqs2x1HorizontalLine(context, it) }
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "Progress Bar Around 2x1 Tiles",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Switch(
-                            checked = usePerimeterProgress,
-                            onCheckedChange = { PanelPreferences.setQqs2x1PerimeterProgress(context, it) }
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "Tile Height ($tileHeightDp dp)",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Slider(
-                            value = tileHeightDp.toFloat(),
-                            onValueChange = {
-                                PanelPreferences.setQqs2x1TileHeightDp(context, kotlin.math.round(it).toInt())
-                            },
-                            valueRange = 40f..84f,
-                            modifier = Modifier.width(150.dp)
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "Active Corner (${kotlin.math.round(activeCornerDp).toInt()} dp)",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Slider(
-                            value = activeCornerDp,
-                            onValueChange = {
-                                PanelPreferences.setQqs2x1ActiveCornerDp(context, kotlin.math.round(it))
-                            },
-                            valueRange = 0f..40f,
-                            modifier = Modifier.width(150.dp)
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "Inactive Corner (${kotlin.math.round(inactiveCornerDp).toInt()} dp)",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Slider(
-                            value = inactiveCornerDp,
-                            onValueChange = {
-                                PanelPreferences.setQqs2x1InactiveCornerDp(context, kotlin.math.round(it))
-                            },
-                            valueRange = 0f..40f,
-                            modifier = Modifier.width(150.dp)
-                        )
-                    }
-                }
-            }
-        }
-        FavoriteFeature.TWEAKS_VIBRATION -> {
-            Text("Haptic Feedback enabled for Quick Setting tiles", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        FavoriteFeature.TWEAKS_DATE_POSITION -> {
-            val datePosition by PanelPreferences.datePosition.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                DatePosition.entries.forEach { pos ->
-                    FilterChip(
-                        selected = datePosition == pos,
-                        onClick = { PanelPreferences.setDatePosition(context, pos) },
-                        label = { Text(pos.label, fontSize = 11.sp) }
-                    )
-                }
-            }
-        }
-        FavoriteFeature.TWEAKS_EDIT_POSITION -> {
-            val editButtonPosition by PanelPreferences.editButtonPosition.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                EditButtonPosition.entries.forEach { pos ->
-                    FilterChip(
-                        selected = editButtonPosition == pos,
-                        onClick = { PanelPreferences.setEditButtonPosition(context, pos) },
-                        label = { Text(pos.label, fontSize = 11.sp) }
-                    )
-                }
-            }
-        }
-        FavoriteFeature.TWEAKS_HIDE_QQS_DRAG -> {
-            val hideQqsDragHandle by PanelPreferences.hideQqsDragHandle.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Hide QQS Drag Handle", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Switch(
-                    checked = hideQqsDragHandle,
-                    onCheckedChange = { PanelPreferences.setHideQqsDragHandle(context, it) }
-                )
-            }
-        }
-
-        // --- QS DESIGN ---
-        FavoriteFeature.DESIGN_ACTIVE_SHAPE -> {
-            val shapeId by PanelPreferences.enabledTileShapeId.collectAsState()
-            Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Active Shape", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("circle" to "Circle", "squircle" to "Squircle", "rounded_square" to "Square", "teardrop" to "Teardrop", "hexagon" to "Hexagon").forEach { (id, name) ->
-                        FilterChip(
-                            selected = shapeId == id,
-                            onClick = { PanelPreferences.setEnabledTileShapeId(context, id) },
-                            label = { Text(name, fontSize = 11.sp) }
-                        )
-                    }
-                }
-            }
-        }
-        FavoriteFeature.DESIGN_INACTIVE_SHAPE -> {
-            val shapeId by PanelPreferences.disabledTileShapeId.collectAsState()
-            Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Inactive Shape", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("circle" to "Circle", "squircle" to "Squircle", "rounded_square" to "Square", "teardrop" to "Teardrop", "hexagon" to "Hexagon").forEach { (id, name) ->
-                        FilterChip(
-                            selected = shapeId == id,
-                            onClick = { PanelPreferences.setDisabledTileShapeId(context, id) },
-                            label = { Text(name, fontSize = 11.sp) }
-                        )
-                    }
-                }
-            }
-        }
-        FavoriteFeature.DESIGN_TILE_STROKE -> {
-            val stroke by PanelPreferences.tileOutlineEnabled.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Tile Stroke / Outline", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Switch(
-                    checked = stroke,
-                    onCheckedChange = { PanelPreferences.setTileOutlineEnabled(context, it) }
-                )
-            }
-        }
-        FavoriteFeature.DESIGN_TILE_GRADIENT -> {
-            val gradient by PanelPreferences.showQsTileGradient.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Monet Tile Gradient", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Switch(
-                    checked = gradient,
-                    onCheckedChange = { PanelPreferences.setShowQsTileGradient(context, it) }
-                )
-            }
-        }
-        FavoriteFeature.DESIGN_PROGRESS_STYLE -> {
-            val progressStyle by PanelPreferences.progressBarStyle.collectAsState()
-            Text("Progress Style: ${progressStyle.label}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        FavoriteFeature.DESIGN_PANEL_CORNERS -> {
-            Text("Configure outer/inner corner radii in Panel Corner section", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        FavoriteFeature.DESIGN_HEADER_IMAGE -> {
-            val headerImg by PanelPreferences.showCustomHeaderImage.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Custom Header Image", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Switch(
-                    checked = headerImg,
-                    onCheckedChange = { PanelPreferences.setShowCustomHeaderImage(context, it) }
-                )
-            }
-        }
-        FavoriteFeature.DESIGN_MONET_GRADIENT -> {
-            val monetGradient by PanelPreferences.showCustomHeaderMonetGradient.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Header Monet Gradient", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Switch(
-                    checked = monetGradient,
-                    onCheckedChange = { PanelPreferences.setShowCustomHeaderMonetGradient(context, it) }
-                )
-            }
-        }
-        FavoriteFeature.DESIGN_ELEMENT_COLORS -> {
-            Button(
-                onClick = {
-                    val intent = android.content.Intent(context, ElementColorsActivity::class.java)
-                    context.startActivity(intent)
-                },
-                modifier = modifier.fillMaxWidth()
-            ) {
-                Text("Open Element Accent Colors", fontSize = 12.sp)
-            }
-        }
-        FavoriteFeature.DESIGN_SIM_CARRIER -> {
-            val showCarrier by PanelPreferences.showCarrier.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("SIM Carrier Label", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Switch(
-                    checked = showCarrier,
-                    onCheckedChange = { PanelPreferences.setShowCarrier(context, it) }
-                )
-            }
-        }
-        FavoriteFeature.DESIGN_CARRIER_DIVIDER -> {
-            val showDivider by PanelPreferences.showCarrierDivider.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Carrier Divider Line", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Switch(
-                    checked = showDivider,
-                    onCheckedChange = { PanelPreferences.setShowCarrierDivider(context, it) }
-                )
-            }
-        }
-        FavoriteFeature.DESIGN_BRIGHTNESS_BOTTOM -> {
-            val moveBottom by PanelPreferences.brightnessAtBottom.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Brightness Bar at Bottom", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Switch(
-                    checked = moveBottom,
-                    onCheckedChange = { PanelPreferences.setBrightnessAtBottom(context, it) }
-                )
-            }
-        }
-        FavoriteFeature.DESIGN_BRIGHTNESS_QQS -> {
-            val showQqsBrightness by PanelPreferences.brightnessInQqs.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Brightness Bar in QQS", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Switch(
-                    checked = showQqsBrightness,
-                    onCheckedChange = { PanelPreferences.setBrightnessInQqs(context, it) }
-                )
-            }
-        }
-
-        // --- HEADS UP ---
-        FavoriteFeature.HEADS_UP_MASTER -> {
-            val enableHeadsUp by PanelPreferences.enableHeadsUpOverlay.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Custom Heads-Up Banner Engine", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Switch(
-                    checked = enableHeadsUp,
-                    onCheckedChange = { PanelPreferences.setEnableHeadsUpOverlay(context, it) }
-                )
-            }
-        }
-        FavoriteFeature.HEADS_UP_TEST -> {
-            Button(
-                onClick = {
-                    com.example.service.HeadsUpOverlayManager.showTestHeadsUp(context)
-                    android.widget.Toast.makeText(context, "Testing Heads-Up Banner...", android.widget.Toast.LENGTH_SHORT).show()
-                },
-                modifier = modifier.fillMaxWidth()
-            ) {
-                Text("Trigger Test Banner Notification", fontSize = 12.sp)
-            }
-        }
-        FavoriteFeature.HEADS_UP_TIMEOUT -> {
-            val timeout by PanelPreferences.headsUpTimeoutSeconds.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Auto-Dismiss Timeout (${timeout}s)", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Slider(
-                    value = timeout.toFloat(),
-                    onValueChange = { PanelPreferences.setHeadsUpTimeoutSeconds(context, it.toInt()) },
-                    valueRange = 1f..15f,
-                    steps = 13,
-                    modifier = Modifier.width(160.dp)
-                )
-            }
-        }
-        FavoriteFeature.HEADS_UP_POSITION,
-        FavoriteFeature.HEADS_UP_COMPACT,
-        FavoriteFeature.HEADS_UP_GESTURES,
-        FavoriteFeature.HEADS_UP_BLACKLIST -> {
-            Text("Access detailed options in section below", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-
-        // --- MISCELLANEOUS ---
-        FavoriteFeature.MISC_ANIMATION_SPEED,
-        FavoriteFeature.MISC_ANIMATION_DURATION -> {
-            val speed by PanelPreferences.animationSpeedScale.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Anim Speed (${String.format("%.1fx", speed)})", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Slider(
-                    value = speed,
-                    onValueChange = { PanelPreferences.setAnimationSpeedScale(context, it) },
-                    valueRange = 0.5f..2.5f,
-                    modifier = Modifier.width(160.dp)
-                )
-            }
-        }
-        FavoriteFeature.MISC_STATUS_BAR_GESTURES,
-        FavoriteFeature.MISC_QUICK_PULLDOWN,
-        FavoriteFeature.MISC_STATUS_TRIGGER,
-        FavoriteFeature.TRIGGER_STATUS_BAR -> {
-            val gestures by PanelPreferences.invisibleStatusBarTrigger.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Invisible Status Bar Trigger", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Switch(
-                    checked = gestures,
-                    onCheckedChange = { PanelPreferences.setInvisibleStatusBarTrigger(context, it) }
-                )
-            }
-        }
-        FavoriteFeature.MISC_PANEL_AUTO_CLOSE -> {
-            val autoClose by PanelPreferences.autoSystemPanelClosing.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Auto-Close Stock System Panel", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Switch(
-                    checked = autoClose,
-                    onCheckedChange = { PanelPreferences.setAutoSystemPanelClosing(context, it) }
-                )
-            }
-        }
-        FavoriteFeature.MISC_REPLACEMENT_DELAY,
-        FavoriteFeature.TRIGGER_DELAY -> {
-            val delayMs by PanelPreferences.panelReplacementDelayMs.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Replacement Delay (${delayMs}ms)", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Slider(
-                    value = delayMs.toFloat(),
-                    onValueChange = { PanelPreferences.setPanelReplacementDelayMs(context, it.toInt()) },
-                    valueRange = 0f..500f,
-                    steps = 10,
-                    modifier = Modifier.width(160.dp)
-                )
-            }
-        }
-        FavoriteFeature.MISC_SYSTEM_OVERRIDE -> {
-            val sysOverride by PanelPreferences.overrideSystemQs.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("System QS Override Engine", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Switch(
-                    checked = sysOverride,
-                    onCheckedChange = { PanelPreferences.setOverrideSystemQs(context, it) }
-                )
-            }
-        }
-        FavoriteFeature.MISC_COOLDOWN,
-        FavoriteFeature.TRIGGER_COOLDOWN -> {
-            val cooldown by PanelPreferences.detectorCooldownMs.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Detector Cooldown (${cooldown}ms)", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Slider(
-                    value = cooldown.toFloat(),
-                    onValueChange = { PanelPreferences.setDetectorCooldownMs(context, it.toInt()) },
-                    valueRange = 100f..1000f,
-                    modifier = Modifier.width(160.dp)
-                )
-            }
-        }
-        FavoriteFeature.MISC_MEDIA_PREVIEW -> {
-            val mediaPreview by PanelPreferences.forceShowMediaPreview.collectAsState()
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Force Media Player Preview", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Switch(
-                    checked = mediaPreview,
-                    onCheckedChange = { PanelPreferences.setForceShowMediaPreview(context, it) }
-                )
-            }
-        }
-
-        // --- GESTURES & OTHER ---
-        FavoriteFeature.GESTURE_VOLUME_KEY,
-        FavoriteFeature.MISC_HARDWARE_BUTTONS,
-        FavoriteFeature.MISC_LOCKSCREEN_BYPASS,
-        FavoriteFeature.MISC_DUAL_TONE_STATUS,
-        FavoriteFeature.MISC_SMART_PULLDOWN,
-        FavoriteFeature.MISC_PRIME_CORE,
-        FavoriteFeature.MISC_VOLUME_PANEL,
-        FavoriteFeature.TRIGGER_IMMERSIVE,
-        FavoriteFeature.THEMES_SAVE,
-        FavoriteFeature.THEMES_SAVED_LIST,
-        FavoriteFeature.ABOUT_INFO,
-        FavoriteFeature.ABOUT_PERMISSIONS -> {
-            Text("Access options in section body below", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+    when (feature.category) {
+        CustomizeCategory.BASIC -> RenderBasicFeatureActions(feature = feature, modifier = modifier)
+        CustomizeCategory.HEADS_UP,
+        CustomizeCategory.HEADS_UP_DESIGN -> RenderHeadsUpFeatureActions(feature = feature, modifier = modifier)
+        CustomizeCategory.QS_DESIGN -> RenderQsDesignFeatureActions(feature = feature, modifier = modifier)
+        CustomizeCategory.QS_TWEAKS -> RenderQsTweaksFeatureActions(feature = feature, modifier = modifier)
+        CustomizeCategory.THEMES,
+        CustomizeCategory.MISCELLANEOUS,
+        CustomizeCategory.ABOUT -> RenderThemesAndMiscAndAboutActions(feature = feature, modifier = modifier)
+        else -> Unit
     }
 }
 

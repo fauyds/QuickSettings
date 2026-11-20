@@ -104,11 +104,15 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
             }
 
             val matchingFeatures = remember(globalSearchQuery) {
-                if (globalSearchQuery.isBlank()) emptyList()
+                val tokens = globalSearchQuery.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+                if (tokens.isEmpty()) emptyList()
                 else FavoriteFeature.entries.filter { feat ->
-                    feat.title.contains(globalSearchQuery, ignoreCase = true) ||
-                        feat.description.contains(globalSearchQuery, ignoreCase = true) ||
-                        feat.category.title.contains(globalSearchQuery, ignoreCase = true)
+                    feat.isSearchable && tokens.all { token ->
+                        feat.title.contains(token, ignoreCase = true) ||
+                            feat.description.contains(token, ignoreCase = true) ||
+                            feat.category.title.contains(token, ignoreCase = true) ||
+                            feat.keywords.contains(token, ignoreCase = true)
+                    }
                 }
             }
 
@@ -143,8 +147,11 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                     )
                 }
 
+                val isDark = com.example.ui.theme.LocalIsDarkTheme.current
+                val cardBackgroundColor = com.example.ui.theme.getSettingsCardBackgroundColor(isDark)
+
                 // Global Search Bar across all settings and features
-                androidx.compose.material3.OutlinedTextField(
+                OutlinedTextField(
                     value = globalSearchQuery,
                     onValueChange = { globalSearchQuery = it },
                     placeholder = { Text("Search all toggles & features...", fontSize = 13.sp) },
@@ -169,13 +176,15 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                     },
                     singleLine = true,
                     shape = CircleShape,
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                    colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
                         unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
                         disabledBorderColor = androidx.compose.ui.graphics.Color.Transparent,
                         errorBorderColor = androidx.compose.ui.graphics.Color.Transparent,
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                        focusedContainerColor = cardBackgroundColor,
+                        unfocusedContainerColor = cardBackgroundColor,
+                        disabledContainerColor = cardBackgroundColor,
+                        errorContainerColor = cardBackgroundColor
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -194,8 +203,8 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                     )
                     if (matchingFeatures.isEmpty()) {
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            shape = CustomizeCardShapes.SingleCard,
+                            color = cardBackgroundColor,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Box(
@@ -217,6 +226,7 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                             GenericPinnedFeatureCard(
                                 feature = feat,
                                 shape = cardShape,
+                                showPinnedBadge = false,
                                 modifier = Modifier.testTag("search_result_${feat.id}")
                             )
                         }
