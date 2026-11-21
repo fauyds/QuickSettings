@@ -1277,10 +1277,21 @@ internal fun RenderQsDesignFeatureActions(feature: FavoriteFeature, modifier: Mo
             val enableTopRim by PanelPreferences.enablePanelTopRim.collectAsState()
             FeatureSwitchRow(
                 label = "Panel Top Rim (20% -> 0% Alpha)",
-                subtitle = "Draws a top-to-bottom gradient rim highlight on top of panel cards.",
+                subtitle = "Draws a top-to-bottom gradient rim highlight and panel background gradient.",
                 checked = enableTopRim,
                 onCheckedChange = { PanelPreferences.setEnablePanelTopRim(context, it) },
                 switchTestTag = "feature_panel_top_rim_switch"
+            )
+        }
+
+        FavoriteFeature.DESIGN_TILE_TOP_RIM -> {
+            val enableTileRim by PanelPreferences.enableTileTopRim.collectAsState()
+            FeatureSwitchRow(
+                label = "Tile & Complication Top Rim (20% -> 0% Alpha)",
+                subtitle = "Draws a top-to-bottom gradient rim and background gradient on QS tiles and complications.",
+                checked = enableTileRim,
+                onCheckedChange = { PanelPreferences.setEnableTileTopRim(context, it) },
+                switchTestTag = "feature_tile_top_rim_switch"
             )
         }
 

@@ -539,6 +539,14 @@ enum class FavoriteFeature(
         icon = Icons.Default.AutoAwesome,
         keywords = "rim top gradient alpha 20 0 highlight border glass panel outline stroke"
     ),
+    DESIGN_TILE_TOP_RIM(
+        id = "design_tile_top_rim",
+        title = "Tile & Complication Top Rim",
+        category = CustomizeCategory.QS_DESIGN,
+        description = "Draw a top rim highlight and vertical background gradient on QS tiles and complications",
+        icon = Icons.Default.AutoAwesome,
+        keywords = "tile tiles qs complication complications rim top gradient alpha 20 0 highlight border glass outline stroke"
+    ),
     DESIGN_HEADER_IMAGE(
         id = "design_header_image",
         title = "Custom Header Image",

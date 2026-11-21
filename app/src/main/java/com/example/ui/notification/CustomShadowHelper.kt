@@ -200,7 +200,9 @@ object CustomShadowHelper {
         isCircle: Boolean = false,
         isPill: Boolean = false,
         customAlpha: Float? = null,
-        customOffsetY: Float? = null
+        customOffsetY: Float? = null,
+        enableTopRimBackground: Boolean = false,
+        baseColor: Int? = null
     ) {
         view.elevation = 0f
         ShadowOutlineDrawable.cachedDensity = view.resources.displayMetrics.density
@@ -210,8 +212,20 @@ object CustomShadowHelper {
             return
         }
 
+        val bgGradientDrawable = if (enableTopRimBackground) {
+            PanelTopRimBackgroundDrawable(
+                radii = radii?.copyOf(),
+                cornerRadius = cornerRadius,
+                baseColor = baseColor
+            )
+        } else null
+
         if (elevation <= 0.2f) {
-            view.background = contentDrawable
+            view.background = if (bgGradientDrawable != null) {
+                LayerDrawable(arrayOf(contentDrawable, bgGradientDrawable))
+            } else {
+                contentDrawable
+            }
             return
         }
 
@@ -229,19 +243,26 @@ object CustomShadowHelper {
             customOffsetY = customOffsetY
         )
 
-        view.background = LayerDrawable(arrayOf(shadowDrawable, contentDrawable))
+        val layers = if (bgGradientDrawable != null) {
+            arrayOf(shadowDrawable, contentDrawable, bgGradientDrawable)
+        } else {
+            arrayOf(shadowDrawable, contentDrawable)
+        }
+        view.background = LayerDrawable(layers)
     }
 
     /**
-     * Applies a vertical gradient rim highlight (20% alpha at top down to 0% alpha at bottom)
-     * in the View's foreground so it renders on top of card background and content.
+     * Applies a vertical gradient rim highlight (adapting opacity from 20% on dark surfaces
+     * to higher contrast on bright/enabled tiles, down to 0% at the bottom) in the View's
+     * foreground so it renders on top of card background and content.
      */
     fun applyPanelTopRimForeground(
         view: View,
         enabled: Boolean,
         radii: FloatArray? = null,
         cornerRadius: Float = 0f,
-        strokeWidthDp: Float = 1f
+        strokeWidthDp: Float = 1f,
+        baseColor: Int? = null
     ) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
         if (!enabled) {
@@ -254,25 +275,39 @@ object CustomShadowHelper {
         val strokePx = (strokeWidthDp * density).coerceAtLeast(1f)
         val existing = view.foreground as? TopRimOutlineDrawable
         if (existing != null) {
-            existing.updateShape(radii = radii, cornerRadius = cornerRadius, strokeWidthPx = strokePx)
+            existing.updateShape(
+                radii = radii,
+                cornerRadius = cornerRadius,
+                strokeWidthPx = strokePx,
+                baseColor = baseColor
+            )
         } else {
             view.foreground = TopRimOutlineDrawable(
                 radii = radii?.copyOf(),
                 cornerRadius = cornerRadius,
-                strokeWidthPx = strokePx
+                strokeWidthPx = strokePx,
+                baseColor = baseColor
             )
         }
     }
 }
 
+internal fun calculateBaseColorLuminanceInt(color: Int?): Float {
+    if (color == null || Color.alpha(color) < 64) return 0f
+    return 0.2126f * (Color.red(color) / 255f) +
+        0.7152f * (Color.green(color) / 255f) +
+        0.0722f * (Color.blue(color) / 255f)
+}
+
 /**
  * Draws a crisp inner border rim with a top-to-bottom vertical gradient from
- * 20% opacity white at the top to 0% opacity at the bottom.
+ * white at the top to 0% opacity at the bottom, adapting opacity for bright fills.
  */
 class TopRimOutlineDrawable(
     private var radii: FloatArray? = null,
     private var cornerRadius: Float = 0f,
-    private var strokeWidthPx: Float = 2f
+    private var strokeWidthPx: Float = 2f,
+    private var baseColor: Int? = null
 ) : Drawable() {
 
     private val rimPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -282,16 +317,22 @@ class TopRimOutlineDrawable(
     }
     private val cachedPath = Path()
 
-    fun updateShape(radii: FloatArray?, cornerRadius: Float, strokeWidthPx: Float) {
+    fun updateShape(
+        radii: FloatArray?,
+        cornerRadius: Float,
+        strokeWidthPx: Float,
+        baseColor: Int? = this.baseColor
+    ) {
         val radiiChanged = when {
             this.radii == null && radii == null -> false
             this.radii != null && radii != null -> !this.radii.contentEquals(radii)
             else -> true
         }
-        if (radiiChanged || this.cornerRadius != cornerRadius || this.strokeWidthPx != strokeWidthPx) {
+        if (radiiChanged || this.cornerRadius != cornerRadius || this.strokeWidthPx != strokeWidthPx || this.baseColor != baseColor) {
             this.radii = radii?.copyOf()
             this.cornerRadius = cornerRadius
             this.strokeWidthPx = strokeWidthPx
+            this.baseColor = baseColor
             updateCachedPath(bounds)
             updateShader(bounds)
             invalidateSelf()
@@ -340,12 +381,18 @@ class TopRimOutlineDrawable(
             rimPaint.shader = null
             return
         }
+        val lum = calculateBaseColorLuminanceInt(baseColor)
+        val topAlpha = when {
+            lum > 0.85f -> 166
+            lum > 0.30f -> 133
+            else -> 51
+        }
         rimPaint.shader = LinearGradient(
             bounds.left.toFloat(),
             bounds.top.toFloat(),
             bounds.left.toFloat(),
             bounds.bottom.toFloat(),
-            Color.argb(51, 255, 255, 255),
+            Color.argb(topAlpha, 255, 255, 255),
             Color.argb(0, 255, 255, 255),
             Shader.TileMode.CLAMP
         )
@@ -367,6 +414,98 @@ class TopRimOutlineDrawable(
 
     override fun setColorFilter(colorFilter: ColorFilter?) {
         rimPaint.colorFilter = colorFilter
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+}
+
+/**
+ * Draws a subtle vertical background sheen over a card's base background fill
+ * when Top Rim is enabled, adapting contrast for bright/enabled tiles.
+ */
+class PanelTopRimBackgroundDrawable(
+    private var radii: FloatArray? = null,
+    private var cornerRadius: Float = 0f,
+    private var baseColor: Int? = null
+) : Drawable() {
+
+    private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
+    private val cachedPath = Path()
+
+    override fun onBoundsChange(bounds: Rect) {
+        super.onBoundsChange(bounds)
+        updateCachedPath(bounds)
+        updateShader(bounds)
+    }
+
+    private fun updateCachedPath(bounds: Rect) {
+        cachedPath.reset()
+        if (bounds.width() <= 0 || bounds.height() <= 0) return
+        val r = radii
+        when {
+            r != null && r.size >= 8 -> {
+                cachedPath.addRoundRect(
+                    bounds.left.toFloat(), bounds.top.toFloat(),
+                    bounds.right.toFloat(), bounds.bottom.toFloat(),
+                    r,
+                    Path.Direction.CW
+                )
+            }
+            cornerRadius > 0f -> {
+                cachedPath.addRoundRect(
+                    bounds.left.toFloat(), bounds.top.toFloat(),
+                    bounds.right.toFloat(), bounds.bottom.toFloat(),
+                    cornerRadius, cornerRadius,
+                    Path.Direction.CW
+                )
+            }
+            else -> {
+                cachedPath.addRect(
+                    bounds.left.toFloat(), bounds.top.toFloat(),
+                    bounds.right.toFloat(), bounds.bottom.toFloat(),
+                    Path.Direction.CW
+                )
+            }
+        }
+    }
+
+    private fun updateShader(bounds: Rect) {
+        if (bounds.height() <= 0) {
+            fillPaint.shader = null
+            return
+        }
+        val lum = calculateBaseColorLuminanceInt(baseColor)
+        val (topColor, bottomColor) = when {
+            lum > 0.85f -> Color.argb(13, 0, 0, 0) to Color.argb(36, 0, 0, 0)
+            lum > 0.30f -> Color.argb(46, 255, 255, 255) to Color.argb(38, 0, 0, 0)
+            else -> Color.argb(26, 255, 255, 255) to Color.argb(0, 255, 255, 255)
+        }
+        fillPaint.shader = LinearGradient(
+            bounds.left.toFloat(),
+            bounds.top.toFloat(),
+            bounds.left.toFloat(),
+            bounds.bottom.toFloat(),
+            topColor,
+            bottomColor,
+            Shader.TileMode.CLAMP
+        )
+    }
+
+    override fun draw(canvas: Canvas) {
+        if (cachedPath.isEmpty || bounds.width() <= 0 || bounds.height() <= 0) return
+        if (fillPaint.shader == null) updateShader(bounds)
+        canvas.drawPath(cachedPath, fillPaint)
+    }
+
+    override fun setAlpha(alpha: Int) {
+        fillPaint.alpha = alpha
+    }
+
+    override fun setColorFilter(colorFilter: ColorFilter?) {
+        fillPaint.colorFilter = colorFilter
     }
 
     @Deprecated("Deprecated in Java")

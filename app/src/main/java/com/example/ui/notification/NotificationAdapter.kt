@@ -521,7 +521,8 @@ class NotificationAdapter(
                 elevation = if (enablePanelShadows && !isOreoStyle && !isKitKatStyle) shadowElevation else 0f,
                 isDark = isDark,
                 customAlpha = panelShadowAlpha,
-                customOffsetY = panelShadowOffsetY
+                customOffsetY = panelShadowOffsetY,
+                enableTopRimBackground = PanelPreferences.enablePanelTopRim.value && !isKitKatStyle
             )
             CustomShadowHelper.applyPanelTopRimForeground(
                 view = flRoot,
@@ -911,7 +912,8 @@ class NotificationAdapter(
                 elevation = if (enablePanelShadows && !isOreoStyle) shadowElevation else 0f,
                 isDark = isDark,
                 customAlpha = panelShadowAlpha,
-                customOffsetY = panelShadowOffsetY
+                customOffsetY = panelShadowOffsetY,
+                enableTopRimBackground = PanelPreferences.enablePanelTopRim.value
             )
             CustomShadowHelper.applyPanelTopRimForeground(
                 view = flRoot,
@@ -1299,7 +1301,8 @@ class NotificationAdapter(
                 elevation = if (enablePanelShadows && !isOreoStyle) shadowElevation else 0f,
                 isDark = isDarkTheme,
                 customAlpha = panelShadowAlpha,
-                customOffsetY = panelShadowOffsetY
+                customOffsetY = panelShadowOffsetY,
+                enableTopRimBackground = PanelPreferences.enablePanelTopRim.value
             )
             CustomShadowHelper.applyPanelTopRimForeground(
                 view = flRoot,
@@ -1476,7 +1479,8 @@ class NotificationAdapter(
                 elevation = if (enablePanelShadows && !isOreoStyle && !isKitKatStyle) shadowElevation else 0f,
                 isDark = isDark,
                 customAlpha = panelShadowAlpha,
-                customOffsetY = panelShadowOffsetY
+                customOffsetY = panelShadowOffsetY,
+                enableTopRimBackground = com.example.data.PanelPreferences.enablePanelTopRim.value && !isKitKatStyle
             )
             CustomShadowHelper.applyPanelTopRimForeground(
                 view = flRoot,

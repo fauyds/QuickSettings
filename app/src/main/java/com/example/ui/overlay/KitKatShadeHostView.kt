@@ -34,9 +34,12 @@ import android.widget.ImageButton
 import androidx.core.graphics.ColorUtils
 import androidx.palette.graphics.Palette
 import com.example.service.MediaSessionManagerHelper
+import com.example.ui.notification.CustomShadowHelper
 import com.example.ui.notification.MonetThemeHelper
 import com.example.ui.notification.NotificationListView
 import com.example.ui.overlay.extractAndroidQNotificationColors
+import com.example.ui.shape.panelTopRim
+import com.example.ui.shape.panelTopRimBackground
 import androidx.compose.ui.graphics.toArgb
 import com.example.ui.view.WavyProgressView
 import androidx.compose.foundation.background
@@ -166,6 +169,7 @@ class KitKatShadeHostView @JvmOverloads constructor(
     private var lastShowHeaderGradient: Boolean? = null
     private var lastPermissionGranted: Boolean? = null
     private var lastOuterCorner: Float? = null
+    private var lastBadgeStyleKey: String? = null
     private var lastCategorySortingEnabled: Boolean? = null
     private var lastCategories: List<com.example.model.NotificationCategory> = emptyList()
     private var lastCategoryExpandedStates: Map<String, Boolean> = emptyMap()
@@ -721,10 +725,20 @@ class KitKatShadeHostView @JvmOverloads constructor(
         }
 
         val outerCorner = PanelPreferences.panelOuterCorner.value
+        val badgeStyleKey = listOf(
+            PanelPreferences.enablePanelTopRim.value,
+            PanelPreferences.clockBackgroundEnabled.value,
+            PanelPreferences.clockBackgroundCorner.value,
+            PanelPreferences.dateBackgroundEnabled.value,
+            PanelPreferences.dateBackgroundCorner.value,
+            PanelPreferences.carrierBackgroundEnabled.value,
+            PanelPreferences.carrierBackgroundCorner.value
+        ).joinToString("|")
         val themeChanged = this.lastIsDark != isDark ||
                 this.lastShowMonetSurface != showMonetSurface ||
                 this.lastShowHeaderGradient != showHeaderGradient ||
-                this.lastOuterCorner != outerCorner
+                this.lastOuterCorner != outerCorner ||
+                this.lastBadgeStyleKey != badgeStyleKey
         val tilesChanged = this.lastTiles != tiles
         val currentSortingEnabled = com.example.data.NotificationCategoryManager.isSortingEnabled.value
         val currentCategories = com.example.data.NotificationCategoryManager.categories.value
@@ -752,6 +766,7 @@ class KitKatShadeHostView @JvmOverloads constructor(
         this.lastShowHeaderGradient = showHeaderGradient
         this.lastPermissionGranted = isNotificationPermissionGranted
         this.lastOuterCorner = outerCorner
+        this.lastBadgeStyleKey = badgeStyleKey
         this.lastCategorySortingEnabled = currentSortingEnabled
         this.lastCategories = currentCategories
         this.lastCategoryExpandedStates = currentExpandedStates
@@ -831,21 +846,45 @@ class KitKatShadeHostView @JvmOverloads constructor(
         val badgeBgColor = MonetThemeHelper.getInactiveTilesColor(context, isDark)
         val badgeTextColor = if (ColorUtils.calculateLuminance(badgeBgColor) > 0.5) Color.parseColor("#1F1F1F") else Color.WHITE
 
+        val enablePanelTopRim = PanelPreferences.enablePanelTopRim.value
+
         fun applyBadgeStyle(view: TextView, enabled: Boolean, cornerDp: Float, defaultColor: Int, hPadDp: Int, vPadDp: Int) {
             if (enabled) {
                 view.setTextColor(badgeTextColor)
                 val hPx = (hPadDp * density).toInt()
                 val vPx = (vPadDp * density).toInt()
                 view.setPadding(hPx, vPx, hPx, vPx)
-                view.background = GradientDrawable().apply {
+                val cornerPx = cornerDp * density
+                val baseDrawable = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
-                    cornerRadius = cornerDp * density
+                    cornerRadius = cornerPx
                     setColor(badgeBgColor)
+                }
+                if (enablePanelTopRim) {
+                    CustomShadowHelper.applyCustomShadowBackground(
+                        view = view,
+                        contentDrawable = baseDrawable,
+                        cornerRadius = cornerPx,
+                        elevation = 0f,
+                        isDark = isDark,
+                        enableTopRimBackground = true,
+                        baseColor = badgeBgColor
+                    )
+                    CustomShadowHelper.applyPanelTopRimForeground(
+                        view = view,
+                        enabled = true,
+                        cornerRadius = cornerPx,
+                        baseColor = badgeBgColor
+                    )
+                } else {
+                    view.background = baseDrawable
+                    CustomShadowHelper.applyPanelTopRimForeground(view = view, enabled = false)
                 }
             } else {
                 view.setTextColor(defaultColor)
                 view.setPadding(0, 0, 0, 0)
                 view.background = null
+                CustomShadowHelper.applyPanelTopRimForeground(view = view, enabled = false)
             }
         }
 
@@ -1143,6 +1182,8 @@ class KitKatShadeHostView @JvmOverloads constructor(
                     }
                 }
 
+                val tileTopRimEnabled = PanelPreferences.enableTileTopRim.value
+
                 // 1. Jetpack Compose Tile Icon (Complication ring or shape background when legacy shapes enabled)
                 holder.composeIcon.setContent {
                     val compSpec = tile.complicationSpec
@@ -1165,11 +1206,21 @@ class KitKatShadeHostView @JvmOverloads constructor(
                                 customRingSize = 44.dp
                             )
                         } else if (enableLegacyTileShapes) {
+                            val innerBg = if (isActive) activeBgColor else inactiveBgColor
                             Box(
                                 modifier = Modifier
                                     .size(44.dp)
+                                    .panelTopRim(
+                                        enabled = tileTopRimEnabled,
+                                        shape = tileShape,
+                                        baseColor = innerBg
+                                    )
                                     .clip(tileShape)
-                                    .background(if (isActive) activeBgColor else inactiveBgColor),
+                                    .background(innerBg)
+                                    .panelTopRimBackground(
+                                        enabled = tileTopRimEnabled,
+                                        baseColor = innerBg
+                                    ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 KitKatTileIcon(
@@ -1213,7 +1264,21 @@ class KitKatShadeHostView @JvmOverloads constructor(
                     cornerRadius = outerCornerPx
                     setColor(tileCardBg)
                 }
-                holder.cardRoot.background = cardDrawable
+                CustomShadowHelper.applyCustomShadowBackground(
+                    view = holder.cardRoot,
+                    contentDrawable = cardDrawable,
+                    cornerRadius = outerCornerPx,
+                    elevation = 0f,
+                    isDark = isDark,
+                    enableTopRimBackground = tileTopRimEnabled,
+                    baseColor = tileCardBg
+                )
+                CustomShadowHelper.applyPanelTopRimForeground(
+                    view = holder.cardRoot,
+                    enabled = tileTopRimEnabled,
+                    cornerRadius = outerCornerPx,
+                    baseColor = tileCardBg
+                )
                 holder.cardRoot.clipToOutline = true
                 holder.cardRoot.alpha = if (isUnavailable) 0.45f else 1f
                 holder.cardRoot.isEnabled = !isUnavailable

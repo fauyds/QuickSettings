@@ -572,7 +572,8 @@ class NotificationListView @JvmOverloads constructor(
             elevation = if (enablePanelShadows) shadowElevation else 0f,
             isDark = isDark,
             customAlpha = panelShadowAlpha,
-            customOffsetY = shadowOffsetY
+            customOffsetY = shadowOffsetY,
+            enableTopRimBackground = enablePanelTopRim
         )
         CustomShadowHelper.applyPanelTopRimForeground(
             flPermissionCard,
@@ -615,7 +616,8 @@ class NotificationListView @JvmOverloads constructor(
                 elevation = if (enablePanelShadows) shadowElevation else 0f,
                 isDark = isDark,
                 customAlpha = panelShadowAlpha,
-                customOffsetY = shadowOffsetY
+                customOffsetY = shadowOffsetY,
+                enableTopRimBackground = enablePanelTopRim
             )
             CustomShadowHelper.applyPanelTopRimForeground(
                 flEmptyCard,

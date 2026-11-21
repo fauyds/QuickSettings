@@ -12,6 +12,7 @@ import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.background
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
@@ -116,6 +117,14 @@ class QsPathDrawable(
     private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
     }
+    private val topBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
+    private val topRimPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
 
     var strokeWidth: Float = 0f
         set(value) {
@@ -129,9 +138,26 @@ class QsPathDrawable(
             invalidateSelf()
         }
 
+    var enableTopRim: Boolean = false
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidateSelf()
+            }
+        }
+
+    var topRimStrokeWidthPx: Float = 2f
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidateSelf()
+            }
+        }
+
     fun setColor(color: Int) {
         if (paint.color != color) {
             paint.color = color
+            if (bounds.height() > 0) updateTopRimShaders(bounds)
             invalidateSelf()
         }
     }
@@ -139,8 +165,65 @@ class QsPathDrawable(
     var gradientColors: IntArray? = null
         set(value) {
             field = value
+            if (bounds.height() > 0) updateTopRimShaders(bounds)
             invalidateSelf()
         }
+
+    private fun updateTopRimShaders(bounds: Rect) {
+        if (bounds.height() <= 0) {
+            topBgPaint.shader = null
+            topRimPaint.shader = null
+            return
+        }
+        val refColor = if (Color.alpha(paint.color) == 0) {
+            paint.color
+        } else {
+            gradientColors?.firstOrNull() ?: paint.color
+        }
+        val alpha = Color.alpha(refColor)
+        val lum = if (alpha >= 64) {
+            0.2126f * (Color.red(refColor) / 255f) +
+                0.7152f * (Color.green(refColor) / 255f) +
+                0.0722f * (Color.blue(refColor) / 255f)
+        } else {
+            0f
+        }
+        val (bgTopColor, bgBottomColor, rimTopAlpha) = when {
+            lum > 0.85f -> Triple(
+                Color.argb(13, 0, 0, 0),
+                Color.argb(36, 0, 0, 0),
+                166
+            )
+            lum > 0.30f -> Triple(
+                Color.argb(46, 255, 255, 255),
+                Color.argb(38, 0, 0, 0),
+                133
+            )
+            else -> Triple(
+                Color.argb(26, 255, 255, 255),
+                Color.argb(0, 255, 255, 255),
+                51
+            )
+        }
+        topBgPaint.shader = android.graphics.LinearGradient(
+            bounds.left.toFloat(),
+            bounds.top.toFloat(),
+            bounds.left.toFloat(),
+            bounds.bottom.toFloat(),
+            bgTopColor,
+            bgBottomColor,
+            android.graphics.Shader.TileMode.CLAMP
+        )
+        topRimPaint.shader = android.graphics.LinearGradient(
+            bounds.left.toFloat(),
+            bounds.top.toFloat(),
+            bounds.left.toFloat(),
+            bounds.bottom.toFloat(),
+            Color.argb(rimTopAlpha, 255, 255, 255),
+            Color.argb(0, 255, 255, 255),
+            android.graphics.Shader.TileMode.CLAMP
+        )
+    }
 
     override fun onBoundsChange(bounds: Rect) {
         super.onBoundsChange(bounds)
@@ -167,12 +250,17 @@ class QsPathDrawable(
             } else {
                 paint.shader = null
             }
+            updateTopRimShaders(bounds)
         }
     }
 
     override fun draw(canvas: Canvas) {
         if (Color.alpha(paint.color) > 0) {
             canvas.drawPath(scaledPath, paint)
+        }
+        if (enableTopRim && !scaledPath.isEmpty && bounds.height() > 0) {
+            if (topBgPaint.shader == null) updateTopRimShaders(bounds)
+            canvas.drawPath(scaledPath, topBgPaint)
         }
         if (strokeWidth > 0f && strokeColor != Color.TRANSPARENT) {
             canvas.save()
@@ -182,15 +270,27 @@ class QsPathDrawable(
             canvas.drawPath(scaledPath, strokePaint)
             canvas.restore()
         }
+        if (enableTopRim && !scaledPath.isEmpty && bounds.height() > 0) {
+            if (topRimPaint.shader == null) updateTopRimShaders(bounds)
+            canvas.save()
+            canvas.clipPath(scaledPath)
+            topRimPaint.strokeWidth = topRimStrokeWidthPx * 2f
+            canvas.drawPath(scaledPath, topRimPaint)
+            canvas.restore()
+        }
     }
 
     override fun setAlpha(alpha: Int) {
         paint.alpha = alpha
+        topBgPaint.alpha = alpha
+        topRimPaint.alpha = alpha
         invalidateSelf()
     }
 
     override fun setColorFilter(colorFilter: ColorFilter?) {
         paint.colorFilter = colorFilter
+        topBgPaint.colorFilter = colorFilter
+        topRimPaint.colorFilter = colorFilter
         invalidateSelf()
     }
 
@@ -248,27 +348,71 @@ fun Modifier.insideShapeBorder(
     }
 }
 
+private fun calculateBaseColorLuminance(color: androidx.compose.ui.graphics.Color?): Float {
+    if (color == null || color.alpha < 0.25f) return 0f
+    return 0.2126f * color.red + 0.7152f * color.green + 0.0722f * color.blue
+}
+
 /**
  * Draws a subtle inner rim ON TOP of content with a vertical gradient from
- * 20% alpha at the top down to 0% alpha at the bottom.
+ * top alpha down to 0% alpha at the bottom, adapting intensity for bright enabled tiles.
  */
 fun Modifier.panelTopRim(
     enabled: Boolean,
     shape: Shape,
     width: Dp = 1.dp,
-    rimColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.White
+    rimColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.White,
+    baseColor: androidx.compose.ui.graphics.Color? = null
 ): Modifier = if (!enabled) {
     this
 } else {
+    val lum = calculateBaseColorLuminance(baseColor)
+    val resolvedTopAlpha = when {
+        lum > 0.85f -> 0.65f
+        lum > 0.30f -> 0.52f
+        else -> 0.20f
+    }
     insideShapeBorder(
         width = width,
         brush = Brush.verticalGradient(
             colors = listOf(
-                rimColor.copy(alpha = 0.20f),
+                rimColor.copy(alpha = resolvedTopAlpha),
                 rimColor.copy(alpha = 0.0f)
             )
         ),
         shape = shape
+    )
+}
+
+/**
+ * Draws a subtle top-to-bottom vertical gradient sheen on top of the surface's
+ * background fill (behind child content), adapting contrast for bright enabled tiles.
+ */
+fun Modifier.panelTopRimBackground(
+    enabled: Boolean,
+    rimColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.White,
+    topAlpha: Float = 0.10f,
+    baseColor: androidx.compose.ui.graphics.Color? = null
+): Modifier = if (!enabled) {
+    this
+} else {
+    val lum = calculateBaseColorLuminance(baseColor)
+    val gradientColors = when {
+        lum > 0.85f -> listOf(
+            androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.05f),
+            androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.14f)
+        )
+        lum > 0.30f -> listOf(
+            rimColor.copy(alpha = 0.18f),
+            androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.15f)
+        )
+        else -> listOf(
+            rimColor.copy(alpha = topAlpha),
+            androidx.compose.ui.graphics.Color.Transparent
+        )
+    }
+    this.background(
+        brush = Brush.verticalGradient(colors = gradientColors)
     )
 }
 

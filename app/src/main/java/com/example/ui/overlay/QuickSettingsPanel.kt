@@ -65,6 +65,7 @@ import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.drawOutline
 import com.example.ui.shape.insideShapeBorder
 import com.example.ui.shape.panelTopRim
+import com.example.ui.shape.panelTopRimBackground
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -1353,6 +1354,7 @@ fun OreoTopStatusBar(
     val clockBgCorner by PanelPreferences.clockBackgroundCorner.collectAsState()
     val carrierBgEnabled by PanelPreferences.carrierBackgroundEnabled.collectAsState()
     val carrierBgCorner by PanelPreferences.carrierBackgroundCorner.collectAsState()
+    val enablePanelTopRim by PanelPreferences.enablePanelTopRim.collectAsState()
     val badgeBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
     val badgeContentColor = if (badgeBgColor.luminance() > 0.5f) Color(0xFF1F1F1F) else Color.White
 
@@ -1368,13 +1370,14 @@ fun OreoTopStatusBar(
     ) {
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(carrierBgCorner.dp))
+                .pillSurfaceWithRim(
+                    enabled = carrierBgEnabled,
+                    shape = RoundedCornerShape(carrierBgCorner.dp),
+                    backgroundColor = badgeBgColor,
+                    topRimEnabled = enablePanelTopRim
+                )
                 .then(
-                    if (carrierBgEnabled) {
-                        Modifier
-                            .background(badgeBgColor)
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
-                    } else Modifier
+                    if (carrierBgEnabled) Modifier.padding(horizontal = 8.dp, vertical = 2.dp) else Modifier
                 ),
             contentAlignment = Alignment.Center
         ) {
@@ -1395,13 +1398,14 @@ fun OreoTopStatusBar(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier
-                        .clip(RoundedCornerShape(batteryBgCorner.dp))
+                        .pillSurfaceWithRim(
+                            enabled = batteryBgEnabled,
+                            shape = RoundedCornerShape(batteryBgCorner.dp),
+                            backgroundColor = badgeBgColor,
+                            topRimEnabled = enablePanelTopRim
+                        )
                         .then(
-                            if (batteryBgEnabled) {
-                                Modifier
-                                    .background(badgeBgColor)
-                                    .padding(horizontal = 8.dp, vertical = 2.dp)
-                            } else Modifier
+                            if (batteryBgEnabled) Modifier.padding(horizontal = 8.dp, vertical = 2.dp) else Modifier
                         )
                 ) {
                     Text(
@@ -1420,13 +1424,14 @@ fun OreoTopStatusBar(
             }
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(clockBgCorner.dp))
+                    .pillSurfaceWithRim(
+                        enabled = clockBgEnabled,
+                        shape = RoundedCornerShape(clockBgCorner.dp),
+                        backgroundColor = badgeBgColor,
+                        topRimEnabled = enablePanelTopRim
+                    )
                     .then(
-                        if (clockBgEnabled) {
-                            Modifier
-                                .background(badgeBgColor)
-                                .padding(horizontal = 8.dp, vertical = 2.dp)
-                        } else Modifier
+                        if (clockBgEnabled) Modifier.padding(horizontal = 8.dp, vertical = 2.dp) else Modifier
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -1479,6 +1484,7 @@ fun QsHeaderBar(
     val batteryBgCorner by PanelPreferences.batteryBackgroundCorner.collectAsState()
     val clockBgEnabled by PanelPreferences.clockBackgroundEnabled.collectAsState()
     val clockBgCorner by PanelPreferences.clockBackgroundCorner.collectAsState()
+    val enablePanelTopRim by PanelPreferences.enablePanelTopRim.collectAsState()
     val badgeBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
     val badgeContentColor = if (badgeBgColor.luminance() > 0.5f) Color(0xFF1F1F1F) else Color.White
 
@@ -1517,13 +1523,14 @@ fun QsHeaderBar(
             ) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(clockBgCorner.dp))
+                        .pillSurfaceWithRim(
+                            enabled = clockBgEnabled,
+                            shape = RoundedCornerShape(clockBgCorner.dp),
+                            backgroundColor = badgeBgColor,
+                            topRimEnabled = enablePanelTopRim
+                        )
                         .then(
-                            if (clockBgEnabled) {
-                                Modifier
-                                    .background(badgeBgColor)
-                                    .padding(horizontal = 10.dp, vertical = 3.dp)
-                            } else Modifier
+                            if (clockBgEnabled) Modifier.padding(horizontal = 10.dp, vertical = 3.dp) else Modifier
                         )
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
@@ -1543,13 +1550,14 @@ fun QsHeaderBar(
                 if (effectiveDatePos == com.example.data.DatePosition.NEXT_TO_TIME) {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(dateBgCorner.dp))
+                            .pillSurfaceWithRim(
+                                enabled = dateBgEnabled,
+                                shape = RoundedCornerShape(dateBgCorner.dp),
+                                backgroundColor = badgeBgColor,
+                                topRimEnabled = enablePanelTopRim
+                            )
                             .then(
-                                if (dateBgEnabled) {
-                                    Modifier
-                                        .background(badgeBgColor)
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                                } else Modifier
+                                if (dateBgEnabled) Modifier.padding(horizontal = 8.dp, vertical = 4.dp) else Modifier
                             )
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
@@ -1576,13 +1584,14 @@ fun QsHeaderBar(
                 ) {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(dateBgCorner.dp))
+                            .pillSurfaceWithRim(
+                                enabled = dateBgEnabled,
+                                shape = RoundedCornerShape(dateBgCorner.dp),
+                                backgroundColor = badgeBgColor,
+                                topRimEnabled = enablePanelTopRim
+                            )
                             .then(
-                                if (dateBgEnabled) {
-                                    Modifier
-                                        .background(badgeBgColor)
-                                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                                } else Modifier
+                                if (dateBgEnabled) Modifier.padding(horizontal = 8.dp, vertical = 3.dp) else Modifier
                             )
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
@@ -1610,12 +1619,15 @@ fun QsHeaderBar(
             if (effectiveDatePos == com.example.data.DatePosition.HEADER_RIGHT) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(dateBgCorner.dp))
+                        .pillSurfaceWithRim(
+                            enabled = dateBgEnabled,
+                            shape = RoundedCornerShape(dateBgCorner.dp),
+                            backgroundColor = badgeBgColor,
+                            topRimEnabled = enablePanelTopRim
+                        )
                         .then(
                             if (dateBgEnabled) {
-                                Modifier
-                                    .background(badgeBgColor)
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                                Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             } else {
                                 Modifier.padding(end = 4.dp)
                             }
@@ -1648,12 +1660,15 @@ fun QsHeaderBar(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier
-                        .clip(RoundedCornerShape(batteryBgCorner.dp))
+                        .pillSurfaceWithRim(
+                            enabled = batteryBgEnabled,
+                            shape = RoundedCornerShape(batteryBgCorner.dp),
+                            backgroundColor = badgeBgColor,
+                            topRimEnabled = enablePanelTopRim
+                        )
                         .then(
                             if (batteryBgEnabled) {
-                                Modifier
-                                    .background(badgeBgColor)
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                                Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             } else {
                                 Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                             }
@@ -1731,6 +1746,7 @@ fun KitKatEditTileCard(
     val enableLegacyTileShapes by PanelPreferences.enableLegacyTileShapes.collectAsState()
     val tileOutlineEnabled by PanelPreferences.tileOutlineEnabled.collectAsState()
     val tileOutlineThicknessDp by PanelPreferences.tileOutlineThicknessDp.collectAsState()
+    val enableTileTopRim by PanelPreferences.enableTileTopRim.collectAsState()
     val enabledTileShapeId by PanelPreferences.enabledTileShapeId.collectAsState()
     val disabledTileShapeId by PanelPreferences.disabledTileShapeId.collectAsState()
     val chosenShapeId = if (isActive) enabledTileShapeId else disabledTileShapeId
@@ -1761,8 +1777,10 @@ fun KitKatEditTileCard(
 
     Box(
         modifier = baseModifier
+            .panelTopRim(enabled = enableTileTopRim, shape = cardShape, baseColor = cardBg)
             .clip(cardShape)
-            .background(cardBg),
+            .background(cardBg)
+            .panelTopRimBackground(enabled = enableTileTopRim, baseColor = cardBg),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -1794,16 +1812,19 @@ fun KitKatEditTileCard(
                     val tileShape = com.example.ui.shape.QsShapeManager.getComposeShape(chosenShapeId)
                     val inactiveBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
                     val oreoOutlineColor = if (isActive) tileAccent else inactiveBgColor
+                    val legacyBg = if (tileOutlineEnabled) Color.Transparent else if (isActive) tileAccent else inactiveBgColor
                     Box(
                         modifier = Modifier
                             .size(44.dp)
+                            .panelTopRim(enabled = enableTileTopRim, shape = tileShape, baseColor = legacyBg)
                             .then(
                                 if (tileOutlineEnabled) {
                                     Modifier.insideShapeBorder(tileOutlineThicknessDp.dp, oreoOutlineColor, tileShape)
                                 } else Modifier
                             )
                             .clip(tileShape)
-                            .background(if (tileOutlineEnabled) Color.Transparent else if (isActive) tileAccent else inactiveBgColor),
+                            .background(legacyBg)
+                            .panelTopRimBackground(enabled = enableTileTopRim, baseColor = legacyBg),
                         contentAlignment = Alignment.Center
                     ) {
                         if (isThirdParty) {
@@ -1985,6 +2006,7 @@ fun KitKatTileEditorScreen(
             val dateBgCorner by PanelPreferences.dateBackgroundCorner.collectAsState()
             val carrierBgEnabled by PanelPreferences.carrierBackgroundEnabled.collectAsState()
             val carrierBgCorner by PanelPreferences.carrierBackgroundCorner.collectAsState()
+            val enablePanelTopRim by PanelPreferences.enablePanelTopRim.collectAsState()
             val badgeBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
             val badgeContentColor = if (badgeBgColor.luminance() > 0.5f) Color(0xFF1F1F1F) else Color.White
 
@@ -2005,13 +2027,14 @@ fun KitKatTileEditorScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(clockBgCorner.dp))
+                                .pillSurfaceWithRim(
+                                    enabled = clockBgEnabled,
+                                    shape = RoundedCornerShape(clockBgCorner.dp),
+                                    backgroundColor = badgeBgColor,
+                                    topRimEnabled = enablePanelTopRim
+                                )
                                 .then(
-                                    if (clockBgEnabled) {
-                                        Modifier
-                                            .background(badgeBgColor)
-                                            .padding(horizontal = 10.dp, vertical = 3.dp)
-                                    } else Modifier
+                                    if (clockBgEnabled) Modifier.padding(horizontal = 10.dp, vertical = 3.dp) else Modifier
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
@@ -2026,13 +2049,14 @@ fun KitKatTileEditorScreen(
                         Box(
                             modifier = Modifier
                                 .padding(bottom = 4.dp)
-                                .clip(RoundedCornerShape(dateBgCorner.dp))
+                                .pillSurfaceWithRim(
+                                    enabled = dateBgEnabled,
+                                    shape = RoundedCornerShape(dateBgCorner.dp),
+                                    backgroundColor = badgeBgColor,
+                                    topRimEnabled = enablePanelTopRim
+                                )
                                 .then(
-                                    if (dateBgEnabled) {
-                                        Modifier
-                                            .background(badgeBgColor)
-                                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                                    } else Modifier
+                                    if (dateBgEnabled) Modifier.padding(horizontal = 8.dp, vertical = 3.dp) else Modifier
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
@@ -2084,13 +2108,14 @@ fun KitKatTileEditorScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(carrierBgCorner.dp))
+                            .pillSurfaceWithRim(
+                                enabled = carrierBgEnabled,
+                                shape = RoundedCornerShape(carrierBgCorner.dp),
+                                backgroundColor = badgeBgColor,
+                                topRimEnabled = enablePanelTopRim
+                            )
                             .then(
-                                if (carrierBgEnabled) {
-                                    Modifier
-                                        .background(badgeBgColor)
-                                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                                } else Modifier
+                                if (carrierBgEnabled) Modifier.padding(horizontal = 8.dp, vertical = 2.dp) else Modifier
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -2793,6 +2818,7 @@ fun MarshmallowTileEditorScreen(
             val clockBgCorner by PanelPreferences.clockBackgroundCorner.collectAsState()
             val carrierBgEnabled by PanelPreferences.carrierBackgroundEnabled.collectAsState()
             val carrierBgCorner by PanelPreferences.carrierBackgroundCorner.collectAsState()
+            val enablePanelTopRim by PanelPreferences.enablePanelTopRim.collectAsState()
             val badgeBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
             val badgeContentColor = if (badgeBgColor.luminance() > 0.5f) Color(0xFF1F1F1F) else Color.White
 
@@ -2814,13 +2840,14 @@ fun MarshmallowTileEditorScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         modifier = Modifier
-                            .clip(RoundedCornerShape(carrierBgCorner.dp))
+                            .pillSurfaceWithRim(
+                                enabled = carrierBgEnabled,
+                                shape = RoundedCornerShape(carrierBgCorner.dp),
+                                backgroundColor = badgeBgColor,
+                                topRimEnabled = enablePanelTopRim
+                            )
                             .then(
-                                if (carrierBgEnabled) {
-                                    Modifier
-                                        .background(badgeBgColor)
-                                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                                } else Modifier
+                                if (carrierBgEnabled) Modifier.padding(horizontal = 8.dp, vertical = 3.dp) else Modifier
                             )
                     ) {
                         Icon(
@@ -2847,13 +2874,14 @@ fun MarshmallowTileEditorScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             modifier = Modifier
-                                .clip(RoundedCornerShape(batteryBgCorner.dp))
+                                .pillSurfaceWithRim(
+                                    enabled = batteryBgEnabled,
+                                    shape = RoundedCornerShape(batteryBgCorner.dp),
+                                    backgroundColor = badgeBgColor,
+                                    topRimEnabled = enablePanelTopRim
+                                )
                                 .then(
-                                    if (batteryBgEnabled) {
-                                        Modifier
-                                            .background(badgeBgColor)
-                                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                                    } else Modifier
+                                    if (batteryBgEnabled) Modifier.padding(horizontal = 8.dp, vertical = 3.dp) else Modifier
                                 )
                         ) {
                             Text(
@@ -2900,13 +2928,14 @@ fun MarshmallowTileEditorScreen(
                 Spacer(modifier = Modifier.height(4.dp))
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(clockBgCorner.dp))
+                        .pillSurfaceWithRim(
+                            enabled = clockBgEnabled,
+                            shape = RoundedCornerShape(clockBgCorner.dp),
+                            backgroundColor = badgeBgColor,
+                            topRimEnabled = enablePanelTopRim
+                        )
                         .then(
-                            if (clockBgEnabled) {
-                                Modifier
-                                    .background(badgeBgColor)
-                                    .padding(horizontal = 10.dp, vertical = 3.dp)
-                            } else Modifier
+                            if (clockBgEnabled) Modifier.padding(horizontal = 10.dp, vertical = 3.dp) else Modifier
                         )
                         .clickable { launchClockApp(context) },
                     contentAlignment = Alignment.Center
@@ -2921,13 +2950,14 @@ fun MarshmallowTileEditorScreen(
                 Spacer(modifier = Modifier.height(if (clockBgEnabled || dateBgEnabled) 4.dp else 2.dp))
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(dateBgCorner.dp))
+                        .pillSurfaceWithRim(
+                            enabled = dateBgEnabled,
+                            shape = RoundedCornerShape(dateBgCorner.dp),
+                            backgroundColor = badgeBgColor,
+                            topRimEnabled = enablePanelTopRim
+                        )
                         .then(
-                            if (dateBgEnabled) {
-                                Modifier
-                                    .background(badgeBgColor)
-                                    .padding(horizontal = 8.dp, vertical = 3.dp)
-                            } else Modifier
+                            if (dateBgEnabled) Modifier.padding(horizontal = 8.dp, vertical = 3.dp) else Modifier
                         )
                         .clickable { launchCalendarApp(context) },
                     contentAlignment = Alignment.Center
@@ -3518,6 +3548,7 @@ fun MarshmallowEditTileCard(
     val isDark = LocalIsDarkTheme.current
     val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
     val enableLegacyTileShapes by PanelPreferences.enableLegacyTileShapes.collectAsState()
+    val enableTileTopRim by PanelPreferences.enableTileTopRim.collectAsState()
     val monetAccent = com.example.ui.theme.getQsTilesElementColor(isDark)
     val cardBg = if (isActive) {
         Color(MonetThemeHelper.getCardBackground(context, isDark))
@@ -3526,13 +3557,16 @@ fun MarshmallowEditTileCard(
     }
     val labelCol = Color(MonetThemeHelper.getTextPrimary(context, isDark))
     val corner = panelOuterCorner.dp
+    val cardShape = RoundedCornerShape(corner)
 
     Box(
         modifier = modifier
             .then(if (tileWidth != Dp.Unspecified) Modifier.width(tileWidth) else Modifier)
             .height(86.dp)
-            .clip(RoundedCornerShape(corner))
-            .background(cardBg),
+            .panelTopRim(enabled = enableTileTopRim, shape = cardShape, baseColor = cardBg)
+            .clip(cardShape)
+            .background(cardBg)
+            .panelTopRimBackground(enabled = enableTileTopRim, baseColor = cardBg),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -5008,6 +5042,7 @@ fun UnifiedQsPanel(
     val clockBgCorner by PanelPreferences.clockBackgroundCorner.collectAsState()
     val carrierBgEnabled by PanelPreferences.carrierBackgroundEnabled.collectAsState()
     val carrierBgCorner by PanelPreferences.carrierBackgroundCorner.collectAsState()
+    val enablePanelTopRim by PanelPreferences.enablePanelTopRim.collectAsState()
     val statusBadgeBgColor = com.example.ui.theme.getInactiveTilesElementColor(isDark)
     val statusBadgeContentColor = if (statusBadgeBgColor.luminance() > 0.5f) Color(0xFF1F1F1F) else Color.White
     val context = LocalContext.current
@@ -5455,13 +5490,14 @@ fun UnifiedQsPanel(
                                     ) {
                                         Box(
                                             modifier = Modifier
-                                                .clip(RoundedCornerShape(clockBgCorner.dp))
+                                                .pillSurfaceWithRim(
+                                                    enabled = clockBgEnabled,
+                                                    shape = RoundedCornerShape(clockBgCorner.dp),
+                                                    backgroundColor = statusBadgeBgColor,
+                                                    topRimEnabled = enablePanelTopRim
+                                                )
                                                 .then(
-                                                    if (clockBgEnabled) {
-                                                        Modifier
-                                                            .background(statusBadgeBgColor)
-                                                            .padding(horizontal = 8.dp, vertical = 2.dp)
-                                                    } else Modifier
+                                                    if (clockBgEnabled) Modifier.padding(horizontal = 8.dp, vertical = 2.dp) else Modifier
                                                 )
                                                 .clickable { launchClockApp(context); onClosePanel() },
                                             contentAlignment = Alignment.Center
@@ -5475,13 +5511,14 @@ fun UnifiedQsPanel(
                                         }
                                         Box(
                                             modifier = Modifier
-                                                .clip(RoundedCornerShape(dateBgCorner.dp))
+                                                .pillSurfaceWithRim(
+                                                    enabled = dateBgEnabled,
+                                                    shape = RoundedCornerShape(dateBgCorner.dp),
+                                                    backgroundColor = statusBadgeBgColor,
+                                                    topRimEnabled = enablePanelTopRim
+                                                )
                                                 .then(
-                                                    if (dateBgEnabled) {
-                                                        Modifier
-                                                            .background(statusBadgeBgColor)
-                                                            .padding(horizontal = 8.dp, vertical = 2.dp)
-                                                    } else Modifier
+                                                    if (dateBgEnabled) Modifier.padding(horizontal = 8.dp, vertical = 2.dp) else Modifier
                                                 )
                                                 .clickable { launchCalendarApp(context); onClosePanel() },
                                             contentAlignment = Alignment.Center
@@ -5528,13 +5565,14 @@ fun UnifiedQsPanel(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                                             modifier = Modifier
-                                                .clip(RoundedCornerShape(batteryBgCorner.dp))
+                                                .pillSurfaceWithRim(
+                                                    enabled = batteryBgEnabled,
+                                                    shape = RoundedCornerShape(batteryBgCorner.dp),
+                                                    backgroundColor = statusBadgeBgColor,
+                                                    topRimEnabled = enablePanelTopRim
+                                                )
                                                 .then(
-                                                    if (batteryBgEnabled) {
-                                                        Modifier
-                                                            .background(statusBadgeBgColor)
-                                                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                                                    } else Modifier
+                                                    if (batteryBgEnabled) Modifier.padding(horizontal = 8.dp, vertical = 3.dp) else Modifier
                                                 )
                                         ) {
                                             if (batteryPercentageLocation == BatteryPercentageLocation.HEADER || batteryPercentageLocation == BatteryPercentageLocation.QQS_RIGHT) {
@@ -5610,13 +5648,14 @@ fun UnifiedQsPanel(
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                                                 modifier = Modifier
-                                                    .clip(RoundedCornerShape(carrierBgCorner.dp))
+                                                    .pillSurfaceWithRim(
+                                                        enabled = carrierBgEnabled,
+                                                        shape = RoundedCornerShape(carrierBgCorner.dp),
+                                                        backgroundColor = statusBadgeBgColor,
+                                                        topRimEnabled = enablePanelTopRim
+                                                    )
                                                     .then(
-                                                        if (carrierBgEnabled) {
-                                                            Modifier
-                                                                .background(statusBadgeBgColor)
-                                                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                                                        } else Modifier
+                                                        if (carrierBgEnabled) Modifier.padding(horizontal = 8.dp, vertical = 3.dp) else Modifier
                                                     )
                                             ) {
                                                 Icon(
@@ -5668,13 +5707,14 @@ fun UnifiedQsPanel(
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                                                 modifier = Modifier
-                                                    .clip(RoundedCornerShape(batteryBgCorner.dp))
+                                                    .pillSurfaceWithRim(
+                                                        enabled = batteryBgEnabled,
+                                                        shape = RoundedCornerShape(batteryBgCorner.dp),
+                                                        backgroundColor = statusBadgeBgColor,
+                                                        topRimEnabled = enablePanelTopRim
+                                                    )
                                                     .then(
-                                                        if (batteryBgEnabled) {
-                                                            Modifier
-                                                                .background(statusBadgeBgColor)
-                                                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                                                        } else Modifier
+                                                        if (batteryBgEnabled) Modifier.padding(horizontal = 8.dp, vertical = 3.dp) else Modifier
                                                     )
                                             ) {
                                                 if (batteryPercentageLocation == BatteryPercentageLocation.HEADER) {
@@ -5734,13 +5774,14 @@ fun UnifiedQsPanel(
 
                                     Box(
                                         modifier = Modifier
-                                            .clip(RoundedCornerShape(clockBgCorner.dp))
+                                            .pillSurfaceWithRim(
+                                                enabled = clockBgEnabled,
+                                                shape = RoundedCornerShape(clockBgCorner.dp),
+                                                backgroundColor = statusBadgeBgColor,
+                                                topRimEnabled = enablePanelTopRim
+                                            )
                                             .then(
-                                                if (clockBgEnabled) {
-                                                    Modifier
-                                                        .background(statusBadgeBgColor)
-                                                        .padding(horizontal = 10.dp, vertical = 3.dp)
-                                                } else Modifier
+                                                if (clockBgEnabled) Modifier.padding(horizontal = 10.dp, vertical = 3.dp) else Modifier
                                             )
                                             .clickable { launchClockApp(context); onClosePanel() },
                                         contentAlignment = Alignment.Center
@@ -5755,13 +5796,14 @@ fun UnifiedQsPanel(
                                     Spacer(modifier = Modifier.height(if (clockBgEnabled || dateBgEnabled) 4.dp else 2.dp))
                                     Box(
                                         modifier = Modifier
-                                            .clip(RoundedCornerShape(dateBgCorner.dp))
+                                            .pillSurfaceWithRim(
+                                                enabled = dateBgEnabled,
+                                                shape = RoundedCornerShape(dateBgCorner.dp),
+                                                backgroundColor = statusBadgeBgColor,
+                                                topRimEnabled = enablePanelTopRim
+                                            )
                                             .then(
-                                                if (dateBgEnabled) {
-                                                    Modifier
-                                                        .background(statusBadgeBgColor)
-                                                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                                                } else Modifier
+                                                if (dateBgEnabled) Modifier.padding(horizontal = 8.dp, vertical = 3.dp) else Modifier
                                             )
                                             .clickable { launchCalendarApp(context); onClosePanel() },
                                         contentAlignment = Alignment.Center
@@ -6152,13 +6194,14 @@ fun UnifiedQsPanel(
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                                     modifier = Modifier
                                         .offset(y = (-3).dp)
-                                        .clip(RoundedCornerShape(dateBgCorner.dp))
+                                        .pillSurfaceWithRim(
+                                            enabled = dateBgEnabled,
+                                            shape = RoundedCornerShape(dateBgCorner.dp),
+                                            backgroundColor = statusBadgeBgColor,
+                                            topRimEnabled = enablePanelTopRim
+                                        )
                                         .then(
-                                            if (dateBgEnabled) {
-                                                Modifier
-                                                    .background(statusBadgeBgColor)
-                                                    .padding(horizontal = 8.dp, vertical = 3.dp)
-                                            } else Modifier
+                                            if (dateBgEnabled) Modifier.padding(horizontal = 8.dp, vertical = 3.dp) else Modifier
                                         )
                                         .clickable {
                                             launchCalendarApp(context)
@@ -6323,13 +6366,14 @@ fun UnifiedQsPanel(
                                 Box(
                                     modifier = Modifier
                                         .align(Alignment.CenterStart)
-                                        .clip(RoundedCornerShape(dateBgCorner.dp))
+                                        .pillSurfaceWithRim(
+                                            enabled = dateBgEnabled,
+                                            shape = RoundedCornerShape(dateBgCorner.dp),
+                                            backgroundColor = statusBadgeBgColor,
+                                            topRimEnabled = enablePanelTopRim
+                                        )
                                         .then(
-                                            if (dateBgEnabled) {
-                                                Modifier
-                                                    .background(statusBadgeBgColor)
-                                                    .padding(horizontal = 8.dp, vertical = 3.dp)
-                                            } else Modifier
+                                            if (dateBgEnabled) Modifier.padding(horizontal = 8.dp, vertical = 3.dp) else Modifier
                                         )
                                         .clickable {
                                             launchCalendarApp(context)
@@ -6417,9 +6461,11 @@ fun UnifiedQsPanel(
 
                                     val btnModifier = Modifier
                                         .size(32.dp)
-                                        .clip(btnShape)
-                                        .then(
-                                            if (footerIconBgEnabled) Modifier.background(footerBgColor) else Modifier
+                                        .pillSurfaceWithRim(
+                                            enabled = footerIconBgEnabled,
+                                            shape = btnShape,
+                                            backgroundColor = footerBgColor,
+                                            topRimEnabled = enablePanelTopRim
                                         )
 
                                     when (btnType) {
@@ -6617,13 +6663,14 @@ fun UnifiedQsPanel(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(5.dp),
                                             modifier = Modifier
-                                                .clip(RoundedCornerShape(dateBgCorner.dp))
+                                                .pillSurfaceWithRim(
+                                                    enabled = dateBgEnabled,
+                                                    shape = RoundedCornerShape(dateBgCorner.dp),
+                                                    backgroundColor = statusBadgeBgColor,
+                                                    topRimEnabled = enablePanelTopRim
+                                                )
                                                 .then(
-                                                    if (dateBgEnabled) {
-                                                        Modifier
-                                                            .background(statusBadgeBgColor)
-                                                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                                                    } else Modifier
+                                                    if (dateBgEnabled) Modifier.padding(horizontal = 8.dp, vertical = 3.dp) else Modifier
                                                 )
                                                 .clickable(
                                                     interactionSource = remember { MutableInteractionSource() },
@@ -6671,13 +6718,14 @@ fun UnifiedQsPanel(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(5.dp),
                                             modifier = Modifier
-                                                .clip(RoundedCornerShape(carrierBgCorner.dp))
+                                                .pillSurfaceWithRim(
+                                                    enabled = carrierBgEnabled,
+                                                    shape = RoundedCornerShape(carrierBgCorner.dp),
+                                                    backgroundColor = statusBadgeBgColor,
+                                                    topRimEnabled = enablePanelTopRim
+                                                )
                                                 .then(
-                                                    if (carrierBgEnabled) {
-                                                        Modifier
-                                                            .background(statusBadgeBgColor)
-                                                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                                                    } else Modifier
+                                                    if (carrierBgEnabled) Modifier.padding(horizontal = 8.dp, vertical = 3.dp) else Modifier
                                                 )
                                         ) {
                                             Icon(
@@ -6708,13 +6756,14 @@ fun UnifiedQsPanel(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                                             modifier = Modifier
-                                                .clip(RoundedCornerShape(batteryBgCorner.dp))
+                                                .pillSurfaceWithRim(
+                                                    enabled = batteryBgEnabled,
+                                                    shape = RoundedCornerShape(batteryBgCorner.dp),
+                                                    backgroundColor = statusBadgeBgColor,
+                                                    topRimEnabled = enablePanelTopRim
+                                                )
                                                 .then(
-                                                    if (batteryBgEnabled) {
-                                                        Modifier
-                                                            .background(statusBadgeBgColor)
-                                                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                                                    } else Modifier
+                                                    if (batteryBgEnabled) Modifier.padding(horizontal = 8.dp, vertical = 3.dp) else Modifier
                                                 )
                                                 .testTag("qqs_right_battery_indicator")
                                         ) {
@@ -7030,13 +7079,14 @@ fun UnifiedQsPanel(
                                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                                                 modifier = Modifier
                                                     .align(Alignment.CenterStart)
-                                                    .clip(RoundedCornerShape(carrierBgCorner.dp))
+                                                    .pillSurfaceWithRim(
+                                                        enabled = carrierBgEnabled,
+                                                        shape = RoundedCornerShape(carrierBgCorner.dp),
+                                                        backgroundColor = statusBadgeBgColor,
+                                                        topRimEnabled = enablePanelTopRim
+                                                    )
                                                     .then(
-                                                        if (carrierBgEnabled) {
-                                                            Modifier
-                                                                .background(statusBadgeBgColor)
-                                                                .padding(horizontal = 10.dp, vertical = 4.dp)
-                                                        } else Modifier
+                                                        if (carrierBgEnabled) Modifier.padding(horizontal = 10.dp, vertical = 4.dp) else Modifier
                                                     )
                                             ) {
                                                 val defaultCarrierColor = if (isDark) Color.LightGray.copy(alpha = 0.9f) else Color(0xFF333333)
@@ -7079,8 +7129,12 @@ fun UnifiedQsPanel(
                                                         }
                                                         val btnMod = Modifier
                                                             .size(32.dp)
-                                                            .clip(btnShape)
-                                                            .then(if (footerIconBgEnabled) Modifier.background(footerBgColor) else Modifier)
+                                                            .pillSurfaceWithRim(
+                                                                enabled = footerIconBgEnabled,
+                                                                shape = btnShape,
+                                                                backgroundColor = footerBgColor,
+                                                                topRimEnabled = enablePanelTopRim
+                                                            )
 
                                                         when (btnType) {
                                                             "collapse" -> {
@@ -7161,9 +7215,11 @@ fun UnifiedQsPanel(
                                                 modifier = Modifier
                                                     .size(32.dp)
                                                     .align(Alignment.CenterStart)
-                                                    .clip(RoundedCornerShape(footerOuterCorner.dp))
-                                                    .then(
-                                                        if (footerIconBgEnabled) Modifier.background(footerBgColor) else Modifier
+                                                    .pillSurfaceWithRim(
+                                                        enabled = footerIconBgEnabled,
+                                                        shape = RoundedCornerShape(footerOuterCorner.dp),
+                                                        backgroundColor = footerBgColor,
+                                                        topRimEnabled = enablePanelTopRim
                                                     )
                                                     .clickable(
                                                         interactionSource = remember { MutableInteractionSource() },
@@ -7220,9 +7276,11 @@ fun UnifiedQsPanel(
                                     modifier = Modifier
                                         .size(32.dp)
                                         .align(Alignment.CenterStart)
-                                        .clip(RoundedCornerShape(footerOuterCorner.dp))
-                                        .then(
-                                            if (footerIconBgEnabled) Modifier.background(footerBgColor) else Modifier
+                                        .pillSurfaceWithRim(
+                                            enabled = footerIconBgEnabled,
+                                            shape = RoundedCornerShape(footerOuterCorner.dp),
+                                            backgroundColor = footerBgColor,
+                                            topRimEnabled = enablePanelTopRim
                                         )
                                         .clickable(
                                             interactionSource = remember { MutableInteractionSource() },
@@ -7304,9 +7362,11 @@ fun UnifiedQsPanel(
 
                                         val btnModifier = Modifier
                                             .size(32.dp)
-                                            .clip(btnShape)
-                                            .then(
-                                                if (footerIconBgEnabled) Modifier.background(footerBgColor) else Modifier
+                                            .pillSurfaceWithRim(
+                                                enabled = footerIconBgEnabled,
+                                                shape = btnShape,
+                                                backgroundColor = footerBgColor,
+                                                topRimEnabled = enablePanelTopRim
                                             )
 
                                         when (btnType) {
@@ -7422,13 +7482,14 @@ fun UnifiedQsPanel(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier
                             .align(Alignment.CenterStart)
-                            .clip(RoundedCornerShape(carrierBgCorner.dp))
+                            .pillSurfaceWithRim(
+                                enabled = carrierBgEnabled,
+                                shape = RoundedCornerShape(carrierBgCorner.dp),
+                                backgroundColor = statusBadgeBgColor,
+                                topRimEnabled = enablePanelTopRim
+                            )
                             .then(
-                                if (carrierBgEnabled) {
-                                    Modifier
-                                        .background(statusBadgeBgColor)
-                                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                                } else Modifier
+                                if (carrierBgEnabled) Modifier.padding(horizontal = 10.dp, vertical = 4.dp) else Modifier
                             )
                     ) {
                         val defaultCarrierColor = if (isDark) Color.LightGray.copy(alpha = 0.9f) else Color(0xFF333333)
@@ -7485,8 +7546,12 @@ fun UnifiedQsPanel(
                                 }
                                 val btnMod = Modifier
                                     .size(if (footerIconBgEnabled || moveCollapseToQqsFooter) 32.dp else 28.dp)
-                                    .clip(btnShape)
-                                    .then(if (footerIconBgEnabled) Modifier.background(footerBgColor) else Modifier)
+                                    .pillSurfaceWithRim(
+                                        enabled = footerIconBgEnabled,
+                                        shape = btnShape,
+                                        backgroundColor = footerBgColor,
+                                        topRimEnabled = enablePanelTopRim
+                                    )
 
                                 when (btnType) {
                                     "collapse" -> {
@@ -8649,6 +8714,7 @@ fun Qqs2x1ComplicationCard(
         PanelPreferences.getInactiveTilesVal(isDark).collectAsState().value != 1f
     val tileOutlineEnabled by PanelPreferences.tileOutlineEnabled.collectAsState()
     val tileOutlineThicknessDp by PanelPreferences.tileOutlineThicknessDp.collectAsState()
+    val enableTileTopRim by PanelPreferences.enableTileTopRim.collectAsState()
     val showQsTileGradient by PanelPreferences.showQsTileGradient.collectAsState()
     val useHorizontalLine by PanelPreferences.qqs2x1HorizontalLine.collectAsState()
     val usePerimeterProgress by PanelPreferences.qqs2x1PerimeterProgress.collectAsState()
@@ -8751,8 +8817,15 @@ fun Qqs2x1ComplicationCard(
         inactiveArcOverride ?: defaultPerimeterFillColor
     }
 
+    val rimBaseColor = when {
+        tileOutlineEnabled -> Color.Transparent
+        useFilledActiveBg && showQsTileGradient -> primaryThemeColor
+        else -> containerBg
+    }
+
     Row(
         modifier = modifier
+            .panelTopRim(enabled = enableTileTopRim, shape = cardShape, baseColor = rimBaseColor)
             .clip(cardShape)
             .then(
                 if (tileOutlineEnabled) {
@@ -8772,6 +8845,7 @@ fun Qqs2x1ComplicationCard(
                     Modifier.background(containerBg)
                 }
             )
+            .panelTopRimBackground(enabled = enableTileTopRim, baseColor = rimBaseColor)
             .then(
                 if (progressDisplayMode.showPerimeterBar) {
                     Modifier.drawWithContent {
@@ -9065,6 +9139,7 @@ fun CircularQsTile(
     val disabledTileShapeId by PanelPreferences.disabledTileShapeId.collectAsState()
     val tileOutlineEnabled by PanelPreferences.tileOutlineEnabled.collectAsState()
     val tileOutlineThicknessDp by PanelPreferences.tileOutlineThicknessDp.collectAsState()
+    val enableTileTopRim by PanelPreferences.enableTileTopRim.collectAsState()
     val baseQqsSize = qqsTileSizeValue.dp.coerceIn(36.dp, 64.dp)
 
     val isActive = tile.state == TileState.ACTIVE
@@ -9250,9 +9325,15 @@ fun CircularQsTile(
                 customRingSize = effectiveRingSize
             )
         } else {
+            val rimBaseColor = when {
+                tileOutlineEnabled -> Color.Transparent
+                isActive && showQsTileGradient -> primaryThemeColor
+                else -> backgroundColor
+            }
             Box(
                 modifier = Modifier
                     .size(circleSize)
+                    .panelTopRim(enabled = enableTileTopRim && renderShapeBg, shape = tileShape, baseColor = rimBaseColor)
                     .then(
                         if (renderShapeBg && tileOutlineEnabled) {
                             if (isActive && showQsTileGradient) {
@@ -9275,7 +9356,8 @@ fun CircularQsTile(
                         } else {
                             Modifier
                         }
-                    ),
+                    )
+                    .panelTopRimBackground(enabled = enableTileTopRim && renderShapeBg, baseColor = rimBaseColor),
                 contentAlignment = Alignment.Center
             ) {
                 val isThirdParty = tile.isExternal || tile.category == TileCategory.THIRD_PARTY || tile.category == TileCategory.EXTERNAL || tile.id.contains("/")
@@ -9841,6 +9923,7 @@ fun BlurredContainerCard(
                 .panelTopRim(enabled = enablePanelTopRim, shape = shape)
                 .clip(shape)
                 .background(containerColor)
+                .panelTopRimBackground(enabled = enablePanelTopRim)
                 .then(
                     if (onClick != null || onLongClick != null) {
                         Modifier.combinedClickable(
@@ -10064,6 +10147,7 @@ private fun MarshmallowTileItem(
     val enableLegacyTileShapes by PanelPreferences.enableLegacyTileShapes.collectAsState()
     val tileOutlineEnabled by PanelPreferences.tileOutlineEnabled.collectAsState()
     val tileOutlineThicknessDp by PanelPreferences.tileOutlineThicknessDp.collectAsState()
+    val enableTileTopRim by PanelPreferences.enableTileTopRim.collectAsState()
 
     val chosenShapeId = if (isActive) enabledTileShapeId else disabledTileShapeId
     val tileShape = remember(chosenShapeId) {
@@ -10141,13 +10225,15 @@ private fun MarshmallowTileItem(
             Box(
                 modifier = Modifier
                     .size(46.dp)
+                    .panelTopRim(enabled = enableTileTopRim, shape = tileShape, baseColor = tileBgColor)
                     .then(
                         if (tileOutlineEnabled) {
                             Modifier.insideShapeBorder(tileOutlineThicknessDp.dp, legacyOutlineColor, tileShape)
                         } else Modifier
                     )
                     .clip(tileShape)
-                    .background(tileBgColor),
+                    .background(tileBgColor)
+                    .panelTopRimBackground(enabled = enableTileTopRim, baseColor = tileBgColor),
                 contentAlignment = Alignment.Center
             ) {
                 MarshmallowTileIcon(
@@ -10323,4 +10409,19 @@ internal fun resolveFooterButtonIconTint(
     defaultIconTint: Color
 ): Color {
     return if (footerIconBgEnabled) inactiveOnTileColor else defaultIconTint
+}
+
+internal fun Modifier.pillSurfaceWithRim(
+    enabled: Boolean,
+    shape: androidx.compose.ui.graphics.Shape,
+    backgroundColor: Color,
+    topRimEnabled: Boolean
+): Modifier = if (enabled) {
+    this
+        .panelTopRim(enabled = topRimEnabled, shape = shape, baseColor = backgroundColor)
+        .clip(shape)
+        .background(backgroundColor)
+        .panelTopRimBackground(enabled = topRimEnabled, baseColor = backgroundColor)
+} else {
+    this.clip(shape)
 }

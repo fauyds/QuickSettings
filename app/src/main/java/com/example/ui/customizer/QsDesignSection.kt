@@ -147,7 +147,6 @@ import androidx.compose.material.icons.filled.Speed
 import com.example.ui.shape.QsShapeItem
 import com.example.ui.shape.QsShapeManager
 import com.example.ui.shape.insideShapeBorder
-import com.example.ui.shape.panelTopRim
 
 @Composable
 fun QsDesignSection(modifier: Modifier = Modifier) {
@@ -184,6 +183,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val panelOuterCorner by PanelPreferences.panelOuterCorner.collectAsState()
     val panelInnerCorner by PanelPreferences.panelInnerCorner.collectAsState()
     val enablePanelTopRim by PanelPreferences.enablePanelTopRim.collectAsState()
+    val enableTileTopRim by PanelPreferences.enableTileTopRim.collectAsState()
     val collapseExpandOptions by PanelPreferences.collapseExpandOptions.collectAsState()
     val useClearAllFab by PanelPreferences.useClearAllFab.collectAsState()
     val clearAllFabPosition by PanelPreferences.clearAllFabPosition.collectAsState()
@@ -4435,8 +4435,6 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     }
 
     val panelTopRimCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
-        val previewSurfaceColor = MaterialTheme.colorScheme.surfaceVariant
-        val previewRimShape = RoundedCornerShape(14.dp)
         PinnableCardWrapper("panel_top_rim_card", CustomizeCategory.QS_DESIGN, "Panel Top Rim") {
             SettingsCard(
                 shape = shape,
@@ -4485,7 +4483,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "Draw a rim highlight on top of panel cards fading from 20% to 0% opacity.",
+                                    text = "Draw a rim highlight and top-to-bottom panel background gradient fading from top to bottom.",
                                     fontSize = 12.sp,
                                     lineHeight = 15.sp,
                                     style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
@@ -4506,30 +4504,80 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             modifier = Modifier.testTag("panel_top_rim_toggle")
                         )
                     }
+                }
+            }
+        }
+    }
 
-                    AnimatedVisibility(
-                        visible = enablePanelTopRim,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut()
+    val tileTopRimCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("tile_top_rim_card", CustomizeCategory.QS_DESIGN, "Tile & Complication Top Rim") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("tile_top_rim_card")
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp)
-                                .panelTopRim(enabled = true, shape = previewRimShape)
-                                .clip(previewRimShape)
-                                .background(
-                                    if (isSystemInDarkTheme()) Color(0xFF20252C) else previewSurfaceColor
-                                ),
-                            contentAlignment = Alignment.Center
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
                         ) {
-                            Text(
-                                text = "Top Rim Preview (20% -> 0% Alpha)",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (isSystemInDarkTheme()) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text(
+                                    text = "Tile & Complication Top Rim",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    lineHeight = 17.sp,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Draw a rim highlight and top-to-bottom background gradient on QS tiles and complications.",
+                                    fontSize = 12.sp,
+                                    lineHeight = 15.sp,
+                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
+
+                        Switch(
+                            checked = enableTileTopRim,
+                            onCheckedChange = { PanelPreferences.setEnableTileTopRim(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("tile_top_rim_toggle")
+                        )
                     }
                 }
             }
@@ -5931,7 +5979,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         "show_brightness_controls_background_card" to showBrightnessControlsBackgroundCard,
         "progress_bar_slider_style_card" to progressBarSliderStyleCard,
         "panel_corner_styling_card" to panelCornerStylingCard,
-        "panel_top_rim_card" to panelTopRimCard
+        "panel_top_rim_card" to panelTopRimCard,
+        "tile_top_rim_card" to tileTopRimCard
     )
     val hiddenDesignIds = buildSet {
         add("header_complication_tiles_card")
@@ -6006,6 +6055,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         if (!hiddenDesignIds.contains("complication_arc_thickness_card") && !pinnedIds.contains("complication_arc_thickness_card")) unpinnedTileShapes.add(complicationArcThicknessCard)
         if (!hiddenDesignIds.contains("tile_outline_card") && !pinnedIds.contains("tile_outline_card")) unpinnedTileShapes.add(tileOutlineCard)
         if (!hiddenDesignIds.contains("qs_tile_gradient_card") && !pinnedIds.contains("qs_tile_gradient_card")) unpinnedTileShapes.add(qsTileGradientCard)
+        if (!hiddenDesignIds.contains("tile_top_rim_card") && !pinnedIds.contains("tile_top_rim_card")) unpinnedTileShapes.add(tileTopRimCard)
         if (!hiddenDesignIds.contains("qs_page_indicator_style_card") && !pinnedIds.contains("qs_page_indicator_style_card")) unpinnedTileShapes.add(pageIndicatorStyleCard)
         if (!hiddenDesignIds.contains("clear_all_fab_card") && !pinnedIds.contains("clear_all_fab_card")) unpinnedTileShapes.add(clearAllFabCard)
         if (!hiddenDesignIds.contains("show_media_in_notif_container_card") && !pinnedIds.contains("show_media_in_notif_container_card")) unpinnedTileShapes.add(showMediaInNotifContainerCard)

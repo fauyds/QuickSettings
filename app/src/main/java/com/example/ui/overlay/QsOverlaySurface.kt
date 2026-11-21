@@ -64,6 +64,7 @@ import com.example.ui.components.QsProgressSlider
 import com.example.ui.shape.QsShapeManager
 import com.example.ui.shape.insideShapeBorder
 import com.example.ui.shape.panelTopRim
+import com.example.ui.shape.panelTopRimBackground
 import org.json.JSONObject
 
 /**
@@ -123,7 +124,8 @@ data class QsOverlaySurfaceConfig(
     val showBrightnessControlsBackground: Boolean = false,
     val minBrightness: Int = 1,
     val maxBrightness: Int = 2047,
-    val enablePanelTopRim: Boolean = false
+    val enablePanelTopRim: Boolean = false,
+    val enableTileTopRim: Boolean = false
 ) {
     @Composable
     fun getSliderElementColor(isDark: Boolean): Color {
@@ -164,6 +166,7 @@ data class QsOverlaySurfaceConfig(
             val minBrightness by PanelPreferences.minBrightness.collectAsState()
             val maxBrightness by PanelPreferences.maxBrightness.collectAsState()
             val enablePanelTopRim by PanelPreferences.enablePanelTopRim.collectAsState()
+            val enableTileTopRim by PanelPreferences.enableTileTopRim.collectAsState()
 
             val showHeaderImg by PanelPreferences.showCustomHeaderImage.collectAsState()
             val headerImgUri by PanelPreferences.customHeaderImageUri.collectAsState()
@@ -257,7 +260,8 @@ data class QsOverlaySurfaceConfig(
                 showBrightnessControlsBackground = showBrightnessControlsBackground,
                 minBrightness = minBrightness,
                 maxBrightness = maxBrightness,
-                enablePanelTopRim = enablePanelTopRim
+                enablePanelTopRim = enablePanelTopRim,
+                enableTileTopRim = enableTileTopRim
             )
         }
 
@@ -287,6 +291,7 @@ data class QsOverlaySurfaceConfig(
                     minBrightness = json.optInt("min_brightness", 1),
                     maxBrightness = json.optInt("max_brightness", 2047),
                     enablePanelTopRim = json.optBoolean("enable_panel_top_rim", false),
+                    enableTileTopRim = json.optBoolean("enable_tile_top_rim", false),
                     sliderSyncAll = json.optBoolean("slider_sync_all", true),
                     panelOuterCorner = outerCorner,
                     panelInnerCorner = innerCorner,
@@ -444,6 +449,7 @@ fun QsOverlaySurface(
             .panelTopRim(enabled = config.enablePanelTopRim, shape = panelShape)
             .clip(panelShape)
             .background(monetSurfaceBg)
+            .panelTopRimBackground(enabled = config.enablePanelTopRim)
             .testTag(testTagPrefix)
     ) {
         Column(
@@ -726,6 +732,7 @@ fun QsOverlaySurface(
                                     hasOutline = config.tileOutlineEnabled,
                                     outlineThicknessDp = config.tileOutlineThicknessDp.dp,
                                     hasGradient = config.showQsTileGradient,
+                                    hasTopRim = config.enableTileTopRim,
                                     tileAccentColor = tileAccentColor,
                                     tileOnAccentColor = tileOnAccentColor,
                                     tertiaryColor = MaterialTheme.colorScheme.tertiary,
@@ -747,6 +754,7 @@ fun QsOverlaySurface(
                                     hasOutline = config.tileOutlineEnabled,
                                     outlineThicknessDp = config.tileOutlineThicknessDp.dp,
                                     hasGradient = false,
+                                    hasTopRim = config.enableTileTopRim,
                                     tileAccentColor = tileAccentColor,
                                     tileOnAccentColor = tileOnAccentColor,
                                     tertiaryColor = MaterialTheme.colorScheme.tertiary,
@@ -871,6 +879,7 @@ fun QsOverlaySurface(
                                 hasOutline = config.tileOutlineEnabled,
                                 outlineThicknessDp = config.tileOutlineThicknessDp.dp,
                                 hasGradient = config.showQsTileGradient,
+                                hasTopRim = config.enableTileTopRim,
                                 tileAccentColor = tileAccentColor,
                                 tileOnAccentColor = tileOnAccentColor,
                                 tertiaryColor = MaterialTheme.colorScheme.tertiary,
@@ -891,6 +900,7 @@ fun QsOverlaySurface(
                                 hasOutline = config.tileOutlineEnabled,
                                 outlineThicknessDp = config.tileOutlineThicknessDp.dp,
                                 hasGradient = false,
+                                hasTopRim = config.enableTileTopRim,
                                 tileAccentColor = tileAccentColor,
                                 tileOnAccentColor = tileOnAccentColor,
                                 tertiaryColor = MaterialTheme.colorScheme.tertiary,
@@ -921,6 +931,7 @@ private fun SharedQsTileView(
     hasOutline: Boolean,
     outlineThicknessDp: androidx.compose.ui.unit.Dp = 1.2.dp,
     hasGradient: Boolean,
+    hasTopRim: Boolean = false,
     tileAccentColor: Color,
     tileOnAccentColor: Color,
     tertiaryColor: Color,
@@ -942,10 +953,17 @@ private fun SharedQsTileView(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier.wrapContentHeight()
     ) {
+        val tileFillColor = when {
+            hasOutline -> Color.Transparent
+            isActive -> tileAccentColor
+            else -> inactiveBg
+        }
+
         // Shaped Icon Container (48dp x 48dp)
         Box(
             modifier = Modifier
                 .size(48.dp)
+                .panelTopRim(enabled = hasTopRim, shape = tileShape, baseColor = tileFillColor)
                 .then(
                     if (hasOutline) {
                         if (isActive && hasGradient) {
@@ -964,7 +982,8 @@ private fun SharedQsTileView(
                     } else {
                         Modifier.background(inactiveBg)
                     }
-                ),
+                )
+                .panelTopRimBackground(enabled = hasTopRim, baseColor = tileFillColor),
             contentAlignment = Alignment.Center
         ) {
             Icon(

@@ -186,6 +186,8 @@ object QsTileViewHelper {
                         shapeDrawable.gradientColors = intArrayOf(primaryAccent, tertiaryAccent)
                     }
                 }
+                shapeDrawable.enableTopRim = PanelPreferences.enableTileTopRim.value
+                shapeDrawable.topRimStrokeWidthPx = (1f * density).coerceAtLeast(1f)
                 val maskDrawable = com.example.ui.shape.QsShapeManager.createDrawable(chosenShapeId, Color.WHITE)
                 flIconBg.background = RippleDrawable(ColorStateList.valueOf(rippleColor), shapeDrawable, maskDrawable)
             }

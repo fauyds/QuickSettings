@@ -2,6 +2,7 @@ package com.example.ui.overlay
 
 import com.example.data.MediaNotificationStyle
 import com.example.ui.shape.panelTopRim
+import com.example.ui.shape.panelTopRimBackground
 import android.os.Build
 import androidx.core.graphics.ColorUtils
 import android.graphics.Color as AndroidColor
@@ -526,6 +527,7 @@ fun AdaptiveMediaPlayerCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .panelTopRimBackground(enabled = enablePanelTopRim)
                 .padding(
                     start = 12.dp,
                     end = 12.dp,

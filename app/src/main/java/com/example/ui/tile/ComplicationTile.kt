@@ -87,6 +87,8 @@ import com.example.data.PanelPreferences
 import com.example.ui.shape.QsShapeItem
 import com.example.ui.shape.QsShapeManager
 import com.example.ui.shape.insideShapeBorder
+import com.example.ui.shape.panelTopRim
+import com.example.ui.shape.panelTopRimBackground
 import com.example.ui.theme.LocalIsDarkTheme
 import com.example.ui.theme.QuickPanelTheme
 import kotlin.math.PI
@@ -363,6 +365,7 @@ fun ComplicationTileView(
     customRingSize: Dp? = null,
     customIconSize: Dp? = null,
     inactiveIconTintOverride: Color? = null,
+    enableTopRim: Boolean? = null,
     onClickOverride: (() -> Unit)? = null,
     onLongClickOverride: (() -> Unit)? = null,
     onAction: ((ComplicationAction) -> Unit)? = null,
@@ -400,6 +403,8 @@ fun ComplicationTileView(
 
     val complicationOutlineEnabled by PanelPreferences.complicationOutlineEnabled.collectAsState()
     val tileOutlineThicknessDp by PanelPreferences.tileOutlineThicknessDp.collectAsState()
+    val tileTopRimPref by PanelPreferences.enableTileTopRim.collectAsState()
+    val effectiveTopRim = enableTopRim ?: tileTopRimPref
     val isOutlineMode = showRingBackground && complicationOutlineEnabled
     val isTransparentInner = !showRingBackground || isOutlineMode
 
@@ -527,17 +532,18 @@ fun ComplicationTileView(
         }
 
         val containerBgModifier = if (!isCompactHeader && showGridCardContainer) {
+            val gridCardShape = RoundedCornerShape(16.dp)
+            val gridCardBg = if (isDark) colorScheme.surfaceContainer.copy(alpha = 0.72f) else colorScheme.surface
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(
-                    if (isDark) colorScheme.surfaceContainer.copy(alpha = 0.72f)
-                    else colorScheme.surface
-                )
+                .panelTopRim(enabled = effectiveTopRim, shape = gridCardShape, baseColor = gridCardBg)
+                .clip(gridCardShape)
+                .background(gridCardBg)
+                .panelTopRimBackground(enabled = effectiveTopRim, baseColor = gridCardBg)
                 .border(
                     width = 0.8.dp,
                     color = colorScheme.outlineVariant.copy(alpha = 0.35f),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = gridCardShape
                 )
                 .padding(horizontal = 8.dp, vertical = 10.dp)
         } else if (customRingSize != null) {
@@ -591,8 +597,10 @@ fun ComplicationTileView(
                     .height(ringSize)
                     .widthIn(min = ringSize)
             } else {
+                val applyRingRim = effectiveTopRim && showRingBackground
                 Modifier
                     .size(ringSize)
+                    .panelTopRim(enabled = applyRingRim, shape = complicationShape, baseColor = ringFillColor)
                     .then(
                         if (isOutlineMode) {
                             Modifier.insideShapeBorder(tileOutlineThicknessDp.dp, outlineStrokeColor, complicationShape)
@@ -602,6 +610,7 @@ fun ComplicationTileView(
                     )
                     .clip(complicationShape)
                     .background(ringFillColor)
+                    .panelTopRimBackground(enabled = applyRingRim, baseColor = ringFillColor)
             }
             Box(
                 modifier = ringBoxModifier
