@@ -727,6 +727,7 @@ class KitKatShadeHostView @JvmOverloads constructor(
         val outerCorner = PanelPreferences.panelOuterCorner.value
         val badgeStyleKey = listOf(
             PanelPreferences.enablePanelTopRim.value,
+            PanelPreferences.topRimAlpha.value,
             PanelPreferences.clockBackgroundEnabled.value,
             PanelPreferences.clockBackgroundCorner.value,
             PanelPreferences.dateBackgroundEnabled.value,

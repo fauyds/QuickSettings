@@ -38,7 +38,8 @@ data class ThemePreviewData(
     val surfaceBgColorTertiary: Boolean = false,
     val panelContainerColorTertiary: Boolean = false,
     val enablePanelTopRim: Boolean = false,
-    val enableTileTopRim: Boolean = false
+    val enableTileTopRim: Boolean = false,
+    val topRimAlpha: Float = 0.20f
 ) {
     val themeModeLabel: String
         get() = when (themeMode.lowercase()) {
@@ -97,7 +98,8 @@ data class SavedTheme(
                     surfaceBgColorTertiary = json.optBoolean("elem_surface_bg_tertiary", false),
                     panelContainerColorTertiary = json.optBoolean("elem_panel_container_tertiary", false),
                     enablePanelTopRim = json.optBoolean("enable_panel_top_rim", false),
-                    enableTileTopRim = json.optBoolean("enable_tile_top_rim", false)
+                    enableTileTopRim = json.optBoolean("enable_tile_top_rim", false),
+                    topRimAlpha = json.optDouble("top_rim_alpha", 0.20).toFloat().coerceIn(0.05f, 0.30f)
                 )
             } catch (_: Exception) {
                 ThemePreviewData()
@@ -226,23 +228,24 @@ object ThemeManager {
                     is Boolean -> editor.putBoolean(key, value)
                     is Number -> {
                         // Handle numbers robustly whether stored as Int, Long, or Float
-                        val floatKeys = setOf(
-                            "drag_handle_vertical_offset", "drag_handle_length", "animation_speed_scale",
-                            "custom_header_image_height", "custom_header_image_opacity", "custom_header_monet_gradient_height",
-                            "qs_tile_label_font_size", "qs_tile_subtitle_font_size", "wavy_thickness", "wavy_wobbliness",
-                            "wavy_wavelength", "wavy_thumb_radius", "slider_inactive_track_thickness", "slider_corner_radius",
-                            "a12_inactive_thickness", "a12_corner_radius", "wavy_inactive_thickness", "wavy_corner_radius",
-                            "straight_thickness", "straight_inactive_thickness", "straight_corner_radius", "straight_thumb_radius",
-                            "m3_track_height", "m3_inactive_track_height", "m3_outer_corner_radius", "m3_inner_corner_radius",
-                            "m3_thumb_width", "m3_thumb_height", "m3_thumb_gap",
-                            "panel_outer_corner", "panel_inner_corner"
+                        val isIntKey = key.contains("custom_color") || key.contains("min_") || key.contains("max_") || 
+                            key.contains("_count") || key == "qqs_tile_size" || key == "clear_all_fab_size" || 
+                            key == "custom_header_monet_gradient_height" || key == "detector_cooldown_ms" || 
+                            key == "panel_replacement_delay_ms"
+
+                        val isFloatKey = !isIntKey && (
+                            value.toDouble() % 1.0 != 0.0 ||
+                            key.contains("_corner") || key.contains("_thickness") || key.contains("_width") || 
+                            key.contains("_radius") || key.contains("_alpha") || key.contains("_spacing") || 
+                            key.contains("_scale") || key.contains("_dp") || key.contains("_elevation") || 
+                            key.contains("_offset") || key.contains("_height") || key.contains("_hue") || 
+                            key.contains("_sat") || key.contains("_val") || key.contains("_opacity") ||
+                            key.contains("font_size") || key.contains("wobbliness") || key.contains("wavelength")
                         )
-                        val isFloatKey = key in floatKeys || key.contains("_hue") || key.contains("_sat") || key.contains("_val") || key.contains("_opacity") || key.contains("_height") || key.contains("_offset")
-                        val isIntKey = key.contains("custom_color") || key.contains("size") || key.contains("min_") || key.contains("max_")
 
                         if (isIntKey) {
                             editor.putInt(key, value.toInt())
-                        } else if (isFloatKey || value is Double || value is Float) {
+                        } else if (isFloatKey) {
                             editor.putFloat(key, value.toFloat())
                         } else if (value is Long) {
                             editor.putLong(key, value.toLong())

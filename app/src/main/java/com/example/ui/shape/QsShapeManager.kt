@@ -13,6 +13,9 @@ import android.graphics.drawable.Drawable
 import android.net.Uri
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
@@ -32,6 +35,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.PathParser
 import com.example.R
+import com.example.data.PanelPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,6 +44,7 @@ import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.roundToInt
 
 data class QsShapeItem(
     val id: String,
@@ -154,6 +159,16 @@ class QsPathDrawable(
             }
         }
 
+    var topRimAlpha: Float = 0.20f
+        set(value) {
+            val clamped = value.coerceIn(0.05f, 0.30f)
+            if (field != clamped) {
+                field = clamped
+                if (bounds.height() > 0) updateTopRimShaders(bounds)
+                invalidateSelf()
+            }
+        }
+
     fun setColor(color: Int) {
         if (paint.color != color) {
             paint.color = color
@@ -188,21 +203,23 @@ class QsPathDrawable(
         } else {
             0f
         }
+        val effectiveRimAlpha = topRimAlpha.coerceIn(0.05f, 0.30f)
+        val scale = effectiveRimAlpha / 0.20f
         val (bgTopColor, bgBottomColor, rimTopAlpha) = when {
             lum > 0.85f -> Triple(
-                Color.argb(13, 0, 0, 0),
-                Color.argb(36, 0, 0, 0),
-                166
+                Color.argb((13f * scale).roundToInt().coerceIn(0, 255), 0, 0, 0),
+                Color.argb((36f * scale).roundToInt().coerceIn(0, 255), 0, 0, 0),
+                (166f * scale).roundToInt().coerceIn(0, 255)
             )
             lum > 0.30f -> Triple(
-                Color.argb(46, 255, 255, 255),
-                Color.argb(38, 0, 0, 0),
-                133
+                Color.argb((46f * scale).roundToInt().coerceIn(0, 255), 255, 255, 255),
+                Color.argb((38f * scale).roundToInt().coerceIn(0, 255), 0, 0, 0),
+                (133f * scale).roundToInt().coerceIn(0, 255)
             )
             else -> Triple(
-                Color.argb(26, 255, 255, 255),
+                Color.argb((26f * scale).roundToInt().coerceIn(0, 255), 255, 255, 255),
                 Color.argb(0, 255, 255, 255),
-                51
+                (effectiveRimAlpha * 255f).roundToInt().coerceIn(0, 255)
             )
         }
         topBgPaint.shader = android.graphics.LinearGradient(
@@ -357,22 +374,26 @@ private fun calculateBaseColorLuminance(color: androidx.compose.ui.graphics.Colo
  * Draws a subtle inner rim ON TOP of content with a vertical gradient from
  * top alpha down to 0% alpha at the bottom, adapting intensity for bright enabled tiles.
  */
+@Composable
 fun Modifier.panelTopRim(
     enabled: Boolean,
     shape: Shape,
     width: Dp = 1.dp,
     rimColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.White,
-    baseColor: androidx.compose.ui.graphics.Color? = null
-): Modifier = if (!enabled) {
-    this
-} else {
+    baseColor: androidx.compose.ui.graphics.Color? = null,
+    rimAlpha: Float? = null
+): Modifier {
+    if (!enabled) return this
+    val prefAlpha by PanelPreferences.topRimAlpha.collectAsState()
+    val effectiveRimAlpha = (rimAlpha ?: prefAlpha).coerceIn(0.05f, 0.30f)
+    val scale = effectiveRimAlpha / 0.20f
     val lum = calculateBaseColorLuminance(baseColor)
     val resolvedTopAlpha = when {
-        lum > 0.85f -> 0.65f
-        lum > 0.30f -> 0.52f
-        else -> 0.20f
+        lum > 0.85f -> (0.65f * scale).coerceIn(0f, 1f)
+        lum > 0.30f -> (0.52f * scale).coerceIn(0f, 1f)
+        else -> effectiveRimAlpha
     }
-    insideShapeBorder(
+    return insideShapeBorder(
         width = width,
         brush = Brush.verticalGradient(
             colors = listOf(
@@ -388,30 +409,34 @@ fun Modifier.panelTopRim(
  * Draws a subtle top-to-bottom vertical gradient sheen on top of the surface's
  * background fill (behind child content), adapting contrast for bright enabled tiles.
  */
+@Composable
 fun Modifier.panelTopRimBackground(
     enabled: Boolean,
     rimColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.White,
-    topAlpha: Float = 0.10f,
-    baseColor: androidx.compose.ui.graphics.Color? = null
-): Modifier = if (!enabled) {
-    this
-} else {
+    topAlpha: Float? = null,
+    baseColor: androidx.compose.ui.graphics.Color? = null,
+    rimAlpha: Float? = null
+): Modifier {
+    if (!enabled) return this
+    val prefAlpha by PanelPreferences.topRimAlpha.collectAsState()
+    val effectiveRimAlpha = (rimAlpha ?: prefAlpha).coerceIn(0.05f, 0.30f)
+    val scale = effectiveRimAlpha / 0.20f
     val lum = calculateBaseColorLuminance(baseColor)
     val gradientColors = when {
         lum > 0.85f -> listOf(
-            androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.05f),
-            androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.14f)
+            androidx.compose.ui.graphics.Color.Black.copy(alpha = (0.05f * scale).coerceIn(0f, 1f)),
+            androidx.compose.ui.graphics.Color.Black.copy(alpha = (0.14f * scale).coerceIn(0f, 1f))
         )
         lum > 0.30f -> listOf(
-            rimColor.copy(alpha = 0.18f),
-            androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.15f)
+            rimColor.copy(alpha = (0.18f * scale).coerceIn(0f, 1f)),
+            androidx.compose.ui.graphics.Color.Black.copy(alpha = (0.15f * scale).coerceIn(0f, 1f))
         )
         else -> listOf(
-            rimColor.copy(alpha = topAlpha),
+            rimColor.copy(alpha = (topAlpha ?: (0.10f * scale)).coerceIn(0f, 1f)),
             androidx.compose.ui.graphics.Color.Transparent
         )
     }
-    this.background(
+    return this.background(
         brush = Brush.verticalGradient(colors = gradientColors)
     )
 }

@@ -125,7 +125,8 @@ data class QsOverlaySurfaceConfig(
     val minBrightness: Int = 1,
     val maxBrightness: Int = 2047,
     val enablePanelTopRim: Boolean = false,
-    val enableTileTopRim: Boolean = false
+    val enableTileTopRim: Boolean = false,
+    val topRimAlpha: Float = 0.20f
 ) {
     @Composable
     fun getSliderElementColor(isDark: Boolean): Color {
@@ -167,6 +168,7 @@ data class QsOverlaySurfaceConfig(
             val maxBrightness by PanelPreferences.maxBrightness.collectAsState()
             val enablePanelTopRim by PanelPreferences.enablePanelTopRim.collectAsState()
             val enableTileTopRim by PanelPreferences.enableTileTopRim.collectAsState()
+            val topRimAlpha by PanelPreferences.topRimAlpha.collectAsState()
 
             val showHeaderImg by PanelPreferences.showCustomHeaderImage.collectAsState()
             val headerImgUri by PanelPreferences.customHeaderImageUri.collectAsState()
@@ -261,7 +263,8 @@ data class QsOverlaySurfaceConfig(
                 minBrightness = minBrightness,
                 maxBrightness = maxBrightness,
                 enablePanelTopRim = enablePanelTopRim,
-                enableTileTopRim = enableTileTopRim
+                enableTileTopRim = enableTileTopRim,
+                topRimAlpha = topRimAlpha
             )
         }
 
@@ -292,6 +295,7 @@ data class QsOverlaySurfaceConfig(
                     maxBrightness = json.optInt("max_brightness", 2047),
                     enablePanelTopRim = json.optBoolean("enable_panel_top_rim", false),
                     enableTileTopRim = json.optBoolean("enable_tile_top_rim", false),
+                    topRimAlpha = json.optDouble("top_rim_alpha", 0.20).toFloat().coerceIn(0.05f, 0.30f),
                     sliderSyncAll = json.optBoolean("slider_sync_all", true),
                     panelOuterCorner = outerCorner,
                     panelInnerCorner = innerCorner,
@@ -446,10 +450,10 @@ fun QsOverlaySurface(
         modifier = modifier
             .fillMaxWidth()
             .offset(y = qqsContainerOffset)
-            .panelTopRim(enabled = config.enablePanelTopRim, shape = panelShape)
+            .panelTopRim(enabled = config.enablePanelTopRim, shape = panelShape, rimAlpha = config.topRimAlpha)
             .clip(panelShape)
             .background(monetSurfaceBg)
-            .panelTopRimBackground(enabled = config.enablePanelTopRim)
+            .panelTopRimBackground(enabled = config.enablePanelTopRim, rimAlpha = config.topRimAlpha)
             .testTag(testTagPrefix)
     ) {
         Column(
@@ -733,6 +737,7 @@ fun QsOverlaySurface(
                                     outlineThicknessDp = config.tileOutlineThicknessDp.dp,
                                     hasGradient = config.showQsTileGradient,
                                     hasTopRim = config.enableTileTopRim,
+                                    topRimAlpha = config.topRimAlpha,
                                     tileAccentColor = tileAccentColor,
                                     tileOnAccentColor = tileOnAccentColor,
                                     tertiaryColor = MaterialTheme.colorScheme.tertiary,
@@ -755,6 +760,7 @@ fun QsOverlaySurface(
                                     outlineThicknessDp = config.tileOutlineThicknessDp.dp,
                                     hasGradient = false,
                                     hasTopRim = config.enableTileTopRim,
+                                    topRimAlpha = config.topRimAlpha,
                                     tileAccentColor = tileAccentColor,
                                     tileOnAccentColor = tileOnAccentColor,
                                     tertiaryColor = MaterialTheme.colorScheme.tertiary,
@@ -880,6 +886,7 @@ fun QsOverlaySurface(
                                 outlineThicknessDp = config.tileOutlineThicknessDp.dp,
                                 hasGradient = config.showQsTileGradient,
                                 hasTopRim = config.enableTileTopRim,
+                                topRimAlpha = config.topRimAlpha,
                                 tileAccentColor = tileAccentColor,
                                 tileOnAccentColor = tileOnAccentColor,
                                 tertiaryColor = MaterialTheme.colorScheme.tertiary,
@@ -901,6 +908,7 @@ fun QsOverlaySurface(
                                 outlineThicknessDp = config.tileOutlineThicknessDp.dp,
                                 hasGradient = false,
                                 hasTopRim = config.enableTileTopRim,
+                                topRimAlpha = config.topRimAlpha,
                                 tileAccentColor = tileAccentColor,
                                 tileOnAccentColor = tileOnAccentColor,
                                 tertiaryColor = MaterialTheme.colorScheme.tertiary,
@@ -932,6 +940,7 @@ private fun SharedQsTileView(
     outlineThicknessDp: androidx.compose.ui.unit.Dp = 1.2.dp,
     hasGradient: Boolean,
     hasTopRim: Boolean = false,
+    topRimAlpha: Float = 0.20f,
     tileAccentColor: Color,
     tileOnAccentColor: Color,
     tertiaryColor: Color,
@@ -963,7 +972,7 @@ private fun SharedQsTileView(
         Box(
             modifier = Modifier
                 .size(48.dp)
-                .panelTopRim(enabled = hasTopRim, shape = tileShape, baseColor = tileFillColor)
+                .panelTopRim(enabled = hasTopRim, shape = tileShape, baseColor = tileFillColor, rimAlpha = topRimAlpha)
                 .then(
                     if (hasOutline) {
                         if (isActive && hasGradient) {
@@ -983,7 +992,7 @@ private fun SharedQsTileView(
                         Modifier.background(inactiveBg)
                     }
                 )
-                .panelTopRimBackground(enabled = hasTopRim, baseColor = tileFillColor),
+                .panelTopRimBackground(enabled = hasTopRim, baseColor = tileFillColor, rimAlpha = topRimAlpha),
             contentAlignment = Alignment.Center
         ) {
             Icon(

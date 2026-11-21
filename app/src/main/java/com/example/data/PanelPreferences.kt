@@ -298,6 +298,7 @@ object PanelPreferences {
     private const val KEY_ENABLE_PANEL_SHADOWS = "enable_panel_shadows"
     private const val KEY_ENABLE_PANEL_TOP_RIM = "enable_panel_top_rim"
     private const val KEY_ENABLE_TILE_TOP_RIM = "enable_tile_top_rim"
+    private const val KEY_TOP_RIM_ALPHA = "top_rim_alpha"
     private const val KEY_PANEL_SHADOW_ELEVATION = "panel_shadow_elevation"
     private const val KEY_PANEL_SHADOW_OFFSET_Y = "panel_shadow_offset_y"
     private const val KEY_PANEL_SHADOW_ALPHA = "panel_shadow_alpha"
@@ -1707,6 +1708,9 @@ object PanelPreferences {
     private val _enableTileTopRim = MutableStateFlow(false)
     val enableTileTopRim: StateFlow<Boolean> = _enableTileTopRim.asStateFlow()
 
+    private val _topRimAlpha = MutableStateFlow(0.20f)
+    val topRimAlpha: StateFlow<Float> = _topRimAlpha.asStateFlow()
+
     private val _panelShadowElevation = MutableStateFlow(8f)
     val panelShadowElevation: StateFlow<Float> = _panelShadowElevation.asStateFlow()
 
@@ -1944,6 +1948,7 @@ object PanelPreferences {
         _enablePanelShadows.value = prefs.getBoolean(KEY_ENABLE_PANEL_SHADOWS, false)
         _enablePanelTopRim.value = prefs.getBoolean(KEY_ENABLE_PANEL_TOP_RIM, false)
         _enableTileTopRim.value = prefs.getBoolean(KEY_ENABLE_TILE_TOP_RIM, false)
+        _topRimAlpha.value = prefs.getFloat(KEY_TOP_RIM_ALPHA, 0.20f).coerceIn(0.05f, 0.30f)
         _panelShadowElevation.value = prefs.getFloat(KEY_PANEL_SHADOW_ELEVATION, 8f)
         _panelShadowOffsetY.value = prefs.getFloat(KEY_PANEL_SHADOW_OFFSET_Y, 0f)
         _panelShadowAlpha.value = prefs.getFloat(KEY_PANEL_SHADOW_ALPHA, 0.35f)
@@ -2634,6 +2639,7 @@ object PanelPreferences {
             putBoolean(getStyleKey(KEY_ENABLE_PANEL_SHADOWS, style), _enablePanelShadows.value)
             putBoolean(getStyleKey(KEY_ENABLE_PANEL_TOP_RIM, style), _enablePanelTopRim.value)
             putBoolean(getStyleKey(KEY_ENABLE_TILE_TOP_RIM, style), _enableTileTopRim.value)
+            putFloat(getStyleKey(KEY_TOP_RIM_ALPHA, style), _topRimAlpha.value)
             putFloat(getStyleKey(KEY_PANEL_SHADOW_ELEVATION, style), _panelShadowElevation.value)
             putFloat(getStyleKey(KEY_PANEL_SHADOW_OFFSET_Y, style), _panelShadowOffsetY.value)
             putFloat(getStyleKey(KEY_PANEL_SHADOW_ALPHA, style), _panelShadowAlpha.value)
@@ -2809,12 +2815,20 @@ object PanelPreferences {
         val targetQsTileLabelFontSize = if (isInitialized) prefs.getFloat(getStyleKey(KEY_QS_TILE_LABEL_FONT_SIZE, style), 12f) else 12f
         val targetQsTileSubtitleFontSize = if (isInitialized) prefs.getFloat(getStyleKey(KEY_QS_TILE_SUBTITLE_FONT_SIZE, style), 10f) else 10f
 
-        val targetEnablePanelShadows = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_ENABLE_PANEL_SHADOWS, style), false) else false
-        val targetEnablePanelTopRim = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_ENABLE_PANEL_TOP_RIM, style), false) else false
-        val targetEnableTileTopRim = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_ENABLE_TILE_TOP_RIM, style), false) else false
-        val targetPanelShadowElevation = if (isInitialized) prefs.getFloat(getStyleKey(KEY_PANEL_SHADOW_ELEVATION, style), 8.0f) else 8.0f
-        val targetPanelShadowOffsetY = if (isInitialized) prefs.getFloat(getStyleKey(KEY_PANEL_SHADOW_OFFSET_Y, style), 4.0f) else 4.0f
-        val targetPanelShadowAlpha = if (isInitialized) prefs.getFloat(getStyleKey(KEY_PANEL_SHADOW_ALPHA, style), 0.15f) else 0.15f
+        val savedGlobalEnablePanelShadows = prefs.getBoolean(KEY_ENABLE_PANEL_SHADOWS, false)
+        val targetEnablePanelShadows = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_ENABLE_PANEL_SHADOWS, style), savedGlobalEnablePanelShadows) else savedGlobalEnablePanelShadows
+        val savedGlobalEnablePanelTopRim = prefs.getBoolean(KEY_ENABLE_PANEL_TOP_RIM, false)
+        val targetEnablePanelTopRim = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_ENABLE_PANEL_TOP_RIM, style), savedGlobalEnablePanelTopRim) else savedGlobalEnablePanelTopRim
+        val savedGlobalEnableTileTopRim = prefs.getBoolean(KEY_ENABLE_TILE_TOP_RIM, false)
+        val targetEnableTileTopRim = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_ENABLE_TILE_TOP_RIM, style), savedGlobalEnableTileTopRim) else savedGlobalEnableTileTopRim
+        val savedGlobalTopRimAlpha = prefs.getFloat(KEY_TOP_RIM_ALPHA, 0.20f)
+        val targetTopRimAlpha = if (isInitialized) prefs.getFloat(getStyleKey(KEY_TOP_RIM_ALPHA, style), savedGlobalTopRimAlpha).coerceIn(0.05f, 0.30f) else savedGlobalTopRimAlpha.coerceIn(0.05f, 0.30f)
+        val savedGlobalShadowElevation = prefs.getFloat(KEY_PANEL_SHADOW_ELEVATION, 8.0f)
+        val targetPanelShadowElevation = if (isInitialized) prefs.getFloat(getStyleKey(KEY_PANEL_SHADOW_ELEVATION, style), savedGlobalShadowElevation) else savedGlobalShadowElevation
+        val savedGlobalShadowOffsetY = prefs.getFloat(KEY_PANEL_SHADOW_OFFSET_Y, 4.0f)
+        val targetPanelShadowOffsetY = if (isInitialized) prefs.getFloat(getStyleKey(KEY_PANEL_SHADOW_OFFSET_Y, style), savedGlobalShadowOffsetY) else savedGlobalShadowOffsetY
+        val savedGlobalShadowAlpha = prefs.getFloat(KEY_PANEL_SHADOW_ALPHA, 0.15f)
+        val targetPanelShadowAlpha = if (isInitialized) prefs.getFloat(getStyleKey(KEY_PANEL_SHADOW_ALPHA, style), savedGlobalShadowAlpha) else savedGlobalShadowAlpha
 
         val targetCollapseExpandOptions = prefs.getBoolean(KEY_COLLAPSE_EXPAND_OPTIONS, false)
         val targetShowCustomHeaderImage = if (isInitialized && prefs.contains(getStyleKey(KEY_SHOW_CUSTOM_HEADER_IMAGE, style))) {
@@ -2964,6 +2978,7 @@ object PanelPreferences {
         _enablePanelShadows.value = targetEnablePanelShadows
         _enablePanelTopRim.value = targetEnablePanelTopRim
         _enableTileTopRim.value = targetEnableTileTopRim
+        _topRimAlpha.value = targetTopRimAlpha
         _panelShadowElevation.value = targetPanelShadowElevation
         _panelShadowOffsetY.value = targetPanelShadowOffsetY
         _panelShadowAlpha.value = targetPanelShadowAlpha
@@ -3039,6 +3054,7 @@ object PanelPreferences {
             putBoolean(KEY_ENABLE_PANEL_SHADOWS, targetEnablePanelShadows)
             putBoolean(KEY_ENABLE_PANEL_TOP_RIM, targetEnablePanelTopRim)
             putBoolean(KEY_ENABLE_TILE_TOP_RIM, targetEnableTileTopRim)
+            putFloat(KEY_TOP_RIM_ALPHA, targetTopRimAlpha)
             putFloat(KEY_PANEL_SHADOW_ELEVATION, targetPanelShadowElevation)
             putFloat(KEY_PANEL_SHADOW_OFFSET_Y, targetPanelShadowOffsetY)
             putFloat(KEY_PANEL_SHADOW_ALPHA, targetPanelShadowAlpha)
@@ -3436,6 +3452,17 @@ object PanelPreferences {
         prefs.edit()
             .putBoolean(KEY_ENABLE_TILE_TOP_RIM, enable)
             .putBoolean(getStyleKey(KEY_ENABLE_TILE_TOP_RIM), enable)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
+    }
+
+    fun setTopRimAlpha(context: Context, alpha: Float) {
+        val clamped = alpha.coerceIn(0.05f, 0.30f)
+        _topRimAlpha.value = clamped
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(KEY_TOP_RIM_ALPHA, clamped)
+            .putFloat(getStyleKey(KEY_TOP_RIM_ALPHA), clamped)
             .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }

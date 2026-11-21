@@ -16,7 +16,9 @@ import android.graphics.drawable.LayerDrawable
 import android.os.Build
 import android.view.View
 import androidx.core.graphics.PathParser
+import com.example.data.PanelPreferences
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 /**
  * Realistic multi-tier Gaussian blur outline shadow drawable for Android Views.
@@ -202,7 +204,8 @@ object CustomShadowHelper {
         customAlpha: Float? = null,
         customOffsetY: Float? = null,
         enableTopRimBackground: Boolean = false,
-        baseColor: Int? = null
+        baseColor: Int? = null,
+        topRimAlpha: Float = PanelPreferences.topRimAlpha.value
     ) {
         view.elevation = 0f
         ShadowOutlineDrawable.cachedDensity = view.resources.displayMetrics.density
@@ -216,7 +219,8 @@ object CustomShadowHelper {
             PanelTopRimBackgroundDrawable(
                 radii = radii?.copyOf(),
                 cornerRadius = cornerRadius,
-                baseColor = baseColor
+                baseColor = baseColor,
+                topRimAlpha = topRimAlpha
             )
         } else null
 
@@ -262,7 +266,8 @@ object CustomShadowHelper {
         radii: FloatArray? = null,
         cornerRadius: Float = 0f,
         strokeWidthDp: Float = 1f,
-        baseColor: Int? = null
+        baseColor: Int? = null,
+        topRimAlpha: Float = PanelPreferences.topRimAlpha.value
     ) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
         if (!enabled) {
@@ -279,14 +284,16 @@ object CustomShadowHelper {
                 radii = radii,
                 cornerRadius = cornerRadius,
                 strokeWidthPx = strokePx,
-                baseColor = baseColor
+                baseColor = baseColor,
+                topRimAlpha = topRimAlpha
             )
         } else {
             view.foreground = TopRimOutlineDrawable(
                 radii = radii?.copyOf(),
                 cornerRadius = cornerRadius,
                 strokeWidthPx = strokePx,
-                baseColor = baseColor
+                baseColor = baseColor,
+                topRimAlpha = topRimAlpha
             )
         }
     }
@@ -307,7 +314,8 @@ class TopRimOutlineDrawable(
     private var radii: FloatArray? = null,
     private var cornerRadius: Float = 0f,
     private var strokeWidthPx: Float = 2f,
-    private var baseColor: Int? = null
+    private var baseColor: Int? = null,
+    private var topRimAlpha: Float = 0.20f
 ) : Drawable() {
 
     private val rimPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -321,18 +329,21 @@ class TopRimOutlineDrawable(
         radii: FloatArray?,
         cornerRadius: Float,
         strokeWidthPx: Float,
-        baseColor: Int? = this.baseColor
+        baseColor: Int? = this.baseColor,
+        topRimAlpha: Float = this.topRimAlpha
     ) {
+        val clampedRimAlpha = topRimAlpha.coerceIn(0.05f, 0.30f)
         val radiiChanged = when {
             this.radii == null && radii == null -> false
             this.radii != null && radii != null -> !this.radii.contentEquals(radii)
             else -> true
         }
-        if (radiiChanged || this.cornerRadius != cornerRadius || this.strokeWidthPx != strokeWidthPx || this.baseColor != baseColor) {
+        if (radiiChanged || this.cornerRadius != cornerRadius || this.strokeWidthPx != strokeWidthPx || this.baseColor != baseColor || this.topRimAlpha != clampedRimAlpha) {
             this.radii = radii?.copyOf()
             this.cornerRadius = cornerRadius
             this.strokeWidthPx = strokeWidthPx
             this.baseColor = baseColor
+            this.topRimAlpha = clampedRimAlpha
             updateCachedPath(bounds)
             updateShader(bounds)
             invalidateSelf()
@@ -382,10 +393,12 @@ class TopRimOutlineDrawable(
             return
         }
         val lum = calculateBaseColorLuminanceInt(baseColor)
+        val effectiveRimAlpha = topRimAlpha.coerceIn(0.05f, 0.30f)
+        val scale = effectiveRimAlpha / 0.20f
         val topAlpha = when {
-            lum > 0.85f -> 166
-            lum > 0.30f -> 133
-            else -> 51
+            lum > 0.85f -> (166f * scale).roundToInt().coerceIn(0, 255)
+            lum > 0.30f -> (133f * scale).roundToInt().coerceIn(0, 255)
+            else -> (effectiveRimAlpha * 255f).roundToInt().coerceIn(0, 255)
         }
         rimPaint.shader = LinearGradient(
             bounds.left.toFloat(),
@@ -427,7 +440,8 @@ class TopRimOutlineDrawable(
 class PanelTopRimBackgroundDrawable(
     private var radii: FloatArray? = null,
     private var cornerRadius: Float = 0f,
-    private var baseColor: Int? = null
+    private var baseColor: Int? = null,
+    private var topRimAlpha: Float = 0.20f
 ) : Drawable() {
 
     private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -478,10 +492,15 @@ class PanelTopRimBackgroundDrawable(
             return
         }
         val lum = calculateBaseColorLuminanceInt(baseColor)
+        val effectiveRimAlpha = topRimAlpha.coerceIn(0.05f, 0.30f)
+        val scale = effectiveRimAlpha / 0.20f
         val (topColor, bottomColor) = when {
-            lum > 0.85f -> Color.argb(13, 0, 0, 0) to Color.argb(36, 0, 0, 0)
-            lum > 0.30f -> Color.argb(46, 255, 255, 255) to Color.argb(38, 0, 0, 0)
-            else -> Color.argb(26, 255, 255, 255) to Color.argb(0, 255, 255, 255)
+            lum > 0.85f -> Color.argb((13f * scale).roundToInt().coerceIn(0, 255), 0, 0, 0) to
+                Color.argb((36f * scale).roundToInt().coerceIn(0, 255), 0, 0, 0)
+            lum > 0.30f -> Color.argb((46f * scale).roundToInt().coerceIn(0, 255), 255, 255, 255) to
+                Color.argb((38f * scale).roundToInt().coerceIn(0, 255), 0, 0, 0)
+            else -> Color.argb((26f * scale).roundToInt().coerceIn(0, 255), 255, 255, 255) to
+                Color.argb(0, 255, 255, 255)
         }
         fillPaint.shader = LinearGradient(
             bounds.left.toFloat(),

@@ -775,6 +775,7 @@ class NotificationListView @JvmOverloads constructor(
                 PanelPreferences.panelInnerCorner.value,
                 PanelPreferences.enablePanelShadows.value,
                 PanelPreferences.enablePanelTopRim.value,
+                PanelPreferences.topRimAlpha.value,
                 PanelPreferences.panelShadowElevation.value,
                 PanelPreferences.mediaNotificationStyle.value,
                 PanelPreferences.disableClearAllBackground.value,

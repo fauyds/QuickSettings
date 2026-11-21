@@ -10411,17 +10411,19 @@ internal fun resolveFooterButtonIconTint(
     return if (footerIconBgEnabled) inactiveOnTileColor else defaultIconTint
 }
 
+@Composable
 internal fun Modifier.pillSurfaceWithRim(
     enabled: Boolean,
     shape: androidx.compose.ui.graphics.Shape,
     backgroundColor: Color,
-    topRimEnabled: Boolean
+    topRimEnabled: Boolean,
+    topRimAlpha: Float? = null
 ): Modifier = if (enabled) {
     this
-        .panelTopRim(enabled = topRimEnabled, shape = shape, baseColor = backgroundColor)
+        .panelTopRim(enabled = topRimEnabled, shape = shape, baseColor = backgroundColor, rimAlpha = topRimAlpha)
         .clip(shape)
         .background(backgroundColor)
-        .panelTopRimBackground(enabled = topRimEnabled, baseColor = backgroundColor)
+        .panelTopRimBackground(enabled = topRimEnabled, baseColor = backgroundColor, rimAlpha = topRimAlpha)
 } else {
     this.clip(shape)
 }

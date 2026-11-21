@@ -187,6 +187,7 @@ object QsTileViewHelper {
                     }
                 }
                 shapeDrawable.enableTopRim = PanelPreferences.enableTileTopRim.value
+                shapeDrawable.topRimAlpha = PanelPreferences.topRimAlpha.value
                 shapeDrawable.topRimStrokeWidthPx = (1f * density).coerceAtLeast(1f)
                 val maskDrawable = com.example.ui.shape.QsShapeManager.createDrawable(chosenShapeId, Color.WHITE)
                 flIconBg.background = RippleDrawable(ColorStateList.valueOf(rippleColor), shapeDrawable, maskDrawable)

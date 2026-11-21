@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -34,6 +35,7 @@ import com.example.data.BatteryPercentageLocation
 import com.example.data.DatePosition
 import com.example.data.PanelPreferences
 import com.example.data.QsPanelStyle
+import com.example.data.ThemeManager
 import com.example.model.ComplicationTileModel
 import com.example.model.QsTileModel
 import com.example.model.TileCategory
@@ -82,6 +84,7 @@ class PanelTopRimTest {
         PanelPreferences.setPanelStyle(context, QsPanelStyle.DEFAULT)
         PanelPreferences.setEnablePanelTopRim(context, false)
         PanelPreferences.setEnableTileTopRim(context, false)
+        PanelPreferences.setTopRimAlpha(context, 0.20f)
         PanelPreferences.setDateBackgroundEnabled(context, false)
         PanelPreferences.setBatteryBackgroundEnabled(context, false)
         PanelPreferences.setClockBackgroundEnabled(context, false)
@@ -567,5 +570,132 @@ class PanelTopRimTest {
         assertNull(tvCarrier.foreground)
         assertNull(tvBottomCarrier.foreground)
         assertFalse(tvTime.background is LayerDrawable)
+    }
+
+    @Test
+    fun `rim debauchery preference clamps 5 to 30 percent and persists across init`() {
+        org.junit.Assert.assertEquals(0.20f, PanelPreferences.topRimAlpha.value, 0.001f)
+
+        PanelPreferences.setTopRimAlpha(context, 0.01f)
+        org.junit.Assert.assertEquals(0.05f, PanelPreferences.topRimAlpha.value, 0.001f)
+
+        PanelPreferences.setTopRimAlpha(context, 0.55f)
+        org.junit.Assert.assertEquals(0.30f, PanelPreferences.topRimAlpha.value, 0.001f)
+
+        PanelPreferences.setTopRimAlpha(context, 0.14f)
+        PanelPreferences.init(context)
+        org.junit.Assert.assertEquals(0.14f, PanelPreferences.topRimAlpha.value, 0.001f)
+    }
+
+    @Test
+    fun `search finds Rim Sensitivity and QsDesignSection slider reflects 5 to 30 percent`() {
+        composeTestRule.setContent {
+            QuickPanelTheme(darkTheme = true) {
+                CustomizeScreen()
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("global_customize_search_input")
+            .performTextInput("Rim Sensitivity")
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("search_result_${FavoriteFeature.DESIGN_RIM_SENSITIVITY.id}")
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag("feature_rim_sensitivity_slider")
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun `QsDesignSection shows Rim Sensitivity slider and updates live with scaled drawables`() {
+        composeTestRule.setContent {
+            QuickPanelTheme(darkTheme = true) {
+                androidx.compose.foundation.layout.Column(
+                    modifier = androidx.compose.ui.Modifier.verticalScroll(
+                        androidx.compose.foundation.rememberScrollState()
+                    )
+                ) {
+                    QsDesignSection()
+                    QsOverlaySurface(
+                        config = QsOverlaySurfaceConfig(
+                            enablePanelTopRim = true,
+                            enableTileTopRim = true,
+                            topRimAlpha = 0.30f
+                        ),
+                        testTagPrefix = "qs_overlay_rim_sensitivity_30"
+                    )
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("rim_sensitivity_slider")
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag("rim_sensitivity_value_text", useUnmergedTree = true)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertTextEquals("20%")
+
+        PanelPreferences.setTopRimAlpha(context, 0.05f)
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("rim_sensitivity_value_text", useUnmergedTree = true)
+            .assertTextEquals("5%")
+
+        PanelPreferences.setTopRimAlpha(context, 0.30f)
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("rim_sensitivity_value_text", useUnmergedTree = true)
+            .assertTextEquals("30%")
+
+        // Verify QsPathDrawable and CustomShadowHelper draw cleanly at 5% and 30%
+        val bitmap = Bitmap.createBitmap(120, 120, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val drawable = QsShapeManager.createDrawable("squircle", Color.DKGRAY)
+        drawable.enableTopRim = true
+        drawable.setBounds(0, 0, 120, 120)
+        drawable.topRimAlpha = 0.05f
+        drawable.draw(canvas)
+        drawable.topRimAlpha = 0.30f
+        drawable.draw(canvas)
+
+        val radii = FloatArray(8) { 20f }
+        val rimDrawable = TopRimOutlineDrawable(radii = radii, topRimAlpha = 0.30f)
+        rimDrawable.setBounds(0, 0, 120, 120)
+        rimDrawable.draw(canvas)
+
+        val bgDrawable = PanelTopRimBackgroundDrawable(radii = radii, topRimAlpha = 0.05f)
+        bgDrawable.setBounds(0, 0, 120, 120)
+        bgDrawable.draw(canvas)
+    }
+
+    @Test
+    fun `theme manager correctly persists and restores QS Design and Tweaks settings including top rim alpha`() {
+        PanelPreferences.setEnablePanelTopRim(context, true)
+        PanelPreferences.setEnableTileTopRim(context, true)
+        PanelPreferences.setTopRimAlpha(context, 0.25f)
+        PanelPreferences.setFooterIconBackground(context, true)
+        PanelPreferences.setDateBackgroundEnabled(context, true)
+        PanelPreferences.setDateBackgroundCorner(context, 15f)
+
+        val savedTheme = ThemeManager.saveCurrentSettingsAsTheme(context, "Test Design Theme")
+        
+        // Reset prefs to defaults
+        PanelPreferences.setEnablePanelTopRim(context, false)
+        PanelPreferences.setEnableTileTopRim(context, false)
+        PanelPreferences.setTopRimAlpha(context, 0.20f)
+        PanelPreferences.setFooterIconBackground(context, false)
+        PanelPreferences.setDateBackgroundEnabled(context, false)
+        PanelPreferences.setDateBackgroundCorner(context, 10f)
+
+        // Apply saved theme
+        val success = ThemeManager.applyTheme(context, savedTheme)
+        assertTrue(success)
+
+        assertTrue(PanelPreferences.enablePanelTopRim.value)
+        assertTrue(PanelPreferences.enableTileTopRim.value)
+        org.junit.Assert.assertEquals(0.25f, PanelPreferences.topRimAlpha.value, 0.001f)
+        assertTrue(PanelPreferences.footerIconBackground.value)
+        assertTrue(PanelPreferences.dateBackgroundEnabled.value)
+        org.junit.Assert.assertEquals(15f, PanelPreferences.dateBackgroundCorner.value, 0.001f)
     }
 }

@@ -184,6 +184,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     val panelInnerCorner by PanelPreferences.panelInnerCorner.collectAsState()
     val enablePanelTopRim by PanelPreferences.enablePanelTopRim.collectAsState()
     val enableTileTopRim by PanelPreferences.enableTileTopRim.collectAsState()
+    val topRimAlpha by PanelPreferences.topRimAlpha.collectAsState()
+    val topRimPercent = kotlin.math.round(topRimAlpha * 100f).toInt().coerceIn(5, 30)
     val collapseExpandOptions by PanelPreferences.collapseExpandOptions.collectAsState()
     val useClearAllFab by PanelPreferences.useClearAllFab.collectAsState()
     val clearAllFabPosition by PanelPreferences.clearAllFabPosition.collectAsState()
@@ -4504,6 +4506,52 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             modifier = Modifier.testTag("panel_top_rim_toggle")
                         )
                     }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Rim Sensitivity",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Top highlight opacity (5% – 30%)",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(
+                                text = "${topRimPercent}%",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.testTag("rim_sensitivity_value_text")
+                            )
+                        }
+                        Slider(
+                            value = topRimPercent.toFloat(),
+                            onValueChange = {
+                                PanelPreferences.setTopRimAlpha(context, kotlin.math.round(it).coerceIn(5f, 30f) / 100f)
+                            },
+                            valueRange = 5f..30f,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("rim_sensitivity_slider"),
+                            colors = SliderDefaults.colors(
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                                inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -4578,6 +4626,54 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             ),
                             modifier = Modifier.testTag("tile_top_rim_toggle")
                         )
+                    }
+
+                    AnimatedVisibility(visible = enableTileTopRim) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "Rim Sensitivity",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "Top highlight opacity (5% – 30%)",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Text(
+                                        text = "${topRimPercent}%",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Slider(
+                                    value = topRimPercent.toFloat(),
+                                    onValueChange = {
+                                        PanelPreferences.setTopRimAlpha(context, kotlin.math.round(it).coerceIn(5f, 30f) / 100f)
+                                    },
+                                    valueRange = 5f..30f,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("tile_rim_sensitivity_slider"),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                                        inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                    )
+                                )
+                            }
+                        }
                     }
                 }
             }

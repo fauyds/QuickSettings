@@ -535,9 +535,9 @@ enum class FavoriteFeature(
         id = "design_panel_top_rim",
         title = "Panel Top Rim",
         category = CustomizeCategory.QS_DESIGN,
-        description = "Draw a top rim highlight on panel cards with vertical gradient from 20% to 0% alpha",
+        description = "Draw a top rim highlight on panel cards with vertical gradient fading to 0% alpha",
         icon = Icons.Default.AutoAwesome,
-        keywords = "rim top gradient alpha 20 0 highlight border glass panel outline stroke"
+        keywords = "rim top gradient alpha debauchery opacity 5 20 30 0 highlight border glass panel outline stroke"
     ),
     DESIGN_TILE_TOP_RIM(
         id = "design_tile_top_rim",
@@ -545,7 +545,15 @@ enum class FavoriteFeature(
         category = CustomizeCategory.QS_DESIGN,
         description = "Draw a top rim highlight and vertical background gradient on QS tiles and complications",
         icon = Icons.Default.AutoAwesome,
-        keywords = "tile tiles qs complication complications rim top gradient alpha 20 0 highlight border glass outline stroke"
+        keywords = "tile tiles qs complication complications rim top gradient alpha debauchery opacity highlight border glass outline stroke"
+    ),
+    DESIGN_RIM_SENSITIVITY(
+        id = "design_rim_sensitivity",
+        title = "Rim Sensitivity",
+        category = CustomizeCategory.QS_DESIGN,
+        description = "Adjust top rim highlight opacity from 5% to 30%",
+        icon = Icons.Default.AutoAwesome,
+        keywords = "rim sensitivity opacity intensity alpha strength 5 30 percent highlight gradient"
     ),
     DESIGN_HEADER_IMAGE(
         id = "design_header_image",

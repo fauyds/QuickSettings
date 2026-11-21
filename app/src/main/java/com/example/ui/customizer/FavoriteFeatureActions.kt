@@ -1275,23 +1275,52 @@ internal fun RenderQsDesignFeatureActions(feature: FavoriteFeature, modifier: Mo
 
         FavoriteFeature.DESIGN_PANEL_TOP_RIM -> {
             val enableTopRim by PanelPreferences.enablePanelTopRim.collectAsState()
-            FeatureSwitchRow(
-                label = "Panel Top Rim (20% -> 0% Alpha)",
-                subtitle = "Draws a top-to-bottom gradient rim highlight and panel background gradient.",
-                checked = enableTopRim,
-                onCheckedChange = { PanelPreferences.setEnablePanelTopRim(context, it) },
-                switchTestTag = "feature_panel_top_rim_switch"
-            )
+            val topRimAlpha by PanelPreferences.topRimAlpha.collectAsState()
+            val topRimPercent = kotlin.math.round(topRimAlpha * 100f).toInt().coerceIn(5, 30)
+            Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FeatureSwitchRow(
+                    label = "Panel Top Rim",
+                    subtitle = "Draws a top-to-bottom gradient rim highlight and panel background gradient.",
+                    checked = enableTopRim,
+                    onCheckedChange = { PanelPreferences.setEnablePanelTopRim(context, it) },
+                    switchTestTag = "feature_panel_top_rim_switch"
+                )
+                FeatureSliderBlock(
+                    label = "Rim Sensitivity",
+                    valueText = "${topRimPercent}%",
+                    value = topRimPercent.toFloat(),
+                    onValueChange = {
+                        PanelPreferences.setTopRimAlpha(context, kotlin.math.round(it).coerceIn(5f, 30f) / 100f)
+                    },
+                    valueRange = 5f..30f,
+                    sliderTestTag = "feature_panel_rim_sensitivity_slider"
+                )
+            }
         }
 
         FavoriteFeature.DESIGN_TILE_TOP_RIM -> {
             val enableTileRim by PanelPreferences.enableTileTopRim.collectAsState()
             FeatureSwitchRow(
-                label = "Tile & Complication Top Rim (20% -> 0% Alpha)",
+                label = "Tile & Complication Top Rim",
                 subtitle = "Draws a top-to-bottom gradient rim and background gradient on QS tiles and complications.",
                 checked = enableTileRim,
                 onCheckedChange = { PanelPreferences.setEnableTileTopRim(context, it) },
                 switchTestTag = "feature_tile_top_rim_switch"
+            )
+        }
+
+        FavoriteFeature.DESIGN_RIM_SENSITIVITY -> {
+            val topRimAlpha by PanelPreferences.topRimAlpha.collectAsState()
+            val topRimPercent = kotlin.math.round(topRimAlpha * 100f).toInt().coerceIn(5, 30)
+            FeatureSliderBlock(
+                label = "Rim Sensitivity",
+                valueText = "${topRimPercent}%",
+                value = topRimPercent.toFloat(),
+                onValueChange = {
+                    PanelPreferences.setTopRimAlpha(context, kotlin.math.round(it).coerceIn(5f, 30f) / 100f)
+                },
+                valueRange = 5f..30f,
+                sliderTestTag = "feature_rim_sensitivity_slider"
             )
         }
 
