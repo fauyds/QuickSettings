@@ -109,6 +109,8 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
     val forceShowMediaPreview by PanelPreferences.forceShowMediaPreview.collectAsState()
 
     val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.MISCELLANEOUS, context).collectAsState()
+    val hiddenIds by PinnedCardsManager.getHiddenCardIds().collectAsState()
+    val isHidden = { id: String -> HiddenFeatureCatalog.isCardHidden(id, hiddenIds) }
 
     // 1. Disable Panel Animations Card
     val disablePanelAnimationsCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
@@ -536,7 +538,7 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                             modifier = Modifier
                                 .weight(1f)
                                 .then(
-                                    if (collapseExpandOptions) Modifier.clickable { delayExpanded = !delayExpanded } else Modifier
+                                    if (collapseExpandOptions) Modifier.pinnableClickable { delayExpanded = !delayExpanded } else Modifier
                                 )
                         ) {
                             Box(
@@ -1314,16 +1316,16 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
     ) {
         // 1. Pinned Cards at the very top of Miscellaneous
         val pinnedCards = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (pinnedIds.contains("disable_panel_animations_card")) pinnedCards.add(disablePanelAnimationsCard)
-        if (pinnedIds.contains("prime_core_affinity_card")) pinnedCards.add(primeCoreAffinityCard)
-        if (pinnedIds.contains("custom_volume_panel_card")) pinnedCards.add(customVolumePanelCard)
-        if (pinnedIds.contains("invisible_status_bar_trigger_card")) pinnedCards.add(invisibleStatusBarTriggerCard)
-        if (pinnedIds.contains("auto_system_panel_closing_card")) pinnedCards.add(autoSystemPanelClosingCard)
-        if (pinnedIds.contains("panel_replacement_delay_card")) pinnedCards.add(panelReplacementDelayCard)
-        if (pinnedIds.contains("stock_shade_override_card")) pinnedCards.add(stockShadeOverrideCard)
-        if (pinnedIds.contains("force_show_media_preview_card")) pinnedCards.add(forceShowMediaPreviewCard)
-        if (pinnedIds.contains("min_brightness_card")) pinnedCards.add(minBrightnessCard)
-        if (pinnedIds.contains("max_brightness_card")) pinnedCards.add(maxBrightnessCard)
+        if (!isHidden("disable_panel_animations_card") && pinnedIds.contains("disable_panel_animations_card")) pinnedCards.add(disablePanelAnimationsCard)
+        if (!isHidden("prime_core_affinity_card") && pinnedIds.contains("prime_core_affinity_card")) pinnedCards.add(primeCoreAffinityCard)
+        if (!isHidden("custom_volume_panel_card") && pinnedIds.contains("custom_volume_panel_card")) pinnedCards.add(customVolumePanelCard)
+        if (!isHidden("invisible_status_bar_trigger_card") && pinnedIds.contains("invisible_status_bar_trigger_card")) pinnedCards.add(invisibleStatusBarTriggerCard)
+        if (!isHidden("auto_system_panel_closing_card") && pinnedIds.contains("auto_system_panel_closing_card")) pinnedCards.add(autoSystemPanelClosingCard)
+        if (!isHidden("panel_replacement_delay_card") && pinnedIds.contains("panel_replacement_delay_card")) pinnedCards.add(panelReplacementDelayCard)
+        if (!isHidden("stock_shade_override_card") && pinnedIds.contains("stock_shade_override_card")) pinnedCards.add(stockShadeOverrideCard)
+        if (!isHidden("force_show_media_preview_card") && pinnedIds.contains("force_show_media_preview_card")) pinnedCards.add(forceShowMediaPreviewCard)
+        if (!isHidden("min_brightness_card") && pinnedIds.contains("min_brightness_card")) pinnedCards.add(minBrightnessCard)
+        if (!isHidden("max_brightness_card") && pinnedIds.contains("max_brightness_card")) pinnedCards.add(maxBrightnessCard)
 
         if (pinnedCards.isNotEmpty()) {
             ListSubheader(
@@ -1337,8 +1339,8 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
 
         // 2. Unpinned Performance
         val unpinnedPerf = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (!pinnedIds.contains("disable_panel_animations_card")) unpinnedPerf.add(disablePanelAnimationsCard)
-        if (!pinnedIds.contains("prime_core_affinity_card")) unpinnedPerf.add(primeCoreAffinityCard)
+        if (!isHidden("disable_panel_animations_card") && !pinnedIds.contains("disable_panel_animations_card")) unpinnedPerf.add(disablePanelAnimationsCard)
+        if (!isHidden("prime_core_affinity_card") && !pinnedIds.contains("prime_core_affinity_card")) unpinnedPerf.add(primeCoreAffinityCard)
 
         if (unpinnedPerf.isNotEmpty()) {
             CollapsibleSubheaderSection(
@@ -1352,7 +1354,8 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
         }
 
         // 3. Unpinned Gestures
-        if (!pinnedIds.contains("custom_volume_panel_card")) {
+        val showGestures = !isHidden("custom_volume_panel_card") && !pinnedIds.contains("custom_volume_panel_card")
+        if (showGestures) {
             CollapsibleSubheaderSection(
                 title = "Gestures",
                 icon = Icons.Default.VolumeUp
@@ -1363,10 +1366,10 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
 
         // 4. Unpinned Trigger
         val unpinnedTrigger = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (!pinnedIds.contains("invisible_status_bar_trigger_card")) unpinnedTrigger.add(invisibleStatusBarTriggerCard)
-        if (!pinnedIds.contains("auto_system_panel_closing_card")) unpinnedTrigger.add(autoSystemPanelClosingCard)
-        if (!pinnedIds.contains("panel_replacement_delay_card")) unpinnedTrigger.add(panelReplacementDelayCard)
-        if (!pinnedIds.contains("stock_shade_override_card")) unpinnedTrigger.add(stockShadeOverrideCard)
+        if (!isHidden("invisible_status_bar_trigger_card") && !pinnedIds.contains("invisible_status_bar_trigger_card")) unpinnedTrigger.add(invisibleStatusBarTriggerCard)
+        if (!isHidden("auto_system_panel_closing_card") && !pinnedIds.contains("auto_system_panel_closing_card")) unpinnedTrigger.add(autoSystemPanelClosingCard)
+        if (!isHidden("panel_replacement_delay_card") && !pinnedIds.contains("panel_replacement_delay_card")) unpinnedTrigger.add(panelReplacementDelayCard)
+        if (!isHidden("stock_shade_override_card") && !pinnedIds.contains("stock_shade_override_card")) unpinnedTrigger.add(stockShadeOverrideCard)
 
         if (unpinnedTrigger.isNotEmpty()) {
             CollapsibleSubheaderSection(
@@ -1381,8 +1384,8 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
 
         // 5. Unpinned Brightness Limits
         val unpinnedBrightness = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (!pinnedIds.contains("min_brightness_card")) unpinnedBrightness.add(minBrightnessCard)
-        if (!pinnedIds.contains("max_brightness_card")) unpinnedBrightness.add(maxBrightnessCard)
+        if (!isHidden("min_brightness_card") && !pinnedIds.contains("min_brightness_card")) unpinnedBrightness.add(minBrightnessCard)
+        if (!isHidden("max_brightness_card") && !pinnedIds.contains("max_brightness_card")) unpinnedBrightness.add(maxBrightnessCard)
 
         if (unpinnedBrightness.isNotEmpty()) {
             CollapsibleSubheaderSection(
@@ -1396,13 +1399,18 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
         }
 
         // 6. Unpinned Debug
-        if (!pinnedIds.contains("force_show_media_preview_card")) {
+        val showDebug = !isHidden("force_show_media_preview_card") && !pinnedIds.contains("force_show_media_preview_card")
+        if (showDebug) {
             CollapsibleSubheaderSection(
                 title = "Debug",
                 icon = Icons.Default.BugReport
             ) {
                 forceShowMediaPreviewCard(CustomizeCardShapes.SingleCard)
             }
+        }
+
+        if (pinnedCards.isEmpty() && unpinnedPerf.isEmpty() && !showGestures && unpinnedTrigger.isEmpty() && unpinnedBrightness.isEmpty() && !showDebug) {
+            AllSectionFeaturesHiddenCard(sectionTitle = "Miscellaneous")
         }
     }
 }

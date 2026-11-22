@@ -171,6 +171,7 @@ fun TileCustomizerScreen(
         // TOP CARD
         SettingsCard(
             shape = topCardShape,
+            canPin = false,
             colors = CardDefaults.cardColors(containerColor = cardContainerColor),
             modifier = Modifier.fillMaxWidth().then(topCardBorder)
         ) {
@@ -661,6 +662,7 @@ fun TileCustomizerScreen(
         if (enableQqsComplicationsRow && !isKitKat && !isMarshmallow) {
             SettingsCard(
                 shape = centerCardShape,
+                canPin = false,
                 colors = CardDefaults.cardColors(containerColor = cardContainerColor),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -724,6 +726,7 @@ fun TileCustomizerScreen(
         // CENTER CARD: ACTIVE TILES & COMPLICATIONS
         SettingsCard(
             shape = centerCardShape,
+            canPin = false,
             colors = CardDefaults.cardColors(containerColor = cardContainerColor),
             modifier = Modifier.fillMaxWidth().then(centerCardBorder)
         ) {
@@ -791,6 +794,7 @@ fun TileCustomizerScreen(
         // BOTTOM CARD: AVAILABLE QS TILES & COMPLICATIONS
         SettingsCard(
             shape = bottomCardShape,
+            canPin = false,
             colors = CardDefaults.cardColors(containerColor = cardContainerColor),
             modifier = Modifier.fillMaxWidth().then(bottomCardBorder)
         ) {

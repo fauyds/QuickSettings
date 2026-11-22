@@ -23,6 +23,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -80,11 +86,14 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                 .fillMaxSize()
                 .background(com.example.ui.theme.getSettingsScreenBackgroundColor(com.example.ui.theme.LocalIsDarkTheme.current))
         ) {
+        val hiddenIds by com.example.data.PanelPreferences.hiddenFeatures.collectAsState()
+        var showHiddenFeaturesDialog by remember { mutableStateOf(false) }
+
         if (selectedCategory == null) {
             // ==========================================
             // SCREEN 1: CATEGORY BUTTONS HUB (NO TABS)
             // ==========================================
-             val pinnedIds by com.example.data.PanelPreferences.pinnedFeatures.collectAsState()
+            val pinnedIds by com.example.data.PanelPreferences.pinnedFeatures.collectAsState()
             var globalSearchQuery by remember { mutableStateOf("") }
             val allCategories = listOf(
                 CustomizeCategory.HEADS_UP,
@@ -96,23 +105,31 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                 CustomizeCategory.MISCELLANEOUS,
                 CustomizeCategory.ABOUT
             )
-            val pinnedCategories = remember(pinnedIds) {
-                allCategories.filter { pinnedIds.contains("cat_${it.name.lowercase()}") }
+            val pinnedCategories = remember(pinnedIds, hiddenIds) {
+                allCategories.filter {
+                    pinnedIds.contains("cat_${it.name.lowercase()}") &&
+                        !HiddenFeatureCatalog.isCategoryHidden(it, hiddenIds)
+                }
             }
-            val unpinnedCategories = remember(pinnedIds) {
-                allCategories.filter { !pinnedIds.contains("cat_${it.name.lowercase()}") }
+            val unpinnedCategories = remember(pinnedIds, hiddenIds) {
+                allCategories.filter {
+                    !pinnedIds.contains("cat_${it.name.lowercase()}") &&
+                        !HiddenFeatureCatalog.isCategoryHidden(it, hiddenIds)
+                }
             }
 
-            val matchingFeatures = remember(globalSearchQuery) {
+            val matchingFeatures = remember(globalSearchQuery, hiddenIds) {
                 val tokens = globalSearchQuery.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
                 if (tokens.isEmpty()) emptyList()
                 else FavoriteFeature.entries.filter { feat ->
-                    feat.isSearchable && tokens.all { token ->
-                        feat.title.contains(token, ignoreCase = true) ||
-                            feat.description.contains(token, ignoreCase = true) ||
-                            feat.category.title.contains(token, ignoreCase = true) ||
-                            feat.keywords.contains(token, ignoreCase = true)
-                    }
+                    feat.isSearchable &&
+                        !HiddenFeatureCatalog.isSearchFeatureHidden(feat, hiddenIds) &&
+                        tokens.all { token ->
+                            feat.title.contains(token, ignoreCase = true) ||
+                                feat.description.contains(token, ignoreCase = true) ||
+                                feat.category.title.contains(token, ignoreCase = true) ||
+                                feat.keywords.contains(token, ignoreCase = true)
+                        }
                 }
             }
 
@@ -131,16 +148,66 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                         .padding(top = 16.dp, bottom = 4.dp, start = 4.dp, end = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "CUSTOMIZE",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.1.sp,
+                            lineHeight = 16.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        Surface(
+                            onClick = { showHiddenFeaturesDialog = true },
+                            shape = CircleShape,
+                            color = if (hiddenIds.isNotEmpty()) {
+                                com.example.ui.theme.ExpressiveTheme.colors.buttonPrimary
+                            } else {
+                                com.example.ui.theme.ExpressiveTheme.colors.cardSurface
+                            },
+                            modifier = Modifier
+                                .defaultMinSize(minHeight = 36.dp)
+                                .testTag("show_hidden_features_btn")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Visibility,
+                                    contentDescription = "Show hidden features",
+                                    tint = if (hiddenIds.isNotEmpty()) {
+                                        MaterialTheme.colorScheme.onPrimary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = if (hiddenIds.isNotEmpty()) {
+                                        "Show Hidden (${hiddenIds.size})"
+                                    } else {
+                                        "Show Hidden Features"
+                                    },
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (hiddenIds.isNotEmpty()) {
+                                        MaterialTheme.colorScheme.onPrimary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    }
+                                )
+                            }
+                        }
+                    }
                     Text(
-                        text = "CUSTOMIZE",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.1.sp,
-                        lineHeight = 16.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "Select a category to customize Quick Settings (Hold any category or option to pin it)",
+                        text = "Select a category to customize Quick Settings (Hold any category or option to pin or hide it)",
                         fontSize = 13.sp,
                         lineHeight = 18.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -252,6 +319,56 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                         }
                     }
 
+                    if (pinnedCategories.isEmpty() && unpinnedCategories.isEmpty()) {
+                        Surface(
+                            shape = CustomizeCardShapes.SingleCard,
+                            color = cardBackgroundColor,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("all_categories_hidden_card")
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.VisibilityOff,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                                Text(
+                                    text = "All categories are hidden",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Button(
+                                    onClick = { showHiddenFeaturesDialog = true },
+                                    shape = CircleShape,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = com.example.ui.theme.ExpressiveTheme.colors.buttonPrimary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary
+                                    ),
+                                    modifier = Modifier
+                                        .defaultMinSize(minHeight = 48.dp)
+                                        .testTag("restore_categories_btn")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Visibility,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Show Hidden Features", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                            }
+                        }
+                    }
+
                     if (unpinnedCategories.isNotEmpty()) {
                         if (pinnedCategories.isNotEmpty()) {
                             Text(
@@ -321,18 +438,50 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                     }
 
                     // Collapsed title shown only when scrolled down (not at very top)
-                    AnimatedVisibility(
-                        visible = !isScrolledToTop,
-                        enter = fadeIn(),
-                        exit = fadeOut()
-                    ) {
-                        Text(
-                            text = activeCategory.title,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 26.sp,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                    Box(modifier = Modifier.weight(1f)) {
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = !isScrolledToTop,
+                            enter = fadeIn(),
+                            exit = fadeOut()
+                        ) {
+                            Text(
+                                text = activeCategory.title,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 26.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+
+                    if (hiddenIds.isNotEmpty()) {
+                        Surface(
+                            onClick = { showHiddenFeaturesDialog = true },
+                            shape = CircleShape,
+                            color = com.example.ui.theme.ExpressiveTheme.colors.buttonPrimary,
+                            modifier = Modifier
+                                .defaultMinSize(minHeight = 36.dp)
+                                .testTag("category_show_hidden_features_btn")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Visibility,
+                                    contentDescription = "Show hidden features",
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "Hidden (${hiddenIds.size})",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -388,6 +537,10 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                     Spacer(modifier = Modifier.height(48.dp))
                 }
             }
+        }
+
+        if (showHiddenFeaturesDialog) {
+            HiddenFeaturesDialog(onDismiss = { showHiddenFeaturesDialog = false })
         }
     }
 }

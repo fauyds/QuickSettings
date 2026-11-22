@@ -139,6 +139,8 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
     var fontSizesExpanded by rememberSaveable { mutableStateOf(false) }
 
     val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.QS_TWEAKS, context).collectAsState()
+    val hiddenIds by PinnedCardsManager.getHiddenCardIds().collectAsState()
+    val isUserHidden = { id: String -> HiddenFeatureCatalog.isCardHidden(id, hiddenIds) }
 
     val gridDensityCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("qs_grid_density_card", CustomizeCategory.QS_TWEAKS) {
@@ -1001,7 +1003,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                         modifier = Modifier
                             .weight(1f)
                             .then(
-                                if (collapseExpandOptions) Modifier.clickable { fontSizesExpanded = !fontSizesExpanded } else Modifier
+                                if (collapseExpandOptions) Modifier.pinnableClickable { fontSizesExpanded = !fontSizesExpanded } else Modifier
                             ),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -2102,7 +2104,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                             modifier = Modifier
                                 .weight(1f)
                                 .then(
-                                    if (collapseExpandOptions) Modifier.clickable { panelShadowsExpanded = !panelShadowsExpanded } else Modifier
+                                    if (collapseExpandOptions) Modifier.pinnableClickable { panelShadowsExpanded = !panelShadowsExpanded } else Modifier
                                 )
                         ) {
                             Box(
@@ -2370,7 +2372,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                             modifier = Modifier
                                 .weight(1f)
                                 .then(
-                                    if (collapseExpandOptions) Modifier.clickable { clearAllFabOffsetsExpanded = !clearAllFabOffsetsExpanded } else Modifier
+                                    if (collapseExpandOptions) Modifier.pinnableClickable { clearAllFabOffsetsExpanded = !clearAllFabOffsetsExpanded } else Modifier
                                 )
                         ) {
                             Box(
@@ -2686,29 +2688,29 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
             }
         }
         val pinnedCards = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (!hiddenInOreoTweakIds.contains("qs_grid_density_card") && pinnedIds.contains("qs_grid_density_card")) pinnedCards.add(gridDensityCard)
-        if (!hiddenInOreoTweakIds.contains("enable_qqs_horizontal_scroll_card") && pinnedIds.contains("enable_qqs_horizontal_scroll_card")) pinnedCards.add(enableQqsHorizontalScrollCard)
-        if (!hiddenInOreoTweakIds.contains("qs_drag_handle_length_card") && pinnedIds.contains("qs_drag_handle_length_card")) pinnedCards.add(dragHandleLengthCard)
-        if (!hiddenInOreoTweakIds.contains("date_position_card") && pinnedIds.contains("date_position_card")) pinnedCards.add(datePositionCard)
-        if (!hiddenInOreoTweakIds.contains("battery_percentage_location_card") && pinnedIds.contains("battery_percentage_location_card")) pinnedCards.add(batteryPercentageLocationCard)
-        if (!hiddenInOreoTweakIds.contains("settings_icon_location_card") && pinnedIds.contains("settings_icon_location_card")) pinnedCards.add(settingsIconLocationCard)
-        if (!hiddenInOreoTweakIds.contains("edit_pencil_location_card") && pinnedIds.contains("edit_pencil_location_card")) pinnedCards.add(editPencilLocationCard)
-        if (!hiddenInOreoTweakIds.contains("move_collapse_to_qqs_footer_card") && pinnedIds.contains("move_collapse_to_qqs_footer_card")) pinnedCards.add(moveCollapseToQqsFooterCard)
-        if (!hiddenInOreoTweakIds.contains("qs_tile_font_size_card") && pinnedIds.contains("qs_tile_font_size_card")) pinnedCards.add(tileFontSizeCard)
-        if (!hiddenInOreoTweakIds.contains("hide_date_in_expanded_card") && pinnedIds.contains("hide_date_in_expanded_card")) pinnedCards.add(hideDateInExpandedCard)
-        if (!hiddenInOreoTweakIds.contains("disable_labels_in_expanded_card") && pinnedIds.contains("disable_labels_in_expanded_card")) pinnedCards.add(disableLabelsInExpandedCard)
-        if (!hiddenInOreoTweakIds.contains("hide_qqs_drag_handle_card") && pinnedIds.contains("hide_qqs_drag_handle_card")) pinnedCards.add(hideQqsDragHandleCard)
-        if (!hiddenInOreoTweakIds.contains("hide_qqs_empty_notif_labels_card") && pinnedIds.contains("hide_qqs_empty_notif_labels_card")) pinnedCards.add(hideQqsEmptyNotifLabelsCard)
-        if (!hiddenInOreoTweakIds.contains("hide_brightness_percentage_card") && pinnedIds.contains("hide_brightness_percentage_card")) pinnedCards.add(hideBrightnessPercentageCard)
-        if (!hiddenInOreoTweakIds.contains("hide_brightness_icon_card") && pinnedIds.contains("hide_brightness_icon_card")) pinnedCards.add(hideBrightnessIconCard)
-        if (!hiddenInOreoTweakIds.contains("show_brightness_plus_minus_card") && pinnedIds.contains("show_brightness_plus_minus_card")) pinnedCards.add(showBrightnessPlusMinusCard)
-        if (!hiddenInOreoTweakIds.contains("enable_panel_shadows_card") && pinnedIds.contains("enable_panel_shadows_card")) pinnedCards.add(enablePanelShadowsCard)
-        if (!hiddenInOreoTweakIds.contains("disable_clear_all_bg_card") && pinnedIds.contains("disable_clear_all_bg_card")) pinnedCards.add(disableClearAllBgCard)
-        if (!hiddenInOreoTweakIds.contains("disable_clear_all_label_card") && pinnedIds.contains("disable_clear_all_label_card")) pinnedCards.add(disableClearAllLabelCard)
-        if (!hiddenInOreoTweakIds.contains("clear_all_fab_offset_card") && pinnedIds.contains("clear_all_fab_offset_card")) pinnedCards.add(clearAllFabOffsetsCard)
-        if (!hiddenInOreoTweakIds.contains("show_carrier_card") && pinnedIds.contains("show_carrier_card")) pinnedCards.add(showCarrierCard)
-        if (!hiddenInOreoTweakIds.contains("carrier_divider_card") && pinnedIds.contains("carrier_divider_card")) pinnedCards.add(carrierDividerCard)
-        if (!hiddenInOreoTweakIds.contains("hide_carrier_in_expanded_card") && pinnedIds.contains("hide_carrier_in_expanded_card")) pinnedCards.add(hideCarrierInExpandedCard)
+        if (!hiddenInOreoTweakIds.contains("qs_grid_density_card") && !isUserHidden("qs_grid_density_card") && pinnedIds.contains("qs_grid_density_card")) pinnedCards.add(gridDensityCard)
+        if (!hiddenInOreoTweakIds.contains("enable_qqs_horizontal_scroll_card") && !isUserHidden("enable_qqs_horizontal_scroll_card") && pinnedIds.contains("enable_qqs_horizontal_scroll_card")) pinnedCards.add(enableQqsHorizontalScrollCard)
+        if (!hiddenInOreoTweakIds.contains("qs_drag_handle_length_card") && !isUserHidden("qs_drag_handle_length_card") && pinnedIds.contains("qs_drag_handle_length_card")) pinnedCards.add(dragHandleLengthCard)
+        if (!hiddenInOreoTweakIds.contains("date_position_card") && !isUserHidden("date_position_card") && pinnedIds.contains("date_position_card")) pinnedCards.add(datePositionCard)
+        if (!hiddenInOreoTweakIds.contains("battery_percentage_location_card") && !isUserHidden("battery_percentage_location_card") && pinnedIds.contains("battery_percentage_location_card")) pinnedCards.add(batteryPercentageLocationCard)
+        if (!hiddenInOreoTweakIds.contains("settings_icon_location_card") && !isUserHidden("settings_icon_location_card") && pinnedIds.contains("settings_icon_location_card")) pinnedCards.add(settingsIconLocationCard)
+        if (!hiddenInOreoTweakIds.contains("edit_pencil_location_card") && !isUserHidden("edit_pencil_location_card") && pinnedIds.contains("edit_pencil_location_card")) pinnedCards.add(editPencilLocationCard)
+        if (!hiddenInOreoTweakIds.contains("move_collapse_to_qqs_footer_card") && !isUserHidden("move_collapse_to_qqs_footer_card") && pinnedIds.contains("move_collapse_to_qqs_footer_card")) pinnedCards.add(moveCollapseToQqsFooterCard)
+        if (!hiddenInOreoTweakIds.contains("qs_tile_font_size_card") && !isUserHidden("qs_tile_font_size_card") && pinnedIds.contains("qs_tile_font_size_card")) pinnedCards.add(tileFontSizeCard)
+        if (!hiddenInOreoTweakIds.contains("hide_date_in_expanded_card") && !isUserHidden("hide_date_in_expanded_card") && pinnedIds.contains("hide_date_in_expanded_card")) pinnedCards.add(hideDateInExpandedCard)
+        if (!hiddenInOreoTweakIds.contains("disable_labels_in_expanded_card") && !isUserHidden("disable_labels_in_expanded_card") && pinnedIds.contains("disable_labels_in_expanded_card")) pinnedCards.add(disableLabelsInExpandedCard)
+        if (!hiddenInOreoTweakIds.contains("hide_qqs_drag_handle_card") && !isUserHidden("hide_qqs_drag_handle_card") && pinnedIds.contains("hide_qqs_drag_handle_card")) pinnedCards.add(hideQqsDragHandleCard)
+        if (!hiddenInOreoTweakIds.contains("hide_qqs_empty_notif_labels_card") && !isUserHidden("hide_qqs_empty_notif_labels_card") && pinnedIds.contains("hide_qqs_empty_notif_labels_card")) pinnedCards.add(hideQqsEmptyNotifLabelsCard)
+        if (!hiddenInOreoTweakIds.contains("hide_brightness_percentage_card") && !isUserHidden("hide_brightness_percentage_card") && pinnedIds.contains("hide_brightness_percentage_card")) pinnedCards.add(hideBrightnessPercentageCard)
+        if (!hiddenInOreoTweakIds.contains("hide_brightness_icon_card") && !isUserHidden("hide_brightness_icon_card") && pinnedIds.contains("hide_brightness_icon_card")) pinnedCards.add(hideBrightnessIconCard)
+        if (!hiddenInOreoTweakIds.contains("show_brightness_plus_minus_card") && !isUserHidden("show_brightness_plus_minus_card") && pinnedIds.contains("show_brightness_plus_minus_card")) pinnedCards.add(showBrightnessPlusMinusCard)
+        if (!hiddenInOreoTweakIds.contains("enable_panel_shadows_card") && !isUserHidden("enable_panel_shadows_card") && pinnedIds.contains("enable_panel_shadows_card")) pinnedCards.add(enablePanelShadowsCard)
+        if (!hiddenInOreoTweakIds.contains("disable_clear_all_bg_card") && !isUserHidden("disable_clear_all_bg_card") && pinnedIds.contains("disable_clear_all_bg_card")) pinnedCards.add(disableClearAllBgCard)
+        if (!hiddenInOreoTweakIds.contains("disable_clear_all_label_card") && !isUserHidden("disable_clear_all_label_card") && pinnedIds.contains("disable_clear_all_label_card")) pinnedCards.add(disableClearAllLabelCard)
+        if (!hiddenInOreoTweakIds.contains("clear_all_fab_offset_card") && !isUserHidden("clear_all_fab_offset_card") && pinnedIds.contains("clear_all_fab_offset_card")) pinnedCards.add(clearAllFabOffsetsCard)
+        if (!hiddenInOreoTweakIds.contains("show_carrier_card") && !isUserHidden("show_carrier_card") && pinnedIds.contains("show_carrier_card")) pinnedCards.add(showCarrierCard)
+        if (!hiddenInOreoTweakIds.contains("carrier_divider_card") && !isUserHidden("carrier_divider_card") && pinnedIds.contains("carrier_divider_card")) pinnedCards.add(carrierDividerCard)
+        if (!hiddenInOreoTweakIds.contains("hide_carrier_in_expanded_card") && !isUserHidden("hide_carrier_in_expanded_card") && pinnedIds.contains("hide_carrier_in_expanded_card")) pinnedCards.add(hideCarrierInExpandedCard)
 
         if (pinnedCards.isNotEmpty()) {
             ListSubheader(
@@ -2722,8 +2724,8 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
 
         // 2. Unpinned Grid & Tile Density
         val unpinnedGridDensity = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (!hiddenInOreoTweakIds.contains("qs_grid_density_card") && !pinnedIds.contains("qs_grid_density_card")) unpinnedGridDensity.add(gridDensityCard)
-        if (!hiddenInOreoTweakIds.contains("enable_qqs_horizontal_scroll_card") && !pinnedIds.contains("enable_qqs_horizontal_scroll_card")) unpinnedGridDensity.add(enableQqsHorizontalScrollCard)
+        if (!hiddenInOreoTweakIds.contains("qs_grid_density_card") && !isUserHidden("qs_grid_density_card") && !pinnedIds.contains("qs_grid_density_card")) unpinnedGridDensity.add(gridDensityCard)
+        if (!hiddenInOreoTweakIds.contains("enable_qqs_horizontal_scroll_card") && !isUserHidden("enable_qqs_horizontal_scroll_card") && !pinnedIds.contains("enable_qqs_horizontal_scroll_card")) unpinnedGridDensity.add(enableQqsHorizontalScrollCard)
 
         if (unpinnedGridDensity.isNotEmpty()) {
             CollapsibleSubheaderSection(
@@ -2737,7 +2739,8 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         }
 
         // 3. Unpinned Drag Handle Options
-        if (!isClassicStyle && !pinnedIds.contains("qs_drag_handle_length_card")) {
+        val showDragHandle = !isClassicStyle && !isUserHidden("qs_drag_handle_length_card") && !pinnedIds.contains("qs_drag_handle_length_card")
+        if (showDragHandle) {
             CollapsibleSubheaderSection(
                 title = "Drag Handle Options",
                 icon = androidx.compose.material.icons.Icons.Default.DragHandle
@@ -2748,15 +2751,15 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
 
         // 4. Unpinned Header & Controls
         val unpinnedHeaderControls = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (!pinnedIds.contains("date_position_card")) unpinnedHeaderControls.add(datePositionCard)
-        if (!pinnedIds.contains("battery_percentage_location_card")) unpinnedHeaderControls.add(batteryPercentageLocationCard)
-        if (!pinnedIds.contains("settings_icon_location_card")) unpinnedHeaderControls.add(settingsIconLocationCard)
-        if (!pinnedIds.contains("edit_pencil_location_card")) unpinnedHeaderControls.add(editPencilLocationCard)
-        if (!hiddenInOreoTweakIds.contains("move_collapse_to_qqs_footer_card") && !pinnedIds.contains("move_collapse_to_qqs_footer_card")) unpinnedHeaderControls.add(moveCollapseToQqsFooterCard)
-        if (!pinnedIds.contains("enable_panel_shadows_card")) unpinnedHeaderControls.add(enablePanelShadowsCard)
-        if (!pinnedIds.contains("disable_clear_all_bg_card")) unpinnedHeaderControls.add(disableClearAllBgCard)
-        if (!pinnedIds.contains("disable_clear_all_label_card")) unpinnedHeaderControls.add(disableClearAllLabelCard)
-        if (!pinnedIds.contains("clear_all_fab_offset_card")) unpinnedHeaderControls.add(clearAllFabOffsetsCard)
+        if (!hiddenInOreoTweakIds.contains("date_position_card") && !isUserHidden("date_position_card") && !pinnedIds.contains("date_position_card")) unpinnedHeaderControls.add(datePositionCard)
+        if (!hiddenInOreoTweakIds.contains("battery_percentage_location_card") && !isUserHidden("battery_percentage_location_card") && !pinnedIds.contains("battery_percentage_location_card")) unpinnedHeaderControls.add(batteryPercentageLocationCard)
+        if (!hiddenInOreoTweakIds.contains("settings_icon_location_card") && !isUserHidden("settings_icon_location_card") && !pinnedIds.contains("settings_icon_location_card")) unpinnedHeaderControls.add(settingsIconLocationCard)
+        if (!hiddenInOreoTweakIds.contains("edit_pencil_location_card") && !isUserHidden("edit_pencil_location_card") && !pinnedIds.contains("edit_pencil_location_card")) unpinnedHeaderControls.add(editPencilLocationCard)
+        if (!hiddenInOreoTweakIds.contains("move_collapse_to_qqs_footer_card") && !isUserHidden("move_collapse_to_qqs_footer_card") && !pinnedIds.contains("move_collapse_to_qqs_footer_card")) unpinnedHeaderControls.add(moveCollapseToQqsFooterCard)
+        if (!hiddenInOreoTweakIds.contains("enable_panel_shadows_card") && !isUserHidden("enable_panel_shadows_card") && !pinnedIds.contains("enable_panel_shadows_card")) unpinnedHeaderControls.add(enablePanelShadowsCard)
+        if (!hiddenInOreoTweakIds.contains("disable_clear_all_bg_card") && !isUserHidden("disable_clear_all_bg_card") && !pinnedIds.contains("disable_clear_all_bg_card")) unpinnedHeaderControls.add(disableClearAllBgCard)
+        if (!hiddenInOreoTweakIds.contains("disable_clear_all_label_card") && !isUserHidden("disable_clear_all_label_card") && !pinnedIds.contains("disable_clear_all_label_card")) unpinnedHeaderControls.add(disableClearAllLabelCard)
+        if (!hiddenInOreoTweakIds.contains("clear_all_fab_offset_card") && !isUserHidden("clear_all_fab_offset_card") && !pinnedIds.contains("clear_all_fab_offset_card")) unpinnedHeaderControls.add(clearAllFabOffsetsCard)
 
         if (unpinnedHeaderControls.isNotEmpty()) {
             CollapsibleSubheaderSection(
@@ -2772,10 +2775,10 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
         // 5. SIM Card Carrier
         val unpinnedCarrier = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
         if (!hiddenInOreoTweakIds.contains("show_carrier_card")) {
-            if (!pinnedIds.contains("show_carrier_card")) unpinnedCarrier.add(showCarrierCard)
+            if (!isUserHidden("show_carrier_card") && !pinnedIds.contains("show_carrier_card")) unpinnedCarrier.add(showCarrierCard)
             if (showCarrier) {
-                if (!hiddenInOreoTweakIds.contains("carrier_divider_card") && !pinnedIds.contains("carrier_divider_card")) unpinnedCarrier.add(carrierDividerCard)
-                if (!hiddenInOreoTweakIds.contains("hide_carrier_in_expanded_card") && !pinnedIds.contains("hide_carrier_in_expanded_card")) unpinnedCarrier.add(hideCarrierInExpandedCard)
+                if (!hiddenInOreoTweakIds.contains("carrier_divider_card") && !isUserHidden("carrier_divider_card") && !pinnedIds.contains("carrier_divider_card")) unpinnedCarrier.add(carrierDividerCard)
+                if (!hiddenInOreoTweakIds.contains("hide_carrier_in_expanded_card") && !isUserHidden("hide_carrier_in_expanded_card") && !pinnedIds.contains("hide_carrier_in_expanded_card")) unpinnedCarrier.add(hideCarrierInExpandedCard)
             }
         }
 
@@ -2792,9 +2795,9 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
 
         // 6. Brightness Controls
         val unpinnedBrightnessControls = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (!pinnedIds.contains("hide_brightness_percentage_card")) unpinnedBrightnessControls.add(hideBrightnessPercentageCard)
-        if (!pinnedIds.contains("hide_brightness_icon_card")) unpinnedBrightnessControls.add(hideBrightnessIconCard)
-        if (!pinnedIds.contains("show_brightness_plus_minus_card")) unpinnedBrightnessControls.add(showBrightnessPlusMinusCard)
+        if (!isUserHidden("hide_brightness_percentage_card") && !pinnedIds.contains("hide_brightness_percentage_card")) unpinnedBrightnessControls.add(hideBrightnessPercentageCard)
+        if (!isUserHidden("hide_brightness_icon_card") && !pinnedIds.contains("hide_brightness_icon_card")) unpinnedBrightnessControls.add(hideBrightnessIconCard)
+        if (!isUserHidden("show_brightness_plus_minus_card") && !pinnedIds.contains("show_brightness_plus_minus_card")) unpinnedBrightnessControls.add(showBrightnessPlusMinusCard)
 
         if (unpinnedBrightnessControls.isNotEmpty()) {
             CollapsibleSubheaderSection(
@@ -2809,11 +2812,11 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
 
         // 7. Unpinned Typography & Font Sizes
         val unpinnedTypography = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (!pinnedIds.contains("qs_tile_font_size_card")) unpinnedTypography.add(tileFontSizeCard)
-        if (!isClassicStyle && !pinnedIds.contains("hide_date_in_expanded_card")) unpinnedTypography.add(hideDateInExpandedCard)
-        if (!pinnedIds.contains("disable_labels_in_expanded_card")) unpinnedTypography.add(disableLabelsInExpandedCard)
-        if (!isClassicStyle && !pinnedIds.contains("hide_qqs_drag_handle_card")) unpinnedTypography.add(hideQqsDragHandleCard)
-        if (!pinnedIds.contains("hide_qqs_empty_notif_labels_card")) unpinnedTypography.add(hideQqsEmptyNotifLabelsCard)
+        if (!isUserHidden("qs_tile_font_size_card") && !pinnedIds.contains("qs_tile_font_size_card")) unpinnedTypography.add(tileFontSizeCard)
+        if (!isClassicStyle && !isUserHidden("hide_date_in_expanded_card") && !pinnedIds.contains("hide_date_in_expanded_card")) unpinnedTypography.add(hideDateInExpandedCard)
+        if (!isUserHidden("disable_labels_in_expanded_card") && !pinnedIds.contains("disable_labels_in_expanded_card")) unpinnedTypography.add(disableLabelsInExpandedCard)
+        if (!isClassicStyle && !isUserHidden("hide_qqs_drag_handle_card") && !pinnedIds.contains("hide_qqs_drag_handle_card")) unpinnedTypography.add(hideQqsDragHandleCard)
+        if (!isUserHidden("hide_qqs_empty_notif_labels_card") && !pinnedIds.contains("hide_qqs_empty_notif_labels_card")) unpinnedTypography.add(hideQqsEmptyNotifLabelsCard)
 
         if (unpinnedTypography.isNotEmpty()) {
             CollapsibleSubheaderSection(
@@ -2824,6 +2827,17 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                     card(CustomizeCardShapes.getShapeForIndex(index, unpinnedTypography.size))
                 }
             }
+        }
+
+        if (pinnedCards.isEmpty() &&
+            unpinnedGridDensity.isEmpty() &&
+            !showDragHandle &&
+            unpinnedHeaderControls.isEmpty() &&
+            unpinnedCarrier.isEmpty() &&
+            unpinnedBrightnessControls.isEmpty() &&
+            unpinnedTypography.isEmpty()
+        ) {
+            AllSectionFeaturesHiddenCard(sectionTitle = "Quick Settings Tweaks")
         }
     }
 }

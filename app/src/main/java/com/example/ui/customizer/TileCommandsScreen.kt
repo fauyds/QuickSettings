@@ -216,6 +216,7 @@ fun TileCommandsScreen(
             }
             SettingsCard(
                 shape = ExpressiveCardShapes.SingleCard,
+                canPin = false,
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(ExpressiveCardShapes.SingleCard)
@@ -297,6 +298,7 @@ fun TileCommandsScreen(
         item {
             SettingsCard(
                 shape = ExpressiveCardShapes.SingleCard,
+                canPin = false,
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("custom_qs_manager_card")
@@ -447,6 +449,7 @@ fun TileCommandsScreen(
         item {
             SettingsCard(
                 shape = ExpressiveCardShapes.SingleCard,
+                canPin = false,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
@@ -532,6 +535,7 @@ fun TileCommandsScreen(
         item {
             SettingsCard(
                 shape = ExpressiveCardShapes.SingleCard,
+                canPin = false,
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("tile_cmd_engine_card")
@@ -626,6 +630,7 @@ fun TileCommandsScreen(
         item {
             SettingsCard(
                 shape = ExpressiveCardShapes.SingleCard,
+                canPin = false,
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("tile_cmd_enable_all_card")
@@ -755,6 +760,7 @@ fun TileCommandCardItem(
 
     SettingsCard(
         shape = shape,
+        canPin = false,
         modifier = Modifier
             .fillMaxWidth()
             .testTag("tile_cmd_card_${tile.id}")

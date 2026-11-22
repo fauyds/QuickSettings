@@ -214,6 +214,7 @@ fun TileVisibilityScreen(
         // Smart Suggestion Action Card
         SettingsCard(
             shape = VisibilityCardShapes.SingleCard,
+            canPin = false,
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -341,6 +342,7 @@ fun TileVisibilityScreen(
 
             SettingsCard(
                 shape = cardShape,
+                canPin = false,
                 colors = CardDefaults.cardColors(
                     containerColor = if (isHidden) screenBg else cardBg
                 ),

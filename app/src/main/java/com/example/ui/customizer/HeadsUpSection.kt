@@ -99,6 +99,8 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
     }).collectAsState()
 
     val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.HEADS_UP, context).collectAsState()
+    val hiddenIds by PinnedCardsManager.getHiddenCardIds().collectAsState()
+    val isHidden = { id: String -> HiddenFeatureCatalog.isCardHidden(id, hiddenIds) }
 
     // 4-Directional Swipe Actions
     val swipeUpAction by PanelPreferences.headsUpSwipeUpAction.collectAsState()
@@ -858,15 +860,15 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
     ) {
         // 1. Pinned Cards at the very top of Heads-Up
         val pinnedCards = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (pinnedIds.contains("heads_up_overlay_engine_card")) pinnedCards.add(masterToggleCard)
-        if (!enableHeadsUpOverlay && pinnedIds.contains("system_heads_up_card")) pinnedCards.add(systemHeadsUpCard)
+        if (!isHidden("heads_up_overlay_engine_card") && pinnedIds.contains("heads_up_overlay_engine_card")) pinnedCards.add(masterToggleCard)
+        if (!enableHeadsUpOverlay && !isHidden("system_heads_up_card") && pinnedIds.contains("system_heads_up_card")) pinnedCards.add(systemHeadsUpCard)
         if (enableHeadsUpOverlay) {
-            if (pinnedIds.contains("heads_up_permission_card")) pinnedCards.add(permissionStatusCard)
-            if (pinnedIds.contains("heads_up_test_card")) pinnedCards.add(testPreviewCard)
-            if (pinnedIds.contains("heads_up_timeout_card")) pinnedCards.add(timeoutSliderCard)
-            if (pinnedIds.contains("heads_up_swipe_actions_card")) pinnedCards.add(swipeActionsCard)
-            if (pinnedIds.contains("heads_up_tap_actions_card")) pinnedCards.add(tapActionsCard)
-            if (hasAnySnoozeAction && pinnedIds.contains("heads_up_snooze_duration_card")) pinnedCards.add(snoozeDurationCard)
+            if (!isHidden("heads_up_permission_card") && pinnedIds.contains("heads_up_permission_card")) pinnedCards.add(permissionStatusCard)
+            if (!isHidden("heads_up_test_card") && pinnedIds.contains("heads_up_test_card")) pinnedCards.add(testPreviewCard)
+            if (!isHidden("heads_up_timeout_card") && pinnedIds.contains("heads_up_timeout_card")) pinnedCards.add(timeoutSliderCard)
+            if (!isHidden("heads_up_swipe_actions_card") && pinnedIds.contains("heads_up_swipe_actions_card")) pinnedCards.add(swipeActionsCard)
+            if (!isHidden("heads_up_tap_actions_card") && pinnedIds.contains("heads_up_tap_actions_card")) pinnedCards.add(tapActionsCard)
+            if (hasAnySnoozeAction && !isHidden("heads_up_snooze_duration_card") && pinnedIds.contains("heads_up_snooze_duration_card")) pinnedCards.add(snoozeDurationCard)
         }
 
         if (pinnedCards.isNotEmpty()) {
@@ -881,9 +883,9 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
 
         // 2. Unpinned Group 1: Overlay Engine & Service
         val engineGroup = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (!pinnedIds.contains("heads_up_overlay_engine_card")) engineGroup.add(masterToggleCard)
-        if (!enableHeadsUpOverlay && !pinnedIds.contains("system_heads_up_card")) engineGroup.add(systemHeadsUpCard)
-        if (enableHeadsUpOverlay && !pinnedIds.contains("heads_up_permission_card")) engineGroup.add(permissionStatusCard)
+        if (!isHidden("heads_up_overlay_engine_card") && !pinnedIds.contains("heads_up_overlay_engine_card")) engineGroup.add(masterToggleCard)
+        if (!enableHeadsUpOverlay && !isHidden("system_heads_up_card") && !pinnedIds.contains("system_heads_up_card")) engineGroup.add(systemHeadsUpCard)
+        if (enableHeadsUpOverlay && !isHidden("heads_up_permission_card") && !pinnedIds.contains("heads_up_permission_card")) engineGroup.add(permissionStatusCard)
 
         if (engineGroup.isNotEmpty()) {
             ListSubheader(
@@ -895,13 +897,15 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
             }
         }
 
+        var visibleAdditionalCount = 0
         if (enableHeadsUpOverlay) {
             // 3. Unpinned Group 2: Display & Timeout
             val displayGroup = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-            if (!pinnedIds.contains("heads_up_test_card")) displayGroup.add(testPreviewCard)
-            if (!pinnedIds.contains("heads_up_timeout_card")) displayGroup.add(timeoutSliderCard)
+            if (!isHidden("heads_up_test_card") && !pinnedIds.contains("heads_up_test_card")) displayGroup.add(testPreviewCard)
+            if (!isHidden("heads_up_timeout_card") && !pinnedIds.contains("heads_up_timeout_card")) displayGroup.add(timeoutSliderCard)
 
             if (displayGroup.isNotEmpty()) {
+                visibleAdditionalCount += displayGroup.size
                 ListSubheader(
                     text = "Display & Timeout",
                     icon = Icons.Default.Timer
@@ -913,10 +917,11 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
 
             // 4. Unpinned Group 3: Gestures & Interactions
             val gesturesGroup = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-            if (!pinnedIds.contains("heads_up_swipe_actions_card")) gesturesGroup.add(swipeActionsCard)
-            if (!pinnedIds.contains("heads_up_tap_actions_card")) gesturesGroup.add(tapActionsCard)
+            if (!isHidden("heads_up_swipe_actions_card") && !pinnedIds.contains("heads_up_swipe_actions_card")) gesturesGroup.add(swipeActionsCard)
+            if (!isHidden("heads_up_tap_actions_card") && !pinnedIds.contains("heads_up_tap_actions_card")) gesturesGroup.add(tapActionsCard)
 
             if (gesturesGroup.isNotEmpty()) {
+                visibleAdditionalCount += gesturesGroup.size
                 ListSubheader(
                     text = "Gestures & Interactions",
                     icon = Icons.Default.TouchApp
@@ -927,13 +932,18 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
             }
 
             // 5. Unpinned Group 4: Snooze Control
-            if (hasAnySnoozeAction && !pinnedIds.contains("heads_up_snooze_duration_card")) {
+            if (hasAnySnoozeAction && !isHidden("heads_up_snooze_duration_card") && !pinnedIds.contains("heads_up_snooze_duration_card")) {
+                visibleAdditionalCount += 1
                 ListSubheader(
                     text = "Snooze Control",
                     icon = Icons.Default.Snooze
                 )
                 snoozeDurationCard(CustomizeCardShapes.SingleCard)
             }
+        }
+
+        if (pinnedCards.isEmpty() && engineGroup.isEmpty() && visibleAdditionalCount == 0) {
+            AllSectionFeaturesHiddenCard(sectionTitle = "Heads-Up")
         }
     }
 }

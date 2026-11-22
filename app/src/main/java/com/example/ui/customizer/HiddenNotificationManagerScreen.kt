@@ -205,6 +205,7 @@ fun HiddenNotificationManagerScreen(
             // Status Info Card
             SettingsCard(
                 shape = NotifHubCardShapes.SingleCard,
+                canPin = false,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -266,6 +267,7 @@ fun HiddenNotificationManagerScreen(
             if (liveOngoingList.isEmpty()) {
                 SettingsCard(
                     shape = NotifHubCardShapes.SingleCard,
+                    canPin = false,
                     colors = CardDefaults.cardColors(containerColor = cardBg),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -291,6 +293,7 @@ fun HiddenNotificationManagerScreen(
 
                     SettingsCard(
                         shape = cardShape,
+                        canPin = false,
                         colors = CardDefaults.cardColors(
                             containerColor = if (isHidden) colorScheme.surfaceContainerLowest.copy(alpha = 0.5f) else colorScheme.surfaceContainer
                         ),
@@ -439,6 +442,7 @@ fun HiddenNotificationManagerScreen(
             if (blacklistRules.isEmpty()) {
                 SettingsCard(
                     shape = NotifHubCardShapes.SingleCard,
+                    canPin = false,
                     colors = CardDefaults.cardColors(containerColor = cardBg),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -461,6 +465,7 @@ fun HiddenNotificationManagerScreen(
 
                     SettingsCard(
                         shape = ruleCardShape,
+                        canPin = false,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(

@@ -57,6 +57,7 @@ fun HeadsUpDesignSection(modifier: Modifier = Modifier) {
     val topMargin by PanelPreferences.headsUpTopMargin.collectAsState()
 
     val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.HEADS_UP_DESIGN, context).collectAsState()
+    val hiddenIds by PinnedCardsManager.getHiddenCardIds().collectAsState()
 
     // 1. Test Notification Card
     val testNotificationCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
@@ -547,25 +548,30 @@ fun HeadsUpDesignSection(modifier: Modifier = Modifier) {
         "heads_up_top_margin_card" to topMarginCard
     )
 
-    val pinnedCards = allCards.filter { pinnedIds.contains(it.first) }.map { it.second }
-    val unpinnedCards = allCards.filter { !pinnedIds.contains(it.first) }.map { it.second }
+    val visibleCards = allCards.filter { !HiddenFeatureCatalog.isCardHidden(it.first, hiddenIds) }
+    val pinnedCards = visibleCards.filter { pinnedIds.contains(it.first) }.map { it.second }
+    val unpinnedCards = visibleCards.filter { !pinnedIds.contains(it.first) }.map { it.second }
 
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(CustomizeCardShapes.CardSpacing)
     ) {
-        if (pinnedCards.isNotEmpty()) {
-            ListSubheader(
-                text = "Pinned",
-                icon = Icons.Default.PushPin
-            )
-            pinnedCards.forEachIndexed { index, card ->
-                card(CustomizeCardShapes.getShapeForIndex(index, pinnedCards.size))
+        if (visibleCards.isEmpty()) {
+            AllSectionFeaturesHiddenCard(sectionTitle = "Heads-Up Design")
+        } else {
+            if (pinnedCards.isNotEmpty()) {
+                ListSubheader(
+                    text = "Pinned",
+                    icon = Icons.Default.PushPin
+                )
+                pinnedCards.forEachIndexed { index, card ->
+                    card(CustomizeCardShapes.getShapeForIndex(index, pinnedCards.size))
+                }
             }
-        }
 
-        unpinnedCards.forEachIndexed { index, card ->
-            card(CustomizeCardShapes.getShapeForIndex(index, unpinnedCards.size))
+            unpinnedCards.forEachIndexed { index, card ->
+                card(CustomizeCardShapes.getShapeForIndex(index, unpinnedCards.size))
+            }
         }
     }
 }

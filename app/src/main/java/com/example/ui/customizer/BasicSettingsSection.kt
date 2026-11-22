@@ -73,6 +73,8 @@ fun BasicSettingsSection(modifier: Modifier = Modifier) {
     var showImportDialog by remember { mutableStateOf(false) }
 
     val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.BASIC, context).collectAsState()
+    val hiddenIds by PinnedCardsManager.getHiddenCardIds().collectAsState()
+    val isHidden = { id: String -> HiddenFeatureCatalog.isCardHidden(id, hiddenIds) }
 
     val themeModeCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("theme_mode_card", CustomizeCategory.BASIC) {
@@ -288,10 +290,10 @@ fun BasicSettingsSection(modifier: Modifier = Modifier) {
     ) {
         // 1. Pinned Cards at the very top of Basic Settings
         val pinnedCards = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (pinnedIds.contains("theme_mode_card")) pinnedCards.add(themeModeCard)
-        if (pinnedIds.contains("collapse_expand_options_card")) pinnedCards.add(collapseToggleCard)
-        if (pinnedIds.contains("collapse_expand_subheaders_card")) pinnedCards.add(collapseSubheadersCard)
-        if (pinnedIds.contains("import_export_card")) pinnedCards.add(importExportCard)
+        if (!isHidden("theme_mode_card") && pinnedIds.contains("theme_mode_card")) pinnedCards.add(themeModeCard)
+        if (!isHidden("collapse_expand_options_card") && pinnedIds.contains("collapse_expand_options_card")) pinnedCards.add(collapseToggleCard)
+        if (!isHidden("collapse_expand_subheaders_card") && pinnedIds.contains("collapse_expand_subheaders_card")) pinnedCards.add(collapseSubheadersCard)
+        if (!isHidden("import_export_card") && pinnedIds.contains("import_export_card")) pinnedCards.add(importExportCard)
 
         if (pinnedCards.isNotEmpty()) {
             ListSubheader(
@@ -305,9 +307,9 @@ fun BasicSettingsSection(modifier: Modifier = Modifier) {
 
         // 2. Unpinned Appearance & Theme Cards
         val unpinnedAppearance = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (!pinnedIds.contains("theme_mode_card")) unpinnedAppearance.add(themeModeCard)
-        if (!pinnedIds.contains("collapse_expand_options_card")) unpinnedAppearance.add(collapseToggleCard)
-        if (!pinnedIds.contains("collapse_expand_subheaders_card")) unpinnedAppearance.add(collapseSubheadersCard)
+        if (!isHidden("theme_mode_card") && !pinnedIds.contains("theme_mode_card")) unpinnedAppearance.add(themeModeCard)
+        if (!isHidden("collapse_expand_options_card") && !pinnedIds.contains("collapse_expand_options_card")) unpinnedAppearance.add(collapseToggleCard)
+        if (!isHidden("collapse_expand_subheaders_card") && !pinnedIds.contains("collapse_expand_subheaders_card")) unpinnedAppearance.add(collapseSubheadersCard)
 
         if (unpinnedAppearance.isNotEmpty()) {
             ListSubheader(
@@ -320,13 +322,17 @@ fun BasicSettingsSection(modifier: Modifier = Modifier) {
         }
 
         // 3. Unpinned Configuration Backup Card
-        if (!pinnedIds.contains("import_export_card")) {
+        if (!isHidden("import_export_card") && !pinnedIds.contains("import_export_card")) {
             CollapsibleSubheaderSection(
                 title = "Configuration Backup",
                 icon = Icons.Default.SyncAlt
             ) {
                 importExportCard(CustomizeCardShapes.SingleCard)
             }
+        }
+
+        if (pinnedCards.isEmpty() && unpinnedAppearance.isEmpty() && isHidden("import_export_card")) {
+            AllSectionFeaturesHiddenCard(sectionTitle = "Basic Settings")
         }
     }
 

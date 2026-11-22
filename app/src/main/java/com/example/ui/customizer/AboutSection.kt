@@ -55,6 +55,8 @@ fun AboutSection(modifier: Modifier = Modifier) {
     val telegramUrl = "https://t.me/allphonecustomization"
 
     val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.ABOUT, context).collectAsState()
+    val hiddenIds by PinnedCardsManager.getHiddenCardIds().collectAsState()
+    val isHidden = { id: String -> HiddenFeatureCatalog.isCardHidden(id, hiddenIds) }
 
     val appHeaderCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("about_app_header_card", CustomizeCategory.ABOUT) {
@@ -348,10 +350,10 @@ fun AboutSection(modifier: Modifier = Modifier) {
     ) {
         // 1. Pinned Cards Section at the very top of About
         val pinnedCards = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (pinnedIds.contains("about_app_header_card")) pinnedCards.add(appHeaderCard)
-        if (pinnedIds.contains("about_developer_card")) pinnedCards.add(developerCard)
-        if (pinnedIds.contains("about_telegram_card")) pinnedCards.add(telegramCard)
-        if (pinnedIds.contains("about_features_card")) pinnedCards.add(featuresCard)
+        if (!isHidden("about_app_header_card") && pinnedIds.contains("about_app_header_card")) pinnedCards.add(appHeaderCard)
+        if (!isHidden("about_developer_card") && pinnedIds.contains("about_developer_card")) pinnedCards.add(developerCard)
+        if (!isHidden("about_telegram_card") && pinnedIds.contains("about_telegram_card")) pinnedCards.add(telegramCard)
+        if (!isHidden("about_features_card") && pinnedIds.contains("about_features_card")) pinnedCards.add(featuresCard)
 
         if (pinnedCards.isNotEmpty()) {
             ListSubheader(
@@ -364,7 +366,7 @@ fun AboutSection(modifier: Modifier = Modifier) {
         }
 
         // 2. Unpinned App Information
-        if (!pinnedIds.contains("about_app_header_card")) {
+        if (!isHidden("about_app_header_card") && !pinnedIds.contains("about_app_header_card")) {
             CollapsibleSubheaderSection(
                 title = "App Information",
                 icon = Icons.Default.Info
@@ -374,7 +376,7 @@ fun AboutSection(modifier: Modifier = Modifier) {
         }
 
         // 3. Unpinned Developer & Creator
-        if (!pinnedIds.contains("about_developer_card")) {
+        if (!isHidden("about_developer_card") && !pinnedIds.contains("about_developer_card")) {
             CollapsibleSubheaderSection(
                 title = "Developer & Creator",
                 icon = Icons.Default.Person
@@ -384,7 +386,7 @@ fun AboutSection(modifier: Modifier = Modifier) {
         }
 
         // 4. Unpinned Community & Support
-        if (!pinnedIds.contains("about_telegram_card")) {
+        if (!isHidden("about_telegram_card") && !pinnedIds.contains("about_telegram_card")) {
             CollapsibleSubheaderSection(
                 title = "Community & Support",
                 icon = Icons.Default.Send
@@ -394,13 +396,21 @@ fun AboutSection(modifier: Modifier = Modifier) {
         }
 
         // 5. Unpinned Features Overview
-        if (!pinnedIds.contains("about_features_card")) {
+        if (!isHidden("about_features_card") && !pinnedIds.contains("about_features_card")) {
             CollapsibleSubheaderSection(
                 title = "Features Overview",
                 icon = Icons.Default.Star
             ) {
                 featuresCard(CustomizeCardShapes.SingleCard)
             }
+        }
+
+        if (isHidden("about_app_header_card") &&
+            isHidden("about_developer_card") &&
+            isHidden("about_telegram_card") &&
+            isHidden("about_features_card")
+        ) {
+            AllSectionFeaturesHiddenCard(sectionTitle = "About")
         }
     }
 }

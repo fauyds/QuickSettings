@@ -91,7 +91,7 @@ data class SavedTheme(
                     showCustomHeaderImage = json.optBoolean("show_custom_header_image", false),
                     customHeaderImageUri = json.optString("custom_header_image_uri", ""),
                     showCustomHeaderMonetGradient = json.optBoolean("show_custom_header_monet_gradient", false),
-                    customHeaderMonetGradientHeight = json.optInt("custom_header_monet_gradient_height", 120),
+                    customHeaderMonetGradientHeight = json.optDouble("custom_header_monet_gradient_height", 120.0).toInt(),
                     headerGradientColorTertiary = json.optBoolean("elem_header_gradient_tertiary", false),
                     slidersColorTertiary = json.optBoolean("elem_sliders_tertiary", false),
                     qsTilesColorTertiary = json.optBoolean("elem_qs_tiles_tertiary", false),
@@ -116,7 +116,8 @@ object ThemeManager {
         "initial_setup_completed",
         "privilege_mode",
         "firebase_appcheck_debug_token",
-        "saved_themes_json_array"
+        "saved_themes_json_array",
+        "hidden_features"
     )
 
     // Flow of saved themes - starts EMPTY, strictly NO preset themes
@@ -163,6 +164,33 @@ object ThemeManager {
         isInitialized = true
     }
 
+    private fun buildSettingsSnapshotJson(context: Context): JSONObject {
+        PanelPreferences.saveStylePreferences(context, PanelPreferences.panelStyle.value)
+        val panelPrefs = context.getSharedPreferences(PanelPreferences.PREFS_NAME, Context.MODE_PRIVATE)
+        val settingsJson = JSONObject()
+
+        for ((key, value) in panelPrefs.all) {
+            if (key in EXCLUDED_KEYS) continue
+            when (value) {
+                is Boolean -> settingsJson.put(key, value)
+                is Int -> settingsJson.put(key, value)
+                is Long -> settingsJson.put(key, value)
+                is Float -> settingsJson.put(key, value.toDouble())
+                is String -> settingsJson.put(key, value)
+                is Set<*> -> {
+                    val arr = JSONArray()
+                    for (item in value) {
+                        arr.put(item.toString())
+                    }
+                    settingsJson.put(key, arr)
+                }
+            }
+        }
+
+        PanelPreferences.populateAllQsDesignAndTweaksToJson(context, settingsJson)
+        return settingsJson
+    }
+
     /**
      * Saves the current customization settings snapshot into a new user theme.
      * No preset themes are created.
@@ -170,36 +198,12 @@ object ThemeManager {
     fun saveCurrentSettingsAsTheme(context: Context, themeName: String): SavedTheme {
         if (!isInitialized) init(context)
 
-        val panelPrefs = context.getSharedPreferences(PanelPreferences.PREFS_NAME, Context.MODE_PRIVATE)
-        val allSettings = panelPrefs.all
-
-        val settingsJson = JSONObject()
-        var count = 0
-
-        for ((key, value) in allSettings) {
-            if (key in EXCLUDED_KEYS) continue
-            when (value) {
-                is Boolean -> { settingsJson.put(key, value); count++ }
-                is Int -> { settingsJson.put(key, value); count++ }
-                is Long -> { settingsJson.put(key, value); count++ }
-                is Float -> { settingsJson.put(key, value.toDouble()); count++ }
-                is String -> { settingsJson.put(key, value); count++ }
-                is Set<*> -> {
-                    val arr = JSONArray()
-                    for (item in value) {
-                        arr.put(item.toString())
-                    }
-                    settingsJson.put(key, arr)
-                    count++
-                }
-            }
-        }
-
+        val settingsJson = buildSettingsSnapshotJson(context)
         val newTheme = SavedTheme(
             id = UUID.randomUUID().toString(),
             name = themeName.trim().ifEmpty { "Saved Theme" },
             timestamp = System.currentTimeMillis(),
-            settingsCount = count,
+            settingsCount = settingsJson.length(),
             jsonPayload = settingsJson.toString()
         )
 
@@ -220,48 +224,14 @@ object ThemeManager {
             val panelPrefs = context.getSharedPreferences(PanelPreferences.PREFS_NAME, Context.MODE_PRIVATE)
             val editor = panelPrefs.edit()
 
+            // Remove existing theme-managed & style-scoped keys so defaults never leak between themes
+            PanelPreferences.clearQsDesignAndTweaksFromEditor(editor, panelPrefs.all.keys)
+
             val keys = settingsJson.keys()
             while (keys.hasNext()) {
                 val key = keys.next()
-                if (key in EXCLUDED_KEYS) continue
-                when (val value = settingsJson.get(key)) {
-                    is Boolean -> editor.putBoolean(key, value)
-                    is Number -> {
-                        // Handle numbers robustly whether stored as Int, Long, or Float
-                        val isIntKey = key.contains("custom_color") || key.contains("min_") || key.contains("max_") || 
-                            key.contains("_count") || key == "qqs_tile_size" || key == "clear_all_fab_size" || 
-                            key == "custom_header_monet_gradient_height" || key == "detector_cooldown_ms" || 
-                            key == "panel_replacement_delay_ms"
-
-                        val isFloatKey = !isIntKey && (
-                            value.toDouble() % 1.0 != 0.0 ||
-                            key.contains("_corner") || key.contains("_thickness") || key.contains("_width") || 
-                            key.contains("_radius") || key.contains("_alpha") || key.contains("_spacing") || 
-                            key.contains("_scale") || key.contains("_dp") || key.contains("_elevation") || 
-                            key.contains("_offset") || key.contains("_height") || key.contains("_hue") || 
-                            key.contains("_sat") || key.contains("_val") || key.contains("_opacity") ||
-                            key.contains("font_size") || key.contains("wobbliness") || key.contains("wavelength")
-                        )
-
-                        if (isIntKey) {
-                            editor.putInt(key, value.toInt())
-                        } else if (isFloatKey) {
-                            editor.putFloat(key, value.toFloat())
-                        } else if (value is Long) {
-                            editor.putLong(key, value.toLong())
-                        } else {
-                            editor.putInt(key, value.toInt())
-                        }
-                    }
-                    is String -> editor.putString(key, value)
-                    is JSONArray -> {
-                        val set = mutableSetOf<String>()
-                        for (i in 0 until value.length()) {
-                            set.add(value.getString(i))
-                        }
-                        editor.putStringSet(key, set)
-                    }
-                }
+                if (key in EXCLUDED_KEYS || settingsJson.isNull(key)) continue
+                PanelPreferences.writeJsonValueToEditor(editor, key, settingsJson.get(key))
             }
             editor.apply()
 
@@ -287,33 +257,11 @@ object ThemeManager {
         if (index == -1) return false
 
         val existingTheme = currentList[index]
-        val panelPrefs = context.getSharedPreferences(PanelPreferences.PREFS_NAME, Context.MODE_PRIVATE)
-        val allSettings = panelPrefs.all
-        val settingsJson = JSONObject()
-        var count = 0
-
-        for ((key, value) in allSettings) {
-            if (key in EXCLUDED_KEYS) continue
-            when (value) {
-                is Boolean -> { settingsJson.put(key, value); count++ }
-                is Int -> { settingsJson.put(key, value); count++ }
-                is Long -> { settingsJson.put(key, value); count++ }
-                is Float -> { settingsJson.put(key, value.toDouble()); count++ }
-                is String -> { settingsJson.put(key, value); count++ }
-                is Set<*> -> {
-                    val arr = JSONArray()
-                    for (item in value) {
-                        arr.put(item.toString())
-                    }
-                    settingsJson.put(key, arr)
-                    count++
-                }
-            }
-        }
+        val settingsJson = buildSettingsSnapshotJson(context)
 
         val updatedTheme = existingTheme.copy(
             timestamp = System.currentTimeMillis(),
-            settingsCount = count,
+            settingsCount = settingsJson.length(),
             jsonPayload = settingsJson.toString()
         )
 
@@ -347,6 +295,14 @@ object ThemeManager {
         val currentList = _savedThemes.value
         val updatedList = currentList.filter { it.id != themeId }
         if (updatedList.size == currentList.size) return false
+
+        if (_activeThemeId.value == themeId) {
+            _activeThemeId.value = null
+            context.getSharedPreferences(PREFS_THEMES_STORE, Context.MODE_PRIVATE)
+                .edit()
+                .remove(KEY_ACTIVE_THEME_ID)
+                .apply()
+        }
 
         _savedThemes.value = updatedList
         persistThemes(context, updatedList)

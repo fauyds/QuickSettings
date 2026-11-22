@@ -929,6 +929,7 @@ object PanelPreferences {
     private const val KEY_HIDE_DATE_IN_EXPANDED = "hide_date_in_expanded"
     private const val KEY_DISABLE_LABELS_IN_EXPANDED = "disable_labels_in_expanded"
     private const val KEY_PINNED_FEATURES = "pinned_features"
+    private const val KEY_HIDDEN_FEATURES = "hidden_features"
     private const val KEY_WAVY_THICKNESS = "wavy_thickness"
     private const val KEY_WAVY_WOBBLINESS = "wavy_wobbliness"
     private const val KEY_WAVY_WAVELENGTH = "wavy_wavelength"
@@ -1656,6 +1657,9 @@ object PanelPreferences {
 
     private val _pinnedFeatures = MutableStateFlow<List<String>>(emptyList())
     val pinnedFeatures: StateFlow<List<String>> = _pinnedFeatures.asStateFlow()
+
+    private val _hiddenFeatures = MutableStateFlow<List<String>>(emptyList())
+    val hiddenFeatures: StateFlow<List<String>> = _hiddenFeatures.asStateFlow()
 
     private val _datePosition = MutableStateFlow(DatePosition.BELOW_TIME)
     val datePosition: StateFlow<DatePosition> = _datePosition.asStateFlow()
@@ -2469,6 +2473,7 @@ object PanelPreferences {
         _hideDateInExpanded.value = prefs.getBoolean(KEY_HIDE_DATE_IN_EXPANDED, false)
         _disableLabelsInExpanded.value = prefs.getBoolean(KEY_DISABLE_LABELS_IN_EXPANDED, false)
         _pinnedFeatures.value = (prefs.getStringSet(KEY_PINNED_FEATURES, emptySet()) ?: emptySet()).toList()
+        _hiddenFeatures.value = (prefs.getStringSet(KEY_HIDDEN_FEATURES, emptySet()) ?: emptySet()).toList()
         _wavyThickness.value = prefs.getFloat(KEY_WAVY_THICKNESS, 4.0f)
         _wavyWobbliness.value = prefs.getFloat(KEY_WAVY_WOBBLINESS, 3.5f)
         _wavyWavelength.value = prefs.getFloat(KEY_WAVY_WAVELENGTH, 26.0f)
@@ -2667,12 +2672,12 @@ object PanelPreferences {
             QsPanelStyle.ANDROID_OREO, QsPanelStyle.ANDROID_MARSHMALLOW, QsPanelStyle.ANDROID_KITKAT -> QsGridLayout.GRID_3X3
         }
         val defaultQqsTileSize = when (style) {
-            QsPanelStyle.DEFAULT -> 18
+            QsPanelStyle.DEFAULT -> 48
             QsPanelStyle.ANDROID_OREO -> 54
             else -> 24
         }
         val defaultQqsTileCount = when (style) {
-            QsPanelStyle.DEFAULT -> 4
+            QsPanelStyle.DEFAULT -> 6
             QsPanelStyle.ANDROID_OREO -> 6
             else -> 5
         }
@@ -2703,174 +2708,179 @@ object PanelPreferences {
         val defaultTileOutline = (style == QsPanelStyle.ANDROID_OREO)
         val defaultUseClearAllFab = (style == QsPanelStyle.DEFAULT)
 
+        fun readStyleBool(key: String, default: Boolean): Boolean {
+            val globalVal = prefs.getBoolean(key, default)
+            val styleKey = getStyleKey(key, style)
+            return if (isInitialized && prefs.contains(styleKey)) prefs.getBoolean(styleKey, globalVal)
+            else if (isInitialized) globalVal
+            else default
+        }
+
+        fun readStyleInt(key: String, default: Int): Int {
+            val globalVal = prefs.getInt(key, default)
+            val styleKey = getStyleKey(key, style)
+            return if (isInitialized && prefs.contains(styleKey)) prefs.getInt(styleKey, globalVal)
+            else if (isInitialized) globalVal
+            else default
+        }
+
+        fun readStyleFloat(key: String, default: Float): Float {
+            val globalVal = prefs.getFloat(key, default)
+            val styleKey = getStyleKey(key, style)
+            return if (isInitialized && prefs.contains(styleKey)) prefs.getFloat(styleKey, globalVal)
+            else if (isInitialized) globalVal
+            else default
+        }
+
+        fun readStyleString(key: String, default: String): String {
+            val globalVal = getSafeString(prefs, key, default) ?: default
+            val styleKey = getStyleKey(key, style)
+            return if (isInitialized && prefs.contains(styleKey)) getSafeString(prefs, styleKey, globalVal) ?: globalVal
+            else if (isInitialized) globalVal
+            else default
+        }
+
         val targetGridLayout = if (isInitialized) {
-            val gridStr = prefs.getString(getStyleKey(KEY_GRID_LAYOUT, style), defaultGridLayout.id)
-            QsGridLayout.fromId(gridStr)
+            QsGridLayout.fromId(readStyleString(KEY_GRID_LAYOUT, defaultGridLayout.id))
         } else defaultGridLayout
 
         val targetQqsTileSize = if (isInitialized) {
-            val size = prefs.getInt(getStyleKey(KEY_QQS_TILE_SIZE, style), defaultQqsTileSize)
-            if (style == QsPanelStyle.ANDROID_OREO && size == 24) defaultQqsTileSize else size
+            val size = readStyleInt(KEY_QQS_TILE_SIZE, defaultQqsTileSize)
+            when {
+                style == QsPanelStyle.ANDROID_OREO && size == 24 -> defaultQqsTileSize
+                style == QsPanelStyle.DEFAULT && size !in 32..72 -> defaultQqsTileSize
+                else -> size
+            }
         } else defaultQqsTileSize
-        val targetQqsTileCount = if (isInitialized) prefs.getInt(getStyleKey(KEY_QQS_TILE_COUNT, style), defaultQqsTileCount) else defaultQqsTileCount
-        val targetMediaInNotif = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SHOW_MEDIA_IN_NOTIFICATION_CONTAINER, style), defaultMediaInNotif) else defaultMediaInNotif
+        val targetQqsTileCount = if (isInitialized) readStyleInt(KEY_QQS_TILE_COUNT, defaultQqsTileCount) else defaultQqsTileCount
+        val targetMediaInNotif = if (isInitialized) readStyleBool(KEY_SHOW_MEDIA_IN_NOTIFICATION_CONTAINER, defaultMediaInNotif) else defaultMediaInNotif
         val targetMediaNotifStyle = if (isInitialized) {
-            val styleStr = getSafeString(prefs, getStyleKey(KEY_MEDIA_NOTIFICATION_STYLE, style), defaultMediaNotifStyle.id)
-            MediaNotificationStyle.fromId(styleStr)
+            MediaNotificationStyle.fromId(readStyleString(KEY_MEDIA_NOTIFICATION_STYLE, defaultMediaNotifStyle.id))
         } else defaultMediaNotifStyle
-        val targetBrightnessAtBottom = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_BRIGHTNESS_AT_BOTTOM, style), defaultBrightnessAtBottom) else defaultBrightnessAtBottom
+        val targetBrightnessAtBottom = if (isInitialized) readStyleBool(KEY_BRIGHTNESS_AT_BOTTOM, defaultBrightnessAtBottom) else defaultBrightnessAtBottom
         val defaultBrightnessInQqsForStyle = if (style == QsPanelStyle.ANDROID_OREO) false else defaultBrightnessInQqs
-        val targetBrightnessInQqs = if (style == QsPanelStyle.ANDROID_OREO) false else if (isInitialized) prefs.getBoolean(getStyleKey(KEY_BRIGHTNESS_IN_QQS, style), defaultBrightnessInQqsForStyle) else defaultBrightnessInQqsForStyle
-        val targetShowBrightnessGradient = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SHOW_BRIGHTNESS_GRADIENT, style), false) else false
+        val targetBrightnessInQqs = if (style == QsPanelStyle.ANDROID_OREO) false else if (isInitialized) readStyleBool(KEY_BRIGHTNESS_IN_QQS, defaultBrightnessInQqsForStyle) else defaultBrightnessInQqsForStyle
+        val targetShowBrightnessGradient = if (isInitialized) readStyleBool(KEY_SHOW_BRIGHTNESS_GRADIENT, false) else false
 
         val targetProgressBarStyle = if (isInitialized) {
-            ProgressBarStyle.fromId(getSafeString(prefs, getStyleKey(KEY_PROGRESS_BAR_STYLE, style), ProgressBarStyle.DEFAULT.id))
+            ProgressBarStyle.fromId(readStyleString(KEY_PROGRESS_BAR_STYLE, ProgressBarStyle.DEFAULT.id))
         } else ProgressBarStyle.DEFAULT
 
         val targetBrightnessSliderStyle = if (isInitialized) {
-            ProgressBarStyle.fromId(getSafeString(prefs, getStyleKey(KEY_BRIGHTNESS_SLIDER_STYLE, style), ProgressBarStyle.DEFAULT.id))
+            ProgressBarStyle.fromId(readStyleString(KEY_BRIGHTNESS_SLIDER_STYLE, targetProgressBarStyle.id))
         } else ProgressBarStyle.DEFAULT
 
         val targetVolumeSliderStyle = if (isInitialized) {
-            ProgressBarStyle.fromId(getSafeString(prefs, getStyleKey(KEY_VOLUME_SLIDER_STYLE, style), ProgressBarStyle.DEFAULT.id))
+            ProgressBarStyle.fromId(readStyleString(KEY_VOLUME_SLIDER_STYLE, targetProgressBarStyle.id))
         } else ProgressBarStyle.DEFAULT
 
         val targetMediaSliderStyle = if (isInitialized) {
-            ProgressBarStyle.fromId(getSafeString(prefs, getStyleKey(KEY_MEDIA_SLIDER_STYLE, style), ProgressBarStyle.DEFAULT.id))
+            ProgressBarStyle.fromId(readStyleString(KEY_MEDIA_SLIDER_STYLE, targetProgressBarStyle.id))
         } else ProgressBarStyle.DEFAULT
 
-        val targetSliderSyncAll = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SLIDER_SYNC_ALL, style), true) else true
+        val targetSliderSyncAll = if (isInitialized) readStyleBool(KEY_SLIDER_SYNC_ALL, true) else true
 
         val targetPanelOuterCorner = if (isInitialized) {
-            val corner = prefs.getFloat(getStyleKey(KEY_PANEL_OUTER_CORNER, style), defaultPanelOuterCorner)
+            val corner = readStyleFloat(KEY_PANEL_OUTER_CORNER, defaultPanelOuterCorner)
             if (style == QsPanelStyle.ANDROID_MARSHMALLOW && corner == 0.0f) defaultPanelOuterCorner else corner
         } else defaultPanelOuterCorner
         val targetPanelInnerCorner = if (isInitialized) {
-            val corner = prefs.getFloat(getStyleKey(KEY_PANEL_INNER_CORNER, style), defaultPanelInnerCorner)
+            val corner = readStyleFloat(KEY_PANEL_INNER_CORNER, defaultPanelInnerCorner)
             if (style == QsPanelStyle.ANDROID_MARSHMALLOW && corner == 0.0f) defaultPanelInnerCorner else corner
         } else defaultPanelInnerCorner
-        val targetGlobalCorner = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_PANEL_GLOBAL_CORNER_ENABLED, style), defaultGlobalCornerEnabled) else defaultGlobalCornerEnabled
-        val targetQsBgCorner = if (isInitialized) prefs.getFloat(getStyleKey(KEY_QS_BACKGROUND_CORNER, style), targetPanelOuterCorner) else targetPanelOuterCorner
+        val targetGlobalCorner = if (isInitialized) readStyleBool(KEY_PANEL_GLOBAL_CORNER_ENABLED, defaultGlobalCornerEnabled) else defaultGlobalCornerEnabled
+        val targetQsBgCorner = if (isInitialized) readStyleFloat(KEY_QS_BACKGROUND_CORNER, targetPanelOuterCorner) else targetPanelOuterCorner
 
-        val targetEnabledShapeId = if (isInitialized) getSafeString(prefs, getStyleKey(KEY_ENABLED_TILE_SHAPE, style), "circle") ?: "circle" else "circle"
-        val targetDisabledShapeId = if (isInitialized) getSafeString(prefs, getStyleKey(KEY_DISABLED_TILE_SHAPE, style), "circle") ?: "circle" else "circle"
-        val targetTileOutline = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_TILE_OUTLINE_ENABLED, style), defaultTileOutline) else defaultTileOutline
-        val globalTileOutlineThickness = prefs.getFloat(KEY_TILE_OUTLINE_THICKNESS, 1.2f).coerceIn(0.5f, 6.0f)
-        val styleTileOutlineThicknessKey = getStyleKey(KEY_TILE_OUTLINE_THICKNESS, style)
-        val targetTileOutlineThickness = if (isInitialized && prefs.contains(styleTileOutlineThicknessKey)) {
-            prefs.getFloat(styleTileOutlineThicknessKey, globalTileOutlineThickness).coerceIn(0.5f, 6.0f)
-        } else {
-            globalTileOutlineThickness
-        }
-        val globalComplicationOutline = prefs.getBoolean(KEY_COMPLICATION_OUTLINE_ENABLED, false)
-        val styleComplicationOutlineKey = getStyleKey(KEY_COMPLICATION_OUTLINE_ENABLED, style)
-        val targetComplicationOutline = if (isInitialized && prefs.contains(styleComplicationOutlineKey)) {
-            prefs.getBoolean(styleComplicationOutlineKey, globalComplicationOutline)
-        } else {
-            globalComplicationOutline
-        }
-        val targetLegacyShapes = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_ENABLE_LEGACY_TILE_SHAPES, style), false) else false
+        val targetEnabledShapeId = if (isInitialized) {
+            val styleEnabledKey = getStyleKey(KEY_ENABLED_TILE_SHAPE, style)
+            val fallbackEnabled = getSafeString(prefs, KEY_ENABLED_TILE_SHAPE, null)
+                ?: getSafeString(prefs, KEY_TILE_SHAPE, null)
+                ?: "circle"
+            if (prefs.contains(styleEnabledKey)) {
+                getSafeString(prefs, styleEnabledKey, fallbackEnabled) ?: fallbackEnabled
+            } else {
+                fallbackEnabled
+            }
+        } else "circle"
+        val targetDisabledShapeId = if (isInitialized) readStyleString(KEY_DISABLED_TILE_SHAPE, "circle") else "circle"
+        val targetTileOutline = if (isInitialized) readStyleBool(KEY_TILE_OUTLINE_ENABLED, defaultTileOutline) else defaultTileOutline
+        val targetTileOutlineThickness = readStyleFloat(KEY_TILE_OUTLINE_THICKNESS, 1.2f).coerceIn(0.5f, 6.0f)
+        val targetComplicationOutline = readStyleBool(KEY_COMPLICATION_OUTLINE_ENABLED, false)
+        val targetLegacyShapes = if (isInitialized) readStyleBool(KEY_ENABLE_LEGACY_TILE_SHAPES, false) else false
 
-        val targetShowMonetSurfaceBg = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SHOW_MONET_SURFACE_BACKGROUND, style), false) else false
-        val targetShowQsTileGradient = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SHOW_QS_TILE_GRADIENT, style), false) else false
-        val targetShowCarrier = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SHOW_CARRIER, style), true) else true
-        val targetShowCarrierDivider = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SHOW_CARRIER_DIVIDER, style), true) else true
-        val targetHideCarrierInExpanded = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_HIDE_CARRIER_IN_EXPANDED, style), false) else false
+        val targetShowMonetSurfaceBg = if (isInitialized) readStyleBool(KEY_SHOW_MONET_SURFACE_BACKGROUND, false) else false
+        val targetShowQsTileGradient = if (isInitialized) readStyleBool(KEY_SHOW_QS_TILE_GRADIENT, false) else false
+        val targetShowCarrier = if (isInitialized) readStyleBool(KEY_SHOW_CARRIER, true) else true
+        val targetShowCarrierDivider = if (isInitialized) readStyleBool(KEY_SHOW_CARRIER_DIVIDER, true) else true
+        val targetHideCarrierInExpanded = if (isInitialized) readStyleBool(KEY_HIDE_CARRIER_IN_EXPANDED, false) else false
 
         val savedGlobalUseClearAllFab = prefs.getBoolean(KEY_USE_CLEAR_ALL_FAB, defaultUseClearAllFab)
-        val targetUseClearAllFab = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_USE_CLEAR_ALL_FAB, style), savedGlobalUseClearAllFab) else defaultUseClearAllFab
-        val savedGlobalPos = prefs.getString(KEY_CLEAR_ALL_FAB_POSITION, ClearAllFabPosition.CENTER.id)
-        val targetClearAllFabPos = if (isInitialized) ClearAllFabPosition.fromId(prefs.getString(getStyleKey(KEY_CLEAR_ALL_FAB_POSITION, style), savedGlobalPos)) else ClearAllFabPosition.fromId(savedGlobalPos)
-        val savedGlobalFabShapeId = prefs.getString(KEY_CLEAR_ALL_FAB_SHAPE_ID, "circle") ?: "circle"
-        val targetClearAllFabShapeId = if (isInitialized) prefs.getString(getStyleKey(KEY_CLEAR_ALL_FAB_SHAPE_ID, style), savedGlobalFabShapeId) ?: savedGlobalFabShapeId else savedGlobalFabShapeId
-        val savedGlobalFabShape = prefs.getString(KEY_CLEAR_ALL_FAB_SHAPE, ClearAllFabShape.CIRCLE.id)
-        val targetClearAllFabShape = if (isInitialized) ClearAllFabShape.fromId(prefs.getString(getStyleKey(KEY_CLEAR_ALL_FAB_SHAPE, style), savedGlobalFabShape)) else ClearAllFabShape.fromId(savedGlobalFabShape)
-        val savedGlobalFabIcon = prefs.getString(KEY_CLEAR_ALL_FAB_ICON, ClearAllFabIcon.CLEAR_ALL.id)
-        val targetClearAllFabIcon = if (isInitialized) ClearAllFabIcon.fromId(prefs.getString(getStyleKey(KEY_CLEAR_ALL_FAB_ICON, style), savedGlobalFabIcon)) else ClearAllFabIcon.fromId(savedGlobalFabIcon)
+        val targetUseClearAllFab = if (isInitialized) readStyleBool(KEY_USE_CLEAR_ALL_FAB, savedGlobalUseClearAllFab) else defaultUseClearAllFab
+        val savedGlobalPos = getSafeString(prefs, KEY_CLEAR_ALL_FAB_POSITION, ClearAllFabPosition.CENTER.id) ?: ClearAllFabPosition.CENTER.id
+        val targetClearAllFabPos = if (isInitialized) ClearAllFabPosition.fromId(readStyleString(KEY_CLEAR_ALL_FAB_POSITION, savedGlobalPos)) else ClearAllFabPosition.fromId(savedGlobalPos)
+        val savedGlobalFabShapeId = getSafeString(prefs, KEY_CLEAR_ALL_FAB_SHAPE_ID, "circle") ?: "circle"
+        val targetClearAllFabShapeId = if (isInitialized) readStyleString(KEY_CLEAR_ALL_FAB_SHAPE_ID, savedGlobalFabShapeId) else savedGlobalFabShapeId
+        val savedGlobalFabShape = getSafeString(prefs, KEY_CLEAR_ALL_FAB_SHAPE, ClearAllFabShape.CIRCLE.id) ?: ClearAllFabShape.CIRCLE.id
+        val targetClearAllFabShape = if (isInitialized) ClearAllFabShape.fromId(readStyleString(KEY_CLEAR_ALL_FAB_SHAPE, savedGlobalFabShape)) else ClearAllFabShape.fromId(savedGlobalFabShape)
+        val savedGlobalFabIcon = getSafeString(prefs, KEY_CLEAR_ALL_FAB_ICON, ClearAllFabIcon.CLEAR_ALL.id) ?: ClearAllFabIcon.CLEAR_ALL.id
+        val targetClearAllFabIcon = if (isInitialized) ClearAllFabIcon.fromId(readStyleString(KEY_CLEAR_ALL_FAB_ICON, savedGlobalFabIcon)) else ClearAllFabIcon.fromId(savedGlobalFabIcon)
         val savedGlobalFabOffsetX = prefs.getFloat(KEY_CLEAR_ALL_FAB_OFFSET_X, 0f)
-        val targetClearAllFabOffsetX = if (isInitialized) prefs.getFloat(getStyleKey(KEY_CLEAR_ALL_FAB_OFFSET_X, style), savedGlobalFabOffsetX) else savedGlobalFabOffsetX
+        val targetClearAllFabOffsetX = if (isInitialized) readStyleFloat(KEY_CLEAR_ALL_FAB_OFFSET_X, savedGlobalFabOffsetX) else savedGlobalFabOffsetX
         val savedGlobalFabOffsetY = prefs.getFloat(KEY_CLEAR_ALL_FAB_OFFSET_Y, 0f)
-        val targetClearAllFabOffsetY = if (isInitialized) prefs.getFloat(getStyleKey(KEY_CLEAR_ALL_FAB_OFFSET_Y, style), savedGlobalFabOffsetY) else savedGlobalFabOffsetY
-        val savedGlobalFabSize = prefs.getInt(KEY_CLEAR_ALL_FAB_SIZE, 56)
-        val targetClearAllFabSize = if (isInitialized) prefs.getInt(getStyleKey(KEY_CLEAR_ALL_FAB_SIZE, style), savedGlobalFabSize) else savedGlobalFabSize
-        val targetDisableClearAllBg = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_DISABLE_CLEAR_ALL_BG, style), false) else false
-        val targetDisableClearAllLabel = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_DISABLE_CLEAR_ALL_LABEL, style), false) else false
-        val targetClearAllIconSize = if (isInitialized) prefs.getInt(getStyleKey(KEY_CLEAR_ALL_ICON_SIZE, style), 24) else 24
-        val targetEnableQqsHorizontalScroll = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_ENABLE_QQS_HORIZONTAL_SCROLL, style), false) else false
-        val targetEnableQqsComplicationsRow = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_ENABLE_QQS_COMPLICATIONS_ROW, style), false) else false
-        val styleQqs2x1Raw = if (isInitialized) prefs.getString(getStyleKey(KEY_QQS_2X1_COMPLICATION_IDS, style), null) else null
+        val targetClearAllFabOffsetY = if (isInitialized) readStyleFloat(KEY_CLEAR_ALL_FAB_OFFSET_Y, savedGlobalFabOffsetY) else savedGlobalFabOffsetY
+        val savedGlobalFabSize = prefs.getInt(KEY_CLEAR_ALL_FAB_SIZE, 64)
+        val targetClearAllFabSize = if (isInitialized) readStyleInt(KEY_CLEAR_ALL_FAB_SIZE, savedGlobalFabSize) else savedGlobalFabSize
+        val targetDisableClearAllBg = if (isInitialized) readStyleBool(KEY_DISABLE_CLEAR_ALL_BG, false) else false
+        val targetDisableClearAllLabel = if (isInitialized) readStyleBool(KEY_DISABLE_CLEAR_ALL_LABEL, false) else false
+        val targetClearAllIconSize = if (isInitialized) readStyleInt(KEY_CLEAR_ALL_ICON_SIZE, 24) else 24
+        val targetEnableQqsHorizontalScroll = if (isInitialized) readStyleBool(KEY_ENABLE_QQS_HORIZONTAL_SCROLL, false) else false
+        val targetEnableQqsComplicationsRow = if (isInitialized) readStyleBool(KEY_ENABLE_QQS_COMPLICATIONS_ROW, false) else false
+        val styleQqs2x1Raw = if (isInitialized) {
+            val style2x1Key = getStyleKey(KEY_QQS_2X1_COMPLICATION_IDS, style)
+            if (prefs.contains(style2x1Key)) getSafeString(prefs, style2x1Key, null)
+            else getSafeString(prefs, KEY_QQS_2X1_COMPLICATION_IDS, null)
+        } else null
         val targetQqs2x1ComplicationIds = if (!styleQqs2x1Raw.isNullOrBlank()) {
             styleQqs2x1Raw.split(",").map { it.trim() }.filter { it.isNotEmpty() }.ifEmpty { DEFAULT_QQS_2X1_COMPLICATION_IDS }
         } else {
             DEFAULT_QQS_2X1_COMPLICATION_IDS
         }
-        val targetQqs2x1HorizontalLine = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_QQS_2X1_HORIZONTAL_LINE, style), false) else false
-        val targetQqs2x1PerimeterProgress = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_QQS_2X1_PERIMETER_PROGRESS, style), false) else false
-        val targetQqs2x1ActiveCornerDp = if (isInitialized) prefs.getFloat(getStyleKey(KEY_QQS_2X1_ACTIVE_CORNER_DP, style), 28.0f).coerceIn(0.0f, 40.0f) else 28.0f
-        val targetQqs2x1InactiveCornerDp = if (isInitialized) prefs.getFloat(getStyleKey(KEY_QQS_2X1_INACTIVE_CORNER_DP, style), 12.0f).coerceIn(0.0f, 40.0f) else 12.0f
-        val targetQqs2x1TileHeightDp = if (isInitialized) prefs.getInt(getStyleKey(KEY_QQS_2X1_TILE_HEIGHT_DP, style), 56).coerceIn(40, 84) else 56
+        val targetQqs2x1HorizontalLine = if (isInitialized) readStyleBool(KEY_QQS_2X1_HORIZONTAL_LINE, false) else false
+        val targetQqs2x1PerimeterProgress = if (isInitialized) readStyleBool(KEY_QQS_2X1_PERIMETER_PROGRESS, false) else false
+        val targetQqs2x1ActiveCornerDp = if (isInitialized) readStyleFloat(KEY_QQS_2X1_ACTIVE_CORNER_DP, 28.0f).coerceIn(0.0f, 40.0f) else 28.0f
+        val targetQqs2x1InactiveCornerDp = if (isInitialized) readStyleFloat(KEY_QQS_2X1_INACTIVE_CORNER_DP, 12.0f).coerceIn(0.0f, 40.0f) else 12.0f
+        val targetQqs2x1TileHeightDp = if (isInitialized) readStyleInt(KEY_QQS_2X1_TILE_HEIGHT_DP, 56).coerceIn(40, 84) else 56
 
-        val targetHideDateInExpanded = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_HIDE_DATE_IN_EXPANDED, style), false) else false
-        val targetDisableLabelsInExpanded = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_DISABLE_LABELS_IN_EXPANDED, style), false) else false
-        val targetQsTileLabelFontSize = if (isInitialized) prefs.getFloat(getStyleKey(KEY_QS_TILE_LABEL_FONT_SIZE, style), 12f) else 12f
-        val targetQsTileSubtitleFontSize = if (isInitialized) prefs.getFloat(getStyleKey(KEY_QS_TILE_SUBTITLE_FONT_SIZE, style), 10f) else 10f
+        val targetHideDateInExpanded = if (isInitialized) readStyleBool(KEY_HIDE_DATE_IN_EXPANDED, false) else false
+        val targetDisableLabelsInExpanded = if (isInitialized) readStyleBool(KEY_DISABLE_LABELS_IN_EXPANDED, false) else false
+        val targetQsTileLabelFontSize = if (isInitialized) readStyleFloat(KEY_QS_TILE_LABEL_FONT_SIZE, 12f) else 12f
+        val targetQsTileSubtitleFontSize = if (isInitialized) readStyleFloat(KEY_QS_TILE_SUBTITLE_FONT_SIZE, 9.0f) else 9.0f
 
-        val savedGlobalEnablePanelShadows = prefs.getBoolean(KEY_ENABLE_PANEL_SHADOWS, false)
-        val targetEnablePanelShadows = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_ENABLE_PANEL_SHADOWS, style), savedGlobalEnablePanelShadows) else savedGlobalEnablePanelShadows
-        val savedGlobalEnablePanelTopRim = prefs.getBoolean(KEY_ENABLE_PANEL_TOP_RIM, false)
-        val targetEnablePanelTopRim = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_ENABLE_PANEL_TOP_RIM, style), savedGlobalEnablePanelTopRim) else savedGlobalEnablePanelTopRim
-        val savedGlobalEnableTileTopRim = prefs.getBoolean(KEY_ENABLE_TILE_TOP_RIM, false)
-        val targetEnableTileTopRim = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_ENABLE_TILE_TOP_RIM, style), savedGlobalEnableTileTopRim) else savedGlobalEnableTileTopRim
-        val savedGlobalTopRimAlpha = prefs.getFloat(KEY_TOP_RIM_ALPHA, 0.20f)
-        val targetTopRimAlpha = if (isInitialized) prefs.getFloat(getStyleKey(KEY_TOP_RIM_ALPHA, style), savedGlobalTopRimAlpha).coerceIn(0.05f, 0.30f) else savedGlobalTopRimAlpha.coerceIn(0.05f, 0.30f)
-        val savedGlobalShadowElevation = prefs.getFloat(KEY_PANEL_SHADOW_ELEVATION, 8.0f)
-        val targetPanelShadowElevation = if (isInitialized) prefs.getFloat(getStyleKey(KEY_PANEL_SHADOW_ELEVATION, style), savedGlobalShadowElevation) else savedGlobalShadowElevation
-        val savedGlobalShadowOffsetY = prefs.getFloat(KEY_PANEL_SHADOW_OFFSET_Y, 4.0f)
-        val targetPanelShadowOffsetY = if (isInitialized) prefs.getFloat(getStyleKey(KEY_PANEL_SHADOW_OFFSET_Y, style), savedGlobalShadowOffsetY) else savedGlobalShadowOffsetY
-        val savedGlobalShadowAlpha = prefs.getFloat(KEY_PANEL_SHADOW_ALPHA, 0.15f)
-        val targetPanelShadowAlpha = if (isInitialized) prefs.getFloat(getStyleKey(KEY_PANEL_SHADOW_ALPHA, style), savedGlobalShadowAlpha) else savedGlobalShadowAlpha
+        val targetEnablePanelShadows = if (isInitialized) readStyleBool(KEY_ENABLE_PANEL_SHADOWS, false) else prefs.getBoolean(KEY_ENABLE_PANEL_SHADOWS, false)
+        val targetEnablePanelTopRim = if (isInitialized) readStyleBool(KEY_ENABLE_PANEL_TOP_RIM, false) else prefs.getBoolean(KEY_ENABLE_PANEL_TOP_RIM, false)
+        val targetEnableTileTopRim = if (isInitialized) readStyleBool(KEY_ENABLE_TILE_TOP_RIM, false) else prefs.getBoolean(KEY_ENABLE_TILE_TOP_RIM, false)
+        val targetTopRimAlpha = readStyleFloat(KEY_TOP_RIM_ALPHA, 0.20f).coerceIn(0.05f, 0.30f)
+        val targetPanelShadowElevation = readStyleFloat(KEY_PANEL_SHADOW_ELEVATION, 8.0f)
+        val targetPanelShadowOffsetY = readStyleFloat(KEY_PANEL_SHADOW_OFFSET_Y, 0.0f)
+        val targetPanelShadowAlpha = readStyleFloat(KEY_PANEL_SHADOW_ALPHA, 0.35f)
 
         val targetCollapseExpandOptions = prefs.getBoolean(KEY_COLLAPSE_EXPAND_OPTIONS, false)
-        val targetShowCustomHeaderImage = if (isInitialized && prefs.contains(getStyleKey(KEY_SHOW_CUSTOM_HEADER_IMAGE, style))) {
-            prefs.getBoolean(getStyleKey(KEY_SHOW_CUSTOM_HEADER_IMAGE, style), false)
-        } else {
-            prefs.getBoolean(KEY_SHOW_CUSTOM_HEADER_IMAGE, false)
-        }
+        val targetShowCustomHeaderImage = readStyleBool(KEY_SHOW_CUSTOM_HEADER_IMAGE, false)
         val targetCustomHeaderImageUri = if (isInitialized && prefs.contains(getStyleKey(KEY_CUSTOM_HEADER_IMAGE_URI, style))) {
-            val styleUri = prefs.getString(getStyleKey(KEY_CUSTOM_HEADER_IMAGE_URI, style), "") ?: ""
-            if (styleUri.isNotBlank()) styleUri else (prefs.getString(KEY_CUSTOM_HEADER_IMAGE_URI, "") ?: "")
+            val styleUri = getSafeString(prefs, getStyleKey(KEY_CUSTOM_HEADER_IMAGE_URI, style), "") ?: ""
+            if (styleUri.isNotBlank()) styleUri else (getSafeString(prefs, KEY_CUSTOM_HEADER_IMAGE_URI, "") ?: "")
         } else {
-            prefs.getString(KEY_CUSTOM_HEADER_IMAGE_URI, "") ?: ""
+            getSafeString(prefs, KEY_CUSTOM_HEADER_IMAGE_URI, "") ?: ""
         }
-        val targetCustomHeaderImageTitle = if (isInitialized && prefs.contains(getStyleKey(KEY_CUSTOM_HEADER_IMAGE_TITLE, style))) {
-            prefs.getString(getStyleKey(KEY_CUSTOM_HEADER_IMAGE_TITLE, style), "") ?: ""
-        } else {
-            prefs.getString(KEY_CUSTOM_HEADER_IMAGE_TITLE, "") ?: ""
-        }
-        val targetCustomHeaderImageHeight = if (isInitialized && prefs.contains(getStyleKey(KEY_CUSTOM_HEADER_IMAGE_HEIGHT, style))) {
-            prefs.getFloat(getStyleKey(KEY_CUSTOM_HEADER_IMAGE_HEIGHT, style), 85f)
-        } else {
-            prefs.getFloat(KEY_CUSTOM_HEADER_IMAGE_HEIGHT, 85f)
-        }
-        val targetCustomHeaderImageOpacity = if (isInitialized && prefs.contains(getStyleKey(KEY_CUSTOM_HEADER_IMAGE_OPACITY, style))) {
-            prefs.getFloat(getStyleKey(KEY_CUSTOM_HEADER_IMAGE_OPACITY, style), 1.0f)
-        } else {
-            prefs.getFloat(KEY_CUSTOM_HEADER_IMAGE_OPACITY, 1.0f)
-        }
-        val targetShowCustomHeaderMonetGradient = if (isInitialized && prefs.contains(getStyleKey(KEY_SHOW_CUSTOM_HEADER_MONET_GRADIENT, style))) {
-            prefs.getBoolean(getStyleKey(KEY_SHOW_CUSTOM_HEADER_MONET_GRADIENT, style), false)
-        } else {
-            prefs.getBoolean(KEY_SHOW_CUSTOM_HEADER_MONET_GRADIENT, false)
-        }
-        val targetCustomHeaderMonetGradientHeight = if (isInitialized && prefs.contains(getStyleKey(KEY_CUSTOM_HEADER_MONET_GRADIENT_HEIGHT, style))) {
-            prefs.getFloat(getStyleKey(KEY_CUSTOM_HEADER_MONET_GRADIENT_HEIGHT, style), 85f)
-        } else {
-            prefs.getFloat(KEY_CUSTOM_HEADER_MONET_GRADIENT_HEIGHT, 85f)
-        }
-        val targetHideBrightnessPercentage = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_HIDE_BRIGHTNESS_PERCENTAGE, style), false) else false
-        val targetHideBrightnessIcon = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_HIDE_BRIGHTNESS_ICON, style), false) else false
-        val targetShowBrightnessPlusMinus = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SHOW_BRIGHTNESS_PLUS_MINUS, style), false) else false
-        val targetShowBrightnessControlsBg = if (isInitialized) prefs.getBoolean(getStyleKey(KEY_SHOW_BRIGHTNESS_CONTROLS_BACKGROUND, style), false) else false
+        val targetCustomHeaderImageTitle = readStyleString(KEY_CUSTOM_HEADER_IMAGE_TITLE, "Header Banner")
+        val targetCustomHeaderImageHeight = readStyleFloat(KEY_CUSTOM_HEADER_IMAGE_HEIGHT, 85f)
+        val targetCustomHeaderImageOpacity = readStyleFloat(KEY_CUSTOM_HEADER_IMAGE_OPACITY, 1.0f)
+        val targetShowCustomHeaderMonetGradient = readStyleBool(KEY_SHOW_CUSTOM_HEADER_MONET_GRADIENT, false)
+        val targetCustomHeaderMonetGradientHeight = readStyleFloat(KEY_CUSTOM_HEADER_MONET_GRADIENT_HEIGHT, 85f)
+        val targetHideBrightnessPercentage = if (isInitialized) readStyleBool(KEY_HIDE_BRIGHTNESS_PERCENTAGE, false) else false
+        val targetHideBrightnessIcon = if (isInitialized) readStyleBool(KEY_HIDE_BRIGHTNESS_ICON, false) else false
+        val targetShowBrightnessPlusMinus = if (isInitialized) readStyleBool(KEY_SHOW_BRIGHTNESS_PLUS_MINUS, false) else false
+        val targetShowBrightnessControlsBg = if (isInitialized) readStyleBool(KEY_SHOW_BRIGHTNESS_CONTROLS_BACKGROUND, false) else false
         val styleComplicationKey = getStyleKey(KEY_COMPLICATION_TILE_SHAPE, style)
         val globalComplicationShapeId = try {
             prefs.getString(KEY_COMPLICATION_TILE_SHAPE, null) ?: "circle"
@@ -3257,6 +3267,7 @@ object PanelPreferences {
         prefs.edit()
             .putBoolean(KEY_DISABLE_CLEAR_ALL_BG, disable)
             .putBoolean(getStyleKey(KEY_DISABLE_CLEAR_ALL_BG), disable)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3266,6 +3277,7 @@ object PanelPreferences {
         prefs.edit()
             .putBoolean(KEY_DISABLE_CLEAR_ALL_LABEL, disable)
             .putBoolean(getStyleKey(KEY_DISABLE_CLEAR_ALL_LABEL), disable)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3275,6 +3287,7 @@ object PanelPreferences {
         prefs.edit()
             .putInt(KEY_CLEAR_ALL_ICON_SIZE, size)
             .putInt(getStyleKey(KEY_CLEAR_ALL_ICON_SIZE), size)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3284,6 +3297,7 @@ object PanelPreferences {
         prefs.edit()
             .putBoolean(KEY_ENABLE_QQS_HORIZONTAL_SCROLL, enable)
             .putBoolean(getStyleKey(KEY_ENABLE_QQS_HORIZONTAL_SCROLL), enable)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3293,6 +3307,7 @@ object PanelPreferences {
         prefs.edit()
             .putBoolean(KEY_ENABLE_QQS_COMPLICATIONS_ROW, enable)
             .putBoolean(getStyleKey(KEY_ENABLE_QQS_COMPLICATIONS_ROW), enable)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3305,6 +3320,7 @@ object PanelPreferences {
         prefs.edit()
             .putString(KEY_QQS_2X1_COMPLICATION_IDS, joined)
             .putString(getStyleKey(KEY_QQS_2X1_COMPLICATION_IDS), joined)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3314,6 +3330,7 @@ object PanelPreferences {
         prefs.edit()
             .putBoolean(KEY_QQS_2X1_HORIZONTAL_LINE, enabled)
             .putBoolean(getStyleKey(KEY_QQS_2X1_HORIZONTAL_LINE), enabled)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3352,6 +3369,7 @@ object PanelPreferences {
         prefs.edit()
             .putBoolean(KEY_QQS_2X1_PERIMETER_PROGRESS, enabled)
             .putBoolean(getStyleKey(KEY_QQS_2X1_PERIMETER_PROGRESS), enabled)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3362,6 +3380,7 @@ object PanelPreferences {
         prefs.edit()
             .putFloat(KEY_QQS_2X1_ACTIVE_CORNER_DP, clamped)
             .putFloat(getStyleKey(KEY_QQS_2X1_ACTIVE_CORNER_DP), clamped)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3372,6 +3391,7 @@ object PanelPreferences {
         prefs.edit()
             .putFloat(KEY_QQS_2X1_INACTIVE_CORNER_DP, clamped)
             .putFloat(getStyleKey(KEY_QQS_2X1_INACTIVE_CORNER_DP), clamped)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3382,6 +3402,7 @@ object PanelPreferences {
         prefs.edit()
             .putInt(KEY_QQS_2X1_TILE_HEIGHT_DP, clamped)
             .putInt(getStyleKey(KEY_QQS_2X1_TILE_HEIGHT_DP), clamped)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3433,7 +3454,11 @@ object PanelPreferences {
     fun setEnablePanelShadows(context: Context, enable: Boolean) {
         _enablePanelShadows.value = enable
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_ENABLE_PANEL_SHADOWS, enable).apply()
+        prefs.edit()
+            .putBoolean(KEY_ENABLE_PANEL_SHADOWS, enable)
+            .putBoolean(getStyleKey(KEY_ENABLE_PANEL_SHADOWS), enable)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
     }
 
     fun setEnablePanelTopRim(context: Context, enable: Boolean) {
@@ -3470,19 +3495,31 @@ object PanelPreferences {
     fun setPanelShadowElevation(context: Context, elevation: Float) {
         _panelShadowElevation.value = elevation
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putFloat(KEY_PANEL_SHADOW_ELEVATION, elevation).apply()
+        prefs.edit()
+            .putFloat(KEY_PANEL_SHADOW_ELEVATION, elevation)
+            .putFloat(getStyleKey(KEY_PANEL_SHADOW_ELEVATION), elevation)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
     }
 
     fun setPanelShadowOffsetY(context: Context, offset: Float) {
         _panelShadowOffsetY.value = offset
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putFloat(KEY_PANEL_SHADOW_OFFSET_Y, offset).apply()
+        prefs.edit()
+            .putFloat(KEY_PANEL_SHADOW_OFFSET_Y, offset)
+            .putFloat(getStyleKey(KEY_PANEL_SHADOW_OFFSET_Y), offset)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
     }
 
     fun setPanelShadowAlpha(context: Context, alpha: Float) {
         _panelShadowAlpha.value = alpha
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putFloat(KEY_PANEL_SHADOW_ALPHA, alpha).apply()
+        prefs.edit()
+            .putFloat(KEY_PANEL_SHADOW_ALPHA, alpha)
+            .putFloat(getStyleKey(KEY_PANEL_SHADOW_ALPHA), alpha)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
     }
 
     fun resetPanelShadowParams(context: Context) {
@@ -3494,6 +3531,10 @@ object PanelPreferences {
             .putFloat(KEY_PANEL_SHADOW_ELEVATION, 8f)
             .putFloat(KEY_PANEL_SHADOW_OFFSET_Y, 0f)
             .putFloat(KEY_PANEL_SHADOW_ALPHA, 0.35f)
+            .putFloat(getStyleKey(KEY_PANEL_SHADOW_ELEVATION), 8f)
+            .putFloat(getStyleKey(KEY_PANEL_SHADOW_OFFSET_Y), 0f)
+            .putFloat(getStyleKey(KEY_PANEL_SHADOW_ALPHA), 0.35f)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3503,6 +3544,7 @@ object PanelPreferences {
         prefs.edit()
             .putBoolean(KEY_USE_CLEAR_ALL_FAB, use)
             .putBoolean(getStyleKey(KEY_USE_CLEAR_ALL_FAB), use)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3512,6 +3554,7 @@ object PanelPreferences {
         prefs.edit()
             .putString(KEY_CLEAR_ALL_FAB_POSITION, pos.id)
             .putString(getStyleKey(KEY_CLEAR_ALL_FAB_POSITION), pos.id)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3524,6 +3567,7 @@ object PanelPreferences {
             .putString(KEY_CLEAR_ALL_FAB_SHAPE_ID, shape.id)
             .putString(getStyleKey(KEY_CLEAR_ALL_FAB_SHAPE), shape.id)
             .putString(getStyleKey(KEY_CLEAR_ALL_FAB_SHAPE_ID), shape.id)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3537,6 +3581,7 @@ object PanelPreferences {
             .putString(KEY_CLEAR_ALL_FAB_SHAPE, shapeId)
             .putString(getStyleKey(KEY_CLEAR_ALL_FAB_SHAPE_ID), shapeId)
             .putString(getStyleKey(KEY_CLEAR_ALL_FAB_SHAPE), shapeId)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3546,6 +3591,7 @@ object PanelPreferences {
         prefs.edit()
             .putString(KEY_CLEAR_ALL_FAB_ICON, icon.id)
             .putString(getStyleKey(KEY_CLEAR_ALL_FAB_ICON), icon.id)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3555,6 +3601,7 @@ object PanelPreferences {
         prefs.edit()
             .putFloat(KEY_CLEAR_ALL_FAB_OFFSET_X, offset)
             .putFloat(getStyleKey(KEY_CLEAR_ALL_FAB_OFFSET_X), offset)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3564,6 +3611,7 @@ object PanelPreferences {
         prefs.edit()
             .putFloat(KEY_CLEAR_ALL_FAB_OFFSET_Y, offset)
             .putFloat(getStyleKey(KEY_CLEAR_ALL_FAB_OFFSET_Y), offset)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3573,6 +3621,7 @@ object PanelPreferences {
         prefs.edit()
             .putInt(KEY_CLEAR_ALL_FAB_SIZE, size)
             .putInt(getStyleKey(KEY_CLEAR_ALL_FAB_SIZE), size)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3588,6 +3637,7 @@ object PanelPreferences {
             .putFloat(getStyleKey(KEY_CLEAR_ALL_FAB_OFFSET_X), 0f)
             .putFloat(getStyleKey(KEY_CLEAR_ALL_FAB_OFFSET_Y), 0f)
             .putInt(getStyleKey(KEY_CLEAR_ALL_FAB_SIZE), 64)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3606,6 +3656,9 @@ object PanelPreferences {
             .putString(KEY_ENABLED_TILE_SHAPE, shapeId)
             .putString(KEY_TILE_SHAPE, shapeId)
             .putBoolean(KEY_ACTIVE_SQUARE_SHAPE, shape == TileShape.SQUIRCLE || shape == TileShape.SQUARE)
+            .putString(getStyleKey(KEY_ENABLED_TILE_SHAPE), shapeId)
+            .putString(getStyleKey(KEY_TILE_SHAPE), shapeId)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3616,6 +3669,8 @@ object PanelPreferences {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
             .putString(KEY_DISABLED_TILE_SHAPE, shapeId)
+            .putString(getStyleKey(KEY_DISABLED_TILE_SHAPE), shapeId)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
 
@@ -3783,19 +3838,31 @@ object PanelPreferences {
     fun setHideBrightnessPercentage(context: Context, value: Boolean) {
         _hideBrightnessPercentage.value = value
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_HIDE_BRIGHTNESS_PERCENTAGE, value).apply()
+        prefs.edit()
+            .putBoolean(KEY_HIDE_BRIGHTNESS_PERCENTAGE, value)
+            .putBoolean(getStyleKey(KEY_HIDE_BRIGHTNESS_PERCENTAGE), value)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
     }
 
     fun setHideBrightnessIcon(context: Context, value: Boolean) {
         _hideBrightnessIcon.value = value
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_HIDE_BRIGHTNESS_ICON, value).apply()
+        prefs.edit()
+            .putBoolean(KEY_HIDE_BRIGHTNESS_ICON, value)
+            .putBoolean(getStyleKey(KEY_HIDE_BRIGHTNESS_ICON), value)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
     }
 
     fun setShowBrightnessPlusMinus(context: Context, value: Boolean) {
         _showBrightnessPlusMinus.value = value
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_SHOW_BRIGHTNESS_PLUS_MINUS, value).apply()
+        prefs.edit()
+            .putBoolean(KEY_SHOW_BRIGHTNESS_PLUS_MINUS, value)
+            .putBoolean(getStyleKey(KEY_SHOW_BRIGHTNESS_PLUS_MINUS), value)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
     }
 
     fun setShowBrightnessControlsBackground(context: Context, value: Boolean) {
@@ -5153,31 +5220,51 @@ object PanelPreferences {
     fun setShowQsTileGradient(context: Context, enabled: Boolean) {
         _showQsTileGradient.value = enabled
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_SHOW_QS_TILE_GRADIENT, enabled).apply()
+        prefs.edit()
+            .putBoolean(KEY_SHOW_QS_TILE_GRADIENT, enabled)
+            .putBoolean(getStyleKey(KEY_SHOW_QS_TILE_GRADIENT), enabled)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
     }
 
     fun setQsTileLabelFontSize(context: Context, size: Float) {
         _qsTileLabelFontSize.value = size
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putFloat(KEY_QS_TILE_LABEL_FONT_SIZE, size).apply()
+        prefs.edit()
+            .putFloat(KEY_QS_TILE_LABEL_FONT_SIZE, size)
+            .putFloat(getStyleKey(KEY_QS_TILE_LABEL_FONT_SIZE), size)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
     }
 
     fun setQsTileSubtitleFontSize(context: Context, size: Float) {
         _qsTileSubtitleFontSize.value = size
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putFloat(KEY_QS_TILE_SUBTITLE_FONT_SIZE, size).apply()
+        prefs.edit()
+            .putFloat(KEY_QS_TILE_SUBTITLE_FONT_SIZE, size)
+            .putFloat(getStyleKey(KEY_QS_TILE_SUBTITLE_FONT_SIZE), size)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
     }
 
     fun setHideDateInExpanded(context: Context, hide: Boolean) {
         _hideDateInExpanded.value = hide
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_HIDE_DATE_IN_EXPANDED, hide).apply()
+        prefs.edit()
+            .putBoolean(KEY_HIDE_DATE_IN_EXPANDED, hide)
+            .putBoolean(getStyleKey(KEY_HIDE_DATE_IN_EXPANDED), hide)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
     }
 
     fun setDisableLabelsInExpanded(context: Context, disabled: Boolean) {
         _disableLabelsInExpanded.value = disabled
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_DISABLE_LABELS_IN_EXPANDED, disabled).apply()
+        prefs.edit()
+            .putBoolean(KEY_DISABLE_LABELS_IN_EXPANDED, disabled)
+            .putBoolean(getStyleKey(KEY_DISABLE_LABELS_IN_EXPANDED), disabled)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
     }
 
     fun isFeaturePinned(featureId: String): Boolean = _pinnedFeatures.value.contains(featureId)
@@ -5203,6 +5290,48 @@ object PanelPreferences {
         _pinnedFeatures.value = featureIds
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putStringSet(KEY_PINNED_FEATURES, featureIds.toSet()).apply()
+    }
+
+    fun isFeatureHidden(featureId: String): Boolean = _hiddenFeatures.value.contains(featureId)
+
+    fun toggleFeatureHidden(context: Context, featureId: String): Boolean {
+        val current = _hiddenFeatures.value.toMutableList()
+        val isNowHidden = if (current.contains(featureId)) {
+            current.remove(featureId)
+            false
+        } else {
+            current.add(0, featureId)
+            true
+        }
+        _hiddenFeatures.value = current.toList()
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putStringSet(KEY_HIDDEN_FEATURES, current.toSet()).apply()
+        return isNowHidden
+    }
+
+    fun hideFeature(context: Context, featureId: String) {
+        if (!_hiddenFeatures.value.contains(featureId)) {
+            toggleFeatureHidden(context, featureId)
+        }
+    }
+
+    fun unhideFeature(context: Context, featureId: String) {
+        val current = _hiddenFeatures.value.toMutableList()
+        if (current.remove(featureId)) {
+            _hiddenFeatures.value = current.toList()
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            prefs.edit().putStringSet(KEY_HIDDEN_FEATURES, current.toSet()).apply()
+        }
+    }
+
+    fun setHiddenFeatures(context: Context, featureIds: List<String>) {
+        _hiddenFeatures.value = featureIds.distinct()
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putStringSet(KEY_HIDDEN_FEATURES, featureIds.toSet()).apply()
+    }
+
+    fun unhideAllFeatures(context: Context) {
+        setHiddenFeatures(context, emptyList())
     }
 
     fun setWavyThickness(context: Context, value: Float) {
@@ -5501,6 +5630,619 @@ object PanelPreferences {
         return json.toString(2)
     }
 
+    private val INT_BASE_KEYS = setOf(
+        KEY_QQS_TILE_SIZE,
+        KEY_QQS_TILE_COUNT,
+        KEY_CLEAR_ALL_FAB_SIZE,
+        KEY_CLEAR_ALL_ICON_SIZE,
+        KEY_QQS_2X1_TILE_HEIGHT_DP,
+        KEY_WAVY_SPEED,
+        KEY_MIN_BRIGHTNESS,
+        KEY_MAX_BRIGHTNESS,
+        KEY_DETECTOR_COOLDOWN_MS,
+        KEY_PANEL_REPLACEMENT_DELAY_MS,
+        KEY_HEADS_UP_TIMEOUT_SECONDS,
+        KEY_HEADS_UP_CORNER_RADIUS,
+        KEY_HEADS_UP_ELEVATION,
+        KEY_HEADS_UP_TOP_MARGIN,
+        KEY_HEADS_UP_SNOOZE_DURATION_MINUTES,
+        KEY_QS_BACKGROUND_COLOR,
+        KEY_QS_PANEL_BACKGROUND_COLOR,
+        "caffeine_default_timeout"
+    )
+
+    private val THEME_MANAGED_KEYS = setOf(
+        // Theme / Style / Background / Blur
+        KEY_THEME_MODE,
+        KEY_PANEL_STYLE,
+        KEY_ANDROID_OREO_STYLE,
+        KEY_QS_BACKGROUND_COLOR,
+        KEY_QS_PANEL_BACKGROUND_COLOR,
+        KEY_QS_BACKGROUND_CORNER,
+        KEY_ENABLE_CONTAINER_BLUR,
+        // Grid / QQS / Tiles / Fonts / Labels
+        KEY_GRID_LAYOUT,
+        KEY_QQS_TILE_SIZE,
+        KEY_QQS_TILE_COUNT,
+        KEY_ENABLE_QQS_HORIZONTAL_SCROLL,
+        KEY_QS_TILE_LABEL_FONT_SIZE,
+        KEY_QS_TILE_SUBTITLE_FONT_SIZE,
+        KEY_HIDE_DATE_IN_EXPANDED,
+        KEY_DISABLE_LABELS_IN_EXPANDED,
+        // Shapes, Outlines, Gradients & Rim
+        KEY_ENABLE_LEGACY_TILE_SHAPES,
+        KEY_ENABLED_TILE_SHAPE,
+        KEY_DISABLED_TILE_SHAPE,
+        KEY_TILE_SHAPE,
+        KEY_ACTIVE_SQUARE_SHAPE,
+        KEY_COMPLICATION_TILE_SHAPE,
+        KEY_INACTIVE_COMPLICATION_TILE_SHAPE,
+        KEY_COMPLICATION_ARC_THICKNESS,
+        KEY_TILE_OUTLINE_ENABLED,
+        KEY_TILE_OUTLINE_THICKNESS,
+        KEY_COMPLICATION_OUTLINE_ENABLED,
+        KEY_SHOW_QS_TILE_GRADIENT,
+        KEY_ENABLE_PANEL_TOP_RIM,
+        KEY_ENABLE_TILE_TOP_RIM,
+        KEY_TOP_RIM_ALPHA,
+        // QQS 2x1 Complications & Header Complications
+        KEY_ENABLE_QQS_COMPLICATIONS_ROW,
+        KEY_QQS_2X1_COMPLICATION_IDS,
+        KEY_QQS_2X1_HORIZONTAL_LINE,
+        KEY_QQS_2X1_PERIMETER_PROGRESS,
+        KEY_QQS_2X1_ACTIVE_CORNER_DP,
+        KEY_QQS_2X1_INACTIVE_CORNER_DP,
+        KEY_QQS_2X1_TILE_HEIGHT_DP,
+        KEY_SHOW_HEADER_COMPLICATIONS,
+        KEY_COMPLICATION_SUBLINE_PLACEMENT,
+        // Header Image, Monet Gradient & Surface Background
+        KEY_SHOW_CUSTOM_HEADER_IMAGE,
+        KEY_CUSTOM_HEADER_IMAGE_URI,
+        KEY_CUSTOM_HEADER_IMAGE_TITLE,
+        KEY_CUSTOM_HEADER_IMAGE_HEIGHT,
+        KEY_CUSTOM_HEADER_IMAGE_OPACITY,
+        KEY_SHOW_CUSTOM_HEADER_MONET_GRADIENT,
+        KEY_CUSTOM_HEADER_MONET_GRADIENT_HEIGHT,
+        KEY_SHOW_MONET_SURFACE_BACKGROUND,
+        // Brightness & Sliders
+        KEY_BRIGHTNESS_AT_BOTTOM,
+        KEY_BRIGHTNESS_IN_QQS,
+        KEY_HIDE_BRIGHTNESS_PERCENTAGE,
+        KEY_HIDE_BRIGHTNESS_ICON,
+        KEY_SHOW_BRIGHTNESS_PLUS_MINUS,
+        KEY_SHOW_BRIGHTNESS_CONTROLS_BACKGROUND,
+        KEY_SHOW_BRIGHTNESS_GRADIENT,
+        KEY_MIN_BRIGHTNESS,
+        KEY_MAX_BRIGHTNESS,
+        KEY_WAVY_PROGRESS_BARS,
+        KEY_PROGRESS_BAR_STYLE,
+        KEY_SLIDER_SYNC_ALL,
+        KEY_BRIGHTNESS_SLIDER_STYLE,
+        KEY_VOLUME_SLIDER_STYLE,
+        KEY_MEDIA_SLIDER_STYLE,
+        KEY_WAVY_THICKNESS,
+        KEY_WAVY_WOBBLINESS,
+        KEY_WAVY_WAVELENGTH,
+        KEY_WAVY_THUMB_RADIUS,
+        KEY_WAVY_SPEED,
+        KEY_SLIDER_INACTIVE_TRACK_THICKNESS,
+        KEY_SLIDER_CORNER_RADIUS,
+        KEY_A12_INACTIVE_THICKNESS,
+        KEY_A12_CORNER_RADIUS,
+        KEY_WAVY_INACTIVE_THICKNESS,
+        KEY_WAVY_CORNER_RADIUS,
+        KEY_STRAIGHT_THICKNESS,
+        KEY_STRAIGHT_INACTIVE_THICKNESS,
+        KEY_STRAIGHT_CORNER_RADIUS,
+        KEY_STRAIGHT_THUMB_RADIUS,
+        KEY_M3_TRACK_HEIGHT,
+        KEY_M3_INACTIVE_TRACK_HEIGHT,
+        KEY_M3_OUTER_CORNER_RADIUS,
+        KEY_M3_INNER_CORNER_RADIUS,
+        KEY_M3_THUMB_WIDTH,
+        KEY_M3_THUMB_HEIGHT,
+        KEY_M3_THUMB_GAP,
+        KEY_M3_SHOW_STOP_INDICATOR,
+        // Panel Corners & Shadows
+        KEY_PANEL_GLOBAL_CORNER_ENABLED,
+        KEY_PANEL_OUTER_CORNER,
+        KEY_PANEL_INNER_CORNER,
+        KEY_ENABLE_PANEL_SHADOWS,
+        KEY_PANEL_SHADOW_ELEVATION,
+        KEY_PANEL_SHADOW_OFFSET_Y,
+        KEY_PANEL_SHADOW_ALPHA,
+        // Clear All FAB & Button
+        KEY_USE_CLEAR_ALL_FAB,
+        KEY_CLEAR_ALL_FAB_POSITION,
+        KEY_CLEAR_ALL_FAB_SHAPE,
+        KEY_CLEAR_ALL_FAB_SHAPE_ID,
+        KEY_CLEAR_ALL_FAB_ICON,
+        KEY_CLEAR_ALL_FAB_OFFSET_X,
+        KEY_CLEAR_ALL_FAB_OFFSET_Y,
+        KEY_CLEAR_ALL_FAB_SIZE,
+        KEY_DISABLE_CLEAR_ALL_BG,
+        KEY_DISABLE_CLEAR_ALL_LABEL,
+        KEY_CLEAR_ALL_ICON_SIZE,
+        // Media Artwork & Notification Container
+        KEY_FORCE_SHOW_MEDIA_PREVIEW,
+        KEY_SHOW_MEDIA_IN_NOTIFICATION_CONTAINER,
+        KEY_MEDIA_NOTIFICATION_STYLE,
+        KEY_USE_MEDIA_ARTWORK_COLORS,
+        // Footer Icon Backgrounds
+        KEY_FOOTER_ICON_BACKGROUND,
+        KEY_FOOTER_OUTER_SPACING,
+        KEY_FOOTER_OUTER_CORNER,
+        KEY_FOOTER_INNER_CORNER,
+        KEY_FOOTER_SPACING,
+        // Header & Status Backgrounds
+        KEY_DATE_BACKGROUND_ENABLED,
+        KEY_DATE_BACKGROUND_CORNER,
+        KEY_BATTERY_BACKGROUND_ENABLED,
+        KEY_BATTERY_BACKGROUND_CORNER,
+        KEY_CLOCK_BACKGROUND_ENABLED,
+        KEY_CLOCK_BACKGROUND_CORNER,
+        KEY_CARRIER_BACKGROUND_ENABLED,
+        KEY_CARRIER_BACKGROUND_CORNER,
+        // Page Indicator Style & Geometry
+        KEY_QS_PAGE_INDICATOR_STYLE,
+        KEY_PI_ACTIVE_LINE_THICKNESS,
+        KEY_PI_INACTIVE_LINE_THICKNESS,
+        KEY_PI_ACTIVE_LINE_WIDTH,
+        KEY_PI_INACTIVE_LINE_WIDTH,
+        KEY_PI_ACTIVE_DOT_RADIUS,
+        KEY_PI_INACTIVE_DOT_RADIUS,
+        KEY_PI_ACTIVE_SLIDING_THICKNESS,
+        KEY_PI_INACTIVE_SLIDING_THICKNESS,
+        // Header / Footer / Carrier / Drag Handle Tweaks
+        KEY_DATE_POSITION,
+        KEY_SHOW_DATE_IN_QQS_HEADER,
+        KEY_EDIT_BUTTON_POSITION,
+        KEY_MOVE_COLLAPSE_TO_QQS_FOOTER,
+        "battery_percentage_location",
+        "settings_icon_location",
+        KEY_HIDE_QQS_DRAG_HANDLE,
+        KEY_HIDE_QQS_EMPTY_NOTIF_LABELS,
+        KEY_DRAG_HANDLE_VERTICAL_OFFSET,
+        KEY_DRAG_HANDLE_LENGTH,
+        KEY_SHOW_CARRIER,
+        KEY_SHOW_CARRIER_DIVIDER,
+        KEY_CARRIER_DIVIDER_AS_LINE,
+        KEY_HIDE_CARRIER_IN_EXPANDED,
+        // Animations
+        KEY_ANIMATION_SPEED_SCALE,
+        KEY_DISABLE_PANEL_ANIMATIONS,
+        // Element Monet Colors
+        KEY_DISABLE_MONET_NOTIF_TEXT,
+        KEY_ELEM_SURFACE_BG_TERTIARY,
+        KEY_ELEM_PANEL_CONTAINER_TERTIARY,
+        KEY_ELEM_NOTIF_CONTAINER_TERTIARY,
+        KEY_ELEM_HEADER_GRADIENT_TERTIARY,
+        KEY_ELEM_QS_TILES_TERTIARY,
+        KEY_ELEM_INACTIVE_TILES_TERTIARY,
+        KEY_ELEM_INACTIVE_TILES_PRIMARY,
+        KEY_ELEM_SLIDERS_TERTIARY,
+        KEY_ELEM_MISC_ELEMENTS_TERTIARY,
+        KEY_ELEM_CLEAR_ALL_TERTIARY,
+        KEY_ELEM_SURFACE_BG_HUE, KEY_ELEM_SURFACE_BG_SAT, KEY_ELEM_SURFACE_BG_VAL,
+        KEY_ELEM_PANEL_CONTAINER_HUE, KEY_ELEM_PANEL_CONTAINER_SAT, KEY_ELEM_PANEL_CONTAINER_VAL,
+        KEY_ELEM_HEADER_GRADIENT_HUE, KEY_ELEM_HEADER_GRADIENT_SAT, KEY_ELEM_HEADER_GRADIENT_VAL,
+        KEY_ELEM_QS_TILES_HUE, KEY_ELEM_QS_TILES_SAT, KEY_ELEM_QS_TILES_VAL,
+        KEY_ELEM_INACTIVE_TILES_HUE, KEY_ELEM_INACTIVE_TILES_SAT, KEY_ELEM_INACTIVE_TILES_VAL,
+        KEY_ELEM_SLIDERS_HUE, KEY_ELEM_SLIDERS_SAT, KEY_ELEM_SLIDERS_VAL,
+        KEY_ELEM_MISC_ELEMENTS_HUE, KEY_ELEM_MISC_ELEMENTS_SAT, KEY_ELEM_MISC_ELEMENTS_VAL,
+        KEY_ELEM_CLEAR_ALL_HUE, KEY_ELEM_CLEAR_ALL_SAT, KEY_ELEM_CLEAR_ALL_VAL
+    )
+
+    private fun stripStylePrefix(key: String): String {
+        for (style in QsPanelStyle.entries) {
+            val prefix = "style_${style.id}_"
+            if (key.startsWith(prefix)) {
+                return key.removePrefix(prefix)
+            }
+        }
+        return key
+    }
+
+    fun isIntPrefKey(key: String): Boolean {
+        val baseKey = stripStylePrefix(key)
+        return baseKey in INT_BASE_KEYS || baseKey.contains("custom_color")
+    }
+
+    fun writeJsonValueToEditor(editor: android.content.SharedPreferences.Editor, key: String, value: Any) {
+        when (value) {
+            is Boolean -> editor.putBoolean(key, value)
+            is Number -> {
+                if (isIntPrefKey(key)) {
+                    editor.putInt(key, value.toInt())
+                } else {
+                    editor.putFloat(key, value.toFloat())
+                }
+            }
+            is String -> editor.putString(key, value)
+            is org.json.JSONArray -> {
+                val set = mutableSetOf<String>()
+                for (i in 0 until value.length()) {
+                    set.add(value.getString(i))
+                }
+                editor.putStringSet(key, set)
+            }
+        }
+    }
+
+    fun clearQsDesignAndTweaksFromEditor(
+        editor: android.content.SharedPreferences.Editor,
+        existingKeys: Set<String>
+    ) {
+        for (key in existingKeys) {
+            if (key in THEME_MANAGED_KEYS ||
+                key.startsWith("elem_") ||
+                key.startsWith("style_")
+            ) {
+                editor.remove(key)
+            }
+        }
+    }
+
+    /**
+     * Ensures every QS Design and QS Tweaks setting (including untouched defaults and current style-scoped keys)
+     * is explicitly populated into [settingsJson] when saving or updating a theme.
+     */
+    fun populateAllQsDesignAndTweaksToJson(context: Context, settingsJson: org.json.JSONObject) {
+        saveStylePreferences(context, _panelStyle.value)
+
+        // Theme / Style / Background / Blur
+        settingsJson.put(KEY_THEME_MODE, _themeMode.value.id)
+        settingsJson.put(KEY_PANEL_STYLE, _panelStyle.value.id)
+        settingsJson.put(KEY_ANDROID_OREO_STYLE, _panelStyle.value == QsPanelStyle.ANDROID_OREO)
+        _qsBackgroundColor.value?.let { settingsJson.put(KEY_QS_BACKGROUND_COLOR, it) }
+        _qsPanelBackgroundColor.value?.let { settingsJson.put(KEY_QS_PANEL_BACKGROUND_COLOR, it) }
+        settingsJson.put(KEY_QS_BACKGROUND_CORNER, _qsBackgroundCorner.value.toDouble())
+        settingsJson.put(KEY_ENABLE_CONTAINER_BLUR, _enableContainerBlur.value)
+
+        // Grid / QQS / Tiles / Fonts / Labels
+        settingsJson.put(KEY_GRID_LAYOUT, _gridLayout.value.id)
+        settingsJson.put(KEY_QQS_TILE_SIZE, _qqsTileSize.value)
+        settingsJson.put(KEY_QQS_TILE_COUNT, _qqsTileCount.value)
+        settingsJson.put(KEY_ENABLE_QQS_HORIZONTAL_SCROLL, _enableQqsHorizontalScroll.value)
+        settingsJson.put(KEY_QS_TILE_LABEL_FONT_SIZE, _qsTileLabelFontSize.value.toDouble())
+        settingsJson.put(KEY_QS_TILE_SUBTITLE_FONT_SIZE, _qsTileSubtitleFontSize.value.toDouble())
+        settingsJson.put(KEY_HIDE_DATE_IN_EXPANDED, _hideDateInExpanded.value)
+        settingsJson.put(KEY_DISABLE_LABELS_IN_EXPANDED, _disableLabelsInExpanded.value)
+
+        // Shapes, Outlines, Gradients & Rim
+        settingsJson.put(KEY_ENABLE_LEGACY_TILE_SHAPES, _enableLegacyTileShapes.value)
+        settingsJson.put(KEY_ENABLED_TILE_SHAPE, _enabledTileShapeId.value)
+        settingsJson.put(KEY_DISABLED_TILE_SHAPE, _disabledTileShapeId.value)
+        settingsJson.put(KEY_TILE_SHAPE, _enabledTileShapeId.value)
+        settingsJson.put(KEY_ACTIVE_SQUARE_SHAPE, _activeSquareShape.value)
+        settingsJson.put(KEY_COMPLICATION_TILE_SHAPE, _complicationTileShapeId.value)
+        settingsJson.put(KEY_INACTIVE_COMPLICATION_TILE_SHAPE, _inactiveComplicationTileShapeId.value)
+        settingsJson.put(KEY_COMPLICATION_ARC_THICKNESS, _complicationArcThicknessDp.value.toDouble())
+        settingsJson.put(KEY_TILE_OUTLINE_ENABLED, _tileOutlineEnabled.value)
+        settingsJson.put(KEY_TILE_OUTLINE_THICKNESS, _tileOutlineThicknessDp.value.toDouble())
+        settingsJson.put(KEY_COMPLICATION_OUTLINE_ENABLED, _complicationOutlineEnabled.value)
+        settingsJson.put(KEY_SHOW_QS_TILE_GRADIENT, _showQsTileGradient.value)
+        settingsJson.put(KEY_ENABLE_PANEL_TOP_RIM, _enablePanelTopRim.value)
+        settingsJson.put(KEY_ENABLE_TILE_TOP_RIM, _enableTileTopRim.value)
+        settingsJson.put(KEY_TOP_RIM_ALPHA, _topRimAlpha.value.toDouble())
+
+        // QQS 2x1 Complications & Header Complications
+        settingsJson.put(KEY_ENABLE_QQS_COMPLICATIONS_ROW, _enableQqsComplicationsRow.value)
+        settingsJson.put(KEY_QQS_2X1_COMPLICATION_IDS, _qqs2x1ComplicationIds.value.joinToString(","))
+        settingsJson.put(KEY_QQS_2X1_HORIZONTAL_LINE, _qqs2x1HorizontalLine.value)
+        settingsJson.put(KEY_QQS_2X1_PERIMETER_PROGRESS, _qqs2x1PerimeterProgress.value)
+        settingsJson.put(KEY_QQS_2X1_ACTIVE_CORNER_DP, _qqs2x1ActiveCornerDp.value.toDouble())
+        settingsJson.put(KEY_QQS_2X1_INACTIVE_CORNER_DP, _qqs2x1InactiveCornerDp.value.toDouble())
+        settingsJson.put(KEY_QQS_2X1_TILE_HEIGHT_DP, _qqs2x1TileHeightDp.value)
+        settingsJson.put(KEY_SHOW_HEADER_COMPLICATIONS, _showHeaderComplications.value)
+        settingsJson.put(KEY_COMPLICATION_SUBLINE_PLACEMENT, _complicationSublinePlacement.value.id)
+
+        // Header Image, Monet Gradient & Surface Background
+        settingsJson.put(KEY_SHOW_CUSTOM_HEADER_IMAGE, _showCustomHeaderImage.value)
+        settingsJson.put(KEY_CUSTOM_HEADER_IMAGE_URI, _customHeaderImageUri.value)
+        settingsJson.put(KEY_CUSTOM_HEADER_IMAGE_TITLE, _customHeaderImageTitle.value)
+        settingsJson.put(KEY_CUSTOM_HEADER_IMAGE_HEIGHT, _customHeaderImageHeight.value.toDouble())
+        settingsJson.put(KEY_CUSTOM_HEADER_IMAGE_OPACITY, _customHeaderImageOpacity.value.toDouble())
+        settingsJson.put(KEY_SHOW_CUSTOM_HEADER_MONET_GRADIENT, _showCustomHeaderMonetGradient.value)
+        settingsJson.put(KEY_CUSTOM_HEADER_MONET_GRADIENT_HEIGHT, _customHeaderMonetGradientHeight.value.toDouble())
+        settingsJson.put(KEY_SHOW_MONET_SURFACE_BACKGROUND, _showMonetSurfaceBackground.value)
+
+        // Brightness & Sliders
+        settingsJson.put(KEY_BRIGHTNESS_AT_BOTTOM, _brightnessAtBottom.value)
+        settingsJson.put(KEY_BRIGHTNESS_IN_QQS, _brightnessInQqs.value)
+        settingsJson.put(KEY_HIDE_BRIGHTNESS_PERCENTAGE, _hideBrightnessPercentage.value)
+        settingsJson.put(KEY_HIDE_BRIGHTNESS_ICON, _hideBrightnessIcon.value)
+        settingsJson.put(KEY_SHOW_BRIGHTNESS_PLUS_MINUS, _showBrightnessPlusMinus.value)
+        settingsJson.put(KEY_SHOW_BRIGHTNESS_CONTROLS_BACKGROUND, _showBrightnessControlsBackground.value)
+        settingsJson.put(KEY_SHOW_BRIGHTNESS_GRADIENT, _showBrightnessGradient.value)
+        settingsJson.put(KEY_MIN_BRIGHTNESS, _minBrightness.value)
+        settingsJson.put(KEY_MAX_BRIGHTNESS, _maxBrightness.value)
+        settingsJson.put(KEY_WAVY_PROGRESS_BARS, _wavyProgressBars.value)
+        settingsJson.put(KEY_PROGRESS_BAR_STYLE, _progressBarStyle.value.id)
+        settingsJson.put(KEY_SLIDER_SYNC_ALL, _sliderSyncAll.value)
+        settingsJson.put(KEY_BRIGHTNESS_SLIDER_STYLE, _brightnessSliderStyle.value.id)
+        settingsJson.put(KEY_VOLUME_SLIDER_STYLE, _volumeSliderStyle.value.id)
+        settingsJson.put(KEY_MEDIA_SLIDER_STYLE, _mediaSliderStyle.value.id)
+        settingsJson.put(KEY_WAVY_THICKNESS, _wavyThickness.value.toDouble())
+        settingsJson.put(KEY_WAVY_WOBBLINESS, _wavyWobbliness.value.toDouble())
+        settingsJson.put(KEY_WAVY_WAVELENGTH, _wavyWavelength.value.toDouble())
+        settingsJson.put(KEY_WAVY_THUMB_RADIUS, _wavyThumbRadius.value.toDouble())
+        settingsJson.put(KEY_WAVY_SPEED, _wavySpeed.value)
+        _sliderInactiveTrackThickness.value?.let { settingsJson.put(KEY_SLIDER_INACTIVE_TRACK_THICKNESS, it.toDouble()) }
+        settingsJson.put(KEY_SLIDER_CORNER_RADIUS, _sliderCornerRadius.value.toDouble())
+        settingsJson.put(KEY_A12_INACTIVE_THICKNESS, _a12InactiveTrackThickness.value.toDouble())
+        settingsJson.put(KEY_A12_CORNER_RADIUS, _a12CornerRadius.value.toDouble())
+        settingsJson.put(KEY_WAVY_INACTIVE_THICKNESS, _wavyInactiveTrackThickness.value.toDouble())
+        settingsJson.put(KEY_WAVY_CORNER_RADIUS, _wavyCornerRadius.value.toDouble())
+        settingsJson.put(KEY_STRAIGHT_THICKNESS, _straightThickness.value.toDouble())
+        settingsJson.put(KEY_STRAIGHT_INACTIVE_THICKNESS, _straightInactiveTrackThickness.value.toDouble())
+        settingsJson.put(KEY_STRAIGHT_CORNER_RADIUS, _straightCornerRadius.value.toDouble())
+        settingsJson.put(KEY_STRAIGHT_THUMB_RADIUS, _straightThumbRadius.value.toDouble())
+        settingsJson.put(KEY_M3_TRACK_HEIGHT, _m3TrackHeight.value.toDouble())
+        settingsJson.put(KEY_M3_INACTIVE_TRACK_HEIGHT, _m3InactiveTrackHeight.value.toDouble())
+        settingsJson.put(KEY_M3_OUTER_CORNER_RADIUS, _m3OuterCornerRadius.value.toDouble())
+        settingsJson.put(KEY_M3_INNER_CORNER_RADIUS, _m3InnerCornerRadius.value.toDouble())
+        settingsJson.put(KEY_M3_THUMB_WIDTH, _m3ThumbWidth.value.toDouble())
+        settingsJson.put(KEY_M3_THUMB_HEIGHT, _m3ThumbHeight.value.toDouble())
+        settingsJson.put(KEY_M3_THUMB_GAP, _m3ThumbGap.value.toDouble())
+        settingsJson.put(KEY_M3_SHOW_STOP_INDICATOR, _m3ShowStopIndicator.value)
+
+        // Panel Corners & Shadows
+        settingsJson.put(KEY_PANEL_GLOBAL_CORNER_ENABLED, _panelGlobalCornerEnabled.value)
+        settingsJson.put(KEY_PANEL_OUTER_CORNER, _panelOuterCorner.value.toDouble())
+        settingsJson.put(KEY_PANEL_INNER_CORNER, _panelInnerCorner.value.toDouble())
+        settingsJson.put(KEY_ENABLE_PANEL_SHADOWS, _enablePanelShadows.value)
+        settingsJson.put(KEY_PANEL_SHADOW_ELEVATION, _panelShadowElevation.value.toDouble())
+        settingsJson.put(KEY_PANEL_SHADOW_OFFSET_Y, _panelShadowOffsetY.value.toDouble())
+        settingsJson.put(KEY_PANEL_SHADOW_ALPHA, _panelShadowAlpha.value.toDouble())
+
+        // Clear All FAB & Button
+        settingsJson.put(KEY_USE_CLEAR_ALL_FAB, _useClearAllFab.value)
+        settingsJson.put(KEY_CLEAR_ALL_FAB_POSITION, _clearAllFabPosition.value.id)
+        settingsJson.put(KEY_CLEAR_ALL_FAB_SHAPE, _clearAllFabShape.value.id)
+        settingsJson.put(KEY_CLEAR_ALL_FAB_SHAPE_ID, _clearAllFabShapeId.value)
+        settingsJson.put(KEY_CLEAR_ALL_FAB_ICON, _clearAllFabIcon.value.id)
+        settingsJson.put(KEY_CLEAR_ALL_FAB_OFFSET_X, _clearAllFabOffsetX.value.toDouble())
+        settingsJson.put(KEY_CLEAR_ALL_FAB_OFFSET_Y, _clearAllFabOffsetY.value.toDouble())
+        settingsJson.put(KEY_CLEAR_ALL_FAB_SIZE, _clearAllFabSize.value)
+        settingsJson.put(KEY_DISABLE_CLEAR_ALL_BG, _disableClearAllBackground.value)
+        settingsJson.put(KEY_DISABLE_CLEAR_ALL_LABEL, _disableClearAllLabel.value)
+        settingsJson.put(KEY_CLEAR_ALL_ICON_SIZE, _clearAllIconSize.value)
+
+        // Media Artwork & Notification Container
+        settingsJson.put(KEY_FORCE_SHOW_MEDIA_PREVIEW, _forceShowMediaPreview.value)
+        settingsJson.put(KEY_SHOW_MEDIA_IN_NOTIFICATION_CONTAINER, _showMediaInNotificationContainer.value)
+        settingsJson.put(KEY_MEDIA_NOTIFICATION_STYLE, _mediaNotificationStyle.value.id)
+        settingsJson.put(KEY_USE_MEDIA_ARTWORK_COLORS, _useMediaArtworkColors.value)
+
+        // Footer Icon Backgrounds
+        settingsJson.put(KEY_FOOTER_ICON_BACKGROUND, _footerIconBackground.value)
+        settingsJson.put(KEY_FOOTER_OUTER_SPACING, _footerOuterSpacing.value)
+        settingsJson.put(KEY_FOOTER_OUTER_CORNER, _footerOuterCorner.value.toDouble())
+        settingsJson.put(KEY_FOOTER_INNER_CORNER, _footerInnerCorner.value.toDouble())
+        settingsJson.put(KEY_FOOTER_SPACING, _footerSpacing.value.toDouble())
+
+        // Header & Status Backgrounds
+        settingsJson.put(KEY_DATE_BACKGROUND_ENABLED, _dateBackgroundEnabled.value)
+        settingsJson.put(KEY_DATE_BACKGROUND_CORNER, _dateBackgroundCorner.value.toDouble())
+        settingsJson.put(KEY_BATTERY_BACKGROUND_ENABLED, _batteryBackgroundEnabled.value)
+        settingsJson.put(KEY_BATTERY_BACKGROUND_CORNER, _batteryBackgroundCorner.value.toDouble())
+        settingsJson.put(KEY_CLOCK_BACKGROUND_ENABLED, _clockBackgroundEnabled.value)
+        settingsJson.put(KEY_CLOCK_BACKGROUND_CORNER, _clockBackgroundCorner.value.toDouble())
+        settingsJson.put(KEY_CARRIER_BACKGROUND_ENABLED, _carrierBackgroundEnabled.value)
+        settingsJson.put(KEY_CARRIER_BACKGROUND_CORNER, _carrierBackgroundCorner.value.toDouble())
+
+        // Page Indicator Style & Geometry
+        settingsJson.put(KEY_QS_PAGE_INDICATOR_STYLE, _qsPageIndicatorStyle.value.id)
+        settingsJson.put(KEY_PI_ACTIVE_LINE_THICKNESS, _piActiveLineThickness.value.toDouble())
+        settingsJson.put(KEY_PI_INACTIVE_LINE_THICKNESS, _piInactiveLineThickness.value.toDouble())
+        settingsJson.put(KEY_PI_ACTIVE_LINE_WIDTH, _piActiveLineWidth.value.toDouble())
+        settingsJson.put(KEY_PI_INACTIVE_LINE_WIDTH, _piInactiveLineWidth.value.toDouble())
+        settingsJson.put(KEY_PI_ACTIVE_DOT_RADIUS, _piActiveDotRadius.value.toDouble())
+        settingsJson.put(KEY_PI_INACTIVE_DOT_RADIUS, _piInactiveDotRadius.value.toDouble())
+        settingsJson.put(KEY_PI_ACTIVE_SLIDING_THICKNESS, _piActiveSlidingThickness.value.toDouble())
+        settingsJson.put(KEY_PI_INACTIVE_SLIDING_THICKNESS, _piInactiveSlidingThickness.value.toDouble())
+
+        // Header / Footer / Carrier / Drag Handle Tweaks
+        settingsJson.put(KEY_DATE_POSITION, _datePosition.value.id)
+        settingsJson.put(KEY_SHOW_DATE_IN_QQS_HEADER, _showDateInQqsHeader.value)
+        settingsJson.put(KEY_EDIT_BUTTON_POSITION, _editButtonPosition.value.id)
+        settingsJson.put(KEY_MOVE_COLLAPSE_TO_QQS_FOOTER, _moveCollapseToQqsFooter.value)
+        settingsJson.put("battery_percentage_location", _batteryPercentageLocation.value.id)
+        settingsJson.put("settings_icon_location", _settingsIconLocation.value.id)
+        settingsJson.put(KEY_HIDE_QQS_DRAG_HANDLE, _hideQqsDragHandle.value)
+        settingsJson.put(KEY_HIDE_QQS_EMPTY_NOTIF_LABELS, _hideQqsEmptyNotifLabels.value)
+        settingsJson.put(KEY_DRAG_HANDLE_VERTICAL_OFFSET, _dragHandleVerticalOffset.value.toDouble())
+        settingsJson.put(KEY_DRAG_HANDLE_LENGTH, _dragHandleLength.value.toDouble())
+        settingsJson.put(KEY_SHOW_CARRIER, _showCarrier.value)
+        settingsJson.put(KEY_SHOW_CARRIER_DIVIDER, _showCarrierDivider.value)
+        settingsJson.put(KEY_CARRIER_DIVIDER_AS_LINE, _carrierDividerAsLine.value)
+        settingsJson.put(KEY_HIDE_CARRIER_IN_EXPANDED, _hideCarrierInExpanded.value)
+
+        // Animations
+        settingsJson.put(KEY_ANIMATION_SPEED_SCALE, _animationSpeedScale.value.toDouble())
+        settingsJson.put(KEY_DISABLE_PANEL_ANIMATIONS, _disablePanelAnimations.value)
+
+        // Per-Element Monet Colors
+        settingsJson.put(KEY_DISABLE_MONET_NOTIF_TEXT, _disableMonetNotifText.value)
+        settingsJson.put(KEY_ELEM_NOTIF_CONTAINER_TERTIARY, _notifContainerColorTertiary.value)
+        settingsJson.put(KEY_ELEM_SURFACE_BG_TERTIARY_LIGHT, _surfaceBgColorTertiaryLight.value)
+        settingsJson.put(KEY_ELEM_SURFACE_BG_TERTIARY_DARK, _surfaceBgColorTertiaryDark.value)
+        settingsJson.put(KEY_ELEM_PANEL_CONTAINER_TERTIARY_LIGHT, _panelContainerColorTertiaryLight.value)
+        settingsJson.put(KEY_ELEM_PANEL_CONTAINER_TERTIARY_DARK, _panelContainerColorTertiaryDark.value)
+        settingsJson.put(KEY_ELEM_HEADER_GRADIENT_TERTIARY_LIGHT, _headerGradientColorTertiaryLight.value)
+        settingsJson.put(KEY_ELEM_HEADER_GRADIENT_TERTIARY_DARK, _headerGradientColorTertiaryDark.value)
+        settingsJson.put(KEY_ELEM_QS_TILES_TERTIARY_LIGHT, _qsTilesColorTertiaryLight.value)
+        settingsJson.put(KEY_ELEM_QS_TILES_TERTIARY_DARK, _qsTilesColorTertiaryDark.value)
+        settingsJson.put(KEY_ELEM_INACTIVE_TILES_TERTIARY_LIGHT, _inactiveTilesColorTertiaryLight.value)
+        settingsJson.put(KEY_ELEM_INACTIVE_TILES_TERTIARY_DARK, _inactiveTilesColorTertiaryDark.value)
+        settingsJson.put(KEY_ELEM_INACTIVE_TILES_PRIMARY_LIGHT, _inactiveTilesColorPrimaryLight.value)
+        settingsJson.put(KEY_ELEM_INACTIVE_TILES_PRIMARY_DARK, _inactiveTilesColorPrimaryDark.value)
+        settingsJson.put(KEY_ELEM_SLIDERS_TERTIARY_LIGHT, _slidersColorTertiaryLight.value)
+        settingsJson.put(KEY_ELEM_SLIDERS_TERTIARY_DARK, _slidersColorTertiaryDark.value)
+        settingsJson.put(KEY_ELEM_MISC_ELEMENTS_TERTIARY_LIGHT, _miscElementsColorTertiaryLight.value)
+        settingsJson.put(KEY_ELEM_MISC_ELEMENTS_TERTIARY_DARK, _miscElementsColorTertiaryDark.value)
+        settingsJson.put(KEY_ELEM_CLEAR_ALL_TERTIARY_LIGHT, _clearAllColorTertiaryLight.value)
+        settingsJson.put(KEY_ELEM_CLEAR_ALL_TERTIARY_DARK, _clearAllColorTertiaryDark.value)
+
+        settingsJson.put(KEY_ELEM_SURFACE_BG_HUE_LIGHT, _surfaceBgHueLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_SURFACE_BG_SAT_LIGHT, _surfaceBgSatLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_SURFACE_BG_VAL_LIGHT, _surfaceBgValLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_SURFACE_BG_HUE_DARK, _surfaceBgHueDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_SURFACE_BG_SAT_DARK, _surfaceBgSatDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_SURFACE_BG_VAL_DARK, _surfaceBgValDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_SURFACE_BG_USE_CUSTOM_LIGHT, _surfaceBgUseCustomLight.value)
+        settingsJson.put(KEY_ELEM_SURFACE_BG_USE_CUSTOM_DARK, _surfaceBgUseCustomDark.value)
+        settingsJson.put(KEY_ELEM_SURFACE_BG_CUSTOM_COLOR_LIGHT, _surfaceBgCustomColorLight.value)
+        settingsJson.put(KEY_ELEM_SURFACE_BG_CUSTOM_COLOR_DARK, _surfaceBgCustomColorDark.value)
+        settingsJson.put(KEY_ELEM_SURFACE_BG_MODE_LIGHT, _surfaceBgColorModeLight.value.id)
+        settingsJson.put(KEY_ELEM_SURFACE_BG_MODE_DARK, _surfaceBgColorModeDark.value.id)
+
+        settingsJson.put(KEY_ELEM_PANEL_CONTAINER_HUE_LIGHT, _panelContainerHueLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_PANEL_CONTAINER_SAT_LIGHT, _panelContainerSatLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_PANEL_CONTAINER_VAL_LIGHT, _panelContainerValLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_PANEL_CONTAINER_HUE_DARK, _panelContainerHueDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_PANEL_CONTAINER_SAT_DARK, _panelContainerSatDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_PANEL_CONTAINER_VAL_DARK, _panelContainerValDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_PANEL_CONTAINER_USE_CUSTOM_LIGHT, _panelContainerUseCustomLight.value)
+        settingsJson.put(KEY_ELEM_PANEL_CONTAINER_USE_CUSTOM_DARK, _panelContainerUseCustomDark.value)
+        settingsJson.put(KEY_ELEM_PANEL_CONTAINER_CUSTOM_COLOR_LIGHT, _panelContainerCustomColorLight.value)
+        settingsJson.put(KEY_ELEM_PANEL_CONTAINER_CUSTOM_COLOR_DARK, _panelContainerCustomColorDark.value)
+        settingsJson.put(KEY_ELEM_PANEL_CONTAINER_MODE_LIGHT, _panelContainerColorModeLight.value.id)
+        settingsJson.put(KEY_ELEM_PANEL_CONTAINER_MODE_DARK, _panelContainerColorModeDark.value.id)
+
+        settingsJson.put(KEY_ELEM_HEADER_GRADIENT_HUE_LIGHT, _headerGradientHueLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_HEADER_GRADIENT_SAT_LIGHT, _headerGradientSatLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_HEADER_GRADIENT_VAL_LIGHT, _headerGradientValLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_HEADER_GRADIENT_HUE_DARK, _headerGradientHueDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_HEADER_GRADIENT_SAT_DARK, _headerGradientSatDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_HEADER_GRADIENT_VAL_DARK, _headerGradientValDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_HEADER_GRADIENT_USE_CUSTOM_LIGHT, _headerGradientUseCustomLight.value)
+        settingsJson.put(KEY_ELEM_HEADER_GRADIENT_USE_CUSTOM_DARK, _headerGradientUseCustomDark.value)
+        settingsJson.put(KEY_ELEM_HEADER_GRADIENT_CUSTOM_COLOR_LIGHT, _headerGradientCustomColorLight.value)
+        settingsJson.put(KEY_ELEM_HEADER_GRADIENT_CUSTOM_COLOR_DARK, _headerGradientCustomColorDark.value)
+        settingsJson.put(KEY_ELEM_HEADER_GRADIENT_MODE_LIGHT, _headerGradientColorModeLight.value.id)
+        settingsJson.put(KEY_ELEM_HEADER_GRADIENT_MODE_DARK, _headerGradientColorModeDark.value.id)
+
+        settingsJson.put(KEY_ELEM_QS_TILES_HUE_LIGHT, _qsTilesHueLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_QS_TILES_SAT_LIGHT, _qsTilesSatLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_QS_TILES_VAL_LIGHT, _qsTilesValLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_QS_TILES_HUE_DARK, _qsTilesHueDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_QS_TILES_SAT_DARK, _qsTilesSatDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_QS_TILES_VAL_DARK, _qsTilesValDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_QS_TILES_USE_CUSTOM_LIGHT, _qsTilesUseCustomLight.value)
+        settingsJson.put(KEY_ELEM_QS_TILES_USE_CUSTOM_DARK, _qsTilesUseCustomDark.value)
+        settingsJson.put(KEY_ELEM_QS_TILES_CUSTOM_COLOR_LIGHT, _qsTilesCustomColorLight.value)
+        settingsJson.put(KEY_ELEM_QS_TILES_CUSTOM_COLOR_DARK, _qsTilesCustomColorDark.value)
+        settingsJson.put(KEY_ELEM_QS_TILES_MODE_LIGHT, _qsTilesColorModeLight.value.id)
+        settingsJson.put(KEY_ELEM_QS_TILES_MODE_DARK, _qsTilesColorModeDark.value.id)
+
+        settingsJson.put(KEY_ELEM_INACTIVE_TILES_HUE_LIGHT, _inactiveTilesHueLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_INACTIVE_TILES_SAT_LIGHT, _inactiveTilesSatLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_INACTIVE_TILES_VAL_LIGHT, _inactiveTilesValLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_INACTIVE_TILES_HUE_DARK, _inactiveTilesHueDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_INACTIVE_TILES_SAT_DARK, _inactiveTilesSatDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_INACTIVE_TILES_VAL_DARK, _inactiveTilesValDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_INACTIVE_TILES_USE_CUSTOM_LIGHT, _inactiveTilesUseCustomLight.value)
+        settingsJson.put(KEY_ELEM_INACTIVE_TILES_USE_CUSTOM_DARK, _inactiveTilesUseCustomDark.value)
+        settingsJson.put(KEY_ELEM_INACTIVE_TILES_CUSTOM_COLOR_LIGHT, _inactiveTilesCustomColorLight.value)
+        settingsJson.put(KEY_ELEM_INACTIVE_TILES_CUSTOM_COLOR_DARK, _inactiveTilesCustomColorDark.value)
+        settingsJson.put(KEY_ELEM_INACTIVE_TILES_MODE_LIGHT, _inactiveTilesColorModeLight.value.id)
+        settingsJson.put(KEY_ELEM_INACTIVE_TILES_MODE_DARK, _inactiveTilesColorModeDark.value.id)
+
+        settingsJson.put(KEY_ELEM_SLIDERS_HUE_LIGHT, _slidersHueLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_SLIDERS_SAT_LIGHT, _slidersSatLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_SLIDERS_VAL_LIGHT, _slidersValLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_SLIDERS_HUE_DARK, _slidersHueDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_SLIDERS_SAT_DARK, _slidersSatDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_SLIDERS_VAL_DARK, _slidersValDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_SLIDERS_USE_CUSTOM_LIGHT, _slidersUseCustomLight.value)
+        settingsJson.put(KEY_ELEM_SLIDERS_USE_CUSTOM_DARK, _slidersUseCustomDark.value)
+        settingsJson.put(KEY_ELEM_SLIDERS_CUSTOM_COLOR_LIGHT, _slidersCustomColorLight.value)
+        settingsJson.put(KEY_ELEM_SLIDERS_CUSTOM_COLOR_DARK, _slidersCustomColorDark.value)
+        settingsJson.put(KEY_ELEM_SLIDERS_MODE_LIGHT, _slidersColorModeLight.value.id)
+        settingsJson.put(KEY_ELEM_SLIDERS_MODE_DARK, _slidersColorModeDark.value.id)
+
+        settingsJson.put(KEY_ELEM_MISC_ELEMENTS_HUE_LIGHT, _miscElementsHueLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_MISC_ELEMENTS_SAT_LIGHT, _miscElementsSatLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_MISC_ELEMENTS_VAL_LIGHT, _miscElementsValLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_MISC_ELEMENTS_HUE_DARK, _miscElementsHueDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_MISC_ELEMENTS_SAT_DARK, _miscElementsSatDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_MISC_ELEMENTS_VAL_DARK, _miscElementsValDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_MISC_ELEMENTS_USE_CUSTOM_LIGHT, _miscElementsUseCustomLight.value)
+        settingsJson.put(KEY_ELEM_MISC_ELEMENTS_USE_CUSTOM_DARK, _miscElementsUseCustomDark.value)
+        settingsJson.put(KEY_ELEM_MISC_ELEMENTS_CUSTOM_COLOR_LIGHT, _miscElementsCustomColorLight.value)
+        settingsJson.put(KEY_ELEM_MISC_ELEMENTS_CUSTOM_COLOR_DARK, _miscElementsCustomColorDark.value)
+        settingsJson.put(KEY_ELEM_MISC_ELEMENTS_MODE_LIGHT, _miscElementsColorModeLight.value.id)
+        settingsJson.put(KEY_ELEM_MISC_ELEMENTS_MODE_DARK, _miscElementsColorModeDark.value.id)
+
+        settingsJson.put(KEY_ELEM_CLEAR_ALL_HUE_LIGHT, _clearAllHueLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_CLEAR_ALL_SAT_LIGHT, _clearAllSatLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_CLEAR_ALL_VAL_LIGHT, _clearAllValLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_CLEAR_ALL_HUE_DARK, _clearAllHueDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_CLEAR_ALL_SAT_DARK, _clearAllSatDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_CLEAR_ALL_VAL_DARK, _clearAllValDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_CLEAR_ALL_USE_CUSTOM_LIGHT, _clearAllUseCustomLight.value)
+        settingsJson.put(KEY_ELEM_CLEAR_ALL_USE_CUSTOM_DARK, _clearAllUseCustomDark.value)
+        settingsJson.put(KEY_ELEM_CLEAR_ALL_CUSTOM_COLOR_LIGHT, _clearAllCustomColorLight.value)
+        settingsJson.put(KEY_ELEM_CLEAR_ALL_CUSTOM_COLOR_DARK, _clearAllCustomColorDark.value)
+        settingsJson.put(KEY_ELEM_CLEAR_ALL_MODE_LIGHT, _clearAllColorModeLight.value.id)
+        settingsJson.put(KEY_ELEM_CLEAR_ALL_MODE_DARK, _clearAllColorModeDark.value.id)
+
+        settingsJson.put(KEY_ELEM_ACTIVE_COMP_ARC_MODE_LIGHT, _activeCompArcModeLight.value.id)
+        settingsJson.put(KEY_ELEM_ACTIVE_COMP_ARC_MODE_DARK, _activeCompArcModeDark.value.id)
+        settingsJson.put(KEY_ELEM_ACTIVE_COMP_ARC_HUE_LIGHT, _activeCompArcHueLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_ACTIVE_COMP_ARC_SAT_LIGHT, _activeCompArcSatLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_ACTIVE_COMP_ARC_VAL_LIGHT, _activeCompArcValLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_ACTIVE_COMP_ARC_HUE_DARK, _activeCompArcHueDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_ACTIVE_COMP_ARC_SAT_DARK, _activeCompArcSatDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_ACTIVE_COMP_ARC_VAL_DARK, _activeCompArcValDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_ACTIVE_COMP_ARC_USE_CUSTOM_LIGHT, _activeCompArcUseCustomLight.value)
+        settingsJson.put(KEY_ELEM_ACTIVE_COMP_ARC_USE_CUSTOM_DARK, _activeCompArcUseCustomDark.value)
+        settingsJson.put(KEY_ELEM_ACTIVE_COMP_ARC_CUSTOM_COLOR_LIGHT, _activeCompArcCustomColorLight.value)
+        settingsJson.put(KEY_ELEM_ACTIVE_COMP_ARC_CUSTOM_COLOR_DARK, _activeCompArcCustomColorDark.value)
+
+        settingsJson.put(KEY_ELEM_INACTIVE_COMP_ARC_MODE_LIGHT, _inactiveCompArcModeLight.value.id)
+        settingsJson.put(KEY_ELEM_INACTIVE_COMP_ARC_MODE_DARK, _inactiveCompArcModeDark.value.id)
+        settingsJson.put(KEY_ELEM_INACTIVE_COMP_ARC_HUE_LIGHT, _inactiveCompArcHueLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_INACTIVE_COMP_ARC_SAT_LIGHT, _inactiveCompArcSatLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_INACTIVE_COMP_ARC_VAL_LIGHT, _inactiveCompArcValLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_INACTIVE_COMP_ARC_HUE_DARK, _inactiveCompArcHueDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_INACTIVE_COMP_ARC_SAT_DARK, _inactiveCompArcSatDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_INACTIVE_COMP_ARC_VAL_DARK, _inactiveCompArcValDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_INACTIVE_COMP_ARC_USE_CUSTOM_LIGHT, _inactiveCompArcUseCustomLight.value)
+        settingsJson.put(KEY_ELEM_INACTIVE_COMP_ARC_USE_CUSTOM_DARK, _inactiveCompArcUseCustomDark.value)
+        settingsJson.put(KEY_ELEM_INACTIVE_COMP_ARC_CUSTOM_COLOR_LIGHT, _inactiveCompArcCustomColorLight.value)
+        settingsJson.put(KEY_ELEM_INACTIVE_COMP_ARC_CUSTOM_COLOR_DARK, _inactiveCompArcCustomColorDark.value)
+
+        settingsJson.put(KEY_ELEM_COMP_ARC_TRACK_MODE_LIGHT, _compArcTrackModeLight.value.id)
+        settingsJson.put(KEY_ELEM_COMP_ARC_TRACK_MODE_DARK, _compArcTrackModeDark.value.id)
+        settingsJson.put(KEY_ELEM_COMP_ARC_TRACK_HUE_LIGHT, _compArcTrackHueLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_COMP_ARC_TRACK_SAT_LIGHT, _compArcTrackSatLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_COMP_ARC_TRACK_VAL_LIGHT, _compArcTrackValLight.value.toDouble())
+        settingsJson.put(KEY_ELEM_COMP_ARC_TRACK_HUE_DARK, _compArcTrackHueDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_COMP_ARC_TRACK_SAT_DARK, _compArcTrackSatDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_COMP_ARC_TRACK_VAL_DARK, _compArcTrackValDark.value.toDouble())
+        settingsJson.put(KEY_ELEM_COMP_ARC_TRACK_USE_CUSTOM_LIGHT, _compArcTrackUseCustomLight.value)
+        settingsJson.put(KEY_ELEM_COMP_ARC_TRACK_USE_CUSTOM_DARK, _compArcTrackUseCustomDark.value)
+        settingsJson.put(KEY_ELEM_COMP_ARC_TRACK_CUSTOM_COLOR_LIGHT, _compArcTrackCustomColorLight.value)
+        settingsJson.put(KEY_ELEM_COMP_ARC_TRACK_CUSTOM_COLOR_DARK, _compArcTrackCustomColorDark.value)
+
+        // Ensure current style-scoped keys in quickpanel_prefs are also mirrored into JSON
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val stylePrefix = "style_${_panelStyle.value.id}_"
+        for ((k, v) in prefs.all) {
+            if (!k.startsWith(stylePrefix)) continue
+            when (v) {
+                is Boolean -> settingsJson.put(k, v)
+                is Int -> settingsJson.put(k, v)
+                is Long -> settingsJson.put(k, v)
+                is Float -> settingsJson.put(k, v.toDouble())
+                is String -> settingsJson.put(k, v)
+            }
+        }
+    }
+
     fun importSettingsJson(context: Context, jsonString: String): Boolean {
         return try {
             val json = org.json.JSONObject(jsonString)
@@ -5510,21 +6252,7 @@ object PanelPreferences {
             while (keys.hasNext()) {
                 val key = keys.next()
                 if (json.isNull(key)) continue
-                val value = json.get(key)
-                when (value) {
-                    is Boolean -> editor.putBoolean(key, value)
-                    is Int -> editor.putInt(key, value)
-                    is Long -> editor.putLong(key, value)
-                    is Double -> editor.putFloat(key, value.toFloat())
-                    is String -> editor.putString(key, value)
-                    is org.json.JSONArray -> {
-                        val set = mutableSetOf<String>()
-                        for (i in 0 until value.length()) {
-                            set.add(value.getString(i))
-                        }
-                        editor.putStringSet(key, set)
-                    }
-                }
+                writeJsonValueToEditor(editor, key, json.get(key))
             }
             editor.apply()
             init(context)
@@ -5562,6 +6290,10 @@ object PanelPreferences {
     fun setQsBackgroundCorner(context: Context, corner: Float) {
         _qsBackgroundCorner.value = corner
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putFloat(KEY_QS_BACKGROUND_CORNER, corner).apply()
+        prefs.edit()
+            .putFloat(KEY_QS_BACKGROUND_CORNER, corner)
+            .putFloat(getStyleKey(KEY_QS_BACKGROUND_CORNER), corner)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
     }
 }

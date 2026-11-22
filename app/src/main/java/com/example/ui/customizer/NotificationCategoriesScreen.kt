@@ -181,6 +181,7 @@ fun NotificationCategoriesScreen(
         // Master Control & New Category Card
         SettingsCard(
             shape = ExpressiveCardShapes.SingleCard,
+            canPin = false,
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
@@ -351,6 +352,7 @@ fun NotificationCategoriesScreen(
         if (categories.isEmpty()) {
             SettingsCard(
                 shape = ExpressiveCardShapes.SingleCard,
+                canPin = false,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
@@ -477,6 +479,7 @@ fun NotificationCategoriesScreen(
 
                 SettingsCard(
                     shape = cardShape,
+                    canPin = false,
                     onClick = { editingCategory = category },
                     modifier = Modifier
                         .fillMaxWidth()

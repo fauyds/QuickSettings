@@ -49,6 +49,9 @@ import androidx.compose.runtime.DisposableEffect
 import com.example.data.EditButtonPosition
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ripple
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.foundation.border
 import com.example.data.TileShape
 import com.example.data.ProgressBarStyle
 import com.example.data.QsPageIndicatorStyle
@@ -9848,10 +9851,18 @@ fun BlurredContainerCard(
 ) {
     val enablePanelShadows by PanelPreferences.enablePanelShadows.collectAsState()
     val enablePanelTopRim by PanelPreferences.enablePanelTopRim.collectAsState()
+    val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
     val panelShadowElevation by PanelPreferences.panelShadowElevation.collectAsState()
     val panelShadowOffsetY by PanelPreferences.panelShadowOffsetY.collectAsState()
     val panelShadowAlpha by PanelPreferences.panelShadowAlpha.collectAsState()
     val isDark = LocalIsDarkTheme.current
+
+    val frostedAlpha = if (isDark) 0.60f else 0.72f
+    val effectiveContainerColor = if (enableContainerBlur) {
+        containerColor.copy(alpha = frostedAlpha)
+    } else {
+        containerColor
+    }
 
     val shadowModifier = if (enablePanelShadows && panelShadowElevation > 0f) {
         Modifier
@@ -9922,7 +9933,18 @@ fun BlurredContainerCard(
                 .wrapContentHeight()
                 .panelTopRim(enabled = enablePanelTopRim, shape = shape)
                 .clip(shape)
-                .background(containerColor)
+                .background(effectiveContainerColor)
+                .then(
+                    if (enableContainerBlur) {
+                        Modifier.border(
+                            width = 1.dp,
+                            color = if (isDark) Color.White.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.45f),
+                            shape = shape
+                        )
+                    } else {
+                        Modifier
+                    }
+                )
                 .panelTopRimBackground(enabled = enablePanelTopRim)
                 .then(
                     if (onClick != null || onLongClick != null) {

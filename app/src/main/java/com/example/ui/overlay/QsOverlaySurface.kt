@@ -279,7 +279,12 @@ data class QsOverlaySurfaceConfig(
                 val innerCorner = if (globalCorner) outerCorner else json.optDouble("panel_inner_corner", 12.0).toFloat()
 
                 val progressStyleStr = json.optString("progress_bar_style", "default")
-                val brightnessStyleStr = json.optString("brightness_slider_style", "default")
+                val brightnessStyleStr = json.optString("brightness_slider_style", progressStyleStr)
+                val volumeStyleStr = json.optString("volume_slider_style", progressStyleStr)
+                val mediaStyleStr = json.optString("media_slider_style", progressStyleStr)
+                val qsPanelBgColor = if (json.has("qs_panel_background_color") && !json.isNull("qs_panel_background_color")) {
+                    json.optInt("qs_panel_background_color")
+                } else null
 
                 QsOverlaySurfaceConfig(
                     themeMode = json.optString("theme_mode", "system"),
@@ -290,6 +295,12 @@ data class QsOverlaySurfaceConfig(
                     showQsTileGradient = json.optBoolean("show_qs_tile_gradient", false),
                     progressBarStyle = ProgressBarStyle.entries.firstOrNull { it.id == progressStyleStr } ?: ProgressBarStyle.DEFAULT,
                     brightnessSliderStyle = ProgressBarStyle.entries.firstOrNull { it.id == brightnessStyleStr } ?: ProgressBarStyle.DEFAULT,
+                    volumeSliderStyle = ProgressBarStyle.entries.firstOrNull { it.id == volumeStyleStr } ?: ProgressBarStyle.DEFAULT,
+                    mediaSliderStyle = ProgressBarStyle.entries.firstOrNull { it.id == mediaStyleStr } ?: ProgressBarStyle.DEFAULT,
+                    qsPanelBackgroundColor = qsPanelBgColor,
+                    hideBrightnessPercentage = json.optBoolean("hide_brightness_percentage", false),
+                    hideBrightnessIcon = json.optBoolean("hide_brightness_icon", false),
+                    showBrightnessPlusMinus = json.optBoolean("show_brightness_plus_minus", false),
                     showBrightnessControlsBackground = json.optBoolean("show_brightness_controls_background", false),
                     minBrightness = json.optInt("min_brightness", 1),
                     maxBrightness = json.optInt("max_brightness", 2047),
@@ -305,7 +316,7 @@ data class QsOverlaySurfaceConfig(
                     customHeaderImageHeight = json.optDouble("custom_header_image_height", 120.0).toFloat(),
                     customHeaderImageOpacity = json.optDouble("custom_header_image_opacity", 1.0).toFloat(),
                     showCustomHeaderMonetGradient = json.optBoolean("show_custom_header_monet_gradient", false),
-                    customHeaderMonetGradientHeight = json.optInt("custom_header_monet_gradient_height", 120).toFloat(),
+                    customHeaderMonetGradientHeight = json.optDouble("custom_header_monet_gradient_height", 120.0).toFloat(),
                     showMonetSurfaceBackground = json.optBoolean("show_monet_surface_background", false),
                     headerGradientColorTertiary = json.optBoolean("elem_header_gradient_tertiary", false),
                     slidersColorTertiary = json.optBoolean("elem_sliders_tertiary", false),
@@ -396,7 +407,8 @@ fun QsOverlaySurface(
         basePanelBg
     }
 
-    val cardContainerBg = config.qsPanelBackgroundColor?.let { Color(it) } ?: if (config.showMonetSurfaceBackground) {
+    val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+    val rawCardContainerBg = config.qsPanelBackgroundColor?.let { Color(it) } ?: if (config.showMonetSurfaceBackground) {
         monetSurfaceBg
     } else if (config.panelContainerColorTertiary) {
         MaterialTheme.colorScheme.tertiaryContainer
@@ -409,6 +421,12 @@ fun QsOverlaySurface(
                 alpha = 1.0f
             )
         } else Color.White
+    }
+
+    val cardContainerBg = if (enableContainerBlur) {
+        rawCardContainerBg.copy(alpha = if (isPanelDark) 0.60f else 0.70f)
+    } else {
+        rawCardContainerBg
     }
 
     val contentColor = if (isPanelDark) Color.White else Color(0xFF1E293B)

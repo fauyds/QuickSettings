@@ -595,6 +595,14 @@ enum class FavoriteFeature(
         icon = Icons.Default.CropSquare,
         keywords = "footer buttons power settings edit collapse background spacing"
     ),
+    DESIGN_FROSTED_GLASS(
+        id = "design_frosted_glass",
+        title = "Frosted Glass Panel Backdrop",
+        category = CustomizeCategory.QS_DESIGN,
+        description = "Enable container blur and frosted glass visual effect for QS panel containers, notifications, and surface cards",
+        icon = Icons.Default.AutoAwesome,
+        keywords = "frosted glass blur container blur backdrop translucent"
+    ),
     DESIGN_BRIGHTNESS_BOTTOM(
         id = "design_brightness_bottom",
         title = "Move Brightness to Bottom",

@@ -431,6 +431,7 @@ fun NotificationManagerBottomSheet(
 
                                         SettingsCard(
                                             shape = cardShape,
+                                            canPin = false,
                                             colors = CardDefaults.cardColors(
                                                 containerColor = if (isBlocked) {
                                                     MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.5f)
@@ -661,6 +662,7 @@ fun NotificationManagerBottomSheet(
 
                                         SettingsCard(
                                             shape = cardShape,
+                                            canPin = false,
                                             colors = CardDefaults.cardColors(
                                                 containerColor = MaterialTheme.colorScheme.surfaceContainer
                                             ),

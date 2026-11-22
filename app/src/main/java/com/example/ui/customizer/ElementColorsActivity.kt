@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -173,6 +174,9 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
     val compArcTrackUseCustom by PanelPreferences.getCompArcTrackUseCustom(isEditingDark).collectAsState()
     val compArcTrackCustomColor by PanelPreferences.getCompArcTrackCustomColor(isEditingDark).collectAsState()
 
+    val hiddenIds by PanelPreferences.hiddenFeatures.collectAsState()
+    var showHiddenDialog by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -192,6 +196,38 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
                         )
+                    }
+                },
+                actions = {
+                    if (hiddenIds.isNotEmpty()) {
+                        Surface(
+                            onClick = { showHiddenDialog = true },
+                            shape = CircleShape,
+                            color = com.example.ui.theme.ExpressiveTheme.colors.buttonPrimary,
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .defaultMinSize(minHeight = 36.dp)
+                                .testTag("element_colors_show_hidden_btn")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Visibility,
+                                    contentDescription = "Show hidden features",
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "Hidden (${hiddenIds.size})",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            }
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -309,7 +345,8 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
 
             // Description Header Card
             SettingsCard(
-                shape = CustomizeCardShapes.SingleCard
+                shape = CustomizeCardShapes.SingleCard,
+                canPin = false
             ) {
                 Column(
                     modifier = Modifier.padding(12.dp),
@@ -353,6 +390,9 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                     )
                 }
 
+                // Group of Expandable Preference Cards (filterable by Hidden Features)
+                val visibleColorCards = mutableListOf<Pair<String, @Composable (androidx.compose.ui.graphics.Shape) -> Unit>>()
+
                 // 1. Surface background
                 val surfaceFactor = if (isEditingDark) 0.90f else 0.87f
                 fun darkenSurface(color: Color) = Color(
@@ -361,96 +401,116 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                     blue = (color.blue * surfaceFactor).coerceIn(0f, 1f),
                     alpha = 1f
                 )
-                ExpandableElementColorCard(
-                    title = "1. Surface Background",
-                    subtitle = "Behind panel containers and background layers",
-                    useCustom = surfaceBgUseCustom,
-                    onUseCustomChange = { PanelPreferences.setSurfaceBgUseCustom(context, isEditingDark, it) },
-                    customColor = surfaceBgCustomColor,
-                    onCustomColorChange = { PanelPreferences.setSurfaceBgCustomColor(context, isEditingDark, it) },
-                    colorMode = surfaceBgColorMode,
-                    onColorModeChange = { PanelPreferences.setSurfaceBgColorMode(context, isEditingDark, it) },
-                    availableModes = allModes,
-                    defaultColor = darkenSurface(editingColorScheme.surfaceVariant),
-                    primaryColor = darkenSurface(editingColorScheme.primaryContainer),
-                    secondaryColor = darkenSurface(editingColorScheme.secondaryContainer),
-                    tertiaryColor = darkenSurface(editingColorScheme.tertiaryContainer),
-                    hue = surfaceBgHue,
-                    sat = surfaceBgSat,
-                    valFactor = surfaceBgVal,
-                    onHsbChange = { h, s, v -> PanelPreferences.setSurfaceBgHsb(context, isEditingDark, h, s, v) },
-                    shape = CustomizeCardShapes.TopCard,
-                    testTag = "activity_surface_bg_tertiary_toggle"
-                )
+                if (!HiddenFeatureCatalog.isCardHidden("elem_color_surface_bg", hiddenIds)) {
+                    visibleColorCards.add("elem_color_surface_bg" to { cardShape ->
+                        ExpandableElementColorCard(
+                            featureId = "elem_color_surface_bg",
+                            title = "1. Surface Background",
+                            subtitle = "Behind panel containers and background layers",
+                            useCustom = surfaceBgUseCustom,
+                            onUseCustomChange = { PanelPreferences.setSurfaceBgUseCustom(context, isEditingDark, it) },
+                            customColor = surfaceBgCustomColor,
+                            onCustomColorChange = { PanelPreferences.setSurfaceBgCustomColor(context, isEditingDark, it) },
+                            colorMode = surfaceBgColorMode,
+                            onColorModeChange = { PanelPreferences.setSurfaceBgColorMode(context, isEditingDark, it) },
+                            availableModes = allModes,
+                            defaultColor = darkenSurface(editingColorScheme.surfaceVariant),
+                            primaryColor = darkenSurface(editingColorScheme.primaryContainer),
+                            secondaryColor = darkenSurface(editingColorScheme.secondaryContainer),
+                            tertiaryColor = darkenSurface(editingColorScheme.tertiaryContainer),
+                            hue = surfaceBgHue,
+                            sat = surfaceBgSat,
+                            valFactor = surfaceBgVal,
+                            onHsbChange = { h, s, v -> PanelPreferences.setSurfaceBgHsb(context, isEditingDark, h, s, v) },
+                            shape = cardShape,
+                            testTag = "activity_surface_bg_tertiary_toggle"
+                        )
+                    })
+                }
 
                 // 2. Panel containers & notifications
-                ExpandableElementColorCard(
-                    title = "2. Panel Containers & Notifications",
-                    subtitle = "Main Quick Settings card panels, sections, and notification cards",
-                    useCustom = panelContainerUseCustom,
-                    onUseCustomChange = { PanelPreferences.setPanelContainerUseCustom(context, isEditingDark, it) },
-                    customColor = panelContainerCustomColor,
-                    onCustomColorChange = { PanelPreferences.setPanelContainerCustomColor(context, isEditingDark, it) },
-                    colorMode = panelContainerColorMode,
-                    onColorModeChange = { PanelPreferences.setPanelContainerColorMode(context, isEditingDark, it) },
-                    availableModes = allModes,
-                    defaultColor = editingColorScheme.surfaceVariant,
-                    primaryColor = editingColorScheme.primaryContainer,
-                    secondaryColor = editingColorScheme.secondaryContainer,
-                    tertiaryColor = editingColorScheme.tertiaryContainer,
-                    hue = panelContainerHue,
-                    sat = panelContainerSat,
-                    valFactor = panelContainerVal,
-                    onHsbChange = { h, s, v -> PanelPreferences.setPanelContainerHsb(context, isEditingDark, h, s, v) },
-                    shape = CustomizeCardShapes.CenterCard,
-                    testTag = "activity_panel_container_tertiary_toggle"
-                )
+                if (!HiddenFeatureCatalog.isCardHidden("elem_color_panel_container", hiddenIds)) {
+                    visibleColorCards.add("elem_color_panel_container" to { cardShape ->
+                        ExpandableElementColorCard(
+                            featureId = "elem_color_panel_container",
+                            title = "2. Panel Containers & Notifications",
+                            subtitle = "Main Quick Settings card panels, sections, and notification cards",
+                            useCustom = panelContainerUseCustom,
+                            onUseCustomChange = { PanelPreferences.setPanelContainerUseCustom(context, isEditingDark, it) },
+                            customColor = panelContainerCustomColor,
+                            onCustomColorChange = { PanelPreferences.setPanelContainerCustomColor(context, isEditingDark, it) },
+                            colorMode = panelContainerColorMode,
+                            onColorModeChange = { PanelPreferences.setPanelContainerColorMode(context, isEditingDark, it) },
+                            availableModes = allModes,
+                            defaultColor = editingColorScheme.surfaceVariant,
+                            primaryColor = editingColorScheme.primaryContainer,
+                            secondaryColor = editingColorScheme.secondaryContainer,
+                            tertiaryColor = editingColorScheme.tertiaryContainer,
+                            hue = panelContainerHue,
+                            sat = panelContainerSat,
+                            valFactor = panelContainerVal,
+                            onHsbChange = { h, s, v -> PanelPreferences.setPanelContainerHsb(context, isEditingDark, h, s, v) },
+                            shape = cardShape,
+                            testTag = "activity_panel_container_tertiary_toggle"
+                        )
+                    })
+                }
 
                 // 3. Header Gradient
-                ExpandableElementColorCard(
-                    title = "3. Header Gradient",
-                    subtitle = "Top Monet gradient background accent layer",
-                    useCustom = headerGradientUseCustom,
-                    onUseCustomChange = { PanelPreferences.setHeaderGradientUseCustom(context, isEditingDark, it) },
-                    customColor = headerGradientCustomColor,
-                    onCustomColorChange = { PanelPreferences.setHeaderGradientCustomColor(context, isEditingDark, it) },
-                    colorMode = headerGradientColorMode,
-                    onColorModeChange = { PanelPreferences.setHeaderGradientColorMode(context, isEditingDark, it) },
-                    availableModes = accentModes,
-                    defaultColor = if (isEditingDark) editingColorScheme.primaryContainer else editingColorScheme.primary,
-                    primaryColor = if (isEditingDark) editingColorScheme.primaryContainer else editingColorScheme.primary,
-                    secondaryColor = if (isEditingDark) editingColorScheme.secondaryContainer else editingColorScheme.secondary,
-                    tertiaryColor = if (isEditingDark) editingColorScheme.tertiaryContainer else editingColorScheme.tertiary,
-                    hue = headerGradientHue,
-                    sat = headerGradientSat,
-                    valFactor = headerGradientVal,
-                    onHsbChange = { h, s, v -> PanelPreferences.setHeaderGradientHsb(context, isEditingDark, h, s, v) },
-                    shape = CustomizeCardShapes.CenterCard,
-                    testTag = "activity_header_gradient_tertiary_toggle"
-                )
+                if (!HiddenFeatureCatalog.isCardHidden("elem_color_header_gradient", hiddenIds)) {
+                    visibleColorCards.add("elem_color_header_gradient" to { cardShape ->
+                        ExpandableElementColorCard(
+                            featureId = "elem_color_header_gradient",
+                            title = "3. Header Gradient",
+                            subtitle = "Top Monet gradient background accent layer",
+                            useCustom = headerGradientUseCustom,
+                            onUseCustomChange = { PanelPreferences.setHeaderGradientUseCustom(context, isEditingDark, it) },
+                            customColor = headerGradientCustomColor,
+                            onCustomColorChange = { PanelPreferences.setHeaderGradientCustomColor(context, isEditingDark, it) },
+                            colorMode = headerGradientColorMode,
+                            onColorModeChange = { PanelPreferences.setHeaderGradientColorMode(context, isEditingDark, it) },
+                            availableModes = accentModes,
+                            defaultColor = if (isEditingDark) editingColorScheme.primaryContainer else editingColorScheme.primary,
+                            primaryColor = if (isEditingDark) editingColorScheme.primaryContainer else editingColorScheme.primary,
+                            secondaryColor = if (isEditingDark) editingColorScheme.secondaryContainer else editingColorScheme.secondary,
+                            tertiaryColor = if (isEditingDark) editingColorScheme.tertiaryContainer else editingColorScheme.tertiary,
+                            hue = headerGradientHue,
+                            sat = headerGradientSat,
+                            valFactor = headerGradientVal,
+                            onHsbChange = { h, s, v -> PanelPreferences.setHeaderGradientHsb(context, isEditingDark, h, s, v) },
+                            shape = cardShape,
+                            testTag = "activity_header_gradient_tertiary_toggle"
+                        )
+                    })
+                }
 
                 // 4. Active QS/QQS Tiles
-                ExpandableElementColorCard(
-                    title = "4. Active QS Tiles",
-                    subtitle = "Quick settings active tiles and icons",
-                    useCustom = qsTilesUseCustom,
-                    onUseCustomChange = { PanelPreferences.setQsTilesUseCustom(context, isEditingDark, it) },
-                    customColor = qsTilesCustomColor,
-                    onCustomColorChange = { PanelPreferences.setQsTilesCustomColor(context, isEditingDark, it) },
-                    colorMode = qsTilesColorMode,
-                    onColorModeChange = { PanelPreferences.setQsTilesColorMode(context, isEditingDark, it) },
-                    availableModes = accentModes,
-                    defaultColor = editingColorScheme.primary,
-                    primaryColor = editingColorScheme.primary,
-                    secondaryColor = editingColorScheme.secondary,
-                    tertiaryColor = editingColorScheme.tertiary,
-                    hue = qsTilesHue,
-                    sat = qsTilesSat,
-                    valFactor = qsTilesVal,
-                    onHsbChange = { h, s, v -> PanelPreferences.setQsTilesHsb(context, isEditingDark, h, s, v) },
-                    shape = CustomizeCardShapes.CenterCard,
-                    testTag = "activity_qs_tiles_tertiary_toggle"
-                )
+                if (!HiddenFeatureCatalog.isCardHidden("elem_color_qs_tiles", hiddenIds)) {
+                    visibleColorCards.add("elem_color_qs_tiles" to { cardShape ->
+                        ExpandableElementColorCard(
+                            featureId = "elem_color_qs_tiles",
+                            title = "4. Active QS Tiles",
+                            subtitle = "Quick settings active tiles and icons",
+                            useCustom = qsTilesUseCustom,
+                            onUseCustomChange = { PanelPreferences.setQsTilesUseCustom(context, isEditingDark, it) },
+                            customColor = qsTilesCustomColor,
+                            onCustomColorChange = { PanelPreferences.setQsTilesCustomColor(context, isEditingDark, it) },
+                            colorMode = qsTilesColorMode,
+                            onColorModeChange = { PanelPreferences.setQsTilesColorMode(context, isEditingDark, it) },
+                            availableModes = accentModes,
+                            defaultColor = editingColorScheme.primary,
+                            primaryColor = editingColorScheme.primary,
+                            secondaryColor = editingColorScheme.secondary,
+                            tertiaryColor = editingColorScheme.tertiary,
+                            hue = qsTilesHue,
+                            sat = qsTilesSat,
+                            valFactor = qsTilesVal,
+                            onHsbChange = { h, s, v -> PanelPreferences.setQsTilesHsb(context, isEditingDark, h, s, v) },
+                            shape = cardShape,
+                            testTag = "activity_qs_tiles_tertiary_toggle"
+                        )
+                    })
+                }
 
                 // 5. Inactive QS Tiles
                 val defaultInactiveTileBg = if (isEditingDark) {
@@ -464,210 +524,274 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                 } else {
                     Color.White
                 }
-                ExpandableElementColorCard(
-                    title = "5. Inactive QS Tiles",
-                    subtitle = "Quick settings inactive tiles background and icons",
-                    useCustom = inactiveTilesUseCustom,
-                    onUseCustomChange = { PanelPreferences.setInactiveTilesUseCustom(context, isEditingDark, it) },
-                    customColor = inactiveTilesCustomColor,
-                    onCustomColorChange = { PanelPreferences.setInactiveTilesCustomColor(context, isEditingDark, it) },
-                    colorMode = inactiveTilesColorMode,
-                    onColorModeChange = { PanelPreferences.setInactiveTilesColorMode(context, isEditingDark, it) },
-                    availableModes = allModes,
-                    defaultColor = defaultInactiveTileBg,
-                    primaryColor = editingColorScheme.primaryContainer,
-                    secondaryColor = editingColorScheme.secondaryContainer,
-                    tertiaryColor = editingColorScheme.tertiaryContainer,
-                    hue = inactiveTilesHue,
-                    sat = inactiveTilesSat,
-                    valFactor = inactiveTilesVal,
-                    onHsbChange = { h, s, v -> PanelPreferences.setInactiveTilesHsb(context, isEditingDark, h, s, v) },
-                    shape = CustomizeCardShapes.CenterCard,
-                    testTag = "activity_inactive_tiles_color"
-                )
+                if (!HiddenFeatureCatalog.isCardHidden("elem_color_inactive_tiles", hiddenIds)) {
+                    visibleColorCards.add("elem_color_inactive_tiles" to { cardShape ->
+                        ExpandableElementColorCard(
+                            featureId = "elem_color_inactive_tiles",
+                            title = "5. Inactive QS Tiles",
+                            subtitle = "Quick settings inactive tiles background and icons",
+                            useCustom = inactiveTilesUseCustom,
+                            onUseCustomChange = { PanelPreferences.setInactiveTilesUseCustom(context, isEditingDark, it) },
+                            customColor = inactiveTilesCustomColor,
+                            onCustomColorChange = { PanelPreferences.setInactiveTilesCustomColor(context, isEditingDark, it) },
+                            colorMode = inactiveTilesColorMode,
+                            onColorModeChange = { PanelPreferences.setInactiveTilesColorMode(context, isEditingDark, it) },
+                            availableModes = allModes,
+                            defaultColor = defaultInactiveTileBg,
+                            primaryColor = editingColorScheme.primaryContainer,
+                            secondaryColor = editingColorScheme.secondaryContainer,
+                            tertiaryColor = editingColorScheme.tertiaryContainer,
+                            hue = inactiveTilesHue,
+                            sat = inactiveTilesSat,
+                            valFactor = inactiveTilesVal,
+                            onHsbChange = { h, s, v -> PanelPreferences.setInactiveTilesHsb(context, isEditingDark, h, s, v) },
+                            shape = cardShape,
+                            testTag = "activity_inactive_tiles_color"
+                        )
+                    })
+                }
 
                 // 6. Sliders/progress bars
-                ExpandableElementColorCard(
-                    title = "6. Sliders / Progress Bars",
-                    subtitle = "Brightness, volume sliders and progress tracks",
-                    useCustom = slidersUseCustom,
-                    onUseCustomChange = { PanelPreferences.setSlidersUseCustom(context, isEditingDark, it) },
-                    customColor = slidersCustomColor,
-                    onCustomColorChange = { PanelPreferences.setSlidersCustomColor(context, isEditingDark, it) },
-                    colorMode = slidersColorMode,
-                    onColorModeChange = { PanelPreferences.setSlidersColorMode(context, isEditingDark, it) },
-                    availableModes = accentModes,
-                    defaultColor = editingColorScheme.primary,
-                    primaryColor = editingColorScheme.primary,
-                    secondaryColor = editingColorScheme.secondary,
-                    tertiaryColor = editingColorScheme.tertiary,
-                    hue = slidersHue,
-                    sat = slidersSat,
-                    valFactor = slidersVal,
-                    onHsbChange = { h, s, v -> PanelPreferences.setSlidersHsb(context, isEditingDark, h, s, v) },
-                    shape = CustomizeCardShapes.CenterCard,
-                    testTag = "activity_sliders_tertiary_toggle"
-                )
+                if (!HiddenFeatureCatalog.isCardHidden("elem_color_sliders", hiddenIds)) {
+                    visibleColorCards.add("elem_color_sliders" to { cardShape ->
+                        ExpandableElementColorCard(
+                            featureId = "elem_color_sliders",
+                            title = "6. Sliders / Progress Bars",
+                            subtitle = "Brightness, volume sliders and progress tracks",
+                            useCustom = slidersUseCustom,
+                            onUseCustomChange = { PanelPreferences.setSlidersUseCustom(context, isEditingDark, it) },
+                            customColor = slidersCustomColor,
+                            onCustomColorChange = { PanelPreferences.setSlidersCustomColor(context, isEditingDark, it) },
+                            colorMode = slidersColorMode,
+                            onColorModeChange = { PanelPreferences.setSlidersColorMode(context, isEditingDark, it) },
+                            availableModes = accentModes,
+                            defaultColor = editingColorScheme.primary,
+                            primaryColor = editingColorScheme.primary,
+                            secondaryColor = editingColorScheme.secondary,
+                            tertiaryColor = editingColorScheme.tertiary,
+                            hue = slidersHue,
+                            sat = slidersSat,
+                            valFactor = slidersVal,
+                            onHsbChange = { h, s, v -> PanelPreferences.setSlidersHsb(context, isEditingDark, h, s, v) },
+                            shape = cardShape,
+                            testTag = "activity_sliders_tertiary_toggle"
+                        )
+                    })
+                }
 
                 // 7. Misc elements
-                ExpandableElementColorCard(
-                    title = "7. Misc Elements",
-                    subtitle = "Page indicators, footer buttons, and status icons",
-                    useCustom = miscElementsUseCustom,
-                    onUseCustomChange = { PanelPreferences.setMiscElementsUseCustom(context, isEditingDark, it) },
-                    customColor = miscElementsCustomColor,
-                    onCustomColorChange = { PanelPreferences.setMiscElementsCustomColor(context, isEditingDark, it) },
-                    colorMode = miscElementsColorMode,
-                    onColorModeChange = { PanelPreferences.setMiscElementsColorMode(context, isEditingDark, it) },
-                    availableModes = accentModes,
-                    defaultColor = editingColorScheme.primary,
-                    primaryColor = editingColorScheme.primary,
-                    secondaryColor = editingColorScheme.secondary,
-                    tertiaryColor = editingColorScheme.tertiary,
-                    hue = miscElementsHue,
-                    sat = miscElementsSat,
-                    valFactor = miscElementsVal,
-                    onHsbChange = { h, s, v -> PanelPreferences.setMiscElementsHsb(context, isEditingDark, h, s, v) },
-                    shape = CustomizeCardShapes.CenterCard,
-                    testTag = "activity_misc_elements_tertiary_toggle"
-                )
+                if (!HiddenFeatureCatalog.isCardHidden("elem_color_misc_elements", hiddenIds)) {
+                    visibleColorCards.add("elem_color_misc_elements" to { cardShape ->
+                        ExpandableElementColorCard(
+                            featureId = "elem_color_misc_elements",
+                            title = "7. Misc Elements",
+                            subtitle = "Page indicators, footer buttons, and status icons",
+                            useCustom = miscElementsUseCustom,
+                            onUseCustomChange = { PanelPreferences.setMiscElementsUseCustom(context, isEditingDark, it) },
+                            customColor = miscElementsCustomColor,
+                            onCustomColorChange = { PanelPreferences.setMiscElementsCustomColor(context, isEditingDark, it) },
+                            colorMode = miscElementsColorMode,
+                            onColorModeChange = { PanelPreferences.setMiscElementsColorMode(context, isEditingDark, it) },
+                            availableModes = accentModes,
+                            defaultColor = editingColorScheme.primary,
+                            primaryColor = editingColorScheme.primary,
+                            secondaryColor = editingColorScheme.secondary,
+                            tertiaryColor = editingColorScheme.tertiary,
+                            hue = miscElementsHue,
+                            sat = miscElementsSat,
+                            valFactor = miscElementsVal,
+                            onHsbChange = { h, s, v -> PanelPreferences.setMiscElementsHsb(context, isEditingDark, h, s, v) },
+                            shape = cardShape,
+                            testTag = "activity_misc_elements_tertiary_toggle"
+                        )
+                    })
+                }
 
                 // 8. Clear All Button / FAB
-                ExpandableElementColorCard(
-                    title = "8. Clear All Button / FAB",
-                    subtitle = "Floating Clear All button and notification list footer button",
-                    useCustom = clearAllUseCustom,
-                    onUseCustomChange = { PanelPreferences.setClearAllUseCustom(context, isEditingDark, it) },
-                    customColor = clearAllCustomColor,
-                    onCustomColorChange = { PanelPreferences.setClearAllCustomColor(context, isEditingDark, it) },
-                    colorMode = clearAllColorMode,
-                    onColorModeChange = { PanelPreferences.setClearAllColorMode(context, isEditingDark, it) },
-                    availableModes = accentModes,
-                    defaultColor = editingColorScheme.primary,
-                    primaryColor = editingColorScheme.primary,
-                    secondaryColor = editingColorScheme.secondary,
-                    tertiaryColor = editingColorScheme.tertiary,
-                    hue = clearAllHue,
-                    sat = clearAllSat,
-                    valFactor = clearAllVal,
-                    onHsbChange = { h, s, v -> PanelPreferences.setClearAllHsb(context, isEditingDark, h, s, v) },
-                    shape = CustomizeCardShapes.CenterCard,
-                    testTag = "activity_clear_all_tertiary_toggle"
-                )
+                if (!HiddenFeatureCatalog.isCardHidden("elem_color_clear_all", hiddenIds)) {
+                    visibleColorCards.add("elem_color_clear_all" to { cardShape ->
+                        ExpandableElementColorCard(
+                            featureId = "elem_color_clear_all",
+                            title = "8. Clear All Button / FAB",
+                            subtitle = "Floating Clear All button and notification list footer button",
+                            useCustom = clearAllUseCustom,
+                            onUseCustomChange = { PanelPreferences.setClearAllUseCustom(context, isEditingDark, it) },
+                            customColor = clearAllCustomColor,
+                            onCustomColorChange = { PanelPreferences.setClearAllCustomColor(context, isEditingDark, it) },
+                            colorMode = clearAllColorMode,
+                            onColorModeChange = { PanelPreferences.setClearAllColorMode(context, isEditingDark, it) },
+                            availableModes = accentModes,
+                            defaultColor = editingColorScheme.primary,
+                            primaryColor = editingColorScheme.primary,
+                            secondaryColor = editingColorScheme.secondary,
+                            tertiaryColor = editingColorScheme.tertiary,
+                            hue = clearAllHue,
+                            sat = clearAllSat,
+                            valFactor = clearAllVal,
+                            onHsbChange = { h, s, v -> PanelPreferences.setClearAllHsb(context, isEditingDark, h, s, v) },
+                            shape = cardShape,
+                            testTag = "activity_clear_all_tertiary_toggle"
+                        )
+                    })
+                }
 
                 // 9. Active Complication Arcs
-                ExpandableElementColorCard(
-                    title = "9. Active Complication Arcs",
-                    subtitle = "Progress arc, horizontal line, and perimeter bar for active complications",
-                    useCustom = activeCompArcUseCustom,
-                    onUseCustomChange = { PanelPreferences.setActiveCompArcUseCustom(context, isEditingDark, it) },
-                    customColor = activeCompArcCustomColor,
-                    onCustomColorChange = { PanelPreferences.setActiveCompArcCustomColor(context, isEditingDark, it) },
-                    colorMode = activeCompArcMode,
-                    onColorModeChange = { PanelPreferences.setActiveCompArcMode(context, isEditingDark, it) },
-                    availableModes = allModes,
-                    defaultColor = editingColorScheme.onPrimary,
-                    primaryColor = editingColorScheme.primary,
-                    secondaryColor = editingColorScheme.secondary,
-                    tertiaryColor = editingColorScheme.tertiary,
-                    defaultModeShortLabel = "Auto",
-                    hue = activeCompArcHue,
-                    sat = activeCompArcSat,
-                    valFactor = activeCompArcVal,
-                    onHsbChange = { h, s, v -> PanelPreferences.setActiveCompArcHsb(context, isEditingDark, h, s, v) },
-                    shape = CustomizeCardShapes.CenterCard,
-                    testTag = "activity_active_comp_arc_color"
-                )
+                if (!HiddenFeatureCatalog.isCardHidden("elem_color_active_comp_arc", hiddenIds)) {
+                    visibleColorCards.add("elem_color_active_comp_arc" to { cardShape ->
+                        ExpandableElementColorCard(
+                            featureId = "elem_color_active_comp_arc",
+                            title = "9. Active Complication Arcs",
+                            subtitle = "Progress arc, horizontal line, and perimeter bar for active complications",
+                            useCustom = activeCompArcUseCustom,
+                            onUseCustomChange = { PanelPreferences.setActiveCompArcUseCustom(context, isEditingDark, it) },
+                            customColor = activeCompArcCustomColor,
+                            onCustomColorChange = { PanelPreferences.setActiveCompArcCustomColor(context, isEditingDark, it) },
+                            colorMode = activeCompArcMode,
+                            onColorModeChange = { PanelPreferences.setActiveCompArcMode(context, isEditingDark, it) },
+                            availableModes = allModes,
+                            defaultColor = editingColorScheme.onPrimary,
+                            primaryColor = editingColorScheme.primary,
+                            secondaryColor = editingColorScheme.secondary,
+                            tertiaryColor = editingColorScheme.tertiary,
+                            defaultModeShortLabel = "Auto",
+                            hue = activeCompArcHue,
+                            sat = activeCompArcSat,
+                            valFactor = activeCompArcVal,
+                            onHsbChange = { h, s, v -> PanelPreferences.setActiveCompArcHsb(context, isEditingDark, h, s, v) },
+                            shape = cardShape,
+                            testTag = "activity_active_comp_arc_color"
+                        )
+                    })
+                }
 
                 // 10. Inactive Complication Arcs
-                ExpandableElementColorCard(
-                    title = "10. Inactive Complication Arcs",
-                    subtitle = "Progress arc, horizontal line, and perimeter bar for inactive complications",
-                    useCustom = inactiveCompArcUseCustom,
-                    onUseCustomChange = { PanelPreferences.setInactiveCompArcUseCustom(context, isEditingDark, it) },
-                    customColor = inactiveCompArcCustomColor,
-                    onCustomColorChange = { PanelPreferences.setInactiveCompArcCustomColor(context, isEditingDark, it) },
-                    colorMode = inactiveCompArcMode,
-                    onColorModeChange = { PanelPreferences.setInactiveCompArcMode(context, isEditingDark, it) },
-                    availableModes = allModes,
-                    defaultColor = if (isEditingDark) Color(0xFFCCCCCC) else Color(0xFF555555),
-                    primaryColor = editingColorScheme.primary,
-                    secondaryColor = editingColorScheme.secondary,
-                    tertiaryColor = editingColorScheme.tertiary,
-                    defaultModeShortLabel = "Auto",
-                    hue = inactiveCompArcHue,
-                    sat = inactiveCompArcSat,
-                    valFactor = inactiveCompArcVal,
-                    onHsbChange = { h, s, v -> PanelPreferences.setInactiveCompArcHsb(context, isEditingDark, h, s, v) },
-                    shape = CustomizeCardShapes.CenterCard,
-                    testTag = "activity_inactive_comp_arc_color"
-                )
+                if (!HiddenFeatureCatalog.isCardHidden("elem_color_inactive_comp_arc", hiddenIds)) {
+                    visibleColorCards.add("elem_color_inactive_comp_arc" to { cardShape ->
+                        ExpandableElementColorCard(
+                            featureId = "elem_color_inactive_comp_arc",
+                            title = "10. Inactive Complication Arcs",
+                            subtitle = "Progress arc, horizontal line, and perimeter bar for inactive complications",
+                            useCustom = inactiveCompArcUseCustom,
+                            onUseCustomChange = { PanelPreferences.setInactiveCompArcUseCustom(context, isEditingDark, it) },
+                            customColor = inactiveCompArcCustomColor,
+                            onCustomColorChange = { PanelPreferences.setInactiveCompArcCustomColor(context, isEditingDark, it) },
+                            colorMode = inactiveCompArcMode,
+                            onColorModeChange = { PanelPreferences.setInactiveCompArcMode(context, isEditingDark, it) },
+                            availableModes = allModes,
+                            defaultColor = if (isEditingDark) Color(0xFFCCCCCC) else Color(0xFF555555),
+                            primaryColor = editingColorScheme.primary,
+                            secondaryColor = editingColorScheme.secondary,
+                            tertiaryColor = editingColorScheme.tertiary,
+                            defaultModeShortLabel = "Auto",
+                            hue = inactiveCompArcHue,
+                            sat = inactiveCompArcSat,
+                            valFactor = inactiveCompArcVal,
+                            onHsbChange = { h, s, v -> PanelPreferences.setInactiveCompArcHsb(context, isEditingDark, h, s, v) },
+                            shape = cardShape,
+                            testTag = "activity_inactive_comp_arc_color"
+                        )
+                    })
+                }
 
                 // 11. Complication Arc Tracks
-                ExpandableElementColorCard(
-                    title = "11. Complication Arc Tracks",
-                    subtitle = "Unfilled background track behind complication arcs, lines, and perimeter bars",
-                    useCustom = compArcTrackUseCustom,
-                    onUseCustomChange = { PanelPreferences.setCompArcTrackUseCustom(context, isEditingDark, it) },
-                    customColor = compArcTrackCustomColor,
-                    onCustomColorChange = { PanelPreferences.setCompArcTrackCustomColor(context, isEditingDark, it) },
-                    colorMode = compArcTrackMode,
-                    onColorModeChange = { PanelPreferences.setCompArcTrackMode(context, isEditingDark, it) },
-                    availableModes = allModes,
-                    defaultColor = (if (isEditingDark) Color.White else Color.Black).copy(alpha = 0.22f),
-                    primaryColor = editingColorScheme.primary.copy(alpha = 0.30f),
-                    secondaryColor = editingColorScheme.secondary.copy(alpha = 0.30f),
-                    tertiaryColor = editingColorScheme.tertiary.copy(alpha = 0.30f),
-                    defaultModeShortLabel = "Auto",
-                    hue = compArcTrackHue,
-                    sat = compArcTrackSat,
-                    valFactor = compArcTrackVal,
-                    onHsbChange = { h, s, v -> PanelPreferences.setCompArcTrackHsb(context, isEditingDark, h, s, v) },
-                    shape = CustomizeCardShapes.BottomCard,
-                    testTag = "activity_comp_arc_track_color"
-                )
+                if (!HiddenFeatureCatalog.isCardHidden("elem_color_comp_arc_track", hiddenIds)) {
+                    visibleColorCards.add("elem_color_comp_arc_track" to { cardShape ->
+                        ExpandableElementColorCard(
+                            featureId = "elem_color_comp_arc_track",
+                            title = "11. Complication Arc Tracks",
+                            subtitle = "Unfilled background track behind complication arcs, lines, and perimeter bars",
+                            useCustom = compArcTrackUseCustom,
+                            onUseCustomChange = { PanelPreferences.setCompArcTrackUseCustom(context, isEditingDark, it) },
+                            customColor = compArcTrackCustomColor,
+                            onCustomColorChange = { PanelPreferences.setCompArcTrackCustomColor(context, isEditingDark, it) },
+                            colorMode = compArcTrackMode,
+                            onColorModeChange = { PanelPreferences.setCompArcTrackMode(context, isEditingDark, it) },
+                            availableModes = allModes,
+                            defaultColor = (if (isEditingDark) Color.White else Color.Black).copy(alpha = 0.22f),
+                            primaryColor = editingColorScheme.primary.copy(alpha = 0.30f),
+                            secondaryColor = editingColorScheme.secondary.copy(alpha = 0.30f),
+                            tertiaryColor = editingColorScheme.tertiary.copy(alpha = 0.30f),
+                            defaultModeShortLabel = "Auto",
+                            hue = compArcTrackHue,
+                            sat = compArcTrackSat,
+                            valFactor = compArcTrackVal,
+                            onHsbChange = { h, s, v -> PanelPreferences.setCompArcTrackHsb(context, isEditingDark, h, s, v) },
+                            shape = cardShape,
+                            testTag = "activity_comp_arc_track_color"
+                        )
+                    })
+                }
+
+                visibleColorCards.forEachIndexed { index, (_, renderCard) ->
+                    renderCard(CustomizeCardShapes.getShapeForIndex(index, visibleColorCards.size))
+                }
             }
 
             val disableMonetNotifText by PanelPreferences.disableMonetNotifText.collectAsState()
+            val showDisableMonetNotifText = !HiddenFeatureCatalog.isCardHidden("disable_monet_notif_text_card", hiddenIds)
 
             // Disable Monet for Notifications Text Option Card
-            SettingsCard(
-                shape = CustomizeCardShapes.SingleCard,
-                onClick = { PanelPreferences.setDisableMonetNotifText(context, !disableMonetNotifText) },
-                modifier = Modifier.testTag("disable_monet_notif_text_card")
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+            if (showDisableMonetNotifText) {
+                SettingsCard(
+                    shape = CustomizeCardShapes.SingleCard,
+                    onClick = { PanelPreferences.setDisableMonetNotifText(context, !disableMonetNotifText) },
+                    featureId = "disable_monet_notif_text_card",
+                    featureTitle = "Disable Monet for Notification Text",
+                    modifier = Modifier.testTag("disable_monet_notif_text_card")
                 ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Disable Monet for Notification Text",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Disables Monet colors for notification text and the 'Notifications' section label (black text in light mode, white text in dark mode). Main QS header labels are not affected.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = "Disable Monet for Notification Text",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Disables Monet colors for notification text and the 'Notifications' section label (black text in light mode, white text in dark mode). Main QS header labels are not affected.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Switch(
+                            checked = disableMonetNotifText,
+                            onCheckedChange = { PanelPreferences.setDisableMonetNotifText(context, it) },
+                            modifier = Modifier.testTag("disable_monet_notif_text_switch")
                         )
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Switch(
-                        checked = disableMonetNotifText,
-                        onCheckedChange = { PanelPreferences.setDisableMonetNotifText(context, it) },
-                        modifier = Modifier.testTag("disable_monet_notif_text_switch")
-                    )
                 }
             }
+
+            val anyColorCardVisible = !HiddenFeatureCatalog.isCardHidden("elem_color_surface_bg", hiddenIds) ||
+                !HiddenFeatureCatalog.isCardHidden("elem_color_panel_container", hiddenIds) ||
+                !HiddenFeatureCatalog.isCardHidden("elem_color_header_gradient", hiddenIds) ||
+                !HiddenFeatureCatalog.isCardHidden("elem_color_qs_tiles", hiddenIds) ||
+                !HiddenFeatureCatalog.isCardHidden("elem_color_inactive_tiles", hiddenIds) ||
+                !HiddenFeatureCatalog.isCardHidden("elem_color_sliders", hiddenIds) ||
+                !HiddenFeatureCatalog.isCardHidden("elem_color_misc_elements", hiddenIds) ||
+                !HiddenFeatureCatalog.isCardHidden("elem_color_clear_all", hiddenIds) ||
+                !HiddenFeatureCatalog.isCardHidden("elem_color_active_comp_arc", hiddenIds) ||
+                !HiddenFeatureCatalog.isCardHidden("elem_color_inactive_comp_arc", hiddenIds) ||
+                !HiddenFeatureCatalog.isCardHidden("elem_color_comp_arc_track", hiddenIds)
+
+            if (!anyColorCardVisible && !showDisableMonetNotifText) {
+                AllSectionFeaturesHiddenCard(sectionTitle = "Element Colors")
+            }
         }
+    }
+
+    if (showHiddenDialog) {
+        HiddenFeaturesDialog(onDismiss = { showHiddenDialog = false })
     }
 }
 
@@ -805,6 +929,7 @@ private fun ColorModeSegmentedBar(
 
 @Composable
 private fun ExpandableElementColorCard(
+    featureId: String,
     title: String,
     subtitle: String,
     useCustom: Boolean,
@@ -853,6 +978,8 @@ private fun ExpandableElementColorCard(
 
     SettingsCard(
         shape = shape,
+        featureId = featureId,
+        featureTitle = title,
         modifier = Modifier.testTag("${testTag}_card")
     ) {
         Column(
@@ -861,7 +988,7 @@ private fun ExpandableElementColorCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { isExpanded = !isExpanded }
+                    .pinnableClickable { isExpanded = !isExpanded }
                     .padding(horizontal = 12.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically

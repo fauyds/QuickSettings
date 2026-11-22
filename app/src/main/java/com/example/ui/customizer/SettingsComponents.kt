@@ -7,9 +7,11 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Indication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,6 +29,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
@@ -100,6 +104,8 @@ fun SettingsCard(
 
     val localCardId = LocalPinnableCardId.current
     val localLongClick = LocalPinnableCardOnLongClick.current
+    val hasStableId = featureId != null || localCardId != null || feature != null || featureTitle != null
+    val effectiveCanPin = canPin && hasStableId
 
     val resolvedId = featureId ?: localCardId ?: feature?.id ?: featureTitle?.let { title ->
         FavoriteFeature.entries.firstOrNull { it.title.equals(title, ignoreCase = true) }?.id
@@ -111,21 +117,32 @@ fun SettingsCard(
     val pinnedIds by PanelPreferences.pinnedFeatures.collectAsState()
     val isPinned = pinnedIds.contains(effectiveFeatureId)
 
+    val cardLongClickHandler: (() -> Unit)? = remember(localLongClick, effectiveCanPin, onLongClick) {
+        if (localLongClick != null) {
+            localLongClick
+        } else if (effectiveCanPin) {
+            {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onLongClick?.invoke()
+                showDropdown = true
+            }
+        } else if (onLongClick != null) {
+            {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onLongClick.invoke()
+            }
+        } else {
+            null
+        }
+    }
+
     Box(modifier = modifier) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .combinedClickable(
                     onClick = { onClick?.invoke() },
-                    onLongClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onLongClick?.invoke()
-                        if (localLongClick != null) {
-                            localLongClick.invoke()
-                        } else if (canPin) {
-                            showDropdown = true
-                        }
-                    }
+                    onLongClick = cardLongClickHandler
                 ),
             shape = shape,
             colors = colors
@@ -133,66 +150,69 @@ fun SettingsCard(
             CompositionLocalProvider(
                 LocalTextStyle provides LocalTextStyle.current.copy(
                     platformStyle = PlatformTextStyle(includeFontPadding = false)
-                )
+                ),
+                LocalPinnableCardOnLongClick provides (cardLongClickHandler ?: localLongClick)
             ) {
                 content()
             }
         }
 
+        val hiddenIds by PanelPreferences.hiddenFeatures.collectAsState()
+        val isHidden = hiddenIds.contains(effectiveFeatureId)
 
-
-        if (canPin) {
+        if (effectiveCanPin && localLongClick == null) {
             DropdownMenu(
                 expanded = showDropdown,
                 onDismissRequest = { showDropdown = false },
                 modifier = Modifier.testTag("dropdown_menu_$effectiveFeatureId")
             ) {
-                DropdownMenuItem(
-                    text = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = if (isPinned) "Unpin" else "Pin",
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 14.sp
-                            )
-                            if (isPinned) {
-                                Surface(
-                                    shape = RoundedCornerShape(4.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer
-                                ) {
-                                    Text(
-                                        text = "PINNED",
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                                    )
-                                }
-                            }
-                        }
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.PushPin,
-                            contentDescription = if (isPinned) "Unpin" else "Pin",
-                            tint = if (isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    },
-                    onClick = {
+                FeatureDropdownMenuItems(
+                    featureId = effectiveFeatureId,
+                    displayTitle = HiddenFeatureCatalog.resolveTitle(effectiveFeatureId, featureTitle),
+                    isPinned = isPinned,
+                    isHidden = isHidden,
+                    onPinClick = {
                         showDropdown = false
                         val isNowPinned = PanelPreferences.toggleFeaturePinned(context, effectiveFeatureId)
-                        val title = featureTitle ?: FavoriteFeature.fromId(effectiveFeatureId)?.title ?: "Option"
+                        val title = HiddenFeatureCatalog.resolveTitle(effectiveFeatureId, featureTitle)
                         val msg = if (isNowPinned) "$title moved to top (Pinned)" else "$title unpinned"
-                        android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                     },
-                    modifier = Modifier.testTag("dropdown_pin_button")
+                    onHideClick = {
+                        showDropdown = false
+                        val isNowHidden = PanelPreferences.toggleFeatureHidden(context, effectiveFeatureId)
+                        val title = HiddenFeatureCatalog.resolveTitle(effectiveFeatureId, featureTitle)
+                        val msg = if (isNowHidden) "$title hidden" else "$title shown"
+                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                    }
                 )
             }
         }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun Modifier.pinnableClickable(
+    enabled: Boolean = true,
+    interactionSource: MutableInteractionSource? = null,
+    indication: Indication? = null,
+    onClick: () -> Unit
+): Modifier {
+    if (!enabled) return this
+    val onLongClick = LocalPinnableCardOnLongClick.current
+    return if (interactionSource != null) {
+        this.combinedClickable(
+            interactionSource = interactionSource,
+            indication = indication,
+            onLongClick = onLongClick,
+            onClick = onClick
+        )
+    } else {
+        this.combinedClickable(
+            onLongClick = onLongClick,
+            onClick = onClick
+        )
     }
 }
 
@@ -352,6 +372,9 @@ fun PinnableCardWrapper(
         showDropdown = true
     }
 
+    val hiddenIds by PinnedCardsManager.getHiddenCardIds().collectAsState()
+    val isHidden = hiddenIds.contains(cardId)
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -377,53 +400,95 @@ fun PinnableCardWrapper(
             onDismissRequest = { showDropdown = false },
             modifier = Modifier.testTag("dropdown_menu_$cardId")
         ) {
-            DropdownMenuItem(
-                text = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = if (isPinned) "Unpin" else "Pin",
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 14.sp
-                        )
-                        if (isPinned) {
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer
-                            ) {
-                                Text(
-                                    text = "PINNED",
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                                )
-                            }
-                        }
-                    }
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.PushPin,
-                        contentDescription = if (isPinned) "Unpin" else "Pin",
-                        tint = if (isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
-                    )
-                },
-                onClick = {
+            val displayTitle = HiddenFeatureCatalog.resolveTitle(cardId, cardTitle)
+            FeatureDropdownMenuItems(
+                featureId = cardId,
+                displayTitle = displayTitle,
+                isPinned = isPinned,
+                isHidden = isHidden,
+                onPinClick = {
                     showDropdown = false
                     val isNowPinned = PinnedCardsManager.togglePin(cardId, category, context)
-                    val displayTitle = cardTitle ?: cardId.replace("qs_", "").replace("_card", "")
-                        .replace("_", " ").split(" ")
-                        .joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
                     val msg = if (isNowPinned) "$displayTitle moved to top (Pinned)" else "$displayTitle unpinned"
                     Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                 },
-                modifier = Modifier.testTag("dropdown_pin_button")
+                onHideClick = {
+                    showDropdown = false
+                    val isNowHidden = PinnedCardsManager.toggleHide(cardId, context)
+                    val msg = if (isNowHidden) "$displayTitle hidden" else "$displayTitle shown"
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                }
             )
         }
     }
+}
+
+@Composable
+private fun FeatureDropdownMenuItems(
+    featureId: String,
+    displayTitle: String,
+    isPinned: Boolean,
+    isHidden: Boolean,
+    onPinClick: () -> Unit,
+    onHideClick: () -> Unit
+) {
+    DropdownMenuItem(
+        text = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = if (isPinned) "Unpin" else "Pin",
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp
+                )
+                if (isPinned) {
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Text(
+                            text = "PINNED",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                        )
+                    }
+                }
+            }
+        },
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.PushPin,
+                contentDescription = if (isPinned) "Unpin" else "Pin",
+                tint = if (isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp)
+            )
+        },
+        onClick = onPinClick,
+        modifier = Modifier.testTag("dropdown_pin_button")
+    )
+
+    DropdownMenuItem(
+        text = {
+            Text(
+                text = if (isHidden) "Unhide" else "Hide",
+                fontWeight = FontWeight.Medium,
+                fontSize = 14.sp
+            )
+        },
+        leadingIcon = {
+            Icon(
+                imageVector = if (isHidden) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                contentDescription = if (isHidden) "Unhide $displayTitle" else "Hide $displayTitle",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp)
+            )
+        },
+        onClick = onHideClick,
+        modifier = Modifier.testTag("dropdown_hide_button")
+    )
 }
 

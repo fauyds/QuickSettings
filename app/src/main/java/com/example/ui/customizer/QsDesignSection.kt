@@ -237,6 +237,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     var showFabImportDialog by remember { mutableStateOf(false) }
 
     val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.QS_DESIGN, context).collectAsState()
+    val hiddenIds by PinnedCardsManager.getHiddenCardIds().collectAsState()
+    val isUserHidden = { id: String -> HiddenFeatureCatalog.isCardHidden(id, hiddenIds) }
 
     // --- 1. TILE SHAPES & LAYOUT CARDS ---
 
@@ -607,7 +609,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(14.dp))
                                     .background(ExpressiveTheme.colors.nestedElementSurface)
-                                    .clickable { PanelPreferences.setQqs2x1HorizontalLine(context, !qqs2x1HorizontalLine) }
+                                    .pinnableClickable { PanelPreferences.setQqs2x1HorizontalLine(context, !qqs2x1HorizontalLine) }
                                     .padding(horizontal = 14.dp, vertical = 10.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
@@ -649,7 +651,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(14.dp))
                                     .background(ExpressiveTheme.colors.nestedElementSurface)
-                                    .clickable { PanelPreferences.setQqs2x1PerimeterProgress(context, !qqs2x1PerimeterProgress) }
+                                    .pinnableClickable { PanelPreferences.setQqs2x1PerimeterProgress(context, !qqs2x1PerimeterProgress) }
                                     .padding(horizontal = 14.dp, vertical = 10.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
@@ -1001,7 +1003,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         modifier = Modifier
                             .weight(1f)
                             .then(
-                                if (collapseExpandOptions) Modifier.clickable { tileShapesExpanded = !tileShapesExpanded } else Modifier
+                                if (collapseExpandOptions) Modifier.pinnableClickable { tileShapesExpanded = !tileShapesExpanded } else Modifier
                             )
                     ) {
                         Box(
@@ -2522,7 +2524,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { expandedConfig = !expandedConfig },
+                            .pinnableClickable { expandedConfig = !expandedConfig },
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -3071,7 +3073,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         modifier = Modifier
                             .weight(1f)
                             .then(
-                                if (collapseExpandOptions) Modifier.clickable { progressBarSliderExpanded = !progressBarSliderExpanded } else Modifier
+                                if (collapseExpandOptions) Modifier.pinnableClickable { progressBarSliderExpanded = !progressBarSliderExpanded } else Modifier
                             ),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -4191,7 +4193,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         modifier = Modifier
                             .weight(1f)
                             .then(
-                                if (collapseExpandOptions) Modifier.clickable { panelCornersExpanded = !panelCornersExpanded } else Modifier
+                                if (collapseExpandOptions) Modifier.pinnableClickable { panelCornersExpanded = !panelCornersExpanded } else Modifier
                             ),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -4704,7 +4706,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             modifier = Modifier
                                 .weight(1f)
                                 .then(
-                                    if (collapseExpandOptions) Modifier.clickable { clearAllFabExpanded = !clearAllFabExpanded } else Modifier
+                                    if (collapseExpandOptions) Modifier.pinnableClickable { clearAllFabExpanded = !clearAllFabExpanded } else Modifier
                                 )
                         ) {
                             Box(
@@ -5373,6 +5375,89 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         }
     }
 
+    val frostedGlassCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("frosted_glass_panel_card", CustomizeCategory.QS_DESIGN, "Frosted Glass Panel Backdrop") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier.testTag("frosted_glass_panel_card")
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                        ) {
+                            Text(
+                                text = "Frosted Glass Panel Backdrop",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 17.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Enable container blur and frosted glass visual effect for QS panel background containers, notifications, and surface cards.",
+                                fontSize = 12.sp,
+                                lineHeight = 15.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    val containerBlurEnabled by PanelPreferences.enableContainerBlur.collectAsState()
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Enable Frosted Glass Blur",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Switch(
+                            checked = containerBlurEnabled,
+                            onCheckedChange = { PanelPreferences.setEnableContainerBlur(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("frosted_glass_toggle")
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     val headerStatusBackgroundCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("header_status_background_card", CustomizeCategory.QS_DESIGN, "Header & Status Backgrounds") {
             SettingsCard(
@@ -5760,7 +5845,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
                             .background(MaterialTheme.colorScheme.background)
-                            .clickable { previewPage = (previewPage + 1) % 3 }
+                            .pinnableClickable { previewPage = (previewPage + 1) % 3 }
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
@@ -6050,6 +6135,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
     }
 
     val pinnedCardsMap = mapOf<String, @Composable (androidx.compose.ui.graphics.Shape) -> Unit>(
+        "panel_style_card" to panelStyleCard,
         "android_oreo_style_card" to androidOreoStyleCard,
         "qqs_icon_size_card" to qqsIconSizeCard,
         "qqs_icon_quantity_card" to qqsIconQuantityCard,
@@ -6068,6 +6154,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
         "element_colors_preference_card" to elementColorsPreferenceCard,
         "header_status_background_card" to headerStatusBackgroundCard,
         "footer_icon_background_card" to footerIconBackgroundCard,
+        "frosted_glass_panel_card" to frostedGlassCard,
         "header_complication_tiles_card" to headerComplicationTilesCard,
         "move_brightness_bottom_card" to moveBrightnessBottomCard,
         "brightness_in_qqs_card" to brightnessInQqsCard,
@@ -6123,7 +6210,17 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
             addAll(list)
         }
     }
-    val pinnedCards = pinnedIds.filter { !hiddenDesignIds.contains(it) }.mapNotNull { pinnedCardsMap[it] }
+    val canonicalPinKey: (String) -> String = { id ->
+        when (id) {
+            "android_oreo_style_card" -> "panel_style_card"
+            "compact_media_notification_card" -> "show_media_in_notif_container_card"
+            else -> id
+        }
+    }
+    val pinnedCards = pinnedIds
+        .filter { !hiddenDesignIds.contains(it) && !isUserHidden(it) }
+        .distinctBy(canonicalPinKey)
+        .mapNotNull { pinnedCardsMap[it] }
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -6142,19 +6239,29 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
         // 2. Tile Shapes & Layout
         val unpinnedTileShapes = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (!hiddenDesignIds.contains("android_oreo_style_card") && !pinnedIds.contains("android_oreo_style_card")) unpinnedTileShapes.add(androidOreoStyleCard)
-        if (!hiddenDesignIds.contains("qqs_icon_size_card") && !pinnedIds.contains("qqs_icon_size_card")) unpinnedTileShapes.add(qqsIconSizeCard)
-        if (!hiddenDesignIds.contains("qqs_icon_quantity_card") && !pinnedIds.contains("qqs_icon_quantity_card")) unpinnedTileShapes.add(qqsIconQuantityCard)
-        if (!hiddenDesignIds.contains("qqs_complications_row_card") && !pinnedIds.contains("qqs_complications_row_card")) unpinnedTileShapes.add(qqsComplicationsRowCard)
-        if (!hiddenDesignIds.contains("legacy_tile_shapes_support_card") && !pinnedIds.contains("legacy_tile_shapes_support_card")) unpinnedTileShapes.add(legacyTileShapesSupportCard)
-        if (!hiddenDesignIds.contains("tile_shape_selection_card") && !pinnedIds.contains("tile_shape_selection_card")) unpinnedTileShapes.add(tileShapeSelectionCard)
-        if (!hiddenDesignIds.contains("complication_arc_thickness_card") && !pinnedIds.contains("complication_arc_thickness_card")) unpinnedTileShapes.add(complicationArcThicknessCard)
-        if (!hiddenDesignIds.contains("tile_outline_card") && !pinnedIds.contains("tile_outline_card")) unpinnedTileShapes.add(tileOutlineCard)
-        if (!hiddenDesignIds.contains("qs_tile_gradient_card") && !pinnedIds.contains("qs_tile_gradient_card")) unpinnedTileShapes.add(qsTileGradientCard)
-        if (!hiddenDesignIds.contains("tile_top_rim_card") && !pinnedIds.contains("tile_top_rim_card")) unpinnedTileShapes.add(tileTopRimCard)
-        if (!hiddenDesignIds.contains("qs_page_indicator_style_card") && !pinnedIds.contains("qs_page_indicator_style_card")) unpinnedTileShapes.add(pageIndicatorStyleCard)
-        if (!hiddenDesignIds.contains("clear_all_fab_card") && !pinnedIds.contains("clear_all_fab_card")) unpinnedTileShapes.add(clearAllFabCard)
-        if (!hiddenDesignIds.contains("show_media_in_notif_container_card") && !pinnedIds.contains("show_media_in_notif_container_card")) unpinnedTileShapes.add(showMediaInNotifContainerCard)
+        if (!hiddenDesignIds.contains("panel_style_card") &&
+            !hiddenDesignIds.contains("android_oreo_style_card") &&
+            !isUserHidden("panel_style_card") &&
+            !pinnedIds.contains("panel_style_card") &&
+            !pinnedIds.contains("android_oreo_style_card")
+        ) unpinnedTileShapes.add(panelStyleCard)
+        if (!hiddenDesignIds.contains("qqs_icon_size_card") && !isUserHidden("qqs_icon_size_card") && !pinnedIds.contains("qqs_icon_size_card")) unpinnedTileShapes.add(qqsIconSizeCard)
+        if (!hiddenDesignIds.contains("qqs_icon_quantity_card") && !isUserHidden("qqs_icon_quantity_card") && !pinnedIds.contains("qqs_icon_quantity_card")) unpinnedTileShapes.add(qqsIconQuantityCard)
+        if (!hiddenDesignIds.contains("qqs_complications_row_card") && !isUserHidden("qqs_complications_row_card") && !pinnedIds.contains("qqs_complications_row_card")) unpinnedTileShapes.add(qqsComplicationsRowCard)
+        if (!hiddenDesignIds.contains("legacy_tile_shapes_support_card") && !isUserHidden("legacy_tile_shapes_support_card") && !pinnedIds.contains("legacy_tile_shapes_support_card")) unpinnedTileShapes.add(legacyTileShapesSupportCard)
+        if (!hiddenDesignIds.contains("tile_shape_selection_card") && !isUserHidden("tile_shape_selection_card") && !pinnedIds.contains("tile_shape_selection_card")) unpinnedTileShapes.add(tileShapeSelectionCard)
+        if (!hiddenDesignIds.contains("complication_arc_thickness_card") && !isUserHidden("complication_arc_thickness_card") && !pinnedIds.contains("complication_arc_thickness_card")) unpinnedTileShapes.add(complicationArcThicknessCard)
+        if (!hiddenDesignIds.contains("tile_outline_card") && !isUserHidden("tile_outline_card") && !pinnedIds.contains("tile_outline_card")) unpinnedTileShapes.add(tileOutlineCard)
+        if (!hiddenDesignIds.contains("qs_tile_gradient_card") && !isUserHidden("qs_tile_gradient_card") && !pinnedIds.contains("qs_tile_gradient_card")) unpinnedTileShapes.add(qsTileGradientCard)
+        if (!hiddenDesignIds.contains("tile_top_rim_card") && !isUserHidden("tile_top_rim_card") && !pinnedIds.contains("tile_top_rim_card")) unpinnedTileShapes.add(tileTopRimCard)
+        if (!hiddenDesignIds.contains("qs_page_indicator_style_card") && !isUserHidden("qs_page_indicator_style_card") && !pinnedIds.contains("qs_page_indicator_style_card")) unpinnedTileShapes.add(pageIndicatorStyleCard)
+        if (!hiddenDesignIds.contains("clear_all_fab_card") && !isUserHidden("clear_all_fab_card") && !pinnedIds.contains("clear_all_fab_card")) unpinnedTileShapes.add(clearAllFabCard)
+        if (!hiddenDesignIds.contains("show_media_in_notif_container_card") &&
+            !hiddenDesignIds.contains("compact_media_notification_card") &&
+            !isUserHidden("show_media_in_notif_container_card") &&
+            !pinnedIds.contains("show_media_in_notif_container_card") &&
+            !pinnedIds.contains("compact_media_notification_card")
+        ) unpinnedTileShapes.add(showMediaInNotifContainerCard)
 
         if (unpinnedTileShapes.isNotEmpty()) {
             CollapsibleSubheaderSection(
@@ -6169,12 +6276,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
         // 3. Header & Backgrounds
         val unpinnedHeader = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (!hiddenDesignIds.contains("custom_header_image_card") && !pinnedIds.contains("custom_header_image_card")) unpinnedHeader.add(customHeaderImageCard)
-        if (!hiddenDesignIds.contains("custom_header_monet_gradient_card") && !pinnedIds.contains("custom_header_monet_gradient_card")) unpinnedHeader.add(customHeaderMonetGradientCard)
-        if (!hiddenDesignIds.contains("element_colors_preference_card") && !pinnedIds.contains("element_colors_preference_card")) unpinnedHeader.add(elementColorsPreferenceCard)
-        if (!hiddenDesignIds.contains("header_status_background_card") && !pinnedIds.contains("header_status_background_card")) unpinnedHeader.add(headerStatusBackgroundCard)
-        if (!hiddenDesignIds.contains("footer_icon_background_card") && !pinnedIds.contains("footer_icon_background_card")) unpinnedHeader.add(footerIconBackgroundCard)
-        if (!hiddenDesignIds.contains("header_complication_tiles_card") && !pinnedIds.contains("header_complication_tiles_card")) unpinnedHeader.add(headerComplicationTilesCard)
+        if (!hiddenDesignIds.contains("custom_header_image_card") && !isUserHidden("custom_header_image_card") && !pinnedIds.contains("custom_header_image_card")) unpinnedHeader.add(customHeaderImageCard)
+        if (!hiddenDesignIds.contains("custom_header_monet_gradient_card") && !isUserHidden("custom_header_monet_gradient_card") && !pinnedIds.contains("custom_header_monet_gradient_card")) unpinnedHeader.add(customHeaderMonetGradientCard)
+        if (!hiddenDesignIds.contains("element_colors_preference_card") && !isUserHidden("element_colors_preference_card") && !pinnedIds.contains("element_colors_preference_card")) unpinnedHeader.add(elementColorsPreferenceCard)
+        if (!hiddenDesignIds.contains("header_status_background_card") && !isUserHidden("header_status_background_card") && !pinnedIds.contains("header_status_background_card")) unpinnedHeader.add(headerStatusBackgroundCard)
+        if (!hiddenDesignIds.contains("footer_icon_background_card") && !isUserHidden("footer_icon_background_card") && !pinnedIds.contains("footer_icon_background_card")) unpinnedHeader.add(footerIconBackgroundCard)
+        if (!hiddenDesignIds.contains("frosted_glass_panel_card") && !isUserHidden("frosted_glass_panel_card") && !pinnedIds.contains("frosted_glass_panel_card")) unpinnedHeader.add(frostedGlassCard)
+        if (!hiddenDesignIds.contains("header_complication_tiles_card") && !isUserHidden("header_complication_tiles_card") && !pinnedIds.contains("header_complication_tiles_card")) unpinnedHeader.add(headerComplicationTilesCard)
 
         if (unpinnedHeader.isNotEmpty()) {
             CollapsibleSubheaderSection(
@@ -6189,11 +6297,11 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
         // 4. Brightness & Sliders
         val unpinnedBrightness = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (!pinnedIds.contains("move_brightness_bottom_card")) unpinnedBrightness.add(moveBrightnessBottomCard)
-        if (!pinnedIds.contains("brightness_in_qqs_card")) unpinnedBrightness.add(brightnessInQqsCard)
-        if (!pinnedIds.contains("brightness_gradient_card")) unpinnedBrightness.add(brightnessGradientCard)
-        if (!pinnedIds.contains("show_brightness_controls_background_card")) unpinnedBrightness.add(showBrightnessControlsBackgroundCard)
-        if (!pinnedIds.contains("progress_bar_slider_style_card")) unpinnedBrightness.add(progressBarSliderStyleCard)
+        if (!isUserHidden("move_brightness_bottom_card") && !pinnedIds.contains("move_brightness_bottom_card")) unpinnedBrightness.add(moveBrightnessBottomCard)
+        if (!isUserHidden("brightness_in_qqs_card") && !pinnedIds.contains("brightness_in_qqs_card")) unpinnedBrightness.add(brightnessInQqsCard)
+        if (!isUserHidden("brightness_gradient_card") && !pinnedIds.contains("brightness_gradient_card")) unpinnedBrightness.add(brightnessGradientCard)
+        if (!isUserHidden("show_brightness_controls_background_card") && !pinnedIds.contains("show_brightness_controls_background_card")) unpinnedBrightness.add(showBrightnessControlsBackgroundCard)
+        if (!isUserHidden("progress_bar_slider_style_card") && !pinnedIds.contains("progress_bar_slider_style_card")) unpinnedBrightness.add(progressBarSliderStyleCard)
 
         if (unpinnedBrightness.isNotEmpty()) {
             CollapsibleSubheaderSection(
@@ -6208,8 +6316,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
         // 5. Panel Corner Styling
         val unpinnedCorners = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
-        if (!isAndroidOreoStyle && !pinnedIds.contains("panel_corner_styling_card")) unpinnedCorners.add(panelCornerStylingCard)
-        if (!pinnedIds.contains("panel_top_rim_card")) unpinnedCorners.add(panelTopRimCard)
+        if (!isAndroidOreoStyle && !isUserHidden("panel_corner_styling_card") && !pinnedIds.contains("panel_corner_styling_card")) unpinnedCorners.add(panelCornerStylingCard)
+        if (!isUserHidden("panel_top_rim_card") && !pinnedIds.contains("panel_top_rim_card")) unpinnedCorners.add(panelTopRimCard)
 
         if (unpinnedCorners.isNotEmpty()) {
             CollapsibleSubheaderSection(
@@ -6220,6 +6328,15 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     card(CustomizeCardShapes.getShapeForIndex(index, unpinnedCorners.size))
                 }
             }
+        }
+
+        if (pinnedCards.isEmpty() &&
+            unpinnedTileShapes.isEmpty() &&
+            unpinnedHeader.isEmpty() &&
+            unpinnedBrightness.isEmpty() &&
+            unpinnedCorners.isEmpty()
+        ) {
+            AllSectionFeaturesHiddenCard(sectionTitle = "Quick Settings Design")
         }
     }
 

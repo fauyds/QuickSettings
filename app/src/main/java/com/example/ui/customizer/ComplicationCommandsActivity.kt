@@ -220,6 +220,7 @@ fun ComplicationCommandsScreen(
                 ) {
                     SettingsCard(
                         shape = ExpressiveCardShapes.SingleCard,
+                        canPin = false,
                         modifier = Modifier
                             .fillMaxWidth()
                             .widthIn(max = 600.dp)
@@ -311,6 +312,7 @@ fun ComplicationCommandsScreen(
                 ) {
                     SettingsCard(
                         shape = ExpressiveCardShapes.SingleCard,
+                        canPin = false,
                         modifier = Modifier
                             .fillMaxWidth()
                             .widthIn(max = 600.dp)
@@ -406,6 +408,7 @@ fun ComplicationCommandsScreen(
                 ) {
                     SettingsCard(
                         shape = ExpressiveCardShapes.SingleCard,
+                        canPin = false,
                         modifier = Modifier
                             .fillMaxWidth()
                             .widthIn(max = 600.dp)
@@ -579,6 +582,7 @@ private fun ComplicationCommandCardItem(
 
     SettingsCard(
         shape = ExpressiveCardShapes.SingleCard,
+        canPin = false,
         modifier = modifier
             .fillMaxWidth()
             .testTag("complication_cmd_card_${definition.id}")

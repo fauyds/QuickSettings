@@ -19,4 +19,16 @@ object PinnedCardsManager {
     fun togglePin(cardId: String, category: CustomizeCategory, context: Context): Boolean {
         return PanelPreferences.toggleFeaturePinned(context, cardId)
     }
+
+    fun getHiddenCardIds(): StateFlow<List<String>> {
+        return PanelPreferences.hiddenFeatures
+    }
+
+    fun isCardHidden(cardId: String): Boolean {
+        return PanelPreferences.isFeatureHidden(cardId)
+    }
+
+    fun toggleHide(cardId: String, context: Context): Boolean {
+        return PanelPreferences.toggleFeatureHidden(context, cardId)
+    }
 }
