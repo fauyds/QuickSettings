@@ -7964,10 +7964,31 @@ fun NotificationsCard(
         }
     }
 
+    val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+    val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsState()
+    val resolvedNotifBgColor = frostedContainerColor(
+        baseColor = notifBgColor,
+        enableBlur = enableContainerBlur,
+        isDark = isDark,
+        transparency = containerBlurTransparency
+    )
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .clipToBounds()
+            .then(
+                if (enableContainerBlur) {
+                    Modifier.frostedGlassSurface(
+                        baseColor = notifBgColor,
+                        enableBlur = true,
+                        isDark = isDark,
+                        transparency = containerBlurTransparency
+                    )
+                } else {
+                    Modifier.background(notifBgColor)
+                }
+            )
             .testTag("notifications_card")
     ) {
         AndroidView(
