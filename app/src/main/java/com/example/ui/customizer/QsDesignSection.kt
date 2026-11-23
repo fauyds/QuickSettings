@@ -5679,6 +5679,110 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             modifier = Modifier.testTag("frosted_glass_qs_only_toggle")
                         )
                     }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    val enableRefraction by PanelPreferences.enableGlassRefraction.collectAsState()
+                    val refractionSensitivity by PanelPreferences.glassRefractionSensitivity.collectAsState()
+                    val refractionPercent = kotlin.math.round(refractionSensitivity * 100f).toInt().coerceIn(10, 100)
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = "Glass Edge Refraction",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Specular edge refraction highlight and border glow.",
+                                fontSize = 11.5.sp,
+                                lineHeight = 14.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = enableRefraction,
+                            onCheckedChange = { PanelPreferences.setEnableGlassRefraction(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("glass_refraction_toggle")
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = enableRefraction,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(ExpressiveTheme.colors.nestedElementSurface)
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Refraction Sensitivity",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Edge specular highlight intensity (10% – 100%)",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    text = "$refractionPercent%",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.testTag("glass_refraction_sensitivity_value")
+                                )
+                            }
+                            Slider(
+                                value = refractionPercent.toFloat(),
+                                onValueChange = {
+                                    PanelPreferences.setGlassRefractionSensitivity(
+                                        context,
+                                        kotlin.math.round(it).coerceIn(10f, 100f) / 100f
+                                    )
+                                },
+                                valueRange = 10f..100f,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("glass_refraction_sensitivity_slider"),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                )
+                            )
+                        }
+                    }
                 }
             }
         }

@@ -425,7 +425,15 @@ object PanelPreferences {
     private val _monetSurfaceTransparency = MutableStateFlow(0.0f)
     val monetSurfaceTransparency: StateFlow<Float> = _monetSurfaceTransparency.asStateFlow()
 
+    private val _enableGlassRefraction = MutableStateFlow(true)
+    val enableGlassRefraction: StateFlow<Boolean> = _enableGlassRefraction.asStateFlow()
+
+    private val _glassRefractionSensitivity = MutableStateFlow(0.5f)
+    val glassRefractionSensitivity: StateFlow<Float> = _glassRefractionSensitivity.asStateFlow()
+
     private const val KEY_MONET_SURFACE_TRANSPARENCY = "monet_surface_transparency"
+    private const val KEY_ENABLE_GLASS_REFRACTION = "enable_glass_refraction"
+    private const val KEY_GLASS_REFRACTION_SENSITIVITY = "glass_refraction_sensitivity"
 
     private const val KEY_SHOW_HEADER_COMPLICATIONS = "show_header_complications"
     private const val KEY_COMPLICATION_SUBLINE_PLACEMENT = "complication_subline_placement"
@@ -2172,6 +2180,8 @@ object PanelPreferences {
         _customHeaderMonetGradientHeight.value = prefs.getFloat(KEY_CUSTOM_HEADER_MONET_GRADIENT_HEIGHT, 85f)
         _showMonetSurfaceBackground.value = prefs.getBoolean(KEY_SHOW_MONET_SURFACE_BACKGROUND, false)
         _monetSurfaceTransparency.value = prefs.getFloat(KEY_MONET_SURFACE_TRANSPARENCY, 0.0f).coerceIn(0f, 0.95f)
+        _enableGlassRefraction.value = prefs.getBoolean(KEY_ENABLE_GLASS_REFRACTION, true)
+        _glassRefractionSensitivity.value = prefs.getFloat(KEY_GLASS_REFRACTION_SENSITIVITY, 0.5f).coerceIn(0.1f, 1.0f)
         _showHeaderComplications.value = prefs.getBoolean(KEY_SHOW_HEADER_COMPLICATIONS, true)
         _complicationSublinePlacement.value = com.example.model.ComplicationSublinePlacement.fromId(
             prefs.getString(KEY_COMPLICATION_SUBLINE_PLACEMENT, com.example.model.ComplicationSublinePlacement.INSIDE_RING.id)
@@ -2636,6 +2646,9 @@ object PanelPreferences {
             putBoolean(getStyleKey(KEY_COMPLICATION_OUTLINE_ENABLED, style), _complicationOutlineEnabled.value)
             putBoolean(getStyleKey(KEY_ENABLE_LEGACY_TILE_SHAPES, style), _enableLegacyTileShapes.value)
             putBoolean(getStyleKey(KEY_SHOW_MONET_SURFACE_BACKGROUND, style), _showMonetSurfaceBackground.value)
+            putFloat(getStyleKey(KEY_MONET_SURFACE_TRANSPARENCY, style), _monetSurfaceTransparency.value)
+            putBoolean(getStyleKey(KEY_ENABLE_GLASS_REFRACTION, style), _enableGlassRefraction.value)
+            putFloat(getStyleKey(KEY_GLASS_REFRACTION_SENSITIVITY, style), _glassRefractionSensitivity.value)
             putBoolean(getStyleKey(KEY_SHOW_QS_TILE_GRADIENT, style), _showQsTileGradient.value)
             putBoolean(getStyleKey(KEY_SHOW_CARRIER, style), _showCarrier.value)
             putBoolean(getStyleKey(KEY_SHOW_CARRIER_DIVIDER, style), _showCarrierDivider.value)
@@ -2831,6 +2844,9 @@ object PanelPreferences {
         val targetLegacyShapes = if (isInitialized) readStyleBool(KEY_ENABLE_LEGACY_TILE_SHAPES, false) else false
 
         val targetShowMonetSurfaceBg = if (isInitialized) readStyleBool(KEY_SHOW_MONET_SURFACE_BACKGROUND, false) else false
+        val targetMonetSurfaceTransparency = if (isInitialized) readStyleFloat(KEY_MONET_SURFACE_TRANSPARENCY, 0.0f).coerceIn(0f, 0.95f) else 0.0f
+        val targetEnableGlassRefraction = if (isInitialized) readStyleBool(KEY_ENABLE_GLASS_REFRACTION, true) else true
+        val targetGlassRefractionSensitivity = if (isInitialized) readStyleFloat(KEY_GLASS_REFRACTION_SENSITIVITY, 0.5f).coerceIn(0.1f, 1.0f) else 0.5f
         val targetShowQsTileGradient = if (isInitialized) readStyleBool(KEY_SHOW_QS_TILE_GRADIENT, false) else false
         val targetShowCarrier = if (isInitialized) readStyleBool(KEY_SHOW_CARRIER, true) else true
         val targetShowCarrierDivider = if (isInitialized) readStyleBool(KEY_SHOW_CARRIER_DIVIDER, true) else true
@@ -2980,6 +2996,9 @@ object PanelPreferences {
         _complicationOutlineEnabled.value = targetComplicationOutline
         _enableLegacyTileShapes.value = targetLegacyShapes
         _showMonetSurfaceBackground.value = targetShowMonetSurfaceBg
+        _monetSurfaceTransparency.value = targetMonetSurfaceTransparency
+        _enableGlassRefraction.value = targetEnableGlassRefraction
+        _glassRefractionSensitivity.value = targetGlassRefractionSensitivity
         _showQsTileGradient.value = targetShowQsTileGradient
         _showCarrier.value = targetShowCarrier
         _showCarrierDivider.value = targetShowCarrierDivider
@@ -3056,6 +3075,9 @@ object PanelPreferences {
             putBoolean(KEY_COMPLICATION_OUTLINE_ENABLED, targetComplicationOutline)
             putBoolean(KEY_ENABLE_LEGACY_TILE_SHAPES, targetLegacyShapes)
             putBoolean(KEY_SHOW_MONET_SURFACE_BACKGROUND, targetShowMonetSurfaceBg)
+            putFloat(KEY_MONET_SURFACE_TRANSPARENCY, targetMonetSurfaceTransparency)
+            putBoolean(KEY_ENABLE_GLASS_REFRACTION, targetEnableGlassRefraction)
+            putFloat(KEY_GLASS_REFRACTION_SENSITIVITY, targetGlassRefractionSensitivity)
             putBoolean(KEY_SHOW_QS_TILE_GRADIENT, targetShowQsTileGradient)
             putBoolean(KEY_SHOW_CARRIER, targetShowCarrier)
             putBoolean(KEY_SHOW_CARRIER_DIVIDER, targetShowCarrierDivider)
@@ -4342,6 +4364,27 @@ object PanelPreferences {
         prefs.edit()
             .putFloat(KEY_MONET_SURFACE_TRANSPARENCY, clamped)
             .putFloat(getStyleKey(KEY_MONET_SURFACE_TRANSPARENCY), clamped)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
+    }
+
+    fun setEnableGlassRefraction(context: Context, enabled: Boolean) {
+        _enableGlassRefraction.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean(KEY_ENABLE_GLASS_REFRACTION, enabled)
+            .putBoolean(getStyleKey(KEY_ENABLE_GLASS_REFRACTION), enabled)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
+    }
+
+    fun setGlassRefractionSensitivity(context: Context, sensitivity: Float) {
+        val clamped = sensitivity.coerceIn(0.1f, 1.0f)
+        _glassRefractionSensitivity.value = clamped
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(KEY_GLASS_REFRACTION_SENSITIVITY, clamped)
+            .putFloat(getStyleKey(KEY_GLASS_REFRACTION_SENSITIVITY), clamped)
             .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }
@@ -5716,6 +5759,8 @@ object PanelPreferences {
         KEY_BLUR_ONLY_BEHIND_QS_CARD,
         KEY_CONTAINER_BLUR_SENSITIVITY_DP,
         KEY_CONTAINER_BLUR_TRANSPARENCY,
+        KEY_ENABLE_GLASS_REFRACTION,
+        KEY_GLASS_REFRACTION_SENSITIVITY,
         // Grid / QQS / Tiles / Fonts / Labels
         KEY_GRID_LAYOUT,
         KEY_QQS_TILE_SIZE,
@@ -5760,6 +5805,7 @@ object PanelPreferences {
         KEY_SHOW_CUSTOM_HEADER_MONET_GRADIENT,
         KEY_CUSTOM_HEADER_MONET_GRADIENT_HEIGHT,
         KEY_SHOW_MONET_SURFACE_BACKGROUND,
+        KEY_MONET_SURFACE_TRANSPARENCY,
         // Brightness & Sliders
         KEY_BRIGHTNESS_AT_BOTTOM,
         KEY_BRIGHTNESS_IN_QQS,
@@ -5957,6 +6003,8 @@ object PanelPreferences {
         settingsJson.put(KEY_BLUR_ONLY_BEHIND_QS_CARD, _blurOnlyBehindQsCard.value)
         settingsJson.put(KEY_CONTAINER_BLUR_SENSITIVITY_DP, _containerBlurRadiusDp.value.toDouble())
         settingsJson.put(KEY_CONTAINER_BLUR_TRANSPARENCY, _containerBlurTransparency.value.toDouble())
+        settingsJson.put(KEY_ENABLE_GLASS_REFRACTION, _enableGlassRefraction.value)
+        settingsJson.put(KEY_GLASS_REFRACTION_SENSITIVITY, _glassRefractionSensitivity.value.toDouble())
 
         // Grid / QQS / Tiles / Fonts / Labels
         settingsJson.put(KEY_GRID_LAYOUT, _gridLayout.value.id)
@@ -6005,6 +6053,7 @@ object PanelPreferences {
         settingsJson.put(KEY_SHOW_CUSTOM_HEADER_MONET_GRADIENT, _showCustomHeaderMonetGradient.value)
         settingsJson.put(KEY_CUSTOM_HEADER_MONET_GRADIENT_HEIGHT, _customHeaderMonetGradientHeight.value.toDouble())
         settingsJson.put(KEY_SHOW_MONET_SURFACE_BACKGROUND, _showMonetSurfaceBackground.value)
+        settingsJson.put(KEY_MONET_SURFACE_TRANSPARENCY, _monetSurfaceTransparency.value.toDouble())
 
         // Brightness & Sliders
         settingsJson.put(KEY_BRIGHTNESS_AT_BOTTOM, _brightnessAtBottom.value)

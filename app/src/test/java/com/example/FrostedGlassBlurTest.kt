@@ -503,4 +503,106 @@ class FrostedGlassBlurTest {
         )
         assertTrue(api35Effect != null)
     }
+
+    @Test
+    fun `monetSurfaceTransparency and glassRefraction persist and sync with ThemeManager`() {
+        assertEquals(0.0f, PanelPreferences.monetSurfaceTransparency.value, 0.01f)
+        assertTrue(PanelPreferences.enableGlassRefraction.value)
+        assertEquals(0.5f, PanelPreferences.glassRefractionSensitivity.value, 0.01f)
+
+        PanelPreferences.setShowMonetSurfaceBackground(context, true)
+        PanelPreferences.setMonetSurfaceTransparency(context, 0.45f)
+        PanelPreferences.setEnableGlassRefraction(context, true)
+        PanelPreferences.setGlassRefractionSensitivity(context, 0.85f)
+
+        // Reload preferences cleanly
+        PanelPreferences.init(context)
+        assertTrue(PanelPreferences.showMonetSurfaceBackground.value)
+        assertEquals(0.45f, PanelPreferences.monetSurfaceTransparency.value, 0.01f)
+        assertTrue(PanelPreferences.enableGlassRefraction.value)
+        assertEquals(0.85f, PanelPreferences.glassRefractionSensitivity.value, 0.01f)
+
+        // Save theme snapshot and restore
+        val savedTheme = com.example.data.ThemeManager.saveCurrentSettingsAsTheme(context, "Refraction Test")
+        PanelPreferences.setMonetSurfaceTransparency(context, 0.10f)
+        PanelPreferences.setEnableGlassRefraction(context, false)
+        PanelPreferences.setGlassRefractionSensitivity(context, 0.20f)
+
+        assertTrue(com.example.data.ThemeManager.applyTheme(context, savedTheme))
+        assertEquals(0.45f, PanelPreferences.monetSurfaceTransparency.value, 0.01f)
+        assertTrue(PanelPreferences.enableGlassRefraction.value)
+        assertEquals(0.85f, PanelPreferences.glassRefractionSensitivity.value, 0.01f)
+    }
+
+    @Test
+    fun `Solid Monet Surface transparency slider displays and updates value when toggled`() {
+        composeTestRule.setContent {
+            QuickPanelTheme(darkTheme = true) {
+                androidx.compose.foundation.layout.Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
+                    com.example.ui.customizer.QsDesignSection()
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // Initially hidden
+        assertEquals(
+            0,
+            composeTestRule.onAllNodes(
+                androidx.compose.ui.test.hasTestTag("monet_surface_transparency_slider"),
+                useUnmergedTree = true
+            ).fetchSemanticsNodes().size
+        )
+
+        // Toggle Solid Monet Surface on
+        composeTestRule.onNodeWithTag("monet_surface_background_toggle")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        assertTrue(PanelPreferences.showMonetSurfaceBackground.value)
+
+        // Slider and value readout appear
+        composeTestRule.onNodeWithTag("monet_surface_transparency_value", useUnmergedTree = true)
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag("monet_surface_transparency_slider")
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun `Glass Edge Refraction toggle and sensitivity slider display and update in QsDesignSection`() {
+        composeTestRule.setContent {
+            QuickPanelTheme(darkTheme = true) {
+                androidx.compose.foundation.layout.Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
+                    com.example.ui.customizer.QsDesignSection()
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // Toggle frosted glass blur on so the frosted card options expand
+        composeTestRule.onNodeWithTag("frosted_glass_toggle")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        // Glass edge refraction toggle is visible
+        composeTestRule.onNodeWithTag("glass_refraction_toggle")
+            .performScrollTo()
+            .assertIsDisplayed()
+
+        // Sensitivity slider is visible when enabled
+        composeTestRule.onNodeWithTag("glass_refraction_sensitivity_value", useUnmergedTree = true)
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag("glass_refraction_sensitivity_slider")
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
 }

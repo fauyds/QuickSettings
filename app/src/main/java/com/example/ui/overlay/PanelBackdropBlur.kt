@@ -46,6 +46,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,6 +60,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -73,6 +75,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import com.example.data.PanelPreferences
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -736,10 +739,17 @@ fun Modifier.frostedGlassSurface(
         }
     }
 
+    val enableRefraction by PanelPreferences.enableGlassRefraction.collectAsState()
+    val refractionSensitivity by PanelPreferences.glassRefractionSensitivity.collectAsState()
+
     val sheenStrength = ((1f - resolvedTransparency.coerceIn(0f, 0.95f)) * if (isDark) 0.09f else 0.14f)
         .coerceIn(0.015f, 0.16f)
     val topSheen = Color.White.copy(alpha = sheenStrength)
     val bottomSheen = Color.Transparent
+
+    val refractionAlpha = if (enableRefraction) (0.22f * refractionSensitivity).coerceIn(0.05f, 0.45f) else 0f
+    val refractionHighlight = Color.White.copy(alpha = refractionAlpha)
+    val refractionShadow = Color.Black.copy(alpha = if (isDark) 0.35f * refractionSensitivity else 0.15f * refractionSensitivity)
 
     this
         .background(effectiveColor)
@@ -763,6 +773,39 @@ fun Modifier.frostedGlassSurface(
                     brush = Brush.verticalGradient(
                         colors = listOf(topSheen, bottomSheen)
                     )
+                )
+            }
+
+            // Glass edge refraction specular highlight & border inner glow
+            if (enableRefraction && refractionAlpha > 0.01f) {
+                val strokePx = 1.25.dp.toPx()
+                // Top edge bright refractive specular highlight
+                drawLine(
+                    color = refractionHighlight,
+                    start = Offset(strokePx, strokePx),
+                    end = Offset(size.width - strokePx, strokePx),
+                    strokeWidth = strokePx
+                )
+                // Left edge highlight
+                drawLine(
+                    color = refractionHighlight.copy(alpha = refractionAlpha * 0.7f),
+                    start = Offset(strokePx, strokePx),
+                    end = Offset(strokePx, size.height - strokePx),
+                    strokeWidth = strokePx * 0.8f
+                )
+                // Bottom edge refraction shadow
+                drawLine(
+                    color = refractionShadow,
+                    start = Offset(strokePx, size.height - strokePx),
+                    end = Offset(size.width - strokePx, size.height - strokePx),
+                    strokeWidth = strokePx
+                )
+                // Right edge shadow
+                drawLine(
+                    color = refractionShadow.copy(alpha = refractionShadow.alpha * 0.7f),
+                    start = Offset(size.width - strokePx, strokePx),
+                    end = Offset(size.width - strokePx, size.height - strokePx),
+                    strokeWidth = strokePx * 0.8f
                 )
             }
         }
