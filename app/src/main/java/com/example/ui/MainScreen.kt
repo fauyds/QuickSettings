@@ -69,19 +69,24 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
@@ -98,6 +103,10 @@ import com.example.service.QuickPanelAccessibilityService
 import com.example.ui.customizer.TileCustomizerScreen
 import com.example.ui.nativecontrols.NativeControlsScreen
 import com.example.ui.onboarding.PrivilegeWizardScreen
+import com.example.data.PanelPreferences
+import com.example.ui.overlay.FrostedPreviewBackdrop
+import com.example.ui.overlay.LocalOnQsCardBoundsChanged
+import com.example.ui.overlay.QsCardBlurBounds
 import com.example.ui.overlay.QsExpansionStage
 import com.example.ui.overlay.QuickSettingsPanel
 import com.example.ui.scanner.ExternalTilesScreen
@@ -205,36 +214,64 @@ fun MainScreen(viewModel: MainViewModel) {
             // Screen content switcher
             when (selectedTab) {
                 0 -> {
-                    // TAB 0: Interactive QS Overlay Panel with dark tint below the panel in preview screen only
+                    val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsStateWithLifecycle()
+                    val blurOnlyBehindQsCard by PanelPreferences.blurOnlyBehindQsCard.collectAsStateWithLifecycle()
+                    val containerBlurRadiusDp by PanelPreferences.containerBlurRadiusDp.collectAsStateWithLifecycle()
+                    val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsStateWithLifecycle()
+                    var hostPosInRoot by remember { mutableStateOf(Offset.Zero) }
+                    var rawQsCardBounds by remember { mutableStateOf(QsCardBlurBounds()) }
+                    val localQsBounds = remember(rawQsCardBounds, hostPosInRoot) {
+                        rawQsCardBounds.translate(-hostPosInRoot.x, -hostPosInRoot.y)
+                    }
+                    // TAB 0: Interactive QS Overlay Panel with underlying backdrop blurred ONLY beneath the panel (or QS/QQS card only)
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.55f))
+                            .onGloballyPositioned { coords ->
+                                hostPosInRoot = coords.positionInRoot()
+                            }
                     ) {
-                        QuickSettingsPanel(
-                            expansionStage = expansionStage,
-                            onStageChange = { viewModel.setExpansionStage(it) },
-                            tiles = tiles,
-                            gridLayout = qsGridLayout,
-                            onTileClick = { viewModel.handleTileClick(it) },
-                            onTileLongClick = { viewModel.handleTileLongClick(it) },
-                            brightness = brightness,
-                            onBrightnessChange = { viewModel.setBrightness(it) },
-                            mediaVolume = mediaVol,
-                            ringVolume = ringVol,
-                            alarmVolume = alarmVol,
-                            notificationVolume = notifVol,
-                            onVolumeChange = { stream, fraction -> viewModel.setStreamVolume(stream, fraction) },
-                            notifications = notifications,
-                            isNotificationPermissionGranted = isNotifPermGranted,
-                            onNotificationClick = { viewModel.launchNotification(it) },
-                            onNotificationDismiss = { viewModel.dismissNotification(it.key) },
-                            onNotificationActionClick = { viewModel.executeNotificationAction(it) },
-                            onDismissAllNotifications = { viewModel.dismissAllNotifications() },
-                            onRequestNotificationAccess = { viewModel.openNotificationListenerSettings() },
-                            onNavigateToCustomizer = { viewModel.setSelectedTab(1) },
-                            onNavigateToNotificationHub = { viewModel.setSelectedTab(8) }
+                        FrostedPreviewBackdrop(
+                            enableBlur = enableContainerBlur,
+                            dimAlpha = when {
+                                enableContainerBlur && blurOnlyBehindQsCard -> 0.28f
+                                enableContainerBlur -> 0.34f
+                                else -> 0.55f
+                            },
+                            blurOnlyBehindQsCard = blurOnlyBehindQsCard,
+                            qsCardBounds = localQsBounds,
+                            blurRadiusDp = containerBlurRadiusDp,
+                            transparency = containerBlurTransparency,
+                            modifier = Modifier.matchParentSize()
                         )
+                        CompositionLocalProvider(
+                            LocalOnQsCardBoundsChanged provides { bounds -> rawQsCardBounds = bounds }
+                        ) {
+                            QuickSettingsPanel(
+                                expansionStage = expansionStage,
+                                onStageChange = { viewModel.setExpansionStage(it) },
+                                tiles = tiles,
+                                gridLayout = qsGridLayout,
+                                onTileClick = { viewModel.handleTileClick(it) },
+                                onTileLongClick = { viewModel.handleTileLongClick(it) },
+                                brightness = brightness,
+                                onBrightnessChange = { viewModel.setBrightness(it) },
+                                mediaVolume = mediaVol,
+                                ringVolume = ringVol,
+                                alarmVolume = alarmVol,
+                                notificationVolume = notifVol,
+                                onVolumeChange = { stream, fraction -> viewModel.setStreamVolume(stream, fraction) },
+                                notifications = notifications,
+                                isNotificationPermissionGranted = isNotifPermGranted,
+                                onNotificationClick = { viewModel.launchNotification(it) },
+                                onNotificationDismiss = { viewModel.dismissNotification(it.key) },
+                                onNotificationActionClick = { viewModel.executeNotificationAction(it) },
+                                onDismissAllNotifications = { viewModel.dismissAllNotifications() },
+                                onRequestNotificationAccess = { viewModel.openNotificationListenerSettings() },
+                                onNavigateToCustomizer = { viewModel.setSelectedTab(1) },
+                                onNavigateToNotificationHub = { viewModel.setSelectedTab(8) }
+                            )
+                        }
                     }
                 }
 

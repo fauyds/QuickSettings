@@ -5429,6 +5429,10 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     }
 
                     val containerBlurEnabled by PanelPreferences.enableContainerBlur.collectAsState()
+                    val blurOnlyBehindQsCard by PanelPreferences.blurOnlyBehindQsCard.collectAsState()
+                    val containerBlurRadiusDp by PanelPreferences.containerBlurRadiusDp.collectAsState()
+                    val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsState()
+                    val transparencyPercent = kotlin.math.round(containerBlurTransparency * 100f).toInt().coerceIn(0, 95)
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -5451,6 +5455,165 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 uncheckedTrackColor = MaterialTheme.colorScheme.surface
                             ),
                             modifier = Modifier.testTag("frosted_glass_toggle")
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = containerBlurEnabled,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(ExpressiveTheme.colors.nestedElementSurface)
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Blur Sensitivity",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "Backdrop blur intensity (4 – 60 dp)",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Text(
+                                        text = "${kotlin.math.round(containerBlurRadiusDp).toInt()} dp",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.testTag("frosted_glass_blur_sensitivity_value")
+                                    )
+                                }
+                                Slider(
+                                    value = containerBlurRadiusDp,
+                                    onValueChange = {
+                                        PanelPreferences.setContainerBlurRadiusDp(
+                                            context,
+                                            kotlin.math.round(it).coerceIn(4f, 60f)
+                                        )
+                                    },
+                                    valueRange = 4f..60f,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("frosted_glass_blur_sensitivity_slider"),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                                        inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                    )
+                                )
+                            }
+
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(ExpressiveTheme.colors.nestedElementSurface)
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Transparency",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "Container glass see-through amount (0% – 95%)",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Text(
+                                        text = "$transparencyPercent%",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.testTag("frosted_glass_transparency_value")
+                                    )
+                                }
+                                Slider(
+                                    value = transparencyPercent.toFloat(),
+                                    onValueChange = {
+                                        PanelPreferences.setContainerBlurTransparency(
+                                            context,
+                                            kotlin.math.round(it).coerceIn(0f, 95f) / 100f
+                                        )
+                                    },
+                                    valueRange = 0f..95f,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("frosted_glass_transparency_slider"),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                                        inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = "Blur Behind QS/QQS Only",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Keep the rest of the screen sharp and apply blur only directly underneath the QS/QQS panel.",
+                                fontSize = 11.5.sp,
+                                lineHeight = 14.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = blurOnlyBehindQsCard,
+                            onCheckedChange = { PanelPreferences.setBlurOnlyBehindQsCard(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("frosted_glass_qs_only_toggle")
                         )
                     }
                 }

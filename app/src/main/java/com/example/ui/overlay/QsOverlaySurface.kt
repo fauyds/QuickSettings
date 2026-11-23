@@ -408,6 +408,7 @@ fun QsOverlaySurface(
     }
 
     val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+    val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsState()
     val rawCardContainerBg = config.qsPanelBackgroundColor?.let { Color(it) } ?: if (config.showMonetSurfaceBackground) {
         monetSurfaceBg
     } else if (config.panelContainerColorTertiary) {
@@ -423,11 +424,12 @@ fun QsOverlaySurface(
         } else Color.White
     }
 
-    val cardContainerBg = if (enableContainerBlur) {
-        rawCardContainerBg.copy(alpha = if (isPanelDark) 0.60f else 0.70f)
-    } else {
-        rawCardContainerBg
-    }
+    val cardContainerBg = frostedContainerColor(
+        baseColor = rawCardContainerBg,
+        enableBlur = enableContainerBlur,
+        isDark = isPanelDark,
+        transparency = containerBlurTransparency
+    )
 
     val contentColor = if (isPanelDark) Color.White else Color(0xFF1E293B)
     val subtextColor = if (isPanelDark) Color(0xFF94A3B8) else Color(0xFF64748B)
@@ -640,7 +642,12 @@ fun QsOverlaySurface(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(innerCorner))
-                            .background(cardContainerBg)
+                            .frostedGlassSurface(
+                                baseColor = rawCardContainerBg,
+                                enableBlur = enableContainerBlur,
+                                isDark = isPanelDark,
+                                transparency = containerBlurTransparency
+                            )
                             .padding(12.dp)
                     ) {
                         Column(
@@ -886,7 +893,12 @@ fun QsOverlaySurface(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(innerCorner))
-                            .background(cardContainerBg)
+                            .frostedGlassSurface(
+                                baseColor = rawCardContainerBg,
+                                enableBlur = enableContainerBlur,
+                                isDark = isPanelDark,
+                                transparency = containerBlurTransparency
+                            )
                             .padding(12.dp)
                     ) {
                         Row(

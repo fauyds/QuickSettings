@@ -196,16 +196,34 @@ fun CompactMediaNotificationCard(
     val artworkShape = RoundedCornerShape(effectiveCorner.dp)
 
     val isDark = com.example.ui.theme.LocalIsDarkTheme.current
+    val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+    val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsState()
+    val effectiveCardColor = frostedContainerColor(backgroundColor, enableContainerBlur, isDark, containerBlurTransparency)
     val primaryTextColor = if (isDark) Color.White else Color(0xFF1C1B1F)
     val secondaryTextColor = if (isDark) Color(0xFFB0B0B0) else Color(0xFF49454F)
     val tertiaryTextColor = if (isDark) Color(0xFF8E8E93) else Color(0xFF79747E)
 
     androidx.compose.material3.Surface(
         shape = cardShape,
-        color = backgroundColor,
+        color = if (enableContainerBlur) Color.Transparent else effectiveCardColor,
+        border = null,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
         modifier = modifier
             .fillMaxWidth()
             .clip(cardShape)
+            .then(
+                if (enableContainerBlur) {
+                    Modifier.frostedGlassSurface(
+                        baseColor = backgroundColor,
+                        enableBlur = true,
+                        isDark = isDark,
+                        transparency = containerBlurTransparency
+                    )
+                } else {
+                    Modifier
+                }
+            )
             .clickable(onClick = onCardClick)
             .testTag("compact_media_notification_card")
     ) {
@@ -427,7 +445,14 @@ fun AdaptiveMediaPlayerCard(
         }
     }
 
-    val cardColor = artworkColor ?: backgroundColor
+    val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+    val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsState()
+    val cardColor = frostedContainerColor(
+        baseColor = artworkColor ?: backgroundColor,
+        enableBlur = enableContainerBlur,
+        isDark = isDark,
+        transparency = containerBlurTransparency
+    )
 
     val enablePanelShadows by PanelPreferences.enablePanelShadows.collectAsState()
     val enablePanelTopRim by PanelPreferences.enablePanelTopRim.collectAsState()
@@ -500,13 +525,26 @@ fun AdaptiveMediaPlayerCard(
         val effectiveShape = if (isClassicStyle) RoundedCornerShape(0.dp) else cardShape
         Surface(
             shape = effectiveShape,
-            color = cardColor,
+            color = if (enableContainerBlur) Color.Transparent else cardColor,
+            border = null,
             tonalElevation = 0.dp,
             shadowElevation = 0.dp,
             modifier = Modifier
                 .fillMaxWidth()
                 .panelTopRim(enabled = enablePanelTopRim, shape = effectiveShape)
                 .clip(effectiveShape)
+                .then(
+                    if (enableContainerBlur) {
+                        Modifier.frostedGlassSurface(
+                            baseColor = artworkColor ?: backgroundColor,
+                            enableBlur = true,
+                            isDark = isDark,
+                            transparency = containerBlurTransparency
+                        )
+                    } else {
+                        Modifier
+                    }
+                )
                 .then(
                     if (isClassicStyle) {
                         Modifier.drawBehind {

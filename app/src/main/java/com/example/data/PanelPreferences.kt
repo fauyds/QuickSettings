@@ -344,6 +344,9 @@ object PanelPreferences {
     private const val KEY_WAVY_PROGRESS_BARS = "wavy_progress_bars"
     private const val KEY_PROGRESS_BAR_STYLE = "progress_bar_style"
     private const val KEY_ENABLE_CONTAINER_BLUR = "enable_container_blur"
+    private const val KEY_BLUR_ONLY_BEHIND_QS_CARD = "blur_only_behind_qs_card"
+    private const val KEY_CONTAINER_BLUR_SENSITIVITY_DP = "container_blur_sensitivity_dp"
+    private const val KEY_CONTAINER_BLUR_TRANSPARENCY = "container_blur_transparency"
     private const val KEY_INVISIBLE_STATUS_BAR_TRIGGER = "invisible_status_bar_trigger"
     private const val KEY_FORCE_IMMERSIVE_TRIGGER = "force_immersive_trigger"
     private const val KEY_OVERRIDE_SYSTEM_QS = "override_system_qs"
@@ -1844,6 +1847,15 @@ object PanelPreferences {
     private val _enableContainerBlur = MutableStateFlow(false)
     val enableContainerBlur: StateFlow<Boolean> = _enableContainerBlur.asStateFlow()
 
+    private val _blurOnlyBehindQsCard = MutableStateFlow(false)
+    val blurOnlyBehindQsCard: StateFlow<Boolean> = _blurOnlyBehindQsCard.asStateFlow()
+
+    private val _containerBlurRadiusDp = MutableStateFlow(24f)
+    val containerBlurRadiusDp: StateFlow<Float> = _containerBlurRadiusDp.asStateFlow()
+
+    private val _containerBlurTransparency = MutableStateFlow(0.40f)
+    val containerBlurTransparency: StateFlow<Float> = _containerBlurTransparency.asStateFlow()
+
     private val _invisibleStatusBarTrigger = MutableStateFlow(false)
     val invisibleStatusBarTrigger: StateFlow<Boolean> = _invisibleStatusBarTrigger.asStateFlow()
 
@@ -2060,6 +2072,10 @@ object PanelPreferences {
         }
         _progressBarStyle.value = resolvedStyle
         _wavyProgressBars.value = (resolvedStyle == ProgressBarStyle.WAVY)
+        _enableContainerBlur.value = prefs.getBoolean(KEY_ENABLE_CONTAINER_BLUR, false)
+        _blurOnlyBehindQsCard.value = prefs.getBoolean(KEY_BLUR_ONLY_BEHIND_QS_CARD, false)
+        _containerBlurRadiusDp.value = prefs.getFloat(KEY_CONTAINER_BLUR_SENSITIVITY_DP, 24f).coerceIn(4f, 60f)
+        _containerBlurTransparency.value = prefs.getFloat(KEY_CONTAINER_BLUR_TRANSPARENCY, 0.40f).coerceIn(0f, 0.95f)
         val savedPanelStyleId = prefs.getString(KEY_PANEL_STYLE, null)
         val resolvedPanelStyle = if (savedPanelStyleId != null) {
             QsPanelStyle.fromId(savedPanelStyleId)
@@ -3982,6 +3998,26 @@ object PanelPreferences {
         prefs.edit().putBoolean(KEY_ENABLE_CONTAINER_BLUR, enabled).apply()
     }
 
+    fun setBlurOnlyBehindQsCard(context: Context, enabled: Boolean) {
+        _blurOnlyBehindQsCard.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_BLUR_ONLY_BEHIND_QS_CARD, enabled).apply()
+    }
+
+    fun setContainerBlurRadiusDp(context: Context, radiusDp: Float) {
+        val clamped = radiusDp.coerceIn(4f, 60f)
+        _containerBlurRadiusDp.value = clamped
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_CONTAINER_BLUR_SENSITIVITY_DP, clamped).apply()
+    }
+
+    fun setContainerBlurTransparency(context: Context, transparency: Float) {
+        val clamped = transparency.coerceIn(0f, 0.95f)
+        _containerBlurTransparency.value = clamped
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_CONTAINER_BLUR_TRANSPARENCY, clamped).apply()
+    }
+
     fun setInvisibleStatusBarTrigger(context: Context, enabled: Boolean) {
         _invisibleStatusBarTrigger.value = enabled
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -5660,6 +5696,9 @@ object PanelPreferences {
         KEY_QS_PANEL_BACKGROUND_COLOR,
         KEY_QS_BACKGROUND_CORNER,
         KEY_ENABLE_CONTAINER_BLUR,
+        KEY_BLUR_ONLY_BEHIND_QS_CARD,
+        KEY_CONTAINER_BLUR_SENSITIVITY_DP,
+        KEY_CONTAINER_BLUR_TRANSPARENCY,
         // Grid / QQS / Tiles / Fonts / Labels
         KEY_GRID_LAYOUT,
         KEY_QQS_TILE_SIZE,
@@ -5898,6 +5937,9 @@ object PanelPreferences {
         _qsPanelBackgroundColor.value?.let { settingsJson.put(KEY_QS_PANEL_BACKGROUND_COLOR, it) }
         settingsJson.put(KEY_QS_BACKGROUND_CORNER, _qsBackgroundCorner.value.toDouble())
         settingsJson.put(KEY_ENABLE_CONTAINER_BLUR, _enableContainerBlur.value)
+        settingsJson.put(KEY_BLUR_ONLY_BEHIND_QS_CARD, _blurOnlyBehindQsCard.value)
+        settingsJson.put(KEY_CONTAINER_BLUR_SENSITIVITY_DP, _containerBlurRadiusDp.value.toDouble())
+        settingsJson.put(KEY_CONTAINER_BLUR_TRANSPARENCY, _containerBlurTransparency.value.toDouble())
 
         // Grid / QQS / Tiles / Fonts / Labels
         settingsJson.put(KEY_GRID_LAYOUT, _gridLayout.value.id)

@@ -49,8 +49,6 @@ import androidx.compose.runtime.DisposableEffect
 import com.example.data.EditButtonPosition
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ripple
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.foundation.border
 import com.example.data.TileShape
 import com.example.data.ProgressBarStyle
@@ -830,7 +828,9 @@ fun QuickSettingsPanel(
                             mediaSessions = activeMediaSessions
                         )
                     },
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .reportQsCardBlurBounds(topCornerRadiusDp = 0f, bottomCornerRadiusDp = 0f)
                 )
             } else if (isAndroidKitKatStyle && isEditingTiles) {
                 val showMonetSurfaceBackground by PanelPreferences.showMonetSurfaceBackground.collectAsState()
@@ -898,10 +898,19 @@ fun QuickSettingsPanel(
                             .then(
                                 when {
                                     showCustomHeaderImage && customHeaderImageUri.isNotBlank() -> {
+                                        val enableHeaderFrosted = PanelPreferences.enableContainerBlur.collectAsState().value
+                                        val headerFrostedTransparency = PanelPreferences.containerBlurTransparency.collectAsState().value
                                         Modifier
                                              .height(customHeaderImageHeight.dp)
                                              .clip(RoundedCornerShape(effectiveOuterCorner))
-                                             .background(com.example.ui.theme.getQsPanelBackgroundColor(isDark))
+                                             .background(
+                                                 frostedContainerColor(
+                                                     com.example.ui.theme.getQsPanelBackgroundColor(isDark),
+                                                     enableHeaderFrosted,
+                                                     isDark,
+                                                     headerFrostedTransparency
+                                                 )
+                                             )
                                     }
                                     else -> {
                                         Modifier.wrapContentHeight()
@@ -2687,7 +2696,7 @@ fun MarshmallowTileEditorScreen(
         }
     }
 
-    val darkHeaderBg = when {
+    val rawDarkHeaderBg = when {
         customPanelBg != null -> Color(customPanelBg)
         isHeaderGradientCustomized -> headerGradientElementColor
         isPanelContainerCustomized -> {
@@ -2707,6 +2716,9 @@ fun MarshmallowTileEditorScreen(
             Color(android.graphics.Color.argb(255, r, g, b))
         }
     }
+    val enableNHeaderFrosted = PanelPreferences.enableContainerBlur.collectAsState().value
+    val nHeaderFrostedTransparency = PanelPreferences.containerBlurTransparency.collectAsState().value
+    val darkHeaderBg = frostedContainerColor(rawDarkHeaderBg, enableNHeaderFrosted, isDark, nHeaderFrostedTransparency)
 
     val headerTextColor = Color(MonetThemeHelper.getTextPrimary(context, isDark))
     val textLightSecondary = Color(MonetThemeHelper.getTextSecondary(context, isDark))
@@ -5316,7 +5328,7 @@ fun UnifiedQsPanel(
                 }
             }
 
-            val darkHeaderBg = when {
+            val rawDarkHeaderBg = when {
                 customPanelBg != null -> Color(customPanelBg)
                 isHeaderGradientCustomized -> headerGradientElementColor
                 isPanelContainerCustomized -> {
@@ -5336,6 +5348,9 @@ fun UnifiedQsPanel(
                     Color(android.graphics.Color.argb(255, r, g, b))
                 }
             }
+            val enableMHeaderFrosted = PanelPreferences.enableContainerBlur.collectAsState().value
+            val mHeaderFrostedTransparency = PanelPreferences.containerBlurTransparency.collectAsState().value
+            val darkHeaderBg = frostedContainerColor(rawDarkHeaderBg, enableMHeaderFrosted, isDark, mHeaderFrostedTransparency)
             val textLightSecondary = Color(MonetThemeHelper.getTextSecondary(context, isDark))
             val headerTextColor = Color(MonetThemeHelper.getTextPrimary(context, isDark))
             val headerActionTint = if (isMiscCustomized) miscElementColor else headerTextColor
@@ -5409,6 +5424,10 @@ fun UnifiedQsPanel(
                     modifier = Modifier
                         .fillMaxWidth()
                         .wrapContentHeight()
+                        .reportQsCardBlurBounds(
+                            topCornerRadiusDp = 0f,
+                            bottomCornerRadiusDp = effectiveOuterCorner.value
+                        )
                 ) {
                     val qsScrollState = rememberScrollState()
 
@@ -5974,6 +5993,7 @@ fun UnifiedQsPanel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentHeight()
+                    .reportQsCardBlurBounds(topCornerRadiusDp = 0f, bottomCornerRadiusDp = 0f)
                     .then(shadeDragModifier)
             ) {
                 Column(
@@ -6574,6 +6594,10 @@ fun UnifiedQsPanel(
                     .fillMaxWidth()
                     .wrapContentHeight()
                     .offset(y = qqsContainerYOffset)
+                    .reportQsCardBlurBounds(
+                        topCornerRadiusDp = effectiveOuterCorner.value,
+                        bottomCornerRadiusDp = if (isSplitCarrier) effectiveInnerCorner.value else effectiveOuterCorner.value
+                    )
                     .then(shadeDragModifier)
             ) {
                 val isQqsMode = morphProgress < 0.5f && !isLandscape
@@ -6833,7 +6857,14 @@ fun UnifiedQsPanel(
                                 val qqsAlpha = ((0.5f - morphProgress) / 0.5f).coerceIn(0f, 1f)
                                 val qqsScale = 1f - (morphProgress * 0.08f)
                                 val dQqsScrollState = rememberScrollState()
-                                val qqsFadeBgColor = com.example.ui.theme.getQsPanelBackgroundColor(isDark)
+                                val enableQqsBlur = PanelPreferences.enableContainerBlur.collectAsState().value
+                                val qqsBlurTransparency = PanelPreferences.containerBlurTransparency.collectAsState().value
+                                val qqsFadeBgColor = frostedContainerColor(
+                                    com.example.ui.theme.getQsPanelBackgroundColor(isDark),
+                                    enableQqsBlur,
+                                    isDark,
+                                    qqsBlurTransparency
+                                )
 
                                 Column(
                                     modifier = Modifier
@@ -9852,17 +9883,18 @@ fun BlurredContainerCard(
     val enablePanelShadows by PanelPreferences.enablePanelShadows.collectAsState()
     val enablePanelTopRim by PanelPreferences.enablePanelTopRim.collectAsState()
     val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+    val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsState()
     val panelShadowElevation by PanelPreferences.panelShadowElevation.collectAsState()
     val panelShadowOffsetY by PanelPreferences.panelShadowOffsetY.collectAsState()
     val panelShadowAlpha by PanelPreferences.panelShadowAlpha.collectAsState()
     val isDark = LocalIsDarkTheme.current
 
-    val frostedAlpha = if (isDark) 0.60f else 0.72f
-    val effectiveContainerColor = if (enableContainerBlur) {
-        containerColor.copy(alpha = frostedAlpha)
-    } else {
-        containerColor
-    }
+    val effectiveContainerColor = frostedContainerColor(
+        baseColor = containerColor,
+        enableBlur = enableContainerBlur,
+        isDark = isDark,
+        transparency = containerBlurTransparency
+    )
 
     val shadowModifier = if (enablePanelShadows && panelShadowElevation > 0f) {
         Modifier
@@ -9933,17 +9965,11 @@ fun BlurredContainerCard(
                 .wrapContentHeight()
                 .panelTopRim(enabled = enablePanelTopRim, shape = shape)
                 .clip(shape)
-                .background(effectiveContainerColor)
-                .then(
-                    if (enableContainerBlur) {
-                        Modifier.border(
-                            width = 1.dp,
-                            color = if (isDark) Color.White.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.45f),
-                            shape = shape
-                        )
-                    } else {
-                        Modifier
-                    }
+                .frostedGlassSurface(
+                    baseColor = containerColor,
+                    enableBlur = enableContainerBlur,
+                    isDark = isDark,
+                    transparency = containerBlurTransparency
                 )
                 .panelTopRimBackground(enabled = enablePanelTopRim)
                 .then(

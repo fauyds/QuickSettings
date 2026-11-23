@@ -599,9 +599,9 @@ enum class FavoriteFeature(
         id = "design_frosted_glass",
         title = "Frosted Glass Panel Backdrop",
         category = CustomizeCategory.QS_DESIGN,
-        description = "Enable container blur and frosted glass visual effect for QS panel containers, notifications, and surface cards",
+        description = "Enable container blur, sensitivity, and transparency for QS panel containers, notifications, and surface cards, with option to blur behind QS/QQS only",
         icon = Icons.Default.AutoAwesome,
-        keywords = "frosted glass blur container blur backdrop translucent"
+        keywords = "frosted glass blur container blur backdrop translucent transparency sensitivity radius qs qqs only"
     ),
     DESIGN_BRIGHTNESS_BOTTOM(
         id = "design_brightness_bottom",

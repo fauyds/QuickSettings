@@ -63,8 +63,17 @@ import com.example.system.ExternalTileScanner
 import com.example.system.NativeTileManager
 import com.example.system.PrivilegeEngine
 import com.example.system.TileRegistry
+import androidx.compose.runtime.CompositionLocalProvider
+import com.example.ui.overlay.LocalOnQsCardBoundsChanged
+import com.example.ui.overlay.QsCardBlurBounds
+import com.example.ui.overlay.QsCardBlurWindowHost
 import com.example.ui.overlay.QsExpansionStage
 import com.example.ui.overlay.QuickSettingsPanel
+import com.example.ui.overlay.applyWindowBlurBehind
+import com.example.ui.overlay.computeQsBlurWindowPlan
+import com.example.ui.overlay.computeWindowBlurBehindRadiusPx
+import com.example.ui.overlay.isCrossWindowBlurSupported
+import com.example.ui.overlay.rememberCrossWindowBlurSupported
 import com.example.ui.theme.QuickPanelTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -72,6 +81,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 class QuickSettingsOverlayService : Service() {
@@ -97,6 +107,7 @@ class QuickSettingsOverlayService : Service() {
     private var triggerContainerView: TriggerContainerLayout? = null
     private var triggerStripView: View? = null
     private var triggerLayoutParams: WindowManager.LayoutParams? = null
+    private var qsBlurWindowHost: QsCardBlurWindowHost? = null
     private var overlayComposeView: ComposeView? = null
     private var lifecycleOwner: OverlayLifecycleOwner? = null
 
@@ -408,7 +419,24 @@ class QuickSettingsOverlayService : Service() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
             }
+            val initialBlurEnabled = PanelPreferences.enableContainerBlur.value &&
+                !PanelPreferences.blurOnlyBehindQsCard.value &&
+                PanelPreferences.disablePanelAnimations.value &&
+                isCrossWindowBlurSupported(this@QuickSettingsOverlayService)
+            if (initialBlurEnabled) {
+                applyWindowBlurBehind(
+                    this,
+                    computeWindowBlurBehindRadiusPx(
+                        enabled = true,
+                        density = resources.displayMetrics.density,
+                        fraction = 1f,
+                        maxBlurDp = PanelPreferences.containerBlurRadiusDp.value
+                    )
+                )
+            }
         }
+
+        val qsBlurHost = QsCardBlurWindowHost(this, layoutType)
 
         val owner = OverlayLifecycleOwner()
         owner.onCreate()
@@ -451,9 +479,19 @@ class QuickSettingsOverlayService : Service() {
 
                     val animSpeedScale by PanelPreferences.animationSpeedScale.collectAsState()
                     val disablePanelAnimations by PanelPreferences.disablePanelAnimations.collectAsState()
+                    val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+                    val blurOnlyBehindQsCard by PanelPreferences.blurOnlyBehindQsCard.collectAsState()
+                    val containerBlurRadiusDp by PanelPreferences.containerBlurRadiusDp.collectAsState()
+                    val crossWindowBlurSupported = rememberCrossWindowBlurSupported()
                     val speedFactor = animSpeedScale.coerceAtLeast(0.01f)
+                    val targetBackdropAlpha = when {
+                        enableContainerBlur && crossWindowBlurSupported && blurOnlyBehindQsCard -> 0.28f
+                        enableContainerBlur && crossWindowBlurSupported -> 0.32f
+                        enableContainerBlur -> 0.38f
+                        else -> 0.50f
+                    }
 
-                    val backdropAlpha = remember { androidx.compose.animation.core.Animatable(if (disablePanelAnimations) 0.50f else 0f) }
+                    val backdropAlpha = remember { androidx.compose.animation.core.Animatable(if (disablePanelAnimations) targetBackdropAlpha else 0f) }
                     val panelOffsetY = remember { androidx.compose.animation.core.Animatable(if (disablePanelAnimations) 0f else initialOffsetY) }
                     val panelAlpha = remember { androidx.compose.animation.core.Animatable(if (disablePanelAnimations) 1f else 0f) }
                     val panelScale = remember { androidx.compose.animation.core.Animatable(if (disablePanelAnimations) 1f else 0.95f) }
@@ -461,6 +499,58 @@ class QuickSettingsOverlayService : Service() {
                     var isClosing by remember { mutableStateOf(false) }
                     var wasPulling by remember { mutableStateOf(false) }
                     val pullOffset by pullDownOffset.collectAsState()
+                    var qsCardBounds by remember { mutableStateOf(QsCardBlurBounds()) }
+
+                    // Sync behind-window SurfaceFlinger blur radius (full-screen or scoped behind QS/QQS card only)
+                    LaunchedEffect(enableContainerBlur, blurOnlyBehindQsCard, containerBlurRadiusDp, crossWindowBlurSupported, targetBackdropAlpha, density) {
+                        snapshotFlow {
+                            val denom = targetBackdropAlpha.coerceAtLeast(0.01f)
+                            val fraction = (backdropAlpha.value / denom).coerceIn(0f, 1f)
+                            val desiredRadius = computeWindowBlurBehindRadiusPx(
+                                enabled = enableContainerBlur && crossWindowBlurSupported,
+                                density = density.density,
+                                fraction = fraction,
+                                maxBlurDp = containerBlurRadiusDp
+                            )
+                            Pair(desiredRadius, qsCardBounds)
+                        }.distinctUntilChanged().collect { (desiredRadius, bounds) ->
+                            val plan = computeQsBlurWindowPlan(desiredRadius, blurOnlyBehindQsCard)
+                            val view = this@apply
+                            if (applyWindowBlurBehind(panelParams, plan.fullScreenBlurRadiusPx) && view.isAttachedToWindow) {
+                                try {
+                                    windowManager?.updateViewLayout(view, panelParams)
+                                } catch (_: Exception) {
+                                    // Ignore if window detached mid-frame
+                                }
+                            }
+                            val screenLoc = IntArray(2)
+                            if (view.isAttachedToWindow) {
+                                view.getLocationOnScreen(screenLoc)
+                            }
+                            qsBlurHost.update(
+                                bounds = bounds,
+                                radiusPx = plan.qsCardBlurRadiusPx,
+                                offsetX = screenLoc[0],
+                                offsetY = screenLoc[1]
+                            )
+                        }
+                    }
+
+                    // Smoothly adjust scrim opacity if Frosted Glass is toggled while panel is visible
+                    LaunchedEffect(targetBackdropAlpha) {
+                        if (!isClosing && !wasPulling && pullDownOffset.value == null && backdropAlpha.value > 0f) {
+                            if (disablePanelAnimations) {
+                                backdropAlpha.snapTo(targetBackdropAlpha)
+                            } else {
+                                backdropAlpha.animateTo(
+                                    targetValue = targetBackdropAlpha,
+                                    animationSpec = androidx.compose.animation.core.tween(
+                                        durationMillis = (180 * speedFactor).toInt().coerceAtLeast(1)
+                                    )
+                                )
+                            }
+                        }
+                    }
 
                     // Live finger tracking for pull-down gesture from status bar
                     LaunchedEffect(pullOffset) {
@@ -470,14 +560,14 @@ class QuickSettingsOverlayService : Service() {
                             val fraction = (currentPull / revealDistancePx).coerceIn(0f, 1f)
                             val targetY = initialOffsetY * (1f - fraction)
                             panelOffsetY.snapTo(targetY)
-                            backdropAlpha.snapTo(0.50f * fraction)
+                            backdropAlpha.snapTo(targetBackdropAlpha * fraction)
                             panelAlpha.snapTo(0.3f + (0.7f * fraction))
                             panelScale.snapTo(0.95f + (0.05f * fraction))
                         } else if (wasPulling && !isClosing) {
                             wasPulling = false
                             // Finger released: snap open if dragged sufficiently, else dismiss
                             if (disablePanelAnimations) {
-                                backdropAlpha.snapTo(0.50f)
+                                backdropAlpha.snapTo(targetBackdropAlpha)
                                 panelOffsetY.snapTo(0f)
                                 panelAlpha.snapTo(1f)
                                 panelScale.snapTo(1f)
@@ -485,7 +575,7 @@ class QuickSettingsOverlayService : Service() {
                                 if (backdropAlpha.value >= 0.12f || panelOffsetY.value >= (initialOffsetY * 0.75f)) {
                                     launch {
                                         backdropAlpha.animateTo(
-                                            targetValue = 0.50f,
+                                            targetValue = targetBackdropAlpha,
                                             animationSpec = androidx.compose.animation.core.tween(
                                                 durationMillis = (240 * speedFactor).toInt(),
                                                 easing = androidx.compose.animation.core.FastOutSlowInEasing
@@ -542,14 +632,14 @@ class QuickSettingsOverlayService : Service() {
                     LaunchedEffect(Unit) {
                         if (pullDownOffset.value == null) {
                             if (disablePanelAnimations) {
-                                backdropAlpha.snapTo(0.50f)
+                                backdropAlpha.snapTo(targetBackdropAlpha)
                                 panelOffsetY.snapTo(0f)
                                 panelAlpha.snapTo(1f)
                                 panelScale.snapTo(1f)
                             } else {
                                 launch {
                                     backdropAlpha.animateTo(
-                                        targetValue = 0.50f,
+                                        targetValue = targetBackdropAlpha,
                                         animationSpec = androidx.compose.animation.core.tween(
                                             durationMillis = (280 * speedFactor).toInt(),
                                             easing = androidx.compose.animation.core.FastOutSlowInEasing
@@ -685,6 +775,9 @@ class QuickSettingsOverlayService : Service() {
                                     onClick = { /* consume click inside panel */ }
                                 )
                         ) {
+                            CompositionLocalProvider(
+                                LocalOnQsCardBoundsChanged provides { bounds -> qsCardBounds = bounds }
+                            ) {
                             QuickSettingsPanel(
                                 expansionStage = stage,
                                 onStageChange = { newStage ->
@@ -759,12 +852,15 @@ class QuickSettingsOverlayService : Service() {
                                     }
                                 )
                             }
+                            }
                         }
                     }
                 }
             }
 
         try {
+            qsBlurHost.showBehindOverlay()
+            qsBlurWindowHost = qsBlurHost
             windowManager?.addView(composeView, panelParams)
             overlayComposeView = composeView
             isPanelShowing = true
@@ -772,6 +868,8 @@ class QuickSettingsOverlayService : Service() {
                 VolumePanelOverlay.bringToFront(this)
             }
         } catch (e: Exception) {
+            qsBlurHost.dismiss()
+            qsBlurWindowHost = null
             Log.e("OverlayService", "Failed to show overlay panel: ${e.message}")
         }
     }
@@ -790,6 +888,8 @@ class QuickSettingsOverlayService : Service() {
             }
         }
         overlayComposeView = null
+        qsBlurWindowHost?.dismiss()
+        qsBlurWindowHost = null
         lifecycleOwner?.onDestroy()
         lifecycleOwner = null
         isPanelShowing = false
