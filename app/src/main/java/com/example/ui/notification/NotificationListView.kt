@@ -13,6 +13,7 @@ import android.view.animation.PathInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.graphics.ColorUtils
 import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -562,8 +563,16 @@ class NotificationListView @JvmOverloads constructor(
         val shadowOffsetY = PanelPreferences.panelShadowOffsetY.value
         val panelShadowAlpha = PanelPreferences.panelShadowAlpha.value
         val cardRadius = PanelPreferences.panelOuterCorner.value * density
-        val cardBg = panelCardBackgroundColor ?: MonetThemeHelper.getCardBackground(context, isDark)
-        val permDrawable = MonetThemeHelper.createMonetCardDrawable(context, isDark, cardRadius, customBgColor = cardBg)
+        val enableContainerBlur = PanelPreferences.enableContainerBlur.value
+        val containerBlurTransparency = PanelPreferences.containerBlurTransparency.value
+        val frostedAlpha = 1f - containerBlurTransparency.coerceIn(0f, 0.95f)
+        val rawCardBg = panelCardBackgroundColor ?: MonetThemeHelper.getCardBackground(context, isDark)
+        val cardBg = if (enableContainerBlur) {
+            ColorUtils.setAlphaComponent(rawCardBg, (frostedAlpha * 255).toInt())
+        } else {
+            rawCardBg
+        }
+        val permDrawable = MonetThemeHelper.createMonetCardDrawable(context, isDark, cardRadius, showStroke = false, customBgColor = cardBg)
         val enablePanelTopRim = PanelPreferences.enablePanelTopRim.value
         CustomShadowHelper.applyCustomShadowBackground(
             flPermissionCard,
@@ -608,7 +617,7 @@ class NotificationListView @JvmOverloads constructor(
             ivEmptyIcon.setColorFilter(emptyColor)
             tvEmptyText.setTextColor(emptyColor)
         } else {
-            val emptyDrawable = MonetThemeHelper.createMonetCardDrawable(context, isDark, cardRadius, customBgColor = cardBg)
+            val emptyDrawable = MonetThemeHelper.createMonetCardDrawable(context, isDark, cardRadius, showStroke = false, customBgColor = cardBg)
             CustomShadowHelper.applyCustomShadowBackground(
                 flEmptyCard,
                 emptyDrawable,

@@ -7907,11 +7907,11 @@ fun NotificationsCard(
     notifications: List<NotificationItem>,
     isPermissionGranted: Boolean,
     expansionStage: QsExpansionStage = QsExpansionStage.QQS,
-    onNotificationClick: (NotificationItem) -> Unit,
-    onNotificationDismiss: (NotificationItem) -> Unit,
-    onActionClick: (NotificationActionModel) -> Unit,
-    onClearAll: () -> Unit,
-    onRequestPermission: () -> Unit,
+    onNotificationClick: (NotificationItem) -> Unit = {},
+    onNotificationDismiss: (NotificationItem) -> Unit = {},
+    onActionClick: (NotificationActionModel) -> Unit = {},
+    onClearAll: () -> Unit = {},
+    onRequestPermission: () -> Unit = {},
     onNavigateToNotificationHub: () -> Unit = {},
     onOpenNotificationManager: () -> Unit = onNavigateToNotificationHub,
     onStageChange: (QsExpansionStage) -> Unit = {}
@@ -7977,18 +7977,6 @@ fun NotificationsCard(
         modifier = Modifier
             .fillMaxSize()
             .clipToBounds()
-            .then(
-                if (enableContainerBlur) {
-                    Modifier.frostedGlassSurface(
-                        baseColor = notifBgColor,
-                        enableBlur = true,
-                        isDark = isDark,
-                        transparency = containerBlurTransparency
-                    )
-                } else {
-                    Modifier.background(notifBgColor)
-                }
-            )
             .testTag("notifications_card")
     ) {
         AndroidView(
@@ -8026,7 +8014,7 @@ fun NotificationsCard(
                     isPermissionGranted = isPermissionGranted,
                     isDark = isDark,
                     primaryColor = primaryColor,
-                    panelCardBackgroundColor = notifBgColorInt,
+                    panelCardBackgroundColor = if (enableContainerBlur) resolvedNotifBgColor.toArgb() else notifBgColorInt,
                     mediaSessions = activeMediaSessions
                 )
             },
@@ -8116,6 +8104,7 @@ fun NotificationItemRow(
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
     val disablePanelAnimations by com.example.data.PanelPreferences.disablePanelAnimations.collectAsState()
+    val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
     var offsetX by remember(item.key) { mutableFloatStateOf(0f) }
     var isDismissed by remember(item.key) { mutableStateOf(false) }
     var isExpanded by remember(item.key) { mutableStateOf(false) }
@@ -8197,7 +8186,7 @@ fun NotificationItemRow(
                         clip = false
                     }
                     .then(
-                        if (isAndroidOreoStyle) {
+                        if (isAndroidOreoStyle && !enableContainerBlur) {
                             Modifier.drawBehind {
                                 val strokeWidth = 1.dp.toPx()
                                 val lineColor = if (isDark) Color.White.copy(alpha = 0.2f) else Color.Black.copy(alpha = 0.2f)

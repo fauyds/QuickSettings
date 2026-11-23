@@ -484,13 +484,22 @@ class NotificationAdapter(
                 )
             }
 
-            val cardBg = if (isOreoStyle) {
+            val enableContainerBlur = PanelPreferences.enableContainerBlur.value
+            val containerBlurTransparency = PanelPreferences.containerBlurTransparency.value
+            val frostedAlpha = 1f - containerBlurTransparency.coerceIn(0f, 0.95f)
+
+            val rawCardBg = if (isOreoStyle) {
                 if (isDark) Color.parseColor("#282828") else Color.parseColor("#F5F5F5")
             } else {
                 customCardBackgroundColor ?: MonetThemeHelper.getCardBackground(context, isDark)
             }
+            val cardBg = if (enableContainerBlur) {
+                ColorUtils.setAlphaComponent(rawCardBg, (frostedAlpha * 255).toInt())
+            } else {
+                rawCardBg
+            }
 
-            val contentDrawable = if (isOreoStyle) {
+            val contentDrawable = if (isOreoStyle && !enableContainerBlur) {
                 val strokeColor = if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#33000000")
                 val strokePx = (1 * density).toInt().coerceAtLeast(1)
                 val baseDrawable = GradientDrawable().apply {
@@ -506,7 +515,7 @@ class NotificationAdapter(
                     setLayerInset(1, -strokePx, 0, -strokePx, 0)
                 }
             } else {
-                MonetThemeHelper.createMonetCardDrawable(context, isDark, radii, customBgColor = cardBg)
+                MonetThemeHelper.createMonetCardDrawable(context, isDark, radii, showStroke = false, customBgColor = cardBg)
             }
 
             val enablePanelShadows = PanelPreferences.enablePanelShadows.value
@@ -839,15 +848,24 @@ class NotificationAdapter(
             val fallbackBg = customCardBackgroundColor ?: if (isDark) Color.parseColor("#25262B") else Color.parseColor("#EAEBEF")
             val fallbackAccent = customPrimaryColor ?: MonetThemeHelper.getPrimaryAccent(context, isDark)
 
-            val cardBgColorInt: Int
+            val enableContainerBlur = PanelPreferences.enableContainerBlur.value
+            val containerBlurTransparency = PanelPreferences.containerBlurTransparency.value
+            val frostedAlpha = 1f - containerBlurTransparency.coerceIn(0f, 0.95f)
+
+            val rawCardBgColorInt: Int
             val accentColorInt: Int
             if (useMediaArtworkColors && artwork != null && !isPanelCustomized) {
                 val extractedColors = extractAndroidQNotificationColors(artwork, palette)
-                cardBgColorInt = extractedColors.backgroundColor.toArgb()
+                rawCardBgColorInt = extractedColors.backgroundColor.toArgb()
                 accentColorInt = extractedColors.accentColor.toArgb()
             } else {
-                cardBgColorInt = fallbackBg
+                rawCardBgColorInt = fallbackBg
                 accentColorInt = fallbackAccent
+            }
+            val cardBgColorInt = if (enableContainerBlur) {
+                ColorUtils.setAlphaComponent(rawCardBgColorInt, (frostedAlpha * 255).toInt())
+            } else {
+                rawCardBgColorInt
             }
             val subTextColorInt = ColorUtils.setAlphaComponent(accentColorInt, (255 * 0.80f).toInt())
             val dimAccentColorInt = ColorUtils.setAlphaComponent(accentColorInt, (255 * 0.45f).toInt())
@@ -877,7 +895,7 @@ class NotificationAdapter(
                 )
             }
 
-            val contentDrawable = if (isOreoStyle) {
+            val contentDrawable = if (isOreoStyle && !enableContainerBlur) {
                 val strokeColor = if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#33000000")
                 val strokePx = (1 * density).toInt().coerceAtLeast(1)
                 val baseDrawable = GradientDrawable().apply {
@@ -1259,19 +1277,28 @@ class NotificationAdapter(
                 )
             }
 
-            val cardBg = if (isOreoStyle) {
+            val enableContainerBlur = PanelPreferences.enableContainerBlur.value
+            val containerBlurTransparency = PanelPreferences.containerBlurTransparency.value
+            val frostedAlpha = 1f - containerBlurTransparency.coerceIn(0f, 0.95f)
+
+            val rawCardBg = if (isOreoStyle) {
                 if (isDarkTheme) Color.parseColor("#212121") else Color.WHITE
             } else {
                 customCardBackgroundColor ?: MonetThemeHelper.getCardBackground(context, isDarkTheme)
             }
+            val cardBg = if (enableContainerBlur) {
+                ColorUtils.setAlphaComponent(rawCardBg, (frostedAlpha * 255).toInt())
+            } else {
+                rawCardBg
+            }
 
-            val contentDrawable = if (isOreoStyle) {
+            val contentDrawable = if (isOreoStyle && !enableContainerBlur) {
                 val strokeColor = if (isDarkTheme) Color.parseColor("#33FFFFFF") else Color.parseColor("#33000000")
                 val strokePx = (1 * density).toInt().coerceAtLeast(1)
                 val solidOreoBg = if (isDarkTheme) Color.parseColor("#212121") else Color.parseColor("#FFFFFF")
                 val baseDrawable = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
-                    setColor(solidOreoBg)
+                    setColor(cardBg)
                 }
                 val strokeDrawable = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
@@ -1443,12 +1470,21 @@ class NotificationAdapter(
                 )
             }
 
-            val cardBg = if (isOreoStyle) {
+            val enableContainerBlur = com.example.data.PanelPreferences.enableContainerBlur.value
+            val containerBlurTransparency = com.example.data.PanelPreferences.containerBlurTransparency.value
+            val frostedAlpha = 1f - containerBlurTransparency.coerceIn(0f, 0.95f)
+
+            val rawCardBg = if (isOreoStyle) {
                 if (isDark) Color.parseColor("#212121") else Color.WHITE
             } else {
                 customCardBackgroundColor ?: MonetThemeHelper.getCardBackground(context, isDark)
             }
-            val contentDrawable = if (isOreoStyle) {
+            val cardBg = if (enableContainerBlur) {
+                ColorUtils.setAlphaComponent(rawCardBg, (frostedAlpha * 255).toInt())
+            } else {
+                rawCardBg
+            }
+            val contentDrawable = if (isOreoStyle && !enableContainerBlur) {
                 val strokeColor = if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#33000000")
                 val strokePx = (1 * density).toInt().coerceAtLeast(1)
                 val baseDrawable = GradientDrawable().apply {
@@ -1464,7 +1500,7 @@ class NotificationAdapter(
                     setLayerInset(1, -strokePx, 0, -strokePx, 0)
                 }
             } else {
-                MonetThemeHelper.createMonetCardDrawable(context, isDark, radii, customBgColor = cardBg)
+                MonetThemeHelper.createMonetCardDrawable(context, isDark, radii, showStroke = false, customBgColor = cardBg)
             }
 
             val enablePanelShadows = com.example.data.PanelPreferences.enablePanelShadows.value

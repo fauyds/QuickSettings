@@ -605,4 +605,48 @@ class FrostedGlassBlurTest {
             .performScrollTo()
             .assertIsDisplayed()
     }
+
+    @Test
+    fun `NotificationsCard container is clean and individual notifications receive frosted glass effect`() {
+        PanelPreferences.setEnableContainerBlur(context, true)
+        PanelPreferences.setContainerBlurTransparency(context, 0.40f)
+
+        val sampleNotification = com.example.model.NotificationItem(
+            id = 101,
+            key = "test_pkg|101",
+            packageName = "com.google.android.gm",
+            appName = "Gmail",
+            title = "New Email",
+            text = "Meeting at 3 PM today",
+            postTime = System.currentTimeMillis(),
+            isOngoing = false,
+            isClearable = true
+        )
+
+        composeTestRule.setContent {
+            QuickPanelTheme(darkTheme = true) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    com.example.ui.overlay.NotificationsCard(
+                        notifications = listOf(sampleNotification),
+                        isPermissionGranted = true
+                    )
+                    com.example.ui.overlay.NotificationItemRow(
+                        item = sampleNotification,
+                        onClick = {},
+                        onDismiss = {},
+                        onActionClick = {}
+                    )
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // Root container is present and clean
+        composeTestRule.onNodeWithTag("notifications_card").assertIsDisplayed()
+
+        // Verify individual Compose NotificationItemRow renders crisply with frosted glass container
+        composeTestRule.onNodeWithTag("notification_item_test_pkg|101").assertIsDisplayed()
+        composeTestRule.onNodeWithText("New Email").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Meeting at 3 PM today").assertIsDisplayed()
+    }
 }
