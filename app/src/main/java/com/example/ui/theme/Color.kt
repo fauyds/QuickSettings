@@ -144,11 +144,13 @@ fun getQsMonetSurfaceBackgroundColor(isDark: Boolean): Color {
         }
     }
     val factor = if (isDark) 0.90f else 0.87f
+    val transparency = PanelPreferences.monetSurfaceTransparency.collectAsState().value
+    val surfaceAlpha = (1f - transparency.coerceIn(0f, 0.95f)).coerceIn(0.05f, 1f)
     val solidBg = Color(
         red = (baseColor.red * factor).coerceIn(0f, 1f),
         green = (baseColor.green * factor).coerceIn(0f, 1f),
         blue = (baseColor.blue * factor).coerceIn(0f, 1f),
-        alpha = 1.0f
+        alpha = surfaceAlpha
     )
     val hue = PanelPreferences.getSurfaceBgHue(isDark).collectAsState().value
     val sat = PanelPreferences.getSurfaceBgSat(isDark).collectAsState().value

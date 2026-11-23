@@ -422,6 +422,11 @@ object PanelPreferences {
     private val _showMonetSurfaceBackground = MutableStateFlow(false)
     val showMonetSurfaceBackground: StateFlow<Boolean> = _showMonetSurfaceBackground.asStateFlow()
 
+    private val _monetSurfaceTransparency = MutableStateFlow(0.0f)
+    val monetSurfaceTransparency: StateFlow<Float> = _monetSurfaceTransparency.asStateFlow()
+
+    private const val KEY_MONET_SURFACE_TRANSPARENCY = "monet_surface_transparency"
+
     private const val KEY_SHOW_HEADER_COMPLICATIONS = "show_header_complications"
     private const val KEY_COMPLICATION_SUBLINE_PLACEMENT = "complication_subline_placement"
     private const val KEY_FOOTER_ICON_BACKGROUND = "footer_icon_background"
@@ -2166,6 +2171,7 @@ object PanelPreferences {
         _showCustomHeaderMonetGradient.value = prefs.getBoolean(KEY_SHOW_CUSTOM_HEADER_MONET_GRADIENT, false)
         _customHeaderMonetGradientHeight.value = prefs.getFloat(KEY_CUSTOM_HEADER_MONET_GRADIENT_HEIGHT, 85f)
         _showMonetSurfaceBackground.value = prefs.getBoolean(KEY_SHOW_MONET_SURFACE_BACKGROUND, false)
+        _monetSurfaceTransparency.value = prefs.getFloat(KEY_MONET_SURFACE_TRANSPARENCY, 0.0f).coerceIn(0f, 0.95f)
         _showHeaderComplications.value = prefs.getBoolean(KEY_SHOW_HEADER_COMPLICATIONS, true)
         _complicationSublinePlacement.value = com.example.model.ComplicationSublinePlacement.fromId(
             prefs.getString(KEY_COMPLICATION_SUBLINE_PLACEMENT, com.example.model.ComplicationSublinePlacement.INSIDE_RING.id)
@@ -4325,6 +4331,17 @@ object PanelPreferences {
         prefs.edit()
             .putBoolean(KEY_SHOW_MONET_SURFACE_BACKGROUND, enabled)
             .putBoolean(getStyleKey(KEY_SHOW_MONET_SURFACE_BACKGROUND), enabled)
+            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
+    }
+
+    fun setMonetSurfaceTransparency(context: Context, transparency: Float) {
+        val clamped = transparency.coerceIn(0f, 0.95f)
+        _monetSurfaceTransparency.value = clamped
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(KEY_MONET_SURFACE_TRANSPARENCY, clamped)
+            .putFloat(getStyleKey(KEY_MONET_SURFACE_TRANSPARENCY), clamped)
             .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
             .apply()
     }

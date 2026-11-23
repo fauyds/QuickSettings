@@ -2418,6 +2418,69 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         modifier = Modifier.testTag("monet_surface_background_toggle")
                     )
                 }
+
+                val monetSurfaceTransparency by PanelPreferences.monetSurfaceTransparency.collectAsState()
+                val monetSurfaceTransparencyPercent = kotlin.math.round(monetSurfaceTransparency * 100f).toInt().coerceIn(0, 95)
+
+                AnimatedVisibility(
+                    visible = showMonetSurfaceBackground,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(ExpressiveTheme.colors.nestedElementSurface)
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Solid Monet Transparency",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "See-through amount for Monet background surface (0% – 95%)",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(
+                                text = "$monetSurfaceTransparencyPercent%",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.testTag("monet_surface_transparency_value")
+                            )
+                        }
+                        Slider(
+                            value = monetSurfaceTransparencyPercent.toFloat(),
+                            onValueChange = {
+                                PanelPreferences.setMonetSurfaceTransparency(
+                                    context,
+                                    kotlin.math.round(it).coerceIn(0f, 95f) / 100f
+                                )
+                            },
+                            valueRange = 0f..95f,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("monet_surface_transparency_slider"),
+                            colors = SliderDefaults.colors(
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                                inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                            )
+                        )
+                    }
+                }
             }
         }
     }
