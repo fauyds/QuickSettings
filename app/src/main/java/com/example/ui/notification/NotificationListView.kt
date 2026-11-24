@@ -22,9 +22,11 @@ import com.example.R
 import com.example.model.MediaState
 import com.example.model.NotificationActionModel
 import com.example.model.NotificationItem
+import com.example.ui.overlay.QsCardBlurBounds
 import com.example.ui.overlay.QsExpansionStage
 import com.example.data.NotificationCategoryManager
 import com.example.data.PanelPreferences
+import kotlin.math.abs
 
 class NotificationListView @JvmOverloads constructor(
     context: Context,
@@ -61,6 +63,8 @@ class NotificationListView @JvmOverloads constructor(
     var onStageChange: ((QsExpansionStage) -> Unit)? = null
     var onExpandToFullQs: (() -> Unit)? = null
     var onDragInteraction: ((deltaY: Float, action: Int) -> Unit)? = null
+    var onNotificationBlurRegionsChanged: ((List<QsCardBlurBounds>) -> Unit)? = null
+    var composeHostView: View? = null
     var currentExpansionStage: QsExpansionStage = QsExpansionStage.QQS
 
     private var startY = 0f
@@ -74,6 +78,18 @@ class NotificationListView @JvmOverloads constructor(
     private var velocityTracker: VelocityTracker? = null
     private var lastVisualSignature: Int? = null
     private val categoryItemAnimator = CategoryExpandItemAnimator()
+    private var blurRegionReportingEnabled: Boolean = false
+    private var isPreDrawListenerRegistered: Boolean = false
+    private var lastReportedBlurRegions: List<QsCardBlurBounds> = emptyList()
+    private var lastCardCornerRadiusPx: Float = 0f
+    private val rootLocBuffer = IntArray(2)
+    private val containerLocBuffer = IntArray(2)
+    private val rvLocBuffer = IntArray(2)
+    private val cardLocBuffer = IntArray(2)
+    private val blurPreDrawListener = android.view.ViewTreeObserver.OnPreDrawListener {
+        dispatchBlurRegionsIfNeeded()
+        true
+    }
 
     companion object {
         private const val DRAG_NONE = 0
@@ -166,6 +182,168 @@ class NotificationListView @JvmOverloads constructor(
 
         initAdapter()
         setupItemTouchHelper()
+    }
+
+    fun setBlurRegionReportingEnabled(enabled: Boolean) {
+        if (blurRegionReportingEnabled == enabled) return
+        blurRegionReportingEnabled = enabled
+        updatePreDrawListenerRegistration()
+        if (!enabled) {
+            clearReportedBlurRegions()
+        } else {
+            post { dispatchBlurRegionsIfNeeded() }
+        }
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        updatePreDrawListenerRegistration()
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        isPreDrawListenerRegistered = false
+        try {
+            viewTreeObserver.removeOnPreDrawListener(blurPreDrawListener)
+        } catch (_: Throwable) {}
+        clearReportedBlurRegions()
+    }
+
+    private fun updatePreDrawListenerRegistration() {
+        val shouldRegister = blurRegionReportingEnabled && isAttachedToWindow
+        if (shouldRegister && !isPreDrawListenerRegistered) {
+            try {
+                viewTreeObserver.addOnPreDrawListener(blurPreDrawListener)
+                isPreDrawListenerRegistered = true
+            } catch (_: Throwable) {}
+        } else if (!shouldRegister && isPreDrawListenerRegistered) {
+            isPreDrawListenerRegistered = false
+            try {
+                viewTreeObserver.removeOnPreDrawListener(blurPreDrawListener)
+            } catch (_: Throwable) {}
+        }
+    }
+
+    private fun clearReportedBlurRegions() {
+        if (lastReportedBlurRegions.isNotEmpty()) {
+            lastReportedBlurRegions = emptyList()
+            onNotificationBlurRegionsChanged?.invoke(emptyList())
+        }
+    }
+
+    private fun collectVisibleBlurRegions(): List<QsCardBlurBounds> {
+        if (!blurRegionReportingEnabled || !isAttachedToWindow || !isShown || width <= 1 || height <= 1) {
+            return emptyList()
+        }
+        val rootRef = composeHostView ?: this.rootView ?: return emptyList()
+        rootRef.getLocationOnScreen(rootLocBuffer)
+        this.getLocationOnScreen(containerLocBuffer)
+
+        val hostLeft = (containerLocBuffer[0] - rootLocBuffer[0]).toFloat()
+        val hostTop = (containerLocBuffer[1] - rootLocBuffer[1]).toFloat()
+        val hostRight = hostLeft + width * scaleX
+        val hostBottom = hostTop + height * scaleY
+        if (hostRight - hostLeft <= 2f || hostBottom - hostTop <= 2f) return emptyList()
+
+        val result = ArrayList<QsCardBlurBounds>(rvNotifications.childCount + 2)
+
+        fun addClampedCard(
+            card: View,
+            topCornerPx: Float,
+            bottomCornerPx: Float,
+            clipLeft: Float,
+            clipTop: Float,
+            clipRight: Float,
+            clipBottom: Float,
+            parentAlpha: Float = 1f
+        ) {
+            if (card.visibility != View.VISIBLE || !card.isShown) return
+            if (parentAlpha * card.alpha <= 0.05f || card.width <= 1 || card.height <= 1) return
+            card.getLocationOnScreen(cardLocBuffer)
+            val rawLeft = (cardLocBuffer[0] - rootLocBuffer[0]).toFloat()
+            val rawTop = (cardLocBuffer[1] - rootLocBuffer[1]).toFloat()
+            val rawRight = rawLeft + card.width * card.scaleX
+            val rawBottom = rawTop + card.height * card.scaleY
+
+            val clampedLeft = maxOf(rawLeft, clipLeft)
+            val clampedTop = maxOf(rawTop, clipTop)
+            val clampedRight = minOf(rawRight, clipRight)
+            val clampedBottom = minOf(rawBottom, clipBottom)
+            if (clampedRight - clampedLeft <= 2f || clampedBottom - clampedTop <= 2f) return
+
+            result.add(
+                QsCardBlurBounds(
+                    left = clampedLeft,
+                    top = clampedTop,
+                    right = clampedRight,
+                    bottom = clampedBottom,
+                    topCornerRadiusPx = topCornerPx,
+                    bottomCornerRadiusPx = bottomCornerPx
+                )
+            )
+        }
+
+        if (flPermissionCard.visibility == View.VISIBLE) {
+            addClampedCard(flPermissionCard, lastCardCornerRadiusPx, lastCardCornerRadiusPx, hostLeft, hostTop, hostRight, hostBottom)
+        }
+        if (flEmptyCard.visibility == View.VISIBLE) {
+            addClampedCard(flEmptyCard, lastCardCornerRadiusPx, lastCardCornerRadiusPx, hostLeft, hostTop, hostRight, hostBottom)
+        }
+        if (rvNotifications.visibility == View.VISIBLE && rvNotifications.isShown) {
+            rvNotifications.getLocationOnScreen(rvLocBuffer)
+            val rvLeft = maxOf((rvLocBuffer[0] - rootLocBuffer[0]).toFloat(), hostLeft)
+            val rvTop = maxOf((rvLocBuffer[1] - rootLocBuffer[1]).toFloat(), hostTop)
+            val rvRight = minOf((rvLocBuffer[0] - rootLocBuffer[0]).toFloat() + rvNotifications.width * rvNotifications.scaleX, hostRight)
+            val rvBottom = minOf((rvLocBuffer[1] - rootLocBuffer[1]).toFloat() + rvNotifications.height * rvNotifications.scaleY, hostBottom)
+            if (rvRight - rvLeft > 2f && rvBottom - rvTop > 2f) {
+                for (i in 0 until rvNotifications.childCount) {
+                    val child = rvNotifications.getChildAt(i) ?: continue
+                    val holder = rvNotifications.getChildViewHolder(child) as? NotificationAdapter.BlurRegionCardHolder ?: continue
+                    val (topR, bottomR) = holder.blurCornerRadiiPx()
+                    addClampedCard(
+                        card = holder.blurTargetView(),
+                        topCornerPx = topR,
+                        bottomCornerPx = bottomR,
+                        clipLeft = rvLeft,
+                        clipTop = rvTop,
+                        clipRight = rvRight,
+                        clipBottom = rvBottom,
+                        parentAlpha = child.alpha
+                    )
+                }
+            }
+        }
+        return result
+    }
+
+    private fun blurRegionsMatch(a: List<QsCardBlurBounds>, b: List<QsCardBlurBounds>): Boolean {
+        if (a.size != b.size) return false
+        for (i in a.indices) {
+            val ra = a[i]
+            val rb = b[i]
+            if (abs(ra.left - rb.left) >= 0.5f ||
+                abs(ra.top - rb.top) >= 0.5f ||
+                abs(ra.right - rb.right) >= 0.5f ||
+                abs(ra.bottom - rb.bottom) >= 0.5f ||
+                abs(ra.topCornerRadiusPx - rb.topCornerRadiusPx) >= 0.5f ||
+                abs(ra.bottomCornerRadiusPx - rb.bottomCornerRadiusPx) >= 0.5f
+            ) {
+                return false
+            }
+        }
+        return true
+    }
+
+    private fun dispatchBlurRegionsIfNeeded() {
+        if (!blurRegionReportingEnabled) {
+            clearReportedBlurRegions()
+            return
+        }
+        val next = collectVisibleBlurRegions()
+        if (!blurRegionsMatch(lastReportedBlurRegions, next)) {
+            lastReportedBlurRegions = next
+            onNotificationBlurRegionsChanged?.invoke(next)
+        }
     }
 
     private fun handleInterceptTouch(e: MotionEvent): Boolean {
@@ -563,7 +741,10 @@ class NotificationListView @JvmOverloads constructor(
         val shadowOffsetY = PanelPreferences.panelShadowOffsetY.value
         val panelShadowAlpha = PanelPreferences.panelShadowAlpha.value
         val cardRadius = PanelPreferences.panelOuterCorner.value * density
-        val enableContainerBlur = PanelPreferences.enableContainerBlur.value
+        lastCardCornerRadiusPx = cardRadius
+        val rawContainerBlur = PanelPreferences.enableContainerBlur.value
+        val enableNotificationBlur = PanelPreferences.enableNotificationBlur.value
+        val enableContainerBlur = rawContainerBlur && enableNotificationBlur
         val containerBlurTransparency = PanelPreferences.containerBlurTransparency.value
         val frostedAlpha = 1f - containerBlurTransparency.coerceIn(0f, 0.95f)
         val rawCardBg = panelCardBackgroundColor ?: MonetThemeHelper.getCardBackground(context, isDark)
@@ -803,7 +984,8 @@ class NotificationListView @JvmOverloads constructor(
                 PanelPreferences.clearAllFabShapeId.value,
                 PanelPreferences.clearAllFabIcon.value,
                 PanelPreferences.clearAllFabSize.value,
-                enableContainerBlur,
+                rawContainerBlur,
+                enableNotificationBlur,
                 containerBlurTransparency,
                 enableGlassRefraction,
                 glassRefractionSensitivity
@@ -812,6 +994,9 @@ class NotificationListView @JvmOverloads constructor(
             lastVisualSignature = visualSignature
 
             adapter?.submitNotifications(notifications.toList(), forceVisualRefresh = visualChanged)
+            if (blurRegionReportingEnabled) {
+                post { dispatchBlurRegionsIfNeeded() }
+            }
         }
         if (PanelPreferences.isAndroidOreoStyle(context) || PanelPreferences.isAndroidMarshmallowStyle(context) || PanelPreferences.isAndroidKitKatStyle(context)) {
             llHeader.visibility = View.GONE

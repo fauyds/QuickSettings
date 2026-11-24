@@ -345,6 +345,7 @@ object PanelPreferences {
     private const val KEY_PROGRESS_BAR_STYLE = "progress_bar_style"
     private const val KEY_ENABLE_CONTAINER_BLUR = "enable_container_blur"
     private const val KEY_BLUR_ONLY_BEHIND_QS_CARD = "blur_only_behind_qs_card"
+    private const val KEY_ENABLE_NOTIFICATION_BLUR = "enable_notification_blur"
     private const val KEY_CONTAINER_BLUR_SENSITIVITY_DP = "container_blur_sensitivity_dp"
     private const val KEY_CONTAINER_BLUR_TRANSPARENCY = "container_blur_transparency"
     private const val KEY_INVISIBLE_STATUS_BAR_TRIGGER = "invisible_status_bar_trigger"
@@ -1863,6 +1864,9 @@ object PanelPreferences {
     private val _blurOnlyBehindQsCard = MutableStateFlow(false)
     val blurOnlyBehindQsCard: StateFlow<Boolean> = _blurOnlyBehindQsCard.asStateFlow()
 
+    private val _enableNotificationBlur = MutableStateFlow(true)
+    val enableNotificationBlur: StateFlow<Boolean> = _enableNotificationBlur.asStateFlow()
+
     private val _containerBlurRadiusDp = MutableStateFlow(24f)
     val containerBlurRadiusDp: StateFlow<Float> = _containerBlurRadiusDp.asStateFlow()
 
@@ -2087,6 +2091,7 @@ object PanelPreferences {
         _wavyProgressBars.value = (resolvedStyle == ProgressBarStyle.WAVY)
         _enableContainerBlur.value = prefs.getBoolean(KEY_ENABLE_CONTAINER_BLUR, false)
         _blurOnlyBehindQsCard.value = prefs.getBoolean(KEY_BLUR_ONLY_BEHIND_QS_CARD, false)
+        _enableNotificationBlur.value = prefs.getBoolean(KEY_ENABLE_NOTIFICATION_BLUR, true)
         _containerBlurRadiusDp.value = prefs.getFloat(KEY_CONTAINER_BLUR_SENSITIVITY_DP, 24f).coerceIn(4f, 60f)
         _containerBlurTransparency.value = prefs.getFloat(KEY_CONTAINER_BLUR_TRANSPARENCY, 0.40f).coerceIn(0f, 0.95f)
         val savedPanelStyleId = prefs.getString(KEY_PANEL_STYLE, null)
@@ -4032,6 +4037,12 @@ object PanelPreferences {
         prefs.edit().putBoolean(KEY_BLUR_ONLY_BEHIND_QS_CARD, enabled).apply()
     }
 
+    fun setEnableNotificationBlur(context: Context, enabled: Boolean) {
+        _enableNotificationBlur.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_ENABLE_NOTIFICATION_BLUR, enabled).apply()
+    }
+
     fun setContainerBlurRadiusDp(context: Context, radiusDp: Float) {
         val clamped = radiusDp.coerceIn(4f, 60f)
         _containerBlurRadiusDp.value = clamped
@@ -5757,6 +5768,7 @@ object PanelPreferences {
         KEY_QS_BACKGROUND_CORNER,
         KEY_ENABLE_CONTAINER_BLUR,
         KEY_BLUR_ONLY_BEHIND_QS_CARD,
+        KEY_ENABLE_NOTIFICATION_BLUR,
         KEY_CONTAINER_BLUR_SENSITIVITY_DP,
         KEY_CONTAINER_BLUR_TRANSPARENCY,
         KEY_ENABLE_GLASS_REFRACTION,
@@ -6001,6 +6013,7 @@ object PanelPreferences {
         settingsJson.put(KEY_QS_BACKGROUND_CORNER, _qsBackgroundCorner.value.toDouble())
         settingsJson.put(KEY_ENABLE_CONTAINER_BLUR, _enableContainerBlur.value)
         settingsJson.put(KEY_BLUR_ONLY_BEHIND_QS_CARD, _blurOnlyBehindQsCard.value)
+        settingsJson.put(KEY_ENABLE_NOTIFICATION_BLUR, _enableNotificationBlur.value)
         settingsJson.put(KEY_CONTAINER_BLUR_SENSITIVITY_DP, _containerBlurRadiusDp.value.toDouble())
         settingsJson.put(KEY_CONTAINER_BLUR_TRANSPARENCY, _containerBlurTransparency.value.toDouble())
         settingsJson.put(KEY_ENABLE_GLASS_REFRACTION, _enableGlassRefraction.value)

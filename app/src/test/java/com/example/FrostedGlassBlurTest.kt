@@ -857,4 +857,188 @@ class FrostedGlassBlurTest {
         assertTrue(reportedRegions["qs_card"]?.isValid == true)
         assertFalse(reportedRegions.containsKey("qqs_carrier_footer"))
     }
+
+    @Test
+    fun `enableNotificationBlur persists syncs with ThemeManager and toggles in QsDesignSection`() {
+        assertTrue(PanelPreferences.enableNotificationBlur.value)
+
+        PanelPreferences.setEnableNotificationBlur(context, false)
+        PanelPreferences.init(context)
+        assertFalse(PanelPreferences.enableNotificationBlur.value)
+
+        val savedTheme = com.example.data.ThemeManager.saveCurrentSettingsAsTheme(context, "Notif Blur Off")
+        PanelPreferences.setEnableNotificationBlur(context, true)
+        assertTrue(PanelPreferences.enableNotificationBlur.value)
+
+        assertTrue(com.example.data.ThemeManager.applyTheme(context, savedTheme))
+        assertFalse(PanelPreferences.enableNotificationBlur.value)
+
+        composeTestRule.setContent {
+            QuickPanelTheme(darkTheme = true) {
+                androidx.compose.foundation.layout.Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
+                    com.example.ui.customizer.QsDesignSection()
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        assertFalse(PanelPreferences.enableNotificationBlur.value)
+
+        composeTestRule.onNodeWithTag("notification_card_blur_toggle")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+        assertTrue(PanelPreferences.enableNotificationBlur.value)
+        assertFalse(PanelPreferences.enableContainerBlur.value)
+
+        composeTestRule.onNodeWithTag("notification_card_blur_toggle")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+        assertFalse(PanelPreferences.enableNotificationBlur.value)
+    }
+
+    @Test
+    fun `NotificationAdapter disables FrostedGlassSurfaceDrawable when enableNotificationBlur is false`() {
+        val themedContext = android.view.ContextThemeWrapper(
+            context,
+            com.example.R.style.Theme_MyApplication
+        )
+        val parent = android.widget.FrameLayout(themedContext)
+        val adapter = com.example.ui.notification.NotificationAdapter(
+            onNotificationClick = {},
+            onNotificationDismiss = {},
+            onActionClick = {}
+        ).apply {
+            isDark = true
+        }
+
+        val item = com.example.model.NotificationItem(
+            id = 303,
+            key = "notif_pkg|303",
+            packageName = "com.example.mail",
+            appName = "Mail",
+            title = "Invoice",
+            text = "Monthly summary attached",
+            postTime = System.currentTimeMillis(),
+            isOngoing = false,
+            isClearable = true
+        )
+
+        PanelPreferences.setEnableContainerBlur(context, true)
+        PanelPreferences.setEnableNotificationBlur(context, false)
+        adapter.submitNotifications(listOf(item))
+
+        val vh = adapter.onCreateViewHolder(parent, adapter.getItemViewType(0))
+        adapter.onBindViewHolder(vh, 0)
+
+        val rootCard = vh.itemView.findViewById<android.view.View>(R.id.fl_notif_root) ?: vh.itemView
+        val bgWhileDisabled = rootCard.background
+        val hasFrostedWhileDisabled = bgWhileDisabled is android.graphics.drawable.LayerDrawable &&
+            (0 until bgWhileDisabled.numberOfLayers).any { idx ->
+                bgWhileDisabled.getDrawable(idx) is com.example.ui.notification.FrostedGlassSurfaceDrawable
+            }
+        assertFalse(hasFrostedWhileDisabled)
+
+        PanelPreferences.setEnableNotificationBlur(context, true)
+        adapter.submitNotifications(listOf(item), forceVisualRefresh = true)
+        adapter.onBindViewHolder(vh, 0)
+
+        val bgWhileEnabled = rootCard.background as android.graphics.drawable.LayerDrawable
+        assertTrue(
+            (0 until bgWhileEnabled.numberOfLayers).any { idx ->
+                val layer = bgWhileEnabled.getDrawable(idx)
+                layer is com.example.ui.notification.FrostedGlassSurfaceDrawable && layer.usesAndroid16Api
+            }
+        )
+    }
+
+    @Test
+    fun `QsMultiCardBlurWindowHost and NotificationListView manage per-card notification blur bounds cleanly`() {
+        val card1 = com.example.ui.overlay.QsCardBlurBounds(
+            left = 32f, top = 420f, right = 1048f, bottom = 620f,
+            topCornerRadiusPx = 40f, bottomCornerRadiusPx = 40f
+        )
+        val card2 = com.example.ui.overlay.QsCardBlurBounds(
+            left = 32f, top = 640f, right = 1048f, bottom = 840f,
+            topCornerRadiusPx = 40f, bottomCornerRadiusPx = 40f
+        )
+
+        val multiHost = com.example.ui.overlay.QsMultiCardBlurWindowHost(
+            context = context,
+            layoutType = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        )
+        multiHost.showBehindOverlay()
+        multiHost.updateAll(
+            regions = mapOf(
+                "qs_card" to com.example.ui.overlay.QsCardBlurBounds(24f, 80f, 1056f, 380f, 48f, 48f)
+            ),
+            radiusPx = 72,
+            notificationRegions = listOf(card1, card2)
+        )
+        multiHost.updateAll(
+            regions = emptyMap(),
+            radiusPx = 72,
+            notificationRegions = listOf(card1)
+        )
+        multiHost.updateAll(
+            regions = emptyMap(),
+            radiusPx = 0,
+            notificationRegions = emptyList()
+        )
+        multiHost.dismiss()
+
+        val themedContext = android.view.ContextThemeWrapper(
+            context,
+            com.example.R.style.Theme_MyApplication
+        )
+        val rootFrame = android.widget.FrameLayout(themedContext)
+        val notifListView = com.example.ui.notification.NotificationListView(themedContext)
+        rootFrame.addView(
+            notifListView,
+            android.widget.FrameLayout.LayoutParams(900, 1200)
+        )
+        var reportedRegions: List<com.example.ui.overlay.QsCardBlurBounds> = emptyList()
+        notifListView.composeHostView = rootFrame
+        notifListView.onNotificationBlurRegionsChanged = { regions ->
+            reportedRegions = regions
+        }
+
+        PanelPreferences.setEnableContainerBlur(context, true)
+        PanelPreferences.setEnableNotificationBlur(context, true)
+        notifListView.setBlurRegionReportingEnabled(true)
+
+        val widthSpec = android.view.View.MeasureSpec.makeMeasureSpec(900, android.view.View.MeasureSpec.EXACTLY)
+        val heightSpec = android.view.View.MeasureSpec.makeMeasureSpec(1200, android.view.View.MeasureSpec.EXACTLY)
+        rootFrame.measure(widthSpec, heightSpec)
+        rootFrame.layout(0, 0, 900, 1200)
+
+        notifListView.updateData(
+            notifications = listOf(
+                com.example.model.NotificationItem(
+                    id = 404,
+                    key = "pkg|404",
+                    packageName = "pkg",
+                    appName = "Chat",
+                    title = "Hi",
+                    text = "Individual card blur test",
+                    postTime = System.currentTimeMillis(),
+                    isOngoing = false,
+                    isClearable = true
+                )
+            ),
+            isPermissionGranted = true,
+            isDark = true,
+            primaryColor = android.graphics.Color.CYAN,
+            panelCardBackgroundColor = android.graphics.Color.DKGRAY
+        )
+        rootFrame.measure(widthSpec, heightSpec)
+        rootFrame.layout(0, 0, 900, 1200)
+
+        // Disabling reporting cleanly clears callback regions
+        notifListView.setBlurRegionReportingEnabled(false)
+        assertTrue(reportedRegions.isEmpty())
+    }
 }

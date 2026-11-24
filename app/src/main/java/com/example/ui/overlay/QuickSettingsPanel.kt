@@ -7972,15 +7972,26 @@ fun NotificationsCard(
     }
 
     val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+    val enableNotificationBlur by PanelPreferences.enableNotificationBlur.collectAsState()
+    val blurOnlyBehindQsCard by PanelPreferences.blurOnlyBehindQsCard.collectAsState()
     val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsState()
     val enableGlassRefraction by PanelPreferences.enableGlassRefraction.collectAsState()
     val glassRefractionSensitivity by PanelPreferences.glassRefractionSensitivity.collectAsState()
+    val onNotificationBlurRegionsChanged = LocalOnNotificationBlurRegionsChanged.current
+    val applyNotifSurfaceBlur = enableContainerBlur && enableNotificationBlur
+    val reportPerNotifBlur = applyNotifSurfaceBlur && blurOnlyBehindQsCard && onNotificationBlurRegionsChanged != null
     val resolvedNotifBgColor = frostedContainerColor(
         baseColor = notifBgColor,
-        enableBlur = enableContainerBlur,
+        enableBlur = applyNotifSurfaceBlur,
         isDark = isDark,
         transparency = containerBlurTransparency
     )
+
+    DisposableEffect(onNotificationBlurRegionsChanged) {
+        onDispose {
+            onNotificationBlurRegionsChanged?.invoke(emptyList())
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -7993,6 +8004,9 @@ fun NotificationsCard(
                 com.example.ui.notification.NotificationListView(ctx).apply {
                     clipChildren = true
                     clipToPadding = true
+                    this.composeHostView = hostView
+                    this.onNotificationBlurRegionsChanged = onNotificationBlurRegionsChanged
+                    this.setBlurRegionReportingEnabled(reportPerNotifBlur)
                     this.onNotificationClick = onNotificationClick
                     this.onNotificationDismiss = onNotificationDismiss
                     this.onActionClick = onActionClick
@@ -8007,9 +8021,12 @@ fun NotificationsCard(
             update = { view ->
                 // Read category & glass refraction state flows inside update block so Compose re-invokes updateData on changes
                 val _catSync = Triple(categorySortingEnabled, customCategories, categoryExpandedStates)
-                val _glassSync = Pair(enableGlassRefraction, glassRefractionSensitivity)
+                val _glassSync = Triple(enableNotificationBlur, enableGlassRefraction, glassRefractionSensitivity)
                 view.clipChildren = true
                 view.clipToPadding = true
+                view.composeHostView = hostView
+                view.onNotificationBlurRegionsChanged = onNotificationBlurRegionsChanged
+                view.setBlurRegionReportingEnabled(reportPerNotifBlur)
                 view.onNotificationClick = onNotificationClick
                 view.onNotificationDismiss = onNotificationDismiss
                 view.onActionClick = onActionClick
@@ -8024,7 +8041,7 @@ fun NotificationsCard(
                     isPermissionGranted = isPermissionGranted,
                     isDark = isDark,
                     primaryColor = primaryColor,
-                    panelCardBackgroundColor = if (enableContainerBlur) resolvedNotifBgColor.toArgb() else notifBgColorInt,
+                    panelCardBackgroundColor = if (applyNotifSurfaceBlur) resolvedNotifBgColor.toArgb() else notifBgColorInt,
                     mediaSessions = activeMediaSessions
                 )
             },
@@ -8115,6 +8132,8 @@ fun NotificationItemRow(
     val context = LocalContext.current
     val disablePanelAnimations by com.example.data.PanelPreferences.disablePanelAnimations.collectAsState()
     val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+    val enableNotificationBlur by PanelPreferences.enableNotificationBlur.collectAsState()
+    val applyNotifBlur = enableContainerBlur && enableNotificationBlur
     var offsetX by remember(item.key) { mutableFloatStateOf(0f) }
     var isDismissed by remember(item.key) { mutableStateOf(false) }
     var isExpanded by remember(item.key) { mutableStateOf(false) }
@@ -8183,6 +8202,7 @@ fun NotificationItemRow(
             ContainerCard(
                 shape = effectiveShape,
                 containerColor = notifContainerColor,
+                enableBlurOverride = applyNotifBlur,
                 onClick = onClick,
                 onLongClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -8196,7 +8216,7 @@ fun NotificationItemRow(
                         clip = false
                     }
                     .then(
-                        if (isAndroidOreoStyle && !enableContainerBlur) {
+                        if (isAndroidOreoStyle && !applyNotifBlur) {
                             Modifier.drawBehind {
                                 val strokeWidth = 1.dp.toPx()
                                 val lineColor = if (isDark) Color.White.copy(alpha = 0.2f) else Color.Black.copy(alpha = 0.2f)
@@ -9898,11 +9918,13 @@ fun BlurredContainerCard(
     containerColor: Color = com.example.ui.theme.getQsPanelBackgroundColor(LocalIsDarkTheme.current),
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
+    enableBlurOverride: Boolean? = null,
     content: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit
 ) {
     val enablePanelShadows by PanelPreferences.enablePanelShadows.collectAsState()
     val enablePanelTopRim by PanelPreferences.enablePanelTopRim.collectAsState()
-    val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+    val rawEnableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+    val enableContainerBlur = enableBlurOverride ?: rawEnableContainerBlur
     val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsState()
     val panelShadowElevation by PanelPreferences.panelShadowElevation.collectAsState()
     val panelShadowOffsetY by PanelPreferences.panelShadowOffsetY.collectAsState()
@@ -10017,6 +10039,7 @@ fun ContainerCard(
     containerColor: Color = com.example.ui.theme.getQsPanelBackgroundColor(LocalIsDarkTheme.current),
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
+    enableBlurOverride: Boolean? = null,
     content: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit
 ) {
     BlurredContainerCard(
@@ -10025,6 +10048,7 @@ fun ContainerCard(
         containerColor = containerColor,
         onClick = onClick,
         onLongClick = onLongClick,
+        enableBlurOverride = enableBlurOverride,
         content = content
     )
 }

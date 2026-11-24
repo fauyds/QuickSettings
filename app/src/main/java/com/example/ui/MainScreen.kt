@@ -106,6 +106,7 @@ import com.example.ui.onboarding.PrivilegeWizardScreen
 import com.example.data.PanelPreferences
 import com.example.ui.overlay.FrostedPreviewBackdrop
 import com.example.ui.overlay.LocalOnBlurRegionBoundsChanged
+import com.example.ui.overlay.LocalOnNotificationBlurRegionsChanged
 import com.example.ui.overlay.LocalOnQsCardBoundsChanged
 import com.example.ui.overlay.QsCardBlurBounds
 import com.example.ui.overlay.QsExpansionStage
@@ -221,17 +222,22 @@ fun MainScreen(viewModel: MainViewModel) {
                     val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsStateWithLifecycle()
                     var hostPosInRoot by remember { mutableStateOf(Offset.Zero) }
                     var rawQsBlurRegions by remember { mutableStateOf<Map<String, QsCardBlurBounds>>(emptyMap()) }
+                    var rawNotifBlurRegions by remember { mutableStateOf<List<QsCardBlurBounds>>(emptyList()) }
                     val localQsBounds = remember(rawQsBlurRegions, hostPosInRoot) {
                         (rawQsBlurRegions["qs_card"] ?: QsCardBlurBounds()).translate(-hostPosInRoot.x, -hostPosInRoot.y)
                     }
-                    val localExtraBlurRegions = remember(rawQsBlurRegions, hostPosInRoot) {
-                        rawQsBlurRegions
+                    val localExtraBlurRegions = remember(rawQsBlurRegions, rawNotifBlurRegions, hostPosInRoot) {
+                        val extraCardRegions = rawQsBlurRegions
                             .filterKeys { it != "qs_card" }
                             .values
                             .filter { it.isValid }
                             .map { it.translate(-hostPosInRoot.x, -hostPosInRoot.y) }
+                        val notifRegions = rawNotifBlurRegions
+                            .filter { it.isValid }
+                            .map { it.translate(-hostPosInRoot.x, -hostPosInRoot.y) }
+                        extraCardRegions + notifRegions
                     }
-                    // TAB 0: Interactive QS Overlay Panel with underlying backdrop blurred ONLY beneath the panel (or QS/QQS + carrier cards only)
+                    // TAB 0: Interactive QS Overlay Panel with underlying backdrop blurred ONLY beneath the panel (or QS/QQS + carrier + notification cards)
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -269,6 +275,9 @@ fun MainScreen(viewModel: MainViewModel) {
                                     if ("qs_card" !in rawQsBlurRegions) rawQsBlurRegions else rawQsBlurRegions - "qs_card"
                                 }
                                 if (next !== rawQsBlurRegions) rawQsBlurRegions = next
+                            },
+                            LocalOnNotificationBlurRegionsChanged provides { regions ->
+                                if (rawNotifBlurRegions != regions) rawNotifBlurRegions = regions
                             }
                         ) {
                             QuickSettingsPanel(

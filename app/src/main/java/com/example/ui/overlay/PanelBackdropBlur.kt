@@ -120,6 +120,7 @@ data class QsCardBlurBounds(
 
 val LocalOnQsCardBoundsChanged = compositionLocalOf<((QsCardBlurBounds) -> Unit)?> { null }
 val LocalOnBlurRegionBoundsChanged = compositionLocalOf<((String, QsCardBlurBounds) -> Unit)?> { null }
+val LocalOnNotificationBlurRegionsChanged = compositionLocalOf<((List<QsCardBlurBounds>) -> Unit)?> { null }
 
 /**
  * Attaches layout measurement to a frosted QS/QQS card so backdrop hosts can scope behind-panel
@@ -508,32 +509,48 @@ class QsCardBlurWindowHost(
 }
 
 /**
- * Manages multiple keyed [QsCardBlurWindowHost] windows (e.g., main QS/QQS card and split
- * QQS carrier footer card) underneath the overlay so each card receives hardware
- * [Window.setBackgroundBlurRadius] strictly within its own rounded bounds when
- * `blurOnlyBehindQsCard` is enabled.
+ * Manages multiple keyed [QsCardBlurWindowHost] windows (main QS/QQS card, split QQS carrier footer,
+ * and a pre-allocated pool of individual notification card blur windows) underneath the overlay so
+ * each card receives hardware [Window.setBackgroundBlurRadius] strictly within its own rounded bounds
+ * when `blurOnlyBehindQsCard` is enabled, keeping gaps and empty space sharp.
  */
 class QsMultiCardBlurWindowHost(
     context: Context,
     layoutType: Int,
-    regionKeys: List<String> = listOf("qs_card", "qqs_carrier_footer")
+    regionKeys: List<String> = listOf("qs_card", "qqs_carrier_footer"),
+    private val maxNotificationSlots: Int = MAX_NOTIFICATION_BLUR_SLOTS
 ) {
     private val hosts: Map<String, QsCardBlurWindowHost> = regionKeys.associateWith {
         QsCardBlurWindowHost(context, layoutType)
     }
 
+    private val notificationHosts: List<QsCardBlurWindowHost> = List(maxNotificationSlots.coerceAtLeast(0)) {
+        QsCardBlurWindowHost(context, layoutType)
+    }
+
     fun showBehindOverlay() {
         hosts.values.forEach { it.showBehindOverlay() }
+        notificationHosts.forEach { it.showBehindOverlay() }
     }
 
     fun updateAll(
         regions: Map<String, QsCardBlurBounds>,
         radiusPx: Int,
         offsetX: Int = 0,
-        offsetY: Int = 0
+        offsetY: Int = 0,
+        notificationRegions: List<QsCardBlurBounds> = emptyList()
     ) {
         hosts.forEach { (key, host) ->
             val bounds = regions[key]
+            host.update(
+                bounds = bounds,
+                radiusPx = radiusPx,
+                offsetX = offsetX,
+                offsetY = offsetY
+            )
+        }
+        notificationHosts.forEachIndexed { index, host ->
+            val bounds = notificationRegions.getOrNull(index)
             host.update(
                 bounds = bounds,
                 radiusPx = radiusPx,
@@ -545,6 +562,11 @@ class QsMultiCardBlurWindowHost(
 
     fun dismiss() {
         hosts.values.forEach { it.dismiss() }
+        notificationHosts.forEach { it.dismiss() }
+    }
+
+    companion object {
+        const val MAX_NOTIFICATION_BLUR_SLOTS = 16
     }
 }
 

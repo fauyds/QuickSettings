@@ -65,6 +65,7 @@ import com.example.system.PrivilegeEngine
 import com.example.system.TileRegistry
 import androidx.compose.runtime.CompositionLocalProvider
 import com.example.ui.overlay.LocalOnBlurRegionBoundsChanged
+import com.example.ui.overlay.LocalOnNotificationBlurRegionsChanged
 import com.example.ui.overlay.LocalOnQsCardBoundsChanged
 import com.example.ui.overlay.QsCardBlurBounds
 import com.example.ui.overlay.QsMultiCardBlurWindowHost
@@ -501,8 +502,9 @@ class QuickSettingsOverlayService : Service() {
                     var wasPulling by remember { mutableStateOf(false) }
                     val pullOffset by pullDownOffset.collectAsState()
                     var qsBlurRegions by remember { mutableStateOf<Map<String, QsCardBlurBounds>>(emptyMap()) }
+                    var notifBlurRegions by remember { mutableStateOf<List<QsCardBlurBounds>>(emptyList()) }
 
-                    // Sync behind-window SurfaceFlinger blur radius (full-screen or scoped behind QS/QQS + carrier cards only)
+                    // Sync behind-window SurfaceFlinger blur radius (full-screen or scoped behind QS/QQS + carrier + notification cards)
                     LaunchedEffect(enableContainerBlur, blurOnlyBehindQsCard, containerBlurRadiusDp, crossWindowBlurSupported, targetBackdropAlpha, density) {
                         snapshotFlow {
                             val denom = targetBackdropAlpha.coerceAtLeast(0.01f)
@@ -513,8 +515,8 @@ class QuickSettingsOverlayService : Service() {
                                 fraction = fraction,
                                 maxBlurDp = containerBlurRadiusDp
                             )
-                            Pair(desiredRadius, qsBlurRegions)
-                        }.distinctUntilChanged().collect { (desiredRadius, regions) ->
+                            Triple(desiredRadius, qsBlurRegions, notifBlurRegions)
+                        }.distinctUntilChanged().collect { (desiredRadius, regions, notifRegions) ->
                             val plan = computeQsBlurWindowPlan(desiredRadius, blurOnlyBehindQsCard)
                             val view = this@apply
                             if (applyWindowBlurBehind(panelParams, plan.fullScreenBlurRadiusPx) && view.isAttachedToWindow) {
@@ -532,7 +534,8 @@ class QuickSettingsOverlayService : Service() {
                                 regions = regions,
                                 radiusPx = plan.qsCardBlurRadiusPx,
                                 offsetX = screenLoc[0],
-                                offsetY = screenLoc[1]
+                                offsetY = screenLoc[1],
+                                notificationRegions = notifRegions
                             )
                         }
                     }
@@ -792,6 +795,9 @@ class QuickSettingsOverlayService : Service() {
                                         if ("qs_card" !in qsBlurRegions) qsBlurRegions else qsBlurRegions - "qs_card"
                                     }
                                     if (next !== qsBlurRegions) qsBlurRegions = next
+                                },
+                                LocalOnNotificationBlurRegionsChanged provides { regions ->
+                                    if (notifBlurRegions != regions) notifBlurRegions = regions
                                 }
                             ) {
                             QuickSettingsPanel(

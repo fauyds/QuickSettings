@@ -5493,6 +5493,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
                     val containerBlurEnabled by PanelPreferences.enableContainerBlur.collectAsState()
                     val blurOnlyBehindQsCard by PanelPreferences.blurOnlyBehindQsCard.collectAsState()
+                    val notificationBlurEnabled by PanelPreferences.enableNotificationBlur.collectAsState()
                     val containerBlurRadiusDp by PanelPreferences.containerBlurRadiusDp.collectAsState()
                     val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsState()
                     val transparencyPercent = kotlin.math.round(containerBlurTransparency * 100f).toInt().coerceIn(0, 95)
@@ -5677,6 +5678,46 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 uncheckedTrackColor = MaterialTheme.colorScheme.surface
                             ),
                             modifier = Modifier.testTag("frosted_glass_qs_only_toggle")
+                        )
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = "Notification Card Blur",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Apply frosted glass and bounded backdrop blur directly behind individual notification cards.",
+                                fontSize = 11.5.sp,
+                                lineHeight = 14.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = notificationBlurEnabled,
+                            onCheckedChange = { PanelPreferences.setEnableNotificationBlur(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.testTag("notification_card_blur_toggle")
                         )
                     }
 

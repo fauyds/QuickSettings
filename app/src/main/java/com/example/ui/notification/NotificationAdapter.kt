@@ -93,6 +93,11 @@ class NotificationAdapter(
     var onCategoryToggled: (() -> Unit)? = null
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
+    interface BlurRegionCardHolder {
+        fun blurTargetView(): View
+        fun blurCornerRadiiPx(): Pair<Float, Float>
+    }
+
     var isDark: Boolean = true
     var customPrimaryColor: Int? = null
     var customCardBackgroundColor: Int? = null
@@ -433,13 +438,17 @@ class NotificationAdapter(
         }
     }
 
-    inner class CategoryHeaderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    inner class CategoryHeaderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView), BlurRegionCardHolder {
         private val flRoot: FrameLayout = itemView.findViewById(R.id.fl_cat_header_root)
         private val flIconBg: FrameLayout = itemView.findViewById(R.id.fl_cat_icon_bg)
         private val ivIcon: ImageView = itemView.findViewById(R.id.iv_cat_icon)
         private val tvTitle: TextView = itemView.findViewById(R.id.tv_cat_title)
         private val tvCount: TextView = itemView.findViewById(R.id.tv_cat_count)
         private val ivExpand: ImageView = itemView.findViewById(R.id.iv_cat_expand)
+        private var lastBlurRadiiPx: Pair<Float, Float> = 0f to 0f
+
+        override fun blurTargetView(): View = flRoot
+        override fun blurCornerRadiiPx(): Pair<Float, Float> = lastBlurRadiiPx
 
         fun bind(
             row: ShadeListRow.CategoryHeaderRow,
@@ -473,6 +482,7 @@ class NotificationAdapter(
 
             val topRadius = if (isFirstInShade) outerCornerPx else innerCornerPx
             val bottomRadius = if (isLastInShade) outerCornerPx else innerCornerPx
+            lastBlurRadiiPx = if (isOreoStyle) (0f to 0f) else (topRadius to bottomRadius)
             val radii = if (isOreoStyle) {
                 FloatArray(8) { 0f }
             } else {
@@ -484,7 +494,7 @@ class NotificationAdapter(
                 )
             }
 
-            val enableContainerBlur = PanelPreferences.enableContainerBlur.value
+            val enableContainerBlur = PanelPreferences.enableContainerBlur.value && PanelPreferences.enableNotificationBlur.value
             val containerBlurTransparency = PanelPreferences.containerBlurTransparency.value
             val frostedAlpha = 1f - containerBlurTransparency.coerceIn(0f, 0.95f)
 
@@ -805,8 +815,12 @@ class NotificationAdapter(
         }
     }
 
-    inner class MediaPlayerViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    inner class MediaPlayerViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView), BlurRegionCardHolder {
         private val flRoot: FrameLayout = itemView.findViewById(R.id.media_card_root)
+        private var lastBlurRadiiPx: Pair<Float, Float> = 0f to 0f
+
+        override fun blurTargetView(): View = flRoot
+        override fun blurCornerRadiiPx(): Pair<Float, Float> = lastBlurRadiiPx
         private val ivArtwork: ImageView = itemView.findViewById(R.id.iv_media_artwork)
         private val vArtworkGradient: View = itemView.findViewById(R.id.v_media_artwork_gradient)
         private val flArtworkFallback: View = itemView.findViewById(R.id.fl_media_artwork_fallback)
@@ -852,7 +866,7 @@ class NotificationAdapter(
             val fallbackBg = customCardBackgroundColor ?: if (isDark) Color.parseColor("#25262B") else Color.parseColor("#EAEBEF")
             val fallbackAccent = customPrimaryColor ?: MonetThemeHelper.getPrimaryAccent(context, isDark)
 
-            val enableContainerBlur = PanelPreferences.enableContainerBlur.value
+            val enableContainerBlur = PanelPreferences.enableContainerBlur.value && PanelPreferences.enableNotificationBlur.value
             val containerBlurTransparency = PanelPreferences.containerBlurTransparency.value
             val frostedAlpha = 1f - containerBlurTransparency.coerceIn(0f, 0.95f)
 
@@ -888,6 +902,7 @@ class NotificationAdapter(
 
             val topRadius = if (isFirstInGroup) outerCornerPx else innerCornerPx
             val bottomRadius = if (isLastInGroup) outerCornerPx else innerCornerPx
+            lastBlurRadiiPx = if (isOreoStyle) (0f to 0f) else (topRadius to bottomRadius)
             val radii = if (isOreoStyle) {
                 FloatArray(8) { 0f }
             } else {
@@ -1181,7 +1196,7 @@ class NotificationAdapter(
         }
     }
 
-    inner class CompactMediaPlayerViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    inner class CompactMediaPlayerViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView), BlurRegionCardHolder {
         private val flRoot: FrameLayout = itemView.findViewById(R.id.compact_media_card_root)
         private val ivArtwork: ImageView = itemView.findViewById(R.id.iv_compact_media_artwork)
         private val tvTitle: TextView = itemView.findViewById(R.id.tv_compact_media_title)
@@ -1190,6 +1205,10 @@ class NotificationAdapter(
         private val btnPrevious: ImageButton = itemView.findViewById(R.id.btn_compact_media_previous)
         private val btnPlayPause: ImageButton = itemView.findViewById(R.id.btn_compact_media_play_pause)
         private val btnNext: ImageButton = itemView.findViewById(R.id.btn_compact_media_next)
+        private var lastBlurRadiiPx: Pair<Float, Float> = 0f to 0f
+
+        override fun blurTargetView(): View = flRoot
+        override fun blurCornerRadiiPx(): Pair<Float, Float> = lastBlurRadiiPx
 
         fun bind(mediaState: MediaState, isFirstInGroup: Boolean, isLastInGroup: Boolean) {
             val context = itemView.context
@@ -1274,6 +1293,7 @@ class NotificationAdapter(
 
             val topRadius = if (isFirstInGroup) outerCornerPx else innerCornerPx
             val bottomRadius = if (isLastInGroup) outerCornerPx else innerCornerPx
+            lastBlurRadiiPx = if (isOreoStyle) (0f to 0f) else (topRadius to bottomRadius)
             val radii = if (isOreoStyle) {
                 FloatArray(8) { 0f }
             } else {
@@ -1285,7 +1305,7 @@ class NotificationAdapter(
                 )
             }
 
-            val enableContainerBlur = PanelPreferences.enableContainerBlur.value
+            val enableContainerBlur = PanelPreferences.enableContainerBlur.value && PanelPreferences.enableNotificationBlur.value
             val containerBlurTransparency = PanelPreferences.containerBlurTransparency.value
             val frostedAlpha = 1f - containerBlurTransparency.coerceIn(0f, 0.95f)
 
@@ -1368,7 +1388,7 @@ class NotificationAdapter(
         }
     }
 
-    inner class NotificationViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    inner class NotificationViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView), BlurRegionCardHolder {
         var notificationItem: NotificationItem? = null
             private set
         val itemKey: String? get() = notificationItem?.key
@@ -1387,6 +1407,10 @@ class NotificationAdapter(
         private val ivBigPicture: ImageView = itemView.findViewById(R.id.iv_notif_big_picture)
         private val pbProgress: ProgressBar = itemView.findViewById(R.id.pb_notif_progress)
         private val llActions: LinearLayout = itemView.findViewById(R.id.ll_notif_actions)
+        private var lastBlurRadiiPx: Pair<Float, Float> = 0f to 0f
+
+        override fun blurTargetView(): View = flRoot
+        override fun blurCornerRadiiPx(): Pair<Float, Float> = lastBlurRadiiPx
 
         fun bind(row: ShadeListRow.NotificationRow, isFirstInShade: Boolean, isLastInShade: Boolean) {
             val item = row.item
@@ -1471,6 +1495,7 @@ class NotificationAdapter(
 
             val topRadius = if (isFirstInShade) outerCornerPx else innerCornerPx
             val bottomRadius = if (isLastInShade) outerCornerPx else innerCornerPx
+            lastBlurRadiiPx = if (isOreoStyle) (0f to 0f) else (topRadius to bottomRadius)
             val radii = if (isOreoStyle) {
                 FloatArray(8) { 0f }
             } else {
@@ -1482,7 +1507,8 @@ class NotificationAdapter(
                 )
             }
 
-            val enableContainerBlur = com.example.data.PanelPreferences.enableContainerBlur.value
+            val enableContainerBlur = com.example.data.PanelPreferences.enableContainerBlur.value &&
+                com.example.data.PanelPreferences.enableNotificationBlur.value
             val containerBlurTransparency = com.example.data.PanelPreferences.containerBlurTransparency.value
             val frostedAlpha = 1f - containerBlurTransparency.coerceIn(0f, 0.95f)
 
