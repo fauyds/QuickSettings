@@ -7502,8 +7502,15 @@ fun UnifiedQsPanel(
                 modifier = Modifier
                     .fillMaxWidth()
                     .offset(y = qqsContainerYOffset)
+                    .reportQsCardBlurBounds(
+                        topCornerRadiusDp = effectiveInnerCorner.value,
+                        bottomCornerRadiusDp = effectiveOuterCorner.value,
+                        regionKey = "qqs_carrier_footer",
+                        isVisible = carrierCardAlpha > 0.05f
+                    )
                     .graphicsLayer { alpha = carrierCardAlpha }
                     .then(shadeDragModifier)
+                    .testTag("qqs_carrier_footer_card")
             ) {
                 Box(
                     modifier = Modifier
@@ -7966,6 +7973,8 @@ fun NotificationsCard(
 
     val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
     val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsState()
+    val enableGlassRefraction by PanelPreferences.enableGlassRefraction.collectAsState()
+    val glassRefractionSensitivity by PanelPreferences.glassRefractionSensitivity.collectAsState()
     val resolvedNotifBgColor = frostedContainerColor(
         baseColor = notifBgColor,
         enableBlur = enableContainerBlur,
@@ -7996,8 +8005,9 @@ fun NotificationsCard(
                 }
             },
             update = { view ->
-                // Read category state flows inside update block so Compose re-invokes updateData when categories change
+                // Read category & glass refraction state flows inside update block so Compose re-invokes updateData on changes
                 val _catSync = Triple(categorySortingEnabled, customCategories, categoryExpandedStates)
+                val _glassSync = Pair(enableGlassRefraction, glassRefractionSensitivity)
                 view.clipChildren = true
                 view.clipToPadding = true
                 view.onNotificationClick = onNotificationClick

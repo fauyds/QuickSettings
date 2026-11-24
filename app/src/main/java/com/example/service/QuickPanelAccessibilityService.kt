@@ -68,9 +68,10 @@ import com.example.system.NativeTileManager
 import com.example.system.PrivilegeEngine
 import com.example.system.TileRegistry
 import androidx.compose.runtime.CompositionLocalProvider
+import com.example.ui.overlay.LocalOnBlurRegionBoundsChanged
 import com.example.ui.overlay.LocalOnQsCardBoundsChanged
 import com.example.ui.overlay.QsCardBlurBounds
-import com.example.ui.overlay.QsCardBlurWindowHost
+import com.example.ui.overlay.QsMultiCardBlurWindowHost
 import com.example.ui.overlay.QsExpansionStage
 import com.example.ui.overlay.QuickSettingsPanel
 import com.example.ui.overlay.applyWindowBlurBehind
@@ -241,7 +242,7 @@ class QuickPanelAccessibilityService : AccessibilityService() {
     private var triggerContainerView: TriggerContainerLayout? = null
     private var triggerStripView: AccessibilityStatusTriggerView? = null
     private var triggerLayoutParams: WindowManager.LayoutParams? = null
-    private var qsBlurWindowHost: QsCardBlurWindowHost? = null
+    private var qsBlurWindowHost: QsMultiCardBlurWindowHost? = null
     private var overlayComposeView: ComposeView? = null
     private var lifecycleOwner: OverlayLifecycleOwner? = null
     private var immersiveModeDetector: com.example.system.ImmersiveModeDetector? = null
@@ -1446,7 +1447,7 @@ class QuickPanelAccessibilityService : AccessibilityService() {
             }
         }
 
-        val qsBlurHost = QsCardBlurWindowHost(this, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY)
+        val qsBlurHost = QsMultiCardBlurWindowHost(this, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY)
 
         val owner = OverlayLifecycleOwner()
         owner.onCreate()
@@ -1509,9 +1510,9 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                     var isClosing by remember { mutableStateOf(false) }
                     var wasPulling by remember { mutableStateOf(false) }
                     val pullOffset by pullDownOffset.collectAsState()
-                    var qsCardBounds by remember { mutableStateOf(QsCardBlurBounds()) }
+                    var qsBlurRegions by remember { mutableStateOf<Map<String, QsCardBlurBounds>>(emptyMap()) }
 
-                    // Sync behind-window SurfaceFlinger blur radius (full-screen or scoped behind QS/QQS card only)
+                    // Sync behind-window SurfaceFlinger blur radius (full-screen or scoped behind QS/QQS + carrier cards only)
                     LaunchedEffect(enableContainerBlur, blurOnlyBehindQsCard, containerBlurRadiusDp, crossWindowBlurSupported, targetBackdropAlpha, density) {
                         snapshotFlow {
                             val denom = targetBackdropAlpha.coerceAtLeast(0.01f)
@@ -1522,8 +1523,8 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                                 fraction = fraction,
                                 maxBlurDp = containerBlurRadiusDp
                             )
-                            Pair(desiredRadius, qsCardBounds)
-                        }.distinctUntilChanged().collect { (desiredRadius, bounds) ->
+                            Pair(desiredRadius, qsBlurRegions)
+                        }.distinctUntilChanged().collect { (desiredRadius, regions) ->
                             val plan = computeQsBlurWindowPlan(desiredRadius, blurOnlyBehindQsCard)
                             val view = this@apply
                             if (applyWindowBlurBehind(panelParams, plan.fullScreenBlurRadiusPx) && view.isAttachedToWindow) {
@@ -1537,8 +1538,8 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                             if (view.isAttachedToWindow) {
                                 view.getLocationOnScreen(screenLoc)
                             }
-                            qsBlurHost.update(
-                                bounds = bounds,
+                            qsBlurHost.updateAll(
+                                regions = regions,
                                 radiusPx = plan.qsCardBlurRadiusPx,
                                 offsetX = screenLoc[0],
                                 offsetY = screenLoc[1]
@@ -1786,7 +1787,22 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                                 )
                         ) {
                             CompositionLocalProvider(
-                                LocalOnQsCardBoundsChanged provides { bounds -> qsCardBounds = bounds }
+                                LocalOnBlurRegionBoundsChanged provides { key, bounds ->
+                                    val next = if (bounds.isValid) {
+                                        if (qsBlurRegions[key] == bounds) qsBlurRegions else qsBlurRegions + (key to bounds)
+                                    } else {
+                                        if (key !in qsBlurRegions) qsBlurRegions else qsBlurRegions - key
+                                    }
+                                    if (next !== qsBlurRegions) qsBlurRegions = next
+                                },
+                                LocalOnQsCardBoundsChanged provides { bounds ->
+                                    val next = if (bounds.isValid) {
+                                        if (qsBlurRegions["qs_card"] == bounds) qsBlurRegions else qsBlurRegions + ("qs_card" to bounds)
+                                    } else {
+                                        if ("qs_card" !in qsBlurRegions) qsBlurRegions else qsBlurRegions - "qs_card"
+                                    }
+                                    if (next !== qsBlurRegions) qsBlurRegions = next
+                                }
                             ) {
                             QuickSettingsPanel(
                                 expansionStage = stage,

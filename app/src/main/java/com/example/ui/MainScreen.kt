@@ -105,6 +105,7 @@ import com.example.ui.nativecontrols.NativeControlsScreen
 import com.example.ui.onboarding.PrivilegeWizardScreen
 import com.example.data.PanelPreferences
 import com.example.ui.overlay.FrostedPreviewBackdrop
+import com.example.ui.overlay.LocalOnBlurRegionBoundsChanged
 import com.example.ui.overlay.LocalOnQsCardBoundsChanged
 import com.example.ui.overlay.QsCardBlurBounds
 import com.example.ui.overlay.QsExpansionStage
@@ -219,11 +220,18 @@ fun MainScreen(viewModel: MainViewModel) {
                     val containerBlurRadiusDp by PanelPreferences.containerBlurRadiusDp.collectAsStateWithLifecycle()
                     val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsStateWithLifecycle()
                     var hostPosInRoot by remember { mutableStateOf(Offset.Zero) }
-                    var rawQsCardBounds by remember { mutableStateOf(QsCardBlurBounds()) }
-                    val localQsBounds = remember(rawQsCardBounds, hostPosInRoot) {
-                        rawQsCardBounds.translate(-hostPosInRoot.x, -hostPosInRoot.y)
+                    var rawQsBlurRegions by remember { mutableStateOf<Map<String, QsCardBlurBounds>>(emptyMap()) }
+                    val localQsBounds = remember(rawQsBlurRegions, hostPosInRoot) {
+                        (rawQsBlurRegions["qs_card"] ?: QsCardBlurBounds()).translate(-hostPosInRoot.x, -hostPosInRoot.y)
                     }
-                    // TAB 0: Interactive QS Overlay Panel with underlying backdrop blurred ONLY beneath the panel (or QS/QQS card only)
+                    val localExtraBlurRegions = remember(rawQsBlurRegions, hostPosInRoot) {
+                        rawQsBlurRegions
+                            .filterKeys { it != "qs_card" }
+                            .values
+                            .filter { it.isValid }
+                            .map { it.translate(-hostPosInRoot.x, -hostPosInRoot.y) }
+                    }
+                    // TAB 0: Interactive QS Overlay Panel with underlying backdrop blurred ONLY beneath the panel (or QS/QQS + carrier cards only)
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -242,10 +250,26 @@ fun MainScreen(viewModel: MainViewModel) {
                             qsCardBounds = localQsBounds,
                             blurRadiusDp = containerBlurRadiusDp,
                             transparency = containerBlurTransparency,
+                            extraBlurRegions = localExtraBlurRegions,
                             modifier = Modifier.matchParentSize()
                         )
                         CompositionLocalProvider(
-                            LocalOnQsCardBoundsChanged provides { bounds -> rawQsCardBounds = bounds }
+                            LocalOnBlurRegionBoundsChanged provides { key, bounds ->
+                                val next = if (bounds.isValid) {
+                                    if (rawQsBlurRegions[key] == bounds) rawQsBlurRegions else rawQsBlurRegions + (key to bounds)
+                                } else {
+                                    if (key !in rawQsBlurRegions) rawQsBlurRegions else rawQsBlurRegions - key
+                                }
+                                if (next !== rawQsBlurRegions) rawQsBlurRegions = next
+                            },
+                            LocalOnQsCardBoundsChanged provides { bounds ->
+                                val next = if (bounds.isValid) {
+                                    if (rawQsBlurRegions["qs_card"] == bounds) rawQsBlurRegions else rawQsBlurRegions + ("qs_card" to bounds)
+                                } else {
+                                    if ("qs_card" !in rawQsBlurRegions) rawQsBlurRegions else rawQsBlurRegions - "qs_card"
+                                }
+                                if (next !== rawQsBlurRegions) rawQsBlurRegions = next
+                            }
                         ) {
                             QuickSettingsPanel(
                                 expansionStage = expansionStage,

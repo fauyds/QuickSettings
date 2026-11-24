@@ -31,6 +31,7 @@ import com.example.ui.overlay.FrostedPreviewBackdrop
 import com.example.ui.overlay.applyWindowBlurBehind
 import com.example.ui.overlay.computeWindowBlurBehindRadiusPx
 import com.example.ui.overlay.frostedContainerColor
+import com.example.ui.overlay.reportQsCardBlurBounds
 import com.example.ui.theme.QuickPanelTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -648,5 +649,212 @@ class FrostedGlassBlurTest {
         composeTestRule.onNodeWithTag("notification_item_test_pkg|101").assertIsDisplayed()
         composeTestRule.onNodeWithText("New Email").assertIsDisplayed()
         composeTestRule.onNodeWithText("Meeting at 3 PM today").assertIsDisplayed()
+    }
+
+    @Test
+    fun `FrostedGlassSurfaceDrawable uses Android 16 BAKLAVA RuntimeColorFilter and draws cleanly`() {
+        val colorFilter = com.example.ui.overlay.createAndroid16FrostedSurfaceColorFilter(
+            isDark = true,
+            transparency = 0.45f
+        )
+        val xfermode = com.example.ui.overlay.createAndroid16FrostedSurfaceXfermode(
+            isDark = true,
+            transparency = 0.45f
+        )
+        assertTrue(colorFilter != null)
+        assertTrue(xfermode != null)
+
+        val drawable = com.example.ui.notification.FrostedGlassSurfaceDrawable(
+            cornerRadius = 24f,
+            isDark = true,
+            transparency = 0.45f,
+            enableGlassRefraction = true,
+            glassRefractionSensitivity = 0.7f,
+            density = 3f
+        )
+        assertTrue(drawable.usesAndroid16Api)
+
+        val view = android.view.View(context)
+        val content = android.graphics.drawable.GradientDrawable().apply {
+            cornerRadius = 24f
+            setColor(android.graphics.Color.argb(140, 30, 36, 41))
+        }
+        com.example.ui.notification.CustomShadowHelper.applyCustomShadowBackground(
+            view = view,
+            contentDrawable = content,
+            cornerRadius = 24f,
+            elevation = 8f,
+            isDark = true,
+            enableFrostedGlass = true,
+            frostedTransparency = 0.45f,
+            enableGlassRefraction = true,
+            glassRefractionSensitivity = 0.7f
+        )
+
+        val layerBg = view.background as android.graphics.drawable.LayerDrawable
+        val hasFrostedLayer = (0 until layerBg.numberOfLayers).any { idx ->
+            val layer = layerBg.getDrawable(idx)
+            layer is com.example.ui.notification.FrostedGlassSurfaceDrawable && layer.usesAndroid16Api
+        }
+        assertTrue(hasFrostedLayer)
+
+        val bmp = android.graphics.Bitmap.createBitmap(200, 120, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bmp)
+        layerBg.setBounds(0, 0, 200, 120)
+        layerBg.draw(canvas)
+        bmp.recycle()
+    }
+
+    @Test
+    @Config(sdk = [35])
+    fun `FrostedGlassSurfaceDrawable falls back gracefully below Android 16`() {
+        val drawable = com.example.ui.notification.FrostedGlassSurfaceDrawable(
+            cornerRadius = 24f,
+            isDark = false,
+            transparency = 0.40f,
+            enableGlassRefraction = true,
+            glassRefractionSensitivity = 0.5f,
+            density = 3f
+        )
+        assertFalse(drawable.usesAndroid16Api)
+
+        val bmp = android.graphics.Bitmap.createBitmap(160, 100, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bmp)
+        drawable.setBounds(0, 0, 160, 100)
+        drawable.draw(canvas)
+        bmp.recycle()
+    }
+
+    @Test
+    fun `NotificationAdapter attaches Android 16 FrostedGlassSurfaceDrawable to notification cards only when blur is enabled`() {
+        val themedContext = android.view.ContextThemeWrapper(
+            context,
+            com.example.R.style.Theme_MyApplication
+        )
+        val parent = android.widget.FrameLayout(themedContext)
+        val adapter = com.example.ui.notification.NotificationAdapter(
+            onNotificationClick = {},
+            onNotificationDismiss = {},
+            onActionClick = {}
+        ).apply {
+            isDark = true
+        }
+
+        val item = com.example.model.NotificationItem(
+            id = 202,
+            key = "notif_pkg|202",
+            packageName = "com.example.chat",
+            appName = "Messages",
+            title = "Alex",
+            text = "Are we still on for lunch?",
+            postTime = System.currentTimeMillis(),
+            isOngoing = false,
+            isClearable = true
+        )
+
+        PanelPreferences.setEnableContainerBlur(context, true)
+        PanelPreferences.setContainerBlurTransparency(context, 0.45f)
+        PanelPreferences.setEnableGlassRefraction(context, true)
+        PanelPreferences.setGlassRefractionSensitivity(context, 0.65f)
+        adapter.submitNotifications(listOf(item))
+
+        val vh = adapter.onCreateViewHolder(parent, adapter.getItemViewType(0))
+        adapter.onBindViewHolder(vh, 0)
+
+        val rootCard = vh.itemView.findViewById<android.view.View>(R.id.fl_notif_root) ?: vh.itemView
+        val bgWhenEnabled = rootCard.background as android.graphics.drawable.LayerDrawable
+        assertTrue(
+            (0 until bgWhenEnabled.numberOfLayers).any { idx ->
+                val layer = bgWhenEnabled.getDrawable(idx)
+                layer is com.example.ui.notification.FrostedGlassSurfaceDrawable && layer.usesAndroid16Api
+            }
+        )
+
+        PanelPreferences.setEnableContainerBlur(context, false)
+        adapter.submitNotifications(listOf(item), forceVisualRefresh = true)
+        adapter.onBindViewHolder(vh, 0)
+        val bgWhenDisabled = rootCard.background
+        val hasFrostedWhenDisabled = bgWhenDisabled is android.graphics.drawable.LayerDrawable &&
+            (0 until bgWhenDisabled.numberOfLayers).any { idx ->
+                bgWhenDisabled.getDrawable(idx) is com.example.ui.notification.FrostedGlassSurfaceDrawable
+            }
+        assertFalse(hasFrostedWhenDisabled)
+    }
+
+    @Test
+    fun `QQS carrier footer and QS card report independent blur regions to QsMultiCardBlurWindowHost and FrostedPreviewBackdrop`() {
+        val reportedRegions = androidx.compose.runtime.mutableStateMapOf<String, com.example.ui.overlay.QsCardBlurBounds>()
+        val carrierVisible = androidx.compose.runtime.mutableStateOf(true)
+
+        composeTestRule.setContent {
+            QuickPanelTheme(darkTheme = true) {
+                androidx.compose.runtime.CompositionLocalProvider(
+                    com.example.ui.overlay.LocalOnBlurRegionBoundsChanged provides { key, bounds ->
+                        if (bounds.isValid) {
+                            reportedRegions[key] = bounds
+                        } else {
+                            reportedRegions.remove(key)
+                        }
+                    }
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        FrostedPreviewBackdrop(
+                            enableBlur = true,
+                            dimAlpha = 0.28f,
+                            blurOnlyBehindQsCard = true,
+                            qsCardBounds = reportedRegions["qs_card"],
+                            extraBlurRegions = listOfNotNull(reportedRegions["qqs_carrier_footer"]),
+                            modifier = Modifier.matchParentSize()
+                        )
+                        androidx.compose.foundation.layout.Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(bottom = 8.dp)
+                                    .reportQsCardBlurBounds(
+                                        topCornerRadiusDp = 24f,
+                                        bottomCornerRadiusDp = 8f,
+                                        regionKey = "qs_card"
+                                    )
+                            ) {
+                                Text("QQS Main Card")
+                            }
+                            Box(
+                                modifier = Modifier.reportQsCardBlurBounds(
+                                    topCornerRadiusDp = 8f,
+                                    bottomCornerRadiusDp = 24f,
+                                    regionKey = "qqs_carrier_footer",
+                                    isVisible = carrierVisible.value
+                                )
+                            ) {
+                                Text("Carrier Footer")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        assertTrue(reportedRegions["qs_card"]?.isValid == true)
+        assertTrue(reportedRegions["qqs_carrier_footer"]?.isValid == true)
+        composeTestRule.onNodeWithTag("frosted_preview_qs_blur_region", useUnmergedTree = true).assertIsDisplayed()
+
+        // Multi-card window host accepts both regions cleanly
+        val multiHost = com.example.ui.overlay.QsMultiCardBlurWindowHost(
+            context = context,
+            layoutType = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        )
+        multiHost.showBehindOverlay()
+        multiHost.updateAll(reportedRegions, radiusPx = 72)
+        multiHost.updateAll(reportedRegions, radiusPx = 0)
+        multiHost.dismiss()
+
+        // Hiding carrier footer clears only qqs_carrier_footer region
+        carrierVisible.value = false
+        composeTestRule.waitForIdle()
+        assertTrue(reportedRegions["qs_card"]?.isValid == true)
+        assertFalse(reportedRegions.containsKey("qqs_carrier_footer"))
     }
 }

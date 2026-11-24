@@ -531,7 +531,11 @@ class NotificationAdapter(
                 isDark = isDark,
                 customAlpha = panelShadowAlpha,
                 customOffsetY = panelShadowOffsetY,
-                enableTopRimBackground = PanelPreferences.enablePanelTopRim.value && !isKitKatStyle
+                enableTopRimBackground = PanelPreferences.enablePanelTopRim.value && !isKitKatStyle,
+                enableFrostedGlass = enableContainerBlur,
+                frostedTransparency = containerBlurTransparency,
+                enableGlassRefraction = PanelPreferences.enableGlassRefraction.value,
+                glassRefractionSensitivity = PanelPreferences.glassRefractionSensitivity.value
             )
             CustomShadowHelper.applyPanelTopRimForeground(
                 view = flRoot,
@@ -931,7 +935,11 @@ class NotificationAdapter(
                 isDark = isDark,
                 customAlpha = panelShadowAlpha,
                 customOffsetY = panelShadowOffsetY,
-                enableTopRimBackground = PanelPreferences.enablePanelTopRim.value
+                enableTopRimBackground = PanelPreferences.enablePanelTopRim.value,
+                enableFrostedGlass = enableContainerBlur,
+                frostedTransparency = containerBlurTransparency,
+                enableGlassRefraction = PanelPreferences.enableGlassRefraction.value,
+                glassRefractionSensitivity = PanelPreferences.glassRefractionSensitivity.value
             )
             CustomShadowHelper.applyPanelTopRimForeground(
                 view = flRoot,
@@ -1329,7 +1337,11 @@ class NotificationAdapter(
                 isDark = isDarkTheme,
                 customAlpha = panelShadowAlpha,
                 customOffsetY = panelShadowOffsetY,
-                enableTopRimBackground = PanelPreferences.enablePanelTopRim.value
+                enableTopRimBackground = PanelPreferences.enablePanelTopRim.value,
+                enableFrostedGlass = enableContainerBlur,
+                frostedTransparency = containerBlurTransparency,
+                enableGlassRefraction = PanelPreferences.enableGlassRefraction.value,
+                glassRefractionSensitivity = PanelPreferences.glassRefractionSensitivity.value
             )
             CustomShadowHelper.applyPanelTopRimForeground(
                 view = flRoot,
@@ -1516,7 +1528,11 @@ class NotificationAdapter(
                 isDark = isDark,
                 customAlpha = panelShadowAlpha,
                 customOffsetY = panelShadowOffsetY,
-                enableTopRimBackground = com.example.data.PanelPreferences.enablePanelTopRim.value && !isKitKatStyle
+                enableTopRimBackground = com.example.data.PanelPreferences.enablePanelTopRim.value && !isKitKatStyle,
+                enableFrostedGlass = enableContainerBlur,
+                frostedTransparency = containerBlurTransparency,
+                enableGlassRefraction = com.example.data.PanelPreferences.enableGlassRefraction.value,
+                glassRefractionSensitivity = com.example.data.PanelPreferences.glassRefractionSensitivity.value
             )
             CustomShadowHelper.applyPanelTopRimForeground(
                 view = flRoot,

@@ -119,30 +119,45 @@ data class QsCardBlurBounds(
 }
 
 val LocalOnQsCardBoundsChanged = compositionLocalOf<((QsCardBlurBounds) -> Unit)?> { null }
+val LocalOnBlurRegionBoundsChanged = compositionLocalOf<((String, QsCardBlurBounds) -> Unit)?> { null }
 
 /**
- * Attaches layout measurement to the main QS/QQS card so backdrop hosts can scope behind-panel
- * blur exclusively underneath the QS/QQS card when `blurOnlyBehindQsCard` is enabled.
+ * Attaches layout measurement to a frosted QS/QQS card so backdrop hosts can scope behind-panel
+ * blur exclusively underneath the active QS/QQS cards (main QS card and QQS carrier footer)
+ * when `blurOnlyBehindQsCard` is enabled.
  */
 fun Modifier.reportQsCardBlurBounds(
     topCornerRadiusDp: Float,
-    bottomCornerRadiusDp: Float = topCornerRadiusDp
+    bottomCornerRadiusDp: Float = topCornerRadiusDp,
+    regionKey: String = "qs_card",
+    isVisible: Boolean = true
 ): Modifier = composed {
-    val onBoundsChanged = LocalOnQsCardBoundsChanged.current ?: return@composed this
+    val onRegionBoundsChanged = LocalOnBlurRegionBoundsChanged.current
+    val onBoundsChanged = LocalOnQsCardBoundsChanged.current
+    if (onRegionBoundsChanged == null && onBoundsChanged == null) return@composed this
     val density = LocalDensity.current
     val topCornerPx = with(density) { topCornerRadiusDp.coerceAtLeast(0f).dp.toPx() }
     val bottomCornerPx = with(density) { bottomCornerRadiusDp.coerceAtLeast(0f).dp.toPx() }
 
-    DisposableEffect(onBoundsChanged) {
+    DisposableEffect(onRegionBoundsChanged, onBoundsChanged, regionKey, isVisible) {
+        if (!isVisible) {
+            onRegionBoundsChanged?.invoke(regionKey, QsCardBlurBounds())
+            if (regionKey == "qs_card") {
+                onBoundsChanged?.invoke(QsCardBlurBounds())
+            }
+        }
         onDispose {
-            onBoundsChanged(QsCardBlurBounds())
+            onRegionBoundsChanged?.invoke(regionKey, QsCardBlurBounds())
+            if (regionKey == "qs_card") {
+                onBoundsChanged?.invoke(QsCardBlurBounds())
+            }
         }
     }
 
     this.onGloballyPositioned { coords ->
         if (coords.isAttached) {
-            val rect = coords.boundsInRoot()
-            onBoundsChanged(
+            val measured = if (isVisible) {
+                val rect = coords.boundsInRoot()
                 QsCardBlurBounds(
                     left = rect.left,
                     top = rect.top,
@@ -151,7 +166,13 @@ fun Modifier.reportQsCardBlurBounds(
                     topCornerRadiusPx = topCornerPx,
                     bottomCornerRadiusPx = bottomCornerPx
                 )
-            )
+            } else {
+                QsCardBlurBounds()
+            }
+            onRegionBoundsChanged?.invoke(regionKey, measured)
+            if (regionKey == "qs_card") {
+                onBoundsChanged?.invoke(measured)
+            }
         }
     }
 }
@@ -486,6 +507,47 @@ class QsCardBlurWindowHost(
     }
 }
 
+/**
+ * Manages multiple keyed [QsCardBlurWindowHost] windows (e.g., main QS/QQS card and split
+ * QQS carrier footer card) underneath the overlay so each card receives hardware
+ * [Window.setBackgroundBlurRadius] strictly within its own rounded bounds when
+ * `blurOnlyBehindQsCard` is enabled.
+ */
+class QsMultiCardBlurWindowHost(
+    context: Context,
+    layoutType: Int,
+    regionKeys: List<String> = listOf("qs_card", "qqs_carrier_footer")
+) {
+    private val hosts: Map<String, QsCardBlurWindowHost> = regionKeys.associateWith {
+        QsCardBlurWindowHost(context, layoutType)
+    }
+
+    fun showBehindOverlay() {
+        hosts.values.forEach { it.showBehindOverlay() }
+    }
+
+    fun updateAll(
+        regions: Map<String, QsCardBlurBounds>,
+        radiusPx: Int,
+        offsetX: Int = 0,
+        offsetY: Int = 0
+    ) {
+        hosts.forEach { (key, host) ->
+            val bounds = regions[key]
+            host.update(
+                bounds = bounds,
+                radiusPx = radiusPx,
+                offsetX = offsetX,
+                offsetY = offsetY
+            )
+        }
+    }
+
+    fun dismiss() {
+        hosts.values.forEach { it.dismiss() }
+    }
+}
+
 fun isCrossWindowBlurSupported(context: Context): Boolean {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false
     return try {
@@ -811,29 +873,37 @@ fun Modifier.frostedGlassSurface(
         }
 }
 
-private data class QsCardBoundsClipShape(
-    private val bounds: QsCardBlurBounds
+private data class QsCardBlurRegionsClipShape(
+    private val regions: List<QsCardBlurBounds>
 ) : Shape {
     override fun createOutline(
         size: Size,
         layoutDirection: LayoutDirection,
         density: Density
     ): ComposeOutline {
-        val topCorner = CornerRadius(bounds.topCornerRadiusPx.coerceAtLeast(0f))
-        val bottomCorner = CornerRadius(bounds.bottomCornerRadiusPx.coerceAtLeast(0f))
         val path = Path().apply {
-            addRoundRect(
-                RoundRect(
-                    left = bounds.left.coerceIn(0f, size.width),
-                    top = bounds.top.coerceIn(0f, size.height),
-                    right = bounds.right.coerceIn(0f, size.width),
-                    bottom = bounds.bottom.coerceIn(0f, size.height),
-                    topLeftCornerRadius = topCorner,
-                    topRightCornerRadius = topCorner,
-                    bottomRightCornerRadius = bottomCorner,
-                    bottomLeftCornerRadius = bottomCorner
+            regions.forEach { bounds ->
+                if (!bounds.isValid) return@forEach
+                val clampedLeft = bounds.left.coerceIn(0f, size.width)
+                val clampedTop = bounds.top.coerceIn(0f, size.height)
+                val clampedRight = bounds.right.coerceIn(0f, size.width)
+                val clampedBottom = bounds.bottom.coerceIn(0f, size.height)
+                if (clampedRight - clampedLeft <= 1f || clampedBottom - clampedTop <= 1f) return@forEach
+                val topCorner = CornerRadius(bounds.topCornerRadiusPx.coerceAtLeast(0f))
+                val bottomCorner = CornerRadius(bounds.bottomCornerRadiusPx.coerceAtLeast(0f))
+                addRoundRect(
+                    RoundRect(
+                        left = clampedLeft,
+                        top = clampedTop,
+                        right = clampedRight,
+                        bottom = clampedBottom,
+                        topLeftCornerRadius = topCorner,
+                        topRightCornerRadius = topCorner,
+                        bottomRightCornerRadius = bottomCorner,
+                        bottomLeftCornerRadius = bottomCorner
+                    )
                 )
-            )
+            }
         }
         return ComposeOutline.Generic(path)
     }
@@ -846,7 +916,8 @@ private data class QsCardBoundsClipShape(
  *    via [AndroidRenderEffect.createColorFilterEffect] (with API 31–35 blur fallback).
  *  - If [blurOnlyBehindQsCard] is false: the entire underlying backdrop blurs.
  *  - If [blurOnlyBehindQsCard] is true: the full screen renders crisp and unblurred, while the
- *    frosted backdrop clipped strictly to [qsCardBounds] sits only directly behind the QS/QQS card.
+ *    frosted backdrop clipped strictly to [qsCardBounds] and [extraBlurRegions] sits only directly
+ *    behind the QS/QQS panel cards (main QS card + QQS carrier footer).
  * The sibling [QuickSettingsPanel] layered on top stays 100% crisp in all modes.
  */
 @Composable
@@ -857,10 +928,19 @@ fun FrostedPreviewBackdrop(
     blurOnlyBehindQsCard: Boolean = false,
     qsCardBounds: QsCardBlurBounds? = null,
     blurRadiusDp: Float = DEFAULT_FROSTED_BLUR_RADIUS_DP,
-    transparency: Float = 0.40f
+    transparency: Float = 0.40f,
+    extraBlurRegions: List<QsCardBlurBounds> = emptyList()
 ) {
+    val activeRegions = remember(qsCardBounds, extraBlurRegions) {
+        buildList {
+            if (qsCardBounds != null && qsCardBounds.isValid) add(qsCardBounds)
+            extraBlurRegions.forEach { region ->
+                if (region.isValid) add(region)
+            }
+        }
+    }
     val shouldBlurFullScreen = enableBlur && !blurOnlyBehindQsCard
-    val shouldBlurQsOnly = enableBlur && blurOnlyBehindQsCard && qsCardBounds != null && qsCardBounds.isValid
+    val shouldBlurQsOnly = enableBlur && blurOnlyBehindQsCard && activeRegions.isNotEmpty()
     val effectiveBlurDp = blurRadiusDp.coerceIn(1f, 80f)
     val density = LocalDensity.current
     val effectiveBlurPx = with(density) { effectiveBlurDp.dp.toPx() }
@@ -904,12 +984,12 @@ fun FrostedPreviewBackdrop(
             }).testTag("frosted_preview_backdrop_layer")
         )
 
-        // When "Blur Behind QS/QQS Only" is active, overlay the frosted scene clipped strictly to QS/QQS bounds
-        if (shouldBlurQsOnly && qsCardBounds != null) {
+        // When "Blur Behind QS/QQS Only" is active, overlay the frosted scene clipped strictly to QS/QQS + carrier footer bounds
+        if (shouldBlurQsOnly) {
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .clip(QsCardBoundsClipShape(qsCardBounds))
+                    .clip(QsCardBlurRegionsClipShape(activeRegions))
                     .testTag("frosted_preview_qs_blur_region")
             ) {
                 PreviewBackdropScene(

@@ -573,6 +573,8 @@ class NotificationListView @JvmOverloads constructor(
             rawCardBg
         }
         val permDrawable = MonetThemeHelper.createMonetCardDrawable(context, isDark, cardRadius, showStroke = false, customBgColor = cardBg)
+        val enableGlassRefraction = PanelPreferences.enableGlassRefraction.value
+        val glassRefractionSensitivity = PanelPreferences.glassRefractionSensitivity.value
         val enablePanelTopRim = PanelPreferences.enablePanelTopRim.value
         CustomShadowHelper.applyCustomShadowBackground(
             flPermissionCard,
@@ -582,7 +584,11 @@ class NotificationListView @JvmOverloads constructor(
             isDark = isDark,
             customAlpha = panelShadowAlpha,
             customOffsetY = shadowOffsetY,
-            enableTopRimBackground = enablePanelTopRim
+            enableTopRimBackground = enablePanelTopRim,
+            enableFrostedGlass = enableContainerBlur,
+            frostedTransparency = containerBlurTransparency,
+            enableGlassRefraction = enableGlassRefraction,
+            glassRefractionSensitivity = glassRefractionSensitivity
         )
         CustomShadowHelper.applyPanelTopRimForeground(
             flPermissionCard,
@@ -626,7 +632,11 @@ class NotificationListView @JvmOverloads constructor(
                 isDark = isDark,
                 customAlpha = panelShadowAlpha,
                 customOffsetY = shadowOffsetY,
-                enableTopRimBackground = enablePanelTopRim
+                enableTopRimBackground = enablePanelTopRim,
+                enableFrostedGlass = enableContainerBlur,
+                frostedTransparency = containerBlurTransparency,
+                enableGlassRefraction = enableGlassRefraction,
+                glassRefractionSensitivity = glassRefractionSensitivity
             )
             CustomShadowHelper.applyPanelTopRimForeground(
                 flEmptyCard,
@@ -792,7 +802,11 @@ class NotificationListView @JvmOverloads constructor(
                 PanelPreferences.disableClearAllLabel.value,
                 PanelPreferences.clearAllFabShapeId.value,
                 PanelPreferences.clearAllFabIcon.value,
-                PanelPreferences.clearAllFabSize.value
+                PanelPreferences.clearAllFabSize.value,
+                enableContainerBlur,
+                containerBlurTransparency,
+                enableGlassRefraction,
+                glassRefractionSensitivity
             ).hashCode()
             val visualChanged = lastVisualSignature != null && lastVisualSignature != visualSignature
             lastVisualSignature = visualSignature

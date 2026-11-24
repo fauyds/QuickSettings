@@ -17,7 +17,9 @@ import android.os.Build
 import android.view.View
 import androidx.core.graphics.PathParser
 import com.example.data.PanelPreferences
-import kotlin.math.max
+import com.example.ui.overlay.createAndroid16FrostedSurfaceColorFilter
+import com.example.ui.overlay.createAndroid16FrostedSurfaceXfermode
+import com.example.ui.overlay.isAndroid16FrostedGlassSupported
 import kotlin.math.roundToInt
 
 /**
@@ -205,15 +207,32 @@ object CustomShadowHelper {
         customOffsetY: Float? = null,
         enableTopRimBackground: Boolean = false,
         baseColor: Int? = null,
-        topRimAlpha: Float = PanelPreferences.topRimAlpha.value
+        topRimAlpha: Float = PanelPreferences.topRimAlpha.value,
+        enableFrostedGlass: Boolean = false,
+        frostedTransparency: Float = PanelPreferences.containerBlurTransparency.value,
+        enableGlassRefraction: Boolean = PanelPreferences.enableGlassRefraction.value,
+        glassRefractionSensitivity: Float = PanelPreferences.glassRefractionSensitivity.value
     ) {
         view.elevation = 0f
-        ShadowOutlineDrawable.cachedDensity = view.resources.displayMetrics.density
+        val density = view.resources.displayMetrics.density
+        ShadowOutlineDrawable.cachedDensity = density
 
         if (contentDrawable == null) {
             view.background = null
             return
         }
+
+        val frostedSurfaceDrawable = if (enableFrostedGlass && !isCircle) {
+            FrostedGlassSurfaceDrawable(
+                radii = radii?.copyOf(),
+                cornerRadius = cornerRadius,
+                isDark = isDark,
+                transparency = frostedTransparency,
+                enableGlassRefraction = enableGlassRefraction,
+                glassRefractionSensitivity = glassRefractionSensitivity,
+                density = density
+            )
+        } else null
 
         val bgGradientDrawable = if (enableTopRimBackground) {
             PanelTopRimBackgroundDrawable(
@@ -225,10 +244,15 @@ object CustomShadowHelper {
         } else null
 
         if (elevation <= 0.2f) {
-            view.background = if (bgGradientDrawable != null) {
-                LayerDrawable(arrayOf(contentDrawable, bgGradientDrawable))
+            val baseLayers = buildList {
+                add(contentDrawable)
+                if (frostedSurfaceDrawable != null) add(frostedSurfaceDrawable)
+                if (bgGradientDrawable != null) add(bgGradientDrawable)
+            }
+            view.background = if (baseLayers.size == 1) {
+                baseLayers[0]
             } else {
-                contentDrawable
+                LayerDrawable(baseLayers.toTypedArray())
             }
             return
         }
@@ -247,12 +271,13 @@ object CustomShadowHelper {
             customOffsetY = customOffsetY
         )
 
-        val layers = if (bgGradientDrawable != null) {
-            arrayOf(shadowDrawable, contentDrawable, bgGradientDrawable)
-        } else {
-            arrayOf(shadowDrawable, contentDrawable)
+        val layers = buildList {
+            add(shadowDrawable)
+            add(contentDrawable)
+            if (frostedSurfaceDrawable != null) add(frostedSurfaceDrawable)
+            if (bgGradientDrawable != null) add(bgGradientDrawable)
         }
-        view.background = LayerDrawable(layers)
+        view.background = LayerDrawable(layers.toTypedArray())
     }
 
     /**
@@ -525,6 +550,191 @@ class PanelTopRimBackgroundDrawable(
 
     override fun setColorFilter(colorFilter: ColorFilter?) {
         fillPaint.colorFilter = colorFilter
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+}
+
+/**
+ * Android 16+ (API 36 / BAKLAVA) frosted glass surface drawable for native Android Views
+ * (individual notification cards, media cards, category headers, permission & empty cards).
+ * Mirrors [com.example.ui.overlay.frostedGlassSurface] using AGSL [android.graphics.RuntimeColorFilter]
+ * + [android.graphics.RuntimeXfermode] luminous sheen and Glass Edge Refraction highlights,
+ * strictly clipped to the card's rounded bounds.
+ */
+class FrostedGlassSurfaceDrawable(
+    private val radii: FloatArray? = null,
+    private val cornerRadius: Float = 0f,
+    private val isDark: Boolean = true,
+    private val transparency: Float = 0.40f,
+    private val enableGlassRefraction: Boolean = true,
+    private val glassRefractionSensitivity: Float = 0.50f,
+    private val density: Float = 2.625f
+) : Drawable() {
+
+    private val api36ColorFilter = if (isAndroid16FrostedGlassSupported()) {
+        createAndroid16FrostedSurfaceColorFilter(isDark = isDark, transparency = transparency)
+    } else null
+
+    private val api36Xfermode = if (isAndroid16FrostedGlassSupported()) {
+        createAndroid16FrostedSurfaceXfermode(isDark = isDark, transparency = transparency)
+    } else null
+
+    val usesAndroid16Api: Boolean
+        get() = isAndroid16FrostedGlassSupported() && api36ColorFilter != null
+
+    private val sheenPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        if (api36ColorFilter != null) {
+            colorFilter = api36ColorFilter
+        }
+        if (api36Xfermode != null) {
+            xfermode = api36Xfermode
+        }
+    }
+
+    private val refractionHighlightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
+
+    private val refractionShadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
+
+    private val cachedPath = Path()
+
+    override fun onBoundsChange(bounds: Rect) {
+        super.onBoundsChange(bounds)
+        updateCachedPath(bounds)
+        updateShaders(bounds)
+    }
+
+    private fun updateCachedPath(bounds: Rect) {
+        cachedPath.reset()
+        if (bounds.width() <= 0 || bounds.height() <= 0) return
+        val r = radii
+        when {
+            r != null && r.size >= 8 -> {
+                cachedPath.addRoundRect(
+                    bounds.left.toFloat(), bounds.top.toFloat(),
+                    bounds.right.toFloat(), bounds.bottom.toFloat(),
+                    r,
+                    Path.Direction.CW
+                )
+            }
+            cornerRadius > 0f -> {
+                cachedPath.addRoundRect(
+                    bounds.left.toFloat(), bounds.top.toFloat(),
+                    bounds.right.toFloat(), bounds.bottom.toFloat(),
+                    cornerRadius, cornerRadius,
+                    Path.Direction.CW
+                )
+            }
+            else -> {
+                cachedPath.addRect(
+                    bounds.left.toFloat(), bounds.top.toFloat(),
+                    bounds.right.toFloat(), bounds.bottom.toFloat(),
+                    Path.Direction.CW
+                )
+            }
+        }
+    }
+
+    private fun updateShaders(bounds: Rect) {
+        if (bounds.width() <= 0 || bounds.height() <= 0) {
+            sheenPaint.shader = null
+            refractionHighlightPaint.shader = null
+            refractionShadowPaint.shader = null
+            return
+        }
+        val clampedTransparency = transparency.coerceIn(0f, 0.95f)
+        val sheenStrength = ((1f - clampedTransparency) * if (isDark) 0.09f else 0.14f)
+            .coerceIn(0.015f, 0.16f)
+        val topSheenColor = Color.argb((sheenStrength * 255f).roundToInt().coerceIn(0, 255), 255, 255, 255)
+        sheenPaint.shader = LinearGradient(
+            bounds.left.toFloat(),
+            bounds.top.toFloat(),
+            bounds.left.toFloat(),
+            bounds.bottom.toFloat(),
+            topSheenColor,
+            Color.TRANSPARENT,
+            Shader.TileMode.CLAMP
+        )
+
+        if (enableGlassRefraction) {
+            val sensitivity = glassRefractionSensitivity.coerceIn(0.1f, 1.0f)
+            val refractionAlpha = (0.22f * sensitivity).coerceIn(0.05f, 0.45f)
+            val shadowAlpha = (if (isDark) 0.35f * sensitivity else 0.15f * sensitivity).coerceIn(0.02f, 0.50f)
+
+            val highlightColor = Color.argb((refractionAlpha * 255f).roundToInt().coerceIn(0, 255), 255, 255, 255)
+            val shadowColor = Color.argb((shadowAlpha * 255f).roundToInt().coerceIn(0, 255), 0, 0, 0)
+
+            refractionHighlightPaint.shader = LinearGradient(
+                bounds.left.toFloat(),
+                bounds.top.toFloat(),
+                bounds.left + bounds.width() * 0.55f,
+                bounds.top + bounds.height() * 0.60f,
+                highlightColor,
+                Color.TRANSPARENT,
+                Shader.TileMode.CLAMP
+            )
+            refractionShadowPaint.shader = LinearGradient(
+                bounds.right.toFloat(),
+                bounds.bottom.toFloat(),
+                bounds.left + bounds.width() * 0.45f,
+                bounds.top + bounds.height() * 0.40f,
+                shadowColor,
+                Color.TRANSPARENT,
+                Shader.TileMode.CLAMP
+            )
+        } else {
+            refractionHighlightPaint.shader = null
+            refractionShadowPaint.shader = null
+        }
+    }
+
+    override fun draw(canvas: Canvas) {
+        if (cachedPath.isEmpty || bounds.width() <= 0 || bounds.height() <= 0) return
+        if (sheenPaint.shader == null) updateShaders(bounds)
+
+        canvas.save()
+        canvas.clipPath(cachedPath)
+        canvas.drawRect(
+            bounds.left.toFloat(),
+            bounds.top.toFloat(),
+            bounds.right.toFloat(),
+            bounds.bottom.toFloat(),
+            sheenPaint
+        )
+
+        if (enableGlassRefraction) {
+            val strokePx = (1.25f * density).coerceAtLeast(1.5f)
+            refractionHighlightPaint.strokeWidth = strokePx * 2f
+            refractionShadowPaint.strokeWidth = strokePx * 2f
+            canvas.drawPath(cachedPath, refractionHighlightPaint)
+            canvas.drawPath(cachedPath, refractionShadowPaint)
+        }
+        canvas.restore()
+    }
+
+    override fun setAlpha(alpha: Int) {
+        sheenPaint.alpha = alpha
+        refractionHighlightPaint.alpha = alpha
+        refractionShadowPaint.alpha = alpha
+    }
+
+    override fun setColorFilter(colorFilter: ColorFilter?) {
+        // Keep Android 16 RuntimeColorFilter intact when external filter is null
+        if (colorFilter != null) {
+            sheenPaint.colorFilter = colorFilter
+        } else {
+            sheenPaint.colorFilter = api36ColorFilter
+        }
     }
 
     @Deprecated("Deprecated in Java")
