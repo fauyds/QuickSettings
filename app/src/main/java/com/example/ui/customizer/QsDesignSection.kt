@@ -5745,7 +5745,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Specular edge refraction highlight and border glow.",
+                                text = "Real-time AGSL optical glass lens refraction and chromatic edge dispersion.",
                                 fontSize = 11.5.sp,
                                 lineHeight = 14.sp,
                                 style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
@@ -5791,7 +5791,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = "Edge specular highlight intensity (10% – 100%)",
+                                        text = "Optical lens warp & edge dispersion strength (10% – 100%)",
                                         fontSize = 11.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )

@@ -35,6 +35,8 @@ import com.example.ui.overlay.reportQsCardBlurBounds
 import com.example.ui.theme.QuickPanelTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -1040,5 +1042,198 @@ class FrostedGlassBlurTest {
         // Disabling reporting cleanly clears callback regions
         notifListView.setBlurRegionReportingEnabled(false)
         assertTrue(reportedRegions.isEmpty())
+    }
+
+    @Test
+    fun `AGSL optical backdrop refraction and bevel RuntimeShaders compile and chain cleanly on API 33+`() {
+        assertTrue(com.example.ui.overlay.isRuntimeShaderRefractionSupported())
+
+        val qsRegion = com.example.ui.overlay.QsCardBlurBounds(
+            left = 40f, top = 80f, right = 1040f, bottom = 580f,
+            topCornerRadiusPx = 64f, bottomCornerRadiusPx = 24f
+        )
+        val notifRegion = com.example.ui.overlay.QsCardBlurBounds(
+            left = 40f, top = 620f, right = 1040f, bottom = 840f,
+            topCornerRadiusPx = 48f, bottomCornerRadiusPx = 48f
+        )
+
+        val backdropEffect = com.example.ui.overlay.createLiquidGlassRefractionRuntimeEffect(
+            regions = listOf(qsRegion, notifRegion),
+            viewportWidthPx = 1080f,
+            viewportHeightPx = 1920f,
+            density = 3f,
+            sensitivity = 0.75f,
+            isDark = true
+        )
+        assertNotNull(backdropEffect)
+
+        val emptyRegionsEffect = com.example.ui.overlay.createLiquidGlassRefractionRuntimeEffect(
+            regions = emptyList(),
+            viewportWidthPx = 1080f,
+            viewportHeightPx = 1920f,
+            density = 3f,
+            sensitivity = 0.75f,
+            isDark = true
+        )
+        assertNull(emptyRegionsEffect)
+
+        val bevelShader = com.example.ui.overlay.createFrostedGlassCardBevelShader(
+            widthPx = 600f,
+            heightPx = 320f,
+            topRadiusPx = 64f,
+            bottomRadiusPx = 24f,
+            density = 3f,
+            sensitivity = 0.75f,
+            isDark = true
+        )
+        assertNotNull(bevelShader)
+
+        val chainedWithRefraction = com.example.ui.overlay.createFrostedBackdropRenderEffect(
+            blurRadiusPx = 48f,
+            isDark = true,
+            blurRadiusDp = 24f,
+            transparency = 0.45f,
+            enableGlassRefraction = true,
+            glassRefractionSensitivity = 0.8f,
+            refractionRegions = listOf(qsRegion, notifRegion),
+            viewportWidthPx = 1080f,
+            viewportHeightPx = 1920f,
+            density = 3f
+        )
+        assertNotNull(chainedWithRefraction)
+
+        val chainedWithoutRefraction = com.example.ui.overlay.createFrostedBackdropRenderEffect(
+            blurRadiusPx = 48f,
+            isDark = false,
+            blurRadiusDp = 24f,
+            transparency = 0.35f,
+            enableGlassRefraction = false
+        )
+        assertNotNull(chainedWithoutRefraction)
+
+        val drawableWithShader = com.example.ui.notification.FrostedGlassSurfaceDrawable(
+            cornerRadius = 48f,
+            isDark = true,
+            transparency = 0.45f,
+            enableGlassRefraction = true,
+            glassRefractionSensitivity = 0.75f,
+            density = 3f
+        )
+        assertTrue(drawableWithShader.usesRefractionShader)
+
+        val drawableWithoutShader = com.example.ui.notification.FrostedGlassSurfaceDrawable(
+            cornerRadius = 48f,
+            isDark = true,
+            transparency = 0.45f,
+            enableGlassRefraction = false,
+            glassRefractionSensitivity = 0.75f,
+            density = 3f
+        )
+        assertFalse(drawableWithoutShader.usesRefractionShader)
+
+        val bmp = android.graphics.Bitmap.createBitmap(240, 140, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bmp)
+        drawableWithShader.setBounds(0, 0, 240, 140)
+        drawableWithShader.draw(canvas)
+        bmp.recycle()
+    }
+
+    @Test
+    @Config(sdk = [32])
+    fun `RuntimeShader refraction cleanly reports unsupported below API 33`() {
+        assertFalse(com.example.ui.overlay.isRuntimeShaderRefractionSupported())
+        val drawable = com.example.ui.notification.FrostedGlassSurfaceDrawable(
+            cornerRadius = 32f,
+            isDark = true,
+            transparency = 0.45f,
+            enableGlassRefraction = true,
+            glassRefractionSensitivity = 0.65f,
+            density = 2.625f
+        )
+        assertFalse(drawable.usesRefractionShader)
+    }
+
+    @Test
+    fun `LiveScreenRefractionBackdrop renders when captured bitmap and active regions are present`() {
+        val sampleScreen = android.graphics.Bitmap.createBitmap(400, 800, android.graphics.Bitmap.Config.ARGB_8888).apply {
+            eraseColor(android.graphics.Color.BLUE)
+        }
+        val enableRefractionState = androidx.compose.runtime.mutableStateOf(true)
+        val bitmapState = androidx.compose.runtime.mutableStateOf<android.graphics.Bitmap?>(sampleScreen)
+
+        val qsBounds = com.example.ui.overlay.QsCardBlurBounds(
+            left = 20f, top = 40f, right = 380f, bottom = 300f,
+            topCornerRadiusPx = 48f, bottomCornerRadiusPx = 16f
+        )
+        val notifBounds = com.example.ui.overlay.QsCardBlurBounds(
+            left = 20f, top = 340f, right = 380f, bottom = 500f,
+            topCornerRadiusPx = 32f, bottomCornerRadiusPx = 32f
+        )
+
+        composeTestRule.setContent {
+            QuickPanelTheme(darkTheme = true) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    com.example.ui.overlay.LiveScreenRefractionBackdrop(
+                        screenBitmap = bitmapState.value,
+                        enableBlur = true,
+                        enableRefraction = enableRefractionState.value,
+                        refractionSensitivity = 0.7f,
+                        blurRadiusDp = 24f,
+                        transparency = 0.45f,
+                        isDark = true,
+                        revealAlpha = 1f,
+                        qsCardBounds = qsBounds,
+                        extraBlurRegions = listOf(notifBounds),
+                        modifier = Modifier.matchParentSize()
+                    )
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("live_screen_refraction_backdrop").assertIsDisplayed()
+
+        // Toggling refraction off removes the live refraction backdrop node cleanly
+        enableRefractionState.value = false
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("live_screen_refraction_backdrop").assertDoesNotExist()
+
+        enableRefractionState.value = true
+        bitmapState.value = null
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("live_screen_refraction_backdrop").assertDoesNotExist()
+
+        sampleScreen.recycle()
+    }
+
+    @Test
+    fun `FrostedPreviewBackdrop accepts real refraction sensitivity and multi-region bounds`() {
+        val qsBounds = com.example.ui.overlay.QsCardBlurBounds(
+            left = 24f, top = 48f, right = 388f, bottom = 320f,
+            topCornerRadiusPx = 48f, bottomCornerRadiusPx = 16f
+        )
+        val carrierBounds = com.example.ui.overlay.QsCardBlurBounds(
+            left = 24f, top = 330f, right = 388f, bottom = 400f,
+            topCornerRadiusPx = 16f, bottomCornerRadiusPx = 48f
+        )
+
+        composeTestRule.setContent {
+            QuickPanelTheme(darkTheme = true) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    FrostedPreviewBackdrop(
+                        enableBlur = true,
+                        dimAlpha = 0.30f,
+                        blurOnlyBehindQsCard = false,
+                        qsCardBounds = qsBounds,
+                        extraBlurRegions = listOf(carrierBounds),
+                        enableGlassRefraction = true,
+                        glassRefractionSensitivity = 0.85f,
+                        modifier = Modifier.matchParentSize()
+                    )
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("frosted_preview_backdrop_root").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("frosted_preview_backdrop_layer").assertIsDisplayed()
     }
 }

@@ -203,6 +203,8 @@ fun CompactMediaNotificationCard(
     val secondaryTextColor = if (isDark) Color(0xFFB0B0B0) else Color(0xFF49454F)
     val tertiaryTextColor = if (isDark) Color(0xFF8E8E93) else Color(0xFF79747E)
 
+    val effectiveCornerFloat = if (isOreoStyle) 0f else effectiveCorner.toFloat()
+
     androidx.compose.material3.Surface(
         shape = cardShape,
         color = if (enableContainerBlur) Color.Transparent else effectiveCardColor,
@@ -211,6 +213,12 @@ fun CompactMediaNotificationCard(
         shadowElevation = 0.dp,
         modifier = modifier
             .fillMaxWidth()
+            .reportQsCardBlurBounds(
+                topCornerRadiusDp = effectiveCornerFloat,
+                bottomCornerRadiusDp = effectiveCornerFloat,
+                regionKey = "media_player_card",
+                isVisible = enableContainerBlur
+            )
             .clip(cardShape)
             .then(
                 if (enableContainerBlur) {
@@ -218,7 +226,8 @@ fun CompactMediaNotificationCard(
                         baseColor = backgroundColor,
                         enableBlur = true,
                         isDark = isDark,
-                        transparency = containerBlurTransparency
+                        transparency = containerBlurTransparency,
+                        cornerRadiusDp = effectiveCornerFloat
                     )
                 } else {
                     Modifier
@@ -523,6 +532,7 @@ fun AdaptiveMediaPlayerCard(
             .then(shadowModifier)
     ) {
         val effectiveShape = if (isClassicStyle) RoundedCornerShape(0.dp) else cardShape
+        val effectiveCornerFloat = if (isClassicStyle) 0f else effectiveCorner.toFloat()
         Surface(
             shape = effectiveShape,
             color = if (enableContainerBlur) Color.Transparent else cardColor,
@@ -531,6 +541,12 @@ fun AdaptiveMediaPlayerCard(
             shadowElevation = 0.dp,
             modifier = Modifier
                 .fillMaxWidth()
+                .reportQsCardBlurBounds(
+                    topCornerRadiusDp = effectiveCornerFloat,
+                    bottomCornerRadiusDp = effectiveCornerFloat,
+                    regionKey = "media_player_card",
+                    isVisible = enableContainerBlur
+                )
                 .panelTopRim(enabled = enablePanelTopRim, shape = effectiveShape)
                 .clip(effectiveShape)
                 .then(
@@ -539,7 +555,8 @@ fun AdaptiveMediaPlayerCard(
                             baseColor = artworkColor ?: backgroundColor,
                             enableBlur = true,
                             isDark = isDark,
-                            transparency = containerBlurTransparency
+                            transparency = containerBlurTransparency,
+                            cornerRadiusDp = effectiveCornerFloat
                         )
                     } else {
                         Modifier

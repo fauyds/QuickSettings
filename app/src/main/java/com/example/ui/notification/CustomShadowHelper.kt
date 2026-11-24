@@ -19,7 +19,9 @@ import androidx.core.graphics.PathParser
 import com.example.data.PanelPreferences
 import com.example.ui.overlay.createAndroid16FrostedSurfaceColorFilter
 import com.example.ui.overlay.createAndroid16FrostedSurfaceXfermode
+import com.example.ui.overlay.createFrostedGlassCardBevelShader
 import com.example.ui.overlay.isAndroid16FrostedGlassSupported
+import com.example.ui.overlay.isRuntimeShaderRefractionSupported
 import kotlin.math.roundToInt
 
 /**
@@ -584,6 +586,9 @@ class FrostedGlassSurfaceDrawable(
     val usesAndroid16Api: Boolean
         get() = isAndroid16FrostedGlassSupported() && api36ColorFilter != null
 
+    val usesRefractionShader: Boolean
+        get() = enableGlassRefraction && isRuntimeShaderRefractionSupported()
+
     private val sheenPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
         if (api36ColorFilter != null) {
@@ -594,16 +599,8 @@ class FrostedGlassSurfaceDrawable(
         }
     }
 
-    private val refractionHighlightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeCap = Paint.Cap.ROUND
-        strokeJoin = Paint.Join.ROUND
-    }
-
-    private val refractionShadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeCap = Paint.Cap.ROUND
-        strokeJoin = Paint.Join.ROUND
+    private val refractionBevelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
     }
 
     private val cachedPath = Path()
@@ -648,8 +645,7 @@ class FrostedGlassSurfaceDrawable(
     private fun updateShaders(bounds: Rect) {
         if (bounds.width() <= 0 || bounds.height() <= 0) {
             sheenPaint.shader = null
-            refractionHighlightPaint.shader = null
-            refractionShadowPaint.shader = null
+            refractionBevelPaint.shader = null
             return
         }
         val clampedTransparency = transparency.coerceIn(0f, 0.95f)
@@ -666,35 +662,20 @@ class FrostedGlassSurfaceDrawable(
             Shader.TileMode.CLAMP
         )
 
-        if (enableGlassRefraction) {
-            val sensitivity = glassRefractionSensitivity.coerceIn(0.1f, 1.0f)
-            val refractionAlpha = (0.22f * sensitivity).coerceIn(0.05f, 0.45f)
-            val shadowAlpha = (if (isDark) 0.35f * sensitivity else 0.15f * sensitivity).coerceIn(0.02f, 0.50f)
-
-            val highlightColor = Color.argb((refractionAlpha * 255f).roundToInt().coerceIn(0, 255), 255, 255, 255)
-            val shadowColor = Color.argb((shadowAlpha * 255f).roundToInt().coerceIn(0, 255), 0, 0, 0)
-
-            refractionHighlightPaint.shader = LinearGradient(
-                bounds.left.toFloat(),
-                bounds.top.toFloat(),
-                bounds.left + bounds.width() * 0.55f,
-                bounds.top + bounds.height() * 0.60f,
-                highlightColor,
-                Color.TRANSPARENT,
-                Shader.TileMode.CLAMP
-            )
-            refractionShadowPaint.shader = LinearGradient(
-                bounds.right.toFloat(),
-                bounds.bottom.toFloat(),
-                bounds.left + bounds.width() * 0.45f,
-                bounds.top + bounds.height() * 0.40f,
-                shadowColor,
-                Color.TRANSPARENT,
-                Shader.TileMode.CLAMP
+        if (enableGlassRefraction && isRuntimeShaderRefractionSupported() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val topR = radii?.takeIf { it.size >= 8 }?.get(0) ?: cornerRadius
+            val botR = radii?.takeIf { it.size >= 8 }?.get(4) ?: cornerRadius
+            refractionBevelPaint.shader = createFrostedGlassCardBevelShader(
+                widthPx = bounds.width().toFloat(),
+                heightPx = bounds.height().toFloat(),
+                topRadiusPx = topR,
+                bottomRadiusPx = botR,
+                density = density,
+                sensitivity = glassRefractionSensitivity,
+                isDark = isDark
             )
         } else {
-            refractionHighlightPaint.shader = null
-            refractionShadowPaint.shader = null
+            refractionBevelPaint.shader = null
         }
     }
 
@@ -712,20 +693,25 @@ class FrostedGlassSurfaceDrawable(
             sheenPaint
         )
 
-        if (enableGlassRefraction) {
-            val strokePx = (1.25f * density).coerceAtLeast(1.5f)
-            refractionHighlightPaint.strokeWidth = strokePx * 2f
-            refractionShadowPaint.strokeWidth = strokePx * 2f
-            canvas.drawPath(cachedPath, refractionHighlightPaint)
-            canvas.drawPath(cachedPath, refractionShadowPaint)
+        val bevelShader = refractionBevelPaint.shader
+        if (enableGlassRefraction && bevelShader != null) {
+            canvas.save()
+            canvas.translate(bounds.left.toFloat(), bounds.top.toFloat())
+            canvas.drawRect(
+                0f,
+                0f,
+                bounds.width().toFloat(),
+                bounds.height().toFloat(),
+                refractionBevelPaint
+            )
+            canvas.restore()
         }
         canvas.restore()
     }
 
     override fun setAlpha(alpha: Int) {
         sheenPaint.alpha = alpha
-        refractionHighlightPaint.alpha = alpha
-        refractionShadowPaint.alpha = alpha
+        refractionBevelPaint.alpha = alpha
     }
 
     override fun setColorFilter(colorFilter: ColorFilter?) {

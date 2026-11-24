@@ -2,13 +2,16 @@ package com.example.ui.overlay
 
 import android.app.Dialog
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
 import android.graphics.LinearGradient
 import android.graphics.Outline
 import android.graphics.Paint
 import android.graphics.PixelFormat
+import android.graphics.RectF
 import android.graphics.RenderEffect as AndroidRenderEffect
 import android.graphics.RuntimeColorFilter
+import android.graphics.RuntimeShader
 import android.graphics.RuntimeXfermode
 import android.graphics.Shader
 import android.graphics.drawable.GradientDrawable
@@ -19,6 +22,8 @@ import android.view.ViewOutlineProvider
 import android.view.Window
 import android.view.WindowManager
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -80,6 +85,7 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
@@ -90,6 +96,7 @@ import java.util.function.Consumer
 import kotlin.math.roundToInt
 
 const val DEFAULT_FROSTED_BLUR_RADIUS_DP = 24f
+const val MAX_REFRACTION_REGIONS = 18
 
 /**
  * Bounding rectangle (in host root coordinates) and corner radii for the QS/QQS card container.
@@ -643,8 +650,159 @@ private const val FROSTED_SURFACE_XFERMODE_AGSL = """
     }
 """
 
+private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
+    uniform shader content;
+    uniform float2 resolution;
+    uniform float density;
+    uniform float sensitivity;
+    uniform float isDark;
+    uniform float4 uRects[18];
+    uniform float2 uRadii[18];
+    uniform int regionCount;
+
+    float sdRoundRect(float2 p, float2 halfSize, float topR, float botR) {
+        float cr = (p.y < 0.0) ? topR : botR;
+        cr = clamp(cr, 0.0, min(halfSize.x, halfSize.y));
+        float2 d = abs(p) - (halfSize - float2(cr));
+        return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - cr;
+    }
+
+    half4 main(float2 fragCoord) {
+        half4 base = content.eval(fragCoord);
+        float s = clamp(sensitivity, 0.1, 1.0);
+        float dScale = max(density, 1.0);
+        float bevelW = (14.0 + 22.0 * s) * dScale;
+
+        for (int i = 0; i < 18; i++) {
+            if (i >= regionCount) break;
+            float4 r = uRects[i];
+            if (fragCoord.x < r.x || fragCoord.x > r.z || fragCoord.y < r.y || fragCoord.y > r.w) {
+                continue;
+            }
+            float2 halfSize = float2((r.z - r.x) * 0.5, (r.w - r.y) * 0.5);
+            if (halfSize.x <= 1.0 || halfSize.y <= 1.0) continue;
+
+            float2 center = float2((r.x + r.z) * 0.5, (r.y + r.w) * 0.5);
+            float2 local = fragCoord - center;
+            float topR = uRadii[i].x;
+            float botR = uRadii[i].y;
+            float sdf = sdRoundRect(local, halfSize, topR, botR);
+            if (sdf > 0.0) continue;
+
+            float distIn = -sdf;
+
+            // Smooth surface normal from central-difference SDF gradient
+            float eps = 1.5;
+            float gx = sdRoundRect(local + float2(eps, 0.0), halfSize, topR, botR)
+                     - sdRoundRect(local - float2(eps, 0.0), halfSize, topR, botR);
+            float gy = sdRoundRect(local + float2(0.0, eps), halfSize, topR, botR)
+                     - sdRoundRect(local - float2(0.0, eps), halfSize, topR, botR);
+            float2 n = float2(gx, gy);
+            float nLen = length(n);
+            n = (nLen > 0.0001) ? (n / nLen) : float2(0.0, -1.0);
+
+            // Optical curved bevel chamfer + subtle peripheral pillow lens warp
+            float edgeT = 1.0 - smoothstep(0.0, bevelW, distIn);
+            float bevelMag = pow(edgeT, 1.45) * (14.0 + 36.0 * s) * dScale;
+            float2 normLocal = local / max(halfSize, float2(1.0));
+            float radialWeight = smoothstep(0.25, 1.0, length(normLocal)) * (1.0 - smoothstep(bevelW, bevelW * 3.0, distIn));
+            float domeMag = radialWeight * (3.5 + 8.5 * s) * dScale;
+
+            float2 disp = -n * (bevelMag + domeMag);
+
+            // Chromatic dispersion: Red, Green, and Blue wavelengths bend at slightly different indices
+            float chroma = (0.12 + 0.16 * s) * edgeT;
+            float2 uvG = clamp(fragCoord + disp, float2(0.5), resolution - float2(0.5));
+            float2 uvR = clamp(fragCoord + disp * (1.0 - chroma), float2(0.5), resolution - float2(0.5));
+            float2 uvB = clamp(fragCoord + disp * (1.0 + chroma), float2(0.5), resolution - float2(0.5));
+
+            half4 cG = content.eval(uvG);
+            half cR = content.eval(uvR).r;
+            half cB = content.eval(uvB).b;
+            half4 refracted = half4(cR, cG.g, cB, cG.a);
+
+            // Physically derived Fresnel specular rim + subtle inner caustic
+            float rimMask = smoothstep(0.0, 1.5 * dScale, distIn) * (1.0 - smoothstep(1.2 * dScale, 6.0 * dScale, distIn));
+            float fresnel = pow(edgeT, 3.0);
+            float keyLight = clamp(dot(n, normalize(float2(-0.55, -0.83))), 0.0, 1.0);
+            float backLight = clamp(dot(n, normalize(float2(0.55, 0.83))), 0.0, 1.0);
+            float rimGlow = (0.28 + 0.72 * keyLight + 0.35 * backLight) * rimMask * (0.14 + 0.30 * s);
+            float innerCaustic = fresnel * (0.04 + 0.08 * s) * (isDark > 0.5 ? 0.65 : 0.90);
+
+            half3 finalRgb = clamp(refracted.rgb + half3(rimGlow + innerCaustic), 0.0, 1.0);
+            return half4(finalRgb, refracted.a);
+        }
+
+        return base;
+    }
+"""
+
+private const val FROSTED_GLASS_CARD_SURFACE_AGSL = """
+    uniform float2 cardSize;
+    uniform float topRadius;
+    uniform float botRadius;
+    uniform float density;
+    uniform float sensitivity;
+    uniform float isDark;
+
+    float sdRoundRect(float2 p, float2 halfSize, float topR, float botR) {
+        float cr = (p.y < 0.0) ? topR : botR;
+        cr = clamp(cr, 0.0, min(halfSize.x, halfSize.y));
+        float2 d = abs(p) - (halfSize - float2(cr));
+        return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - cr;
+    }
+
+    half4 main(float2 fragCoord) {
+        float2 halfSize = cardSize * 0.5;
+        if (halfSize.x <= 1.0 || halfSize.y <= 1.0) return half4(0.0);
+
+        float2 local = fragCoord - halfSize;
+        float sdf = sdRoundRect(local, halfSize, topRadius, botRadius);
+        if (sdf > 0.0) return half4(0.0);
+
+        float distIn = -sdf;
+        float dScale = max(density, 1.0);
+        float s = clamp(sensitivity, 0.1, 1.0);
+
+        float eps = 1.5;
+        float gx = sdRoundRect(local + float2(eps, 0.0), halfSize, topRadius, botRadius)
+                 - sdRoundRect(local - float2(eps, 0.0), halfSize, topRadius, botRadius);
+        float gy = sdRoundRect(local + float2(0.0, eps), halfSize, topRadius, botRadius)
+                 - sdRoundRect(local - float2(0.0, eps), halfSize, topRadius, botRadius);
+        float2 n = float2(gx, gy);
+        float nLen = length(n);
+        n = (nLen > 0.0001) ? (n / nLen) : float2(0.0, -1.0);
+
+        float bevelW = (10.0 + 14.0 * s) * dScale;
+        float edgeT = 1.0 - smoothstep(0.0, bevelW, distIn);
+        float rimBand = smoothstep(0.0, 1.35 * dScale, distIn) * (1.0 - smoothstep(1.1 * dScale, 4.8 * dScale, distIn));
+
+        float keyLight = clamp(dot(n, normalize(float2(-0.55, -0.83))), 0.0, 1.0);
+        float counterLight = clamp(dot(n, normalize(float2(0.55, 0.83))), 0.0, 1.0);
+
+        // Subtle chromatic dispersion across the bevel normal
+        float spectrumPhase = n.x * 0.65 - n.y * 0.35;
+        half3 prismTint = half3(
+            clamp(1.0 + 0.18 * spectrumPhase, 0.82, 1.0),
+            1.0,
+            clamp(1.0 - 0.18 * spectrumPhase, 0.82, 1.0)
+        );
+
+        float highlightStrength = (0.14 + 0.28 * s) * (0.28 + 0.72 * keyLight) * rimBand;
+        float causticStrength = pow(edgeT, 2.6) * (0.04 + 0.07 * s) * (0.4 + 0.6 * keyLight);
+        float shadowStrength = (isDark > 0.5 ? 0.28 : 0.12) * s * counterLight * rimBand;
+
+        half3 lightColor = prismTint * half(highlightStrength + causticStrength);
+        float outAlpha = clamp(highlightStrength + causticStrength + shadowStrength, 0.0, 0.65);
+        return half4(lightColor, half(outAlpha));
+    }
+"""
+
 fun isAndroid16FrostedGlassSupported(): Boolean =
     Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA
+
+fun isRuntimeShaderRefractionSupported(): Boolean =
+    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
 
 @RequiresApi(Build.VERSION_CODES.BAKLAVA)
 fun createAndroid16FrostedBackdropColorFilter(
@@ -706,16 +864,99 @@ fun createAndroid16FrostedSurfaceXfermode(
 }
 
 /**
+ * Builds an AGSL [RuntimeShader] that draws curved glass bevel & chromatic Fresnel rim
+ * highlights strictly using the rounded-rectangle SDF of an individual card or container.
+ */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+fun createFrostedGlassCardBevelShader(
+    widthPx: Float,
+    heightPx: Float,
+    topRadiusPx: Float,
+    bottomRadiusPx: Float = topRadiusPx,
+    density: Float = 2.625f,
+    sensitivity: Float = 0.50f,
+    isDark: Boolean = true
+): RuntimeShader? {
+    if (widthPx <= 1f || heightPx <= 1f) return null
+    return try {
+        RuntimeShader(FROSTED_GLASS_CARD_SURFACE_AGSL).apply {
+            setFloatUniform("cardSize", widthPx, heightPx)
+            setFloatUniform("topRadius", topRadiusPx.coerceAtLeast(0f))
+            setFloatUniform("botRadius", bottomRadiusPx.coerceAtLeast(0f))
+            setFloatUniform("density", density.coerceAtLeast(1f))
+            setFloatUniform("sensitivity", sensitivity.coerceIn(0.1f, 1.0f))
+            setFloatUniform("isDark", if (isDark) 1f else 0f)
+        }
+    } catch (_: Throwable) {
+        null
+    }
+}
+
+/**
+ * Builds an API 33+ AGSL [AndroidRenderEffect] using [AndroidRenderEffect.createRuntimeShaderEffect]
+ * that genuinely samples and refracts underlying `content` pixels across each active glass card's
+ * rounded edges (`qs_card`, `qqs_carrier_footer`, notification cards) with chromatic RGB dispersion.
+ */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+fun createLiquidGlassRefractionRuntimeEffect(
+    regions: List<QsCardBlurBounds>,
+    viewportWidthPx: Float,
+    viewportHeightPx: Float,
+    density: Float,
+    sensitivity: Float,
+    isDark: Boolean
+): AndroidRenderEffect? {
+    val validRegions = regions.filter { it.isValid }.take(MAX_REFRACTION_REGIONS)
+    if (validRegions.isEmpty() || viewportWidthPx <= 1f || viewportHeightPx <= 1f) return null
+
+    return try {
+        val rectsArray = FloatArray(MAX_REFRACTION_REGIONS * 4)
+        val radiiArray = FloatArray(MAX_REFRACTION_REGIONS * 2)
+        validRegions.forEachIndexed { idx, bounds ->
+            val rBase = idx * 4
+            rectsArray[rBase] = bounds.left
+            rectsArray[rBase + 1] = bounds.top
+            rectsArray[rBase + 2] = bounds.right
+            rectsArray[rBase + 3] = bounds.bottom
+
+            val crBase = idx * 2
+            radiiArray[crBase] = bounds.topCornerRadiusPx.coerceAtLeast(0f)
+            radiiArray[crBase + 1] = bounds.bottomCornerRadiusPx.coerceAtLeast(0f)
+        }
+        val shader = RuntimeShader(LIQUID_GLASS_BACKDROP_REFRACTION_AGSL).apply {
+            setFloatUniform("resolution", viewportWidthPx, viewportHeightPx)
+            setFloatUniform("density", density.coerceAtLeast(1f))
+            setFloatUniform("sensitivity", sensitivity.coerceIn(0.1f, 1.0f))
+            setFloatUniform("isDark", if (isDark) 1f else 0f)
+            setFloatUniform("uRects", rectsArray)
+            setFloatUniform("uRadii", radiiArray)
+            setIntUniform("regionCount", validRegions.size)
+        }
+        AndroidRenderEffect.createRuntimeShaderEffect(shader, "content")
+    } catch (_: Throwable) {
+        null
+    }
+}
+
+/**
  * Builds the GPU RenderEffect pipeline for frosted glass backdrops:
- * - On Android 16+ (API 36 / BAKLAVA): chains [AndroidRenderEffect.createBlurEffect] with Android 16's
- *   AGSL [RuntimeColorFilter] via [AndroidRenderEffect.createColorFilterEffect] for authentic vibrant acrylic glass.
- * - On Android 12–15 (API 31–35): uses [AndroidRenderEffect.createBlurEffect].
+ * - Chains [AndroidRenderEffect.createBlurEffect] with Android 16's AGSL [RuntimeColorFilter]
+ *   on API 36+.
+ * - When [enableGlassRefraction] is true on API 33+ and [refractionRegions] has active glass cards
+ *   with valid viewport size, chains [AndroidRenderEffect.createRuntimeShaderEffect] so underlying
+ *   content is optically refracted and chromatically dispersed along every card boundary.
  */
 fun createFrostedBackdropRenderEffect(
     blurRadiusPx: Float,
     isDark: Boolean,
     blurRadiusDp: Float = DEFAULT_FROSTED_BLUR_RADIUS_DP,
-    transparency: Float = 0.40f
+    transparency: Float = 0.40f,
+    enableGlassRefraction: Boolean = false,
+    glassRefractionSensitivity: Float = 0.50f,
+    refractionRegions: List<QsCardBlurBounds> = emptyList(),
+    viewportWidthPx: Float = 0f,
+    viewportHeightPx: Float = 0f,
+    density: Float = 2.625f
 ): ComposeRenderEffect? {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || blurRadiusPx <= 0.5f) return null
     val baseBlur = try {
@@ -728,7 +969,7 @@ fun createFrostedBackdropRenderEffect(
         return null
     }
 
-    val platformEffect = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
+    var platformEffect = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
         val frostedFilter = createAndroid16FrostedBackdropColorFilter(
             isDark = isDark,
             blurRadiusDp = blurRadiusDp,
@@ -745,6 +986,29 @@ fun createFrostedBackdropRenderEffect(
         }
     } else {
         baseBlur
+    }
+
+    if (enableGlassRefraction &&
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        refractionRegions.isNotEmpty() &&
+        viewportWidthPx > 1f &&
+        viewportHeightPx > 1f
+    ) {
+        val refractionEffect = createLiquidGlassRefractionRuntimeEffect(
+            regions = refractionRegions,
+            viewportWidthPx = viewportWidthPx,
+            viewportHeightPx = viewportHeightPx,
+            density = density,
+            sensitivity = glassRefractionSensitivity,
+            isDark = isDark
+        )
+        if (refractionEffect != null) {
+            platformEffect = try {
+                AndroidRenderEffect.createChainEffect(refractionEffect, platformEffect)
+            } catch (_: Throwable) {
+                platformEffect
+            }
+        }
     }
 
     return try {
@@ -778,7 +1042,8 @@ fun Modifier.frostedGlassSurface(
     baseColor: Color,
     enableBlur: Boolean,
     isDark: Boolean,
-    transparency: Float? = null
+    transparency: Float? = null,
+    cornerRadiusDp: Float = 24f
 ): Modifier = composed {
     val effectiveColor = frostedContainerColor(
         baseColor = baseColor,
@@ -822,18 +1087,22 @@ fun Modifier.frostedGlassSurface(
             }
         }
     }
+    val bevelPaint = remember {
+        Paint().apply {
+            isAntiAlias = true
+        }
+    }
 
     val enableRefraction by PanelPreferences.enableGlassRefraction.collectAsState()
     val refractionSensitivity by PanelPreferences.glassRefractionSensitivity.collectAsState()
+    val density = LocalDensity.current
 
     val sheenStrength = ((1f - resolvedTransparency.coerceIn(0f, 0.95f)) * if (isDark) 0.09f else 0.14f)
         .coerceIn(0.015f, 0.16f)
     val topSheen = Color.White.copy(alpha = sheenStrength)
     val bottomSheen = Color.Transparent
-
-    val refractionAlpha = if (enableRefraction) (0.22f * refractionSensitivity).coerceIn(0.05f, 0.45f) else 0f
-    val refractionHighlight = Color.White.copy(alpha = refractionAlpha)
-    val refractionShadow = Color.Black.copy(alpha = if (isDark) 0.35f * refractionSensitivity else 0.15f * refractionSensitivity)
+    val cornerPx = with(density) { cornerRadiusDp.coerceAtLeast(0f).dp.toPx() }
+    val densityPx = density.density
 
     this
         .background(effectiveColor)
@@ -860,37 +1129,23 @@ fun Modifier.frostedGlassSurface(
                 )
             }
 
-            // Glass edge refraction specular highlight & border inner glow
-            if (enableRefraction && refractionAlpha > 0.01f) {
-                val strokePx = 1.25.dp.toPx()
-                // Top edge bright refractive specular highlight
-                drawLine(
-                    color = refractionHighlight,
-                    start = Offset(strokePx, strokePx),
-                    end = Offset(size.width - strokePx, strokePx),
-                    strokeWidth = strokePx
+            // Real AGSL rounded-rect SDF Fresnel dispersion & bevel shader on API 33+
+            if (enableRefraction && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val bevelShader = createFrostedGlassCardBevelShader(
+                    widthPx = size.width,
+                    heightPx = size.height,
+                    topRadiusPx = cornerPx,
+                    bottomRadiusPx = cornerPx,
+                    density = densityPx,
+                    sensitivity = refractionSensitivity,
+                    isDark = isDark
                 )
-                // Left edge highlight
-                drawLine(
-                    color = refractionHighlight.copy(alpha = refractionAlpha * 0.7f),
-                    start = Offset(strokePx, strokePx),
-                    end = Offset(strokePx, size.height - strokePx),
-                    strokeWidth = strokePx * 0.8f
-                )
-                // Bottom edge refraction shadow
-                drawLine(
-                    color = refractionShadow,
-                    start = Offset(strokePx, size.height - strokePx),
-                    end = Offset(size.width - strokePx, size.height - strokePx),
-                    strokeWidth = strokePx
-                )
-                // Right edge shadow
-                drawLine(
-                    color = refractionShadow.copy(alpha = refractionShadow.alpha * 0.7f),
-                    start = Offset(size.width - strokePx, strokePx),
-                    end = Offset(size.width - strokePx, size.height - strokePx),
-                    strokeWidth = strokePx * 0.8f
-                )
+                if (bevelShader != null) {
+                    bevelPaint.shader = bevelShader
+                    drawIntoCanvas { canvas ->
+                        canvas.nativeCanvas.drawRect(0f, 0f, size.width, size.height, bevelPaint)
+                    }
+                }
             }
         }
 }
@@ -932,15 +1187,119 @@ private data class QsCardBlurRegionsClipShape(
 }
 
 /**
+ * Renders the real captured live display backdrop strictly underneath glass panel & notification
+ * cards in the accessibility overlay, passing the live screen pixels through the AGSL
+ * [createFrostedBackdropRenderEffect] + [LIQUID_GLASS_BACKDROP_REFRACTION_AGSL] shader so
+ * apps, icons, and text behind every glass card optically bend, magnify, and disperse in real time.
+ */
+@Composable
+fun LiveScreenRefractionBackdrop(
+    screenBitmap: Bitmap?,
+    enableBlur: Boolean,
+    enableRefraction: Boolean,
+    refractionSensitivity: Float,
+    blurRadiusDp: Float,
+    transparency: Float,
+    isDark: Boolean,
+    revealAlpha: Float,
+    qsCardBounds: QsCardBlurBounds?,
+    extraBlurRegions: List<QsCardBlurBounds> = emptyList(),
+    hostOffsetX: Float = 0f,
+    hostOffsetY: Float = 0f,
+    modifier: Modifier = Modifier
+) {
+    if (!enableBlur || !enableRefraction || screenBitmap == null || screenBitmap.isRecycled) return
+    val activeRegions = remember(qsCardBounds, extraBlurRegions) {
+        buildList {
+            if (qsCardBounds != null && qsCardBounds.isValid) add(qsCardBounds)
+            extraBlurRegions.forEach { region ->
+                if (region.isValid) add(region)
+            }
+        }
+    }
+    if (activeRegions.isEmpty() || revealAlpha <= 0.01f) return
+
+    val density = LocalDensity.current
+    val effectiveBlurDp = blurRadiusDp.coerceIn(1f, 80f)
+    val effectiveBlurPx = with(density) { effectiveBlurDp.dp.toPx() }
+    var viewportWidthPx by remember { mutableStateOf(screenBitmap.width.toFloat()) }
+    var viewportHeightPx by remember { mutableStateOf(screenBitmap.height.toFloat()) }
+
+    val frostedRefractionEffect = remember(
+        effectiveBlurPx,
+        isDark,
+        effectiveBlurDp,
+        transparency,
+        refractionSensitivity,
+        activeRegions,
+        viewportWidthPx,
+        viewportHeightPx,
+        density.density
+    ) {
+        createFrostedBackdropRenderEffect(
+            blurRadiusPx = effectiveBlurPx,
+            isDark = isDark,
+            blurRadiusDp = effectiveBlurDp,
+            transparency = transparency,
+            enableGlassRefraction = true,
+            glassRefractionSensitivity = refractionSensitivity,
+            refractionRegions = activeRegions,
+            viewportWidthPx = viewportWidthPx,
+            viewportHeightPx = viewportHeightPx,
+            density = density.density
+        )
+    }
+
+    val drawPaint = remember { Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG) }
+    val hostView = LocalView.current
+    val locBuffer = remember { IntArray(2) }
+    var measuredOffsetX by remember { mutableStateOf(0f) }
+    var measuredOffsetY by remember { mutableStateOf(0f) }
+    val resolvedOffsetX = if (hostOffsetX != 0f) hostOffsetX else measuredOffsetX
+    val resolvedOffsetY = if (hostOffsetY != 0f) hostOffsetY else measuredOffsetY
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .onGloballyPositioned { coords ->
+                viewportWidthPx = coords.size.width.toFloat().coerceAtLeast(1f)
+                viewportHeightPx = coords.size.height.toFloat().coerceAtLeast(1f)
+                if (hostOffsetX == 0f && hostOffsetY == 0f && hostView.isAttachedToWindow) {
+                    hostView.getLocationOnScreen(locBuffer)
+                    measuredOffsetX = locBuffer[0].toFloat()
+                    measuredOffsetY = locBuffer[1].toFloat()
+                }
+            }
+            .clip(QsCardBlurRegionsClipShape(activeRegions))
+            .graphicsLayer {
+                alpha = revealAlpha.coerceIn(0f, 1f)
+                clip = true
+                if (frostedRefractionEffect != null) {
+                    renderEffect = frostedRefractionEffect
+                }
+            }
+            .testTag("live_screen_refraction_backdrop")
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawIntoCanvas { canvas ->
+                val dstRect = RectF(
+                    -resolvedOffsetX,
+                    -resolvedOffsetY,
+                    -resolvedOffsetX + screenBitmap.width.toFloat(),
+                    -resolvedOffsetY + screenBitmap.height.toFloat()
+                )
+                canvas.nativeCanvas.drawBitmap(screenBitmap, null, dstRect, drawPaint)
+            }
+        }
+    }
+}
+
+/**
  * Preview-tab underlying home screen/wallpaper backdrop rendered strictly *beneath* [QuickSettingsPanel].
  * When [enableBlur] is true:
- *  - Uses Android 16+ (API 36 / BAKLAVA) [RuntimeColorFilter] chained onto [AndroidRenderEffect.createBlurEffect]
- *    via [AndroidRenderEffect.createColorFilterEffect] (with API 31–35 blur fallback).
- *  - If [blurOnlyBehindQsCard] is false: the entire underlying backdrop blurs.
- *  - If [blurOnlyBehindQsCard] is true: the full screen renders crisp and unblurred, while the
- *    frosted backdrop clipped strictly to [qsCardBounds] and [extraBlurRegions] sits only directly
- *    behind the QS/QQS panel cards (main QS card + QQS carrier footer).
- * The sibling [QuickSettingsPanel] layered on top stays 100% crisp in all modes.
+ *  - Chains [AndroidRenderEffect.createBlurEffect] with Android 16+ [RuntimeColorFilter] and,
+ *    when [enableGlassRefraction] is enabled on API 33+, chains [AndroidRenderEffect.createRuntimeShaderEffect]
+ *    so the underlying preview widgets and icons genuinely refract through every glass card.
  */
 @Composable
 fun FrostedPreviewBackdrop(
@@ -951,8 +1310,15 @@ fun FrostedPreviewBackdrop(
     qsCardBounds: QsCardBlurBounds? = null,
     blurRadiusDp: Float = DEFAULT_FROSTED_BLUR_RADIUS_DP,
     transparency: Float = 0.40f,
-    extraBlurRegions: List<QsCardBlurBounds> = emptyList()
+    extraBlurRegions: List<QsCardBlurBounds> = emptyList(),
+    enableGlassRefraction: Boolean? = null,
+    glassRefractionSensitivity: Float? = null
 ) {
+    val prefRefraction by PanelPreferences.enableGlassRefraction.collectAsState()
+    val prefRefractionSens by PanelPreferences.glassRefractionSensitivity.collectAsState()
+    val resolvedRefraction = enableGlassRefraction ?: prefRefraction
+    val resolvedRefractionSens = glassRefractionSensitivity ?: prefRefractionSens
+
     val activeRegions = remember(qsCardBounds, extraBlurRegions) {
         buildList {
             if (qsCardBounds != null && qsCardBounds.isValid) add(qsCardBounds)
@@ -969,13 +1335,34 @@ fun FrostedPreviewBackdrop(
     val isDark = MaterialTheme.colorScheme.surface.let {
         (0.2126f * it.red + 0.7152f * it.green + 0.0722f * it.blue) < 0.5f
     }
-    val frostedRenderEffect = remember(enableBlur, effectiveBlurPx, isDark, effectiveBlurDp, transparency) {
+    var viewportWidthPx by remember { mutableStateOf(0f) }
+    var viewportHeightPx by remember { mutableStateOf(0f) }
+
+    val frostedRenderEffect = remember(
+        enableBlur,
+        effectiveBlurPx,
+        isDark,
+        effectiveBlurDp,
+        transparency,
+        resolvedRefraction,
+        resolvedRefractionSens,
+        activeRegions,
+        viewportWidthPx,
+        viewportHeightPx,
+        density.density
+    ) {
         if (!enableBlur) null
         else createFrostedBackdropRenderEffect(
             blurRadiusPx = effectiveBlurPx,
             isDark = isDark,
             blurRadiusDp = effectiveBlurDp,
-            transparency = transparency
+            transparency = transparency,
+            enableGlassRefraction = resolvedRefraction,
+            glassRefractionSensitivity = resolvedRefractionSens,
+            refractionRegions = activeRegions,
+            viewportWidthPx = viewportWidthPx,
+            viewportHeightPx = viewportHeightPx,
+            density = density.density
         )
     }
 
@@ -993,6 +1380,10 @@ fun FrostedPreviewBackdrop(
     Box(
         modifier = modifier
             .fillMaxSize()
+            .onGloballyPositioned { coords ->
+                viewportWidthPx = coords.size.width.toFloat()
+                viewportHeightPx = coords.size.height.toFloat()
+            }
             .testTag("frosted_preview_backdrop_root")
     ) {
         // Base underlying wallpaper & dock layer (blurs full-screen when full blur is active, sharp otherwise)
@@ -1006,7 +1397,7 @@ fun FrostedPreviewBackdrop(
             }).testTag("frosted_preview_backdrop_layer")
         )
 
-        // When "Blur Behind QS/QQS Only" is active, overlay the frosted scene clipped strictly to QS/QQS + carrier footer bounds
+        // When "Blur Behind QS/QQS Only" is active, overlay the frosted + refracted scene clipped strictly to QS/QQS + carrier + notification bounds
         if (shouldBlurQsOnly) {
             Box(
                 modifier = Modifier

@@ -68,6 +68,7 @@ import com.example.system.NativeTileManager
 import com.example.system.PrivilegeEngine
 import com.example.system.TileRegistry
 import androidx.compose.runtime.CompositionLocalProvider
+import com.example.ui.overlay.LiveScreenRefractionBackdrop
 import com.example.ui.overlay.LocalOnBlurRegionBoundsChanged
 import com.example.ui.overlay.LocalOnNotificationBlurRegionsChanged
 import com.example.ui.overlay.LocalOnQsCardBoundsChanged
@@ -80,6 +81,7 @@ import com.example.ui.overlay.computeQsBlurWindowPlan
 import com.example.ui.overlay.computeWindowBlurBehindRadiusPx
 import com.example.ui.overlay.isCrossWindowBlurSupported
 import com.example.ui.overlay.rememberCrossWindowBlurSupported
+import com.example.ui.theme.LocalIsDarkTheme
 import com.example.ui.theme.QuickPanelTheme
 
 /**
@@ -261,6 +263,13 @@ class QuickPanelAccessibilityService : AccessibilityService() {
     private val expansionStage = MutableStateFlow(QsExpansionStage.COLLAPSED)
     var isPanelShowing = false
         private set
+    private var isPendingShowOverlay = false
+
+    private val _capturedBackdropBitmap = MutableStateFlow<android.graphics.Bitmap?>(null)
+    val capturedBackdropBitmap: StateFlow<android.graphics.Bitmap?> = _capturedBackdropBitmap.asStateFlow()
+    private var lastBackdropCaptureTimeMs = 0L
+    private var isBackdropCaptureInFlight = false
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     val pullDownOffset = MutableStateFlow<Float?>(null)
 
@@ -270,6 +279,78 @@ class QuickPanelAccessibilityService : AccessibilityService() {
 
     fun onPullDownReleased(finalDiffY: Float, isFlick: Boolean) {
         pullDownOffset.value = null
+    }
+
+    fun preCaptureScreenBackdropIfNeeded(onComplete: (() -> Unit)? = null) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            onComplete?.invoke()
+            return
+        }
+        if (isPanelShowing || !PanelPreferences.enableContainerBlur.value || !PanelPreferences.enableGlassRefraction.value) {
+            onComplete?.invoke()
+            return
+        }
+        val now = android.os.SystemClock.uptimeMillis()
+        if (isBackdropCaptureInFlight) {
+            onComplete?.invoke()
+            return
+        }
+        val existing = _capturedBackdropBitmap.value
+        if (existing != null && !existing.isRecycled && (now - lastBackdropCaptureTimeMs) < 350L) {
+            onComplete?.invoke()
+            return
+        }
+        isBackdropCaptureInFlight = true
+        try {
+            takeScreenshot(
+                Display.DEFAULT_DISPLAY,
+                mainExecutor,
+                object : TakeScreenshotCallback {
+                    override fun onSuccess(screenshot: ScreenshotResult) {
+                        isBackdropCaptureInFlight = false
+                        lastBackdropCaptureTimeMs = android.os.SystemClock.uptimeMillis()
+                        val hb = screenshot.hardwareBuffer
+                        val wrapped = try {
+                            android.graphics.Bitmap.wrapHardwareBuffer(hb, screenshot.colorSpace)
+                        } catch (_: Throwable) {
+                            null
+                        } finally {
+                            try {
+                                hb.close()
+                            } catch (_: Throwable) {}
+                        }
+                        if (wrapped != null && !isPanelShowing) {
+                            val previous = _capturedBackdropBitmap.value
+                            _capturedBackdropBitmap.value = wrapped
+                            if (previous != null && previous !== wrapped && !previous.isRecycled) {
+                                previous.recycle()
+                            }
+                        } else {
+                            wrapped?.recycle()
+                        }
+                        onComplete?.invoke()
+                    }
+
+                    override fun onFailure(errorCode: Int) {
+                        isBackdropCaptureInFlight = false
+                        onComplete?.invoke()
+                    }
+                }
+            )
+        } catch (_: Throwable) {
+            isBackdropCaptureInFlight = false
+            onComplete?.invoke()
+        }
+    }
+
+    private fun clearCapturedBackdropBitmap() {
+        val current = _capturedBackdropBitmap.value
+        _capturedBackdropBitmap.value = null
+        if (current != null && !current.isRecycled) {
+            try {
+                current.recycle()
+            } catch (_: Throwable) {}
+        }
     }
 
     var isInterceptionEnabled = true
@@ -1392,6 +1473,43 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         if (isLockedOrUnlocking()) {
             return
         }
+        if ((isPanelShowing && overlayComposeView != null) || isPendingShowOverlay) {
+            return
+        }
+
+        val now = android.os.SystemClock.uptimeMillis()
+        val existing = _capturedBackdropBitmap.value
+        val hasFreshBackdrop = existing != null && !existing.isRecycled && (now - lastBackdropCaptureTimeMs) < 650L
+        val shouldCaptureFirst = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            PanelPreferences.enableContainerBlur.value &&
+            PanelPreferences.enableGlassRefraction.value &&
+            !hasFreshBackdrop &&
+            !isBackdropCaptureInFlight
+
+        if (shouldCaptureFirst) {
+            isPendingShowOverlay = true
+            val launched = java.util.concurrent.atomic.AtomicBoolean(false)
+            val finishLaunch = Runnable {
+                if (launched.compareAndSet(false, true)) {
+                    isPendingShowOverlay = false
+                    showOverlayPanelInternal(initialStage)
+                }
+            }
+            mainHandler.postDelayed(finishLaunch, 65L)
+            preCaptureScreenBackdropIfNeeded {
+                mainHandler.removeCallbacks(finishLaunch)
+                finishLaunch.run()
+            }
+            return
+        }
+
+        showOverlayPanelInternal(initialStage)
+    }
+
+    private fun showOverlayPanelInternal(initialStage: QsExpansionStage) {
+        if (isLockedOrUnlocking()) {
+            return
+        }
         if (isPanelShowing && overlayComposeView != null) {
             return
         }
@@ -1494,6 +1612,11 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                     val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
                     val blurOnlyBehindQsCard by PanelPreferences.blurOnlyBehindQsCard.collectAsState()
                     val containerBlurRadiusDp by PanelPreferences.containerBlurRadiusDp.collectAsState()
+                    val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsState()
+                    val enableGlassRefraction by PanelPreferences.enableGlassRefraction.collectAsState()
+                    val glassRefractionSensitivity by PanelPreferences.glassRefractionSensitivity.collectAsState()
+                    val capturedBackdrop by capturedBackdropBitmap.collectAsState()
+                    val isDarkOverlay = LocalIsDarkTheme.current
                     val crossWindowBlurSupported = rememberCrossWindowBlurSupported()
                     val speedFactor = animSpeedScale.coerceAtLeast(0.01f)
                     val targetBackdropAlpha = when {
@@ -1760,17 +1883,43 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                     val alarmVol by nativeTileManager.alarmVolume.collectAsState()
                     val notifVol by nativeTileManager.notificationVolume.collectAsState()
 
-                    // Stationary Full-Screen Dim Backdrop (Never moves up or down when panel/notifications move)
+                    val allExtraRefractionRegions = remember(qsBlurRegions, notifBlurRegions) {
+                        val extraCardRegions = qsBlurRegions
+                            .filterKeys { it != "qs_card" }
+                            .values
+                            .filter { it.isValid }
+                        extraCardRegions + notifBlurRegions.filter { it.isValid }
+                    }
+                    val revealFraction = (backdropAlpha.value / targetBackdropAlpha.coerceAtLeast(0.01f)).coerceIn(0f, 1f)
+
+                    // Stationary Full-Screen Container: Live Screen AGSL Refraction Backdrop + Dim Scrim + Interactive Panel
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color.Black.copy(alpha = backdropAlpha.value))
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
                                 onClick = { startDismiss() }
                             )
                     ) {
+                        LiveScreenRefractionBackdrop(
+                            screenBitmap = capturedBackdrop,
+                            enableBlur = enableContainerBlur,
+                            enableRefraction = enableGlassRefraction,
+                            refractionSensitivity = glassRefractionSensitivity,
+                            blurRadiusDp = containerBlurRadiusDp,
+                            transparency = containerBlurTransparency,
+                            isDark = isDarkOverlay,
+                            revealAlpha = revealFraction,
+                            qsCardBounds = qsBlurRegions["qs_card"],
+                            extraBlurRegions = allExtraRefractionRegions,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = backdropAlpha.value))
+                        )
                         // Animated Panel Content Container (Slides/springs on open and glide-up on close; panel & notifications stay freely movable)
                         Box(
                             modifier = Modifier
@@ -1917,8 +2066,10 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         lifecycleOwner?.onDestroy()
         lifecycleOwner = null
         isPanelShowing = false
+        isPendingShowOverlay = false
         expansionStage.value = QsExpansionStage.COLLAPSED
         dismissAnimatedCallback = null
+        clearCapturedBackdropBitmap()
         com.example.system.ComplicationDataHub.closeMicroWindow()
     }
 
@@ -2027,6 +2178,7 @@ class AccessibilityStatusTriggerView(context: Context) : View(context) {
                 startY = event.rawY
                 startX = event.rawX
                 isDragging = true
+                QuickPanelAccessibilityService.instance?.preCaptureScreenBackdropIfNeeded()
                 QuickPanelAccessibilityService.instance?.notifyUserDragging(true)
                 setPressedState(true)
                 QuickPanelAccessibilityService.collapseStockNotificationShade()

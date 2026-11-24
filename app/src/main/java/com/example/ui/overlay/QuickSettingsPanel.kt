@@ -7979,7 +7979,7 @@ fun NotificationsCard(
     val glassRefractionSensitivity by PanelPreferences.glassRefractionSensitivity.collectAsState()
     val onNotificationBlurRegionsChanged = LocalOnNotificationBlurRegionsChanged.current
     val applyNotifSurfaceBlur = enableContainerBlur && enableNotificationBlur
-    val reportPerNotifBlur = applyNotifSurfaceBlur && blurOnlyBehindQsCard && onNotificationBlurRegionsChanged != null
+    val reportPerNotifBlur = applyNotifSurfaceBlur && (blurOnlyBehindQsCard || enableGlassRefraction) && onNotificationBlurRegionsChanged != null
     val resolvedNotifBgColor = frostedContainerColor(
         baseColor = notifBgColor,
         enableBlur = applyNotifSurfaceBlur,
