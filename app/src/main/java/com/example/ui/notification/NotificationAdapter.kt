@@ -494,7 +494,8 @@ class NotificationAdapter(
                 )
             }
 
-            val enableContainerBlur = PanelPreferences.enableContainerBlur.value && PanelPreferences.enableNotificationBlur.value
+            val enableContainerBlur = PanelPreferences.enableContainerBlur.value
+            val enableNotificationBlur = PanelPreferences.enableNotificationBlur.value
             val containerBlurTransparency = PanelPreferences.containerBlurTransparency.value
             val frostedAlpha = 1f - containerBlurTransparency.coerceIn(0f, 0.95f)
 
@@ -542,7 +543,7 @@ class NotificationAdapter(
                 customAlpha = panelShadowAlpha,
                 customOffsetY = panelShadowOffsetY,
                 enableTopRimBackground = PanelPreferences.enablePanelTopRim.value && !isKitKatStyle,
-                enableFrostedGlass = enableContainerBlur,
+                enableFrostedGlass = enableContainerBlur && enableNotificationBlur,
                 frostedTransparency = containerBlurTransparency,
                 enableGlassRefraction = PanelPreferences.enableGlassRefraction.value,
                 glassRefractionSensitivity = PanelPreferences.glassRefractionSensitivity.value
@@ -866,7 +867,8 @@ class NotificationAdapter(
             val fallbackBg = customCardBackgroundColor ?: if (isDark) Color.parseColor("#25262B") else Color.parseColor("#EAEBEF")
             val fallbackAccent = customPrimaryColor ?: MonetThemeHelper.getPrimaryAccent(context, isDark)
 
-            val enableContainerBlur = PanelPreferences.enableContainerBlur.value && PanelPreferences.enableNotificationBlur.value
+            val enableContainerBlur = PanelPreferences.enableContainerBlur.value
+            val enableNotificationBlur = PanelPreferences.enableNotificationBlur.value
             val containerBlurTransparency = PanelPreferences.containerBlurTransparency.value
             val frostedAlpha = 1f - containerBlurTransparency.coerceIn(0f, 0.95f)
 
@@ -951,7 +953,7 @@ class NotificationAdapter(
                 customAlpha = panelShadowAlpha,
                 customOffsetY = panelShadowOffsetY,
                 enableTopRimBackground = PanelPreferences.enablePanelTopRim.value,
-                enableFrostedGlass = enableContainerBlur,
+                enableFrostedGlass = enableContainerBlur && enableNotificationBlur,
                 frostedTransparency = containerBlurTransparency,
                 enableGlassRefraction = PanelPreferences.enableGlassRefraction.value,
                 glassRefractionSensitivity = PanelPreferences.glassRefractionSensitivity.value
@@ -1305,7 +1307,8 @@ class NotificationAdapter(
                 )
             }
 
-            val enableContainerBlur = PanelPreferences.enableContainerBlur.value && PanelPreferences.enableNotificationBlur.value
+            val enableContainerBlur = PanelPreferences.enableContainerBlur.value
+            val enableNotificationBlur = PanelPreferences.enableNotificationBlur.value
             val containerBlurTransparency = PanelPreferences.containerBlurTransparency.value
             val frostedAlpha = 1f - containerBlurTransparency.coerceIn(0f, 0.95f)
 
@@ -1358,7 +1361,7 @@ class NotificationAdapter(
                 customAlpha = panelShadowAlpha,
                 customOffsetY = panelShadowOffsetY,
                 enableTopRimBackground = PanelPreferences.enablePanelTopRim.value,
-                enableFrostedGlass = enableContainerBlur,
+                enableFrostedGlass = enableContainerBlur && enableNotificationBlur,
                 frostedTransparency = containerBlurTransparency,
                 enableGlassRefraction = PanelPreferences.enableGlassRefraction.value,
                 glassRefractionSensitivity = PanelPreferences.glassRefractionSensitivity.value
@@ -1507,8 +1510,8 @@ class NotificationAdapter(
                 )
             }
 
-            val enableContainerBlur = com.example.data.PanelPreferences.enableContainerBlur.value &&
-                com.example.data.PanelPreferences.enableNotificationBlur.value
+            val enableContainerBlur = com.example.data.PanelPreferences.enableContainerBlur.value
+            val enableNotificationBlur = com.example.data.PanelPreferences.enableNotificationBlur.value
             val containerBlurTransparency = com.example.data.PanelPreferences.containerBlurTransparency.value
             val frostedAlpha = 1f - containerBlurTransparency.coerceIn(0f, 0.95f)
 
@@ -1555,7 +1558,7 @@ class NotificationAdapter(
                 customAlpha = panelShadowAlpha,
                 customOffsetY = panelShadowOffsetY,
                 enableTopRimBackground = com.example.data.PanelPreferences.enablePanelTopRim.value && !isKitKatStyle,
-                enableFrostedGlass = enableContainerBlur,
+                enableFrostedGlass = enableContainerBlur && enableNotificationBlur,
                 frostedTransparency = containerBlurTransparency,
                 enableGlassRefraction = com.example.data.PanelPreferences.enableGlassRefraction.value,
                 glassRefractionSensitivity = com.example.data.PanelPreferences.glassRefractionSensitivity.value

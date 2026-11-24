@@ -7982,7 +7982,7 @@ fun NotificationsCard(
     val reportPerNotifBlur = applyNotifSurfaceBlur && (blurOnlyBehindQsCard || enableGlassRefraction) && onNotificationBlurRegionsChanged != null
     val resolvedNotifBgColor = frostedContainerColor(
         baseColor = notifBgColor,
-        enableBlur = applyNotifSurfaceBlur,
+        enableBlur = enableContainerBlur,
         isDark = isDark,
         transparency = containerBlurTransparency
     )
@@ -8041,7 +8041,7 @@ fun NotificationsCard(
                     isPermissionGranted = isPermissionGranted,
                     isDark = isDark,
                     primaryColor = primaryColor,
-                    panelCardBackgroundColor = if (applyNotifSurfaceBlur) resolvedNotifBgColor.toArgb() else notifBgColorInt,
+                    panelCardBackgroundColor = if (enableContainerBlur) resolvedNotifBgColor.toArgb() else notifBgColorInt,
                     mediaSessions = activeMediaSessions
                 )
             },
@@ -8202,7 +8202,7 @@ fun NotificationItemRow(
             ContainerCard(
                 shape = effectiveShape,
                 containerColor = notifContainerColor,
-                enableBlurOverride = applyNotifBlur,
+                enableBlurOverride = enableContainerBlur,
                 onClick = onClick,
                 onLongClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -8216,7 +8216,7 @@ fun NotificationItemRow(
                         clip = false
                     }
                     .then(
-                        if (isAndroidOreoStyle && !applyNotifBlur) {
+                        if (isAndroidOreoStyle && !enableContainerBlur) {
                             Modifier.drawBehind {
                                 val strokeWidth = 1.dp.toPx()
                                 val lineColor = if (isDark) Color.White.copy(alpha = 0.2f) else Color.Black.copy(alpha = 0.2f)

@@ -744,7 +744,7 @@ class NotificationListView @JvmOverloads constructor(
         lastCardCornerRadiusPx = cardRadius
         val rawContainerBlur = PanelPreferences.enableContainerBlur.value
         val enableNotificationBlur = PanelPreferences.enableNotificationBlur.value
-        val enableContainerBlur = rawContainerBlur && enableNotificationBlur
+        val enableContainerBlur = rawContainerBlur
         val containerBlurTransparency = PanelPreferences.containerBlurTransparency.value
         val frostedAlpha = 1f - containerBlurTransparency.coerceIn(0f, 0.95f)
         val rawCardBg = panelCardBackgroundColor ?: MonetThemeHelper.getCardBackground(context, isDark)
@@ -766,7 +766,7 @@ class NotificationListView @JvmOverloads constructor(
             customAlpha = panelShadowAlpha,
             customOffsetY = shadowOffsetY,
             enableTopRimBackground = enablePanelTopRim,
-            enableFrostedGlass = enableContainerBlur,
+            enableFrostedGlass = rawContainerBlur && enableNotificationBlur,
             frostedTransparency = containerBlurTransparency,
             enableGlassRefraction = enableGlassRefraction,
             glassRefractionSensitivity = glassRefractionSensitivity
@@ -814,7 +814,7 @@ class NotificationListView @JvmOverloads constructor(
                 customAlpha = panelShadowAlpha,
                 customOffsetY = shadowOffsetY,
                 enableTopRimBackground = enablePanelTopRim,
-                enableFrostedGlass = enableContainerBlur,
+                enableFrostedGlass = rawContainerBlur && enableNotificationBlur,
                 frostedTransparency = containerBlurTransparency,
                 enableGlassRefraction = enableGlassRefraction,
                 glassRefractionSensitivity = glassRefractionSensitivity

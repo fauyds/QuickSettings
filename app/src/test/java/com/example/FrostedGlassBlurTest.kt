@@ -321,12 +321,21 @@ class FrostedGlassBlurTest {
         }
         composeTestRule.waitForIdle()
 
+        // When container blur is disabled, frosted_glass_qs_only_toggle is hidden
+        composeTestRule.onNodeWithTag("frosted_glass_qs_only_toggle").assertDoesNotExist()
+
+        // Enable frosted glass blur so frosted_glass_qs_only_toggle appears
+        composeTestRule.onNodeWithTag("frosted_glass_toggle")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+
         composeTestRule.onNodeWithTag("frosted_glass_qs_only_toggle")
             .performScrollTo()
             .performClick()
         composeTestRule.waitForIdle()
         assertTrue(PanelPreferences.blurOnlyBehindQsCard.value)
-        assertFalse(PanelPreferences.enableContainerBlur.value)
+        assertTrue(PanelPreferences.enableContainerBlur.value)
     }
 
     @Test
@@ -591,6 +600,12 @@ class FrostedGlassBlurTest {
 
         // Toggle frosted glass blur on so the frosted card options expand
         composeTestRule.onNodeWithTag("frosted_glass_toggle")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        // Toggle blurOnlyBehindQsCard on so notification & glass edge refraction toggles expand
+        composeTestRule.onNodeWithTag("frosted_glass_qs_only_toggle")
             .performScrollTo()
             .performClick()
         composeTestRule.waitForIdle()
@@ -888,12 +903,26 @@ class FrostedGlassBlurTest {
 
         assertFalse(PanelPreferences.enableNotificationBlur.value)
 
+        // When container blur is disabled, notification_card_blur_toggle is hidden
+        composeTestRule.onNodeWithTag("notification_card_blur_toggle").assertDoesNotExist()
+
+        // Enable frosted glass blur and QS-only blur to display notification blur toggle
+        composeTestRule.onNodeWithTag("frosted_glass_toggle")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("frosted_glass_qs_only_toggle")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+
         composeTestRule.onNodeWithTag("notification_card_blur_toggle")
             .performScrollTo()
             .performClick()
         composeTestRule.waitForIdle()
         assertTrue(PanelPreferences.enableNotificationBlur.value)
-        assertFalse(PanelPreferences.enableContainerBlur.value)
+        assertTrue(PanelPreferences.enableContainerBlur.value)
 
         composeTestRule.onNodeWithTag("notification_card_blur_toggle")
             .performScrollTo()
@@ -1235,5 +1264,57 @@ class FrostedGlassBlurTest {
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("frosted_preview_backdrop_root").assertIsDisplayed()
         composeTestRule.onNodeWithTag("frosted_preview_backdrop_layer").assertIsDisplayed()
+    }
+
+    @Test
+    fun `Frosted glass sub-toggles hide when master blur is disabled and appear conditionally`() {
+        PanelPreferences.setEnableContainerBlur(context, false)
+        PanelPreferences.setBlurOnlyBehindQsCard(context, false)
+        PanelPreferences.setEnableNotificationBlur(context, false)
+        PanelPreferences.setEnableGlassRefraction(context, false)
+
+        composeTestRule.setContent {
+            QuickPanelTheme(darkTheme = true) {
+                androidx.compose.foundation.layout.Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
+                    com.example.ui.customizer.QsDesignSection()
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // 1. When Enable Frosted Glass Blur is OFF, all 3 sub-toggles MUST BE HIDDEN
+        composeTestRule.onNodeWithTag("frosted_glass_qs_only_toggle").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("notification_card_blur_toggle").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("glass_refraction_toggle").assertDoesNotExist()
+
+        // 2. Enable Frosted Glass Blur -> Blur Behind QS/QQS Only toggle appears
+        composeTestRule.onNodeWithTag("frosted_glass_toggle")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("frosted_glass_qs_only_toggle")
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag("notification_card_blur_toggle").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("glass_refraction_toggle").assertDoesNotExist()
+
+        // 3. Enable Blur Behind QS/QQS Only -> Notification Card Blur & Glass Edge Refraction appear
+        composeTestRule.onNodeWithTag("frosted_glass_qs_only_toggle")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("notification_card_blur_toggle")
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag("glass_refraction_toggle")
+            .performScrollTo()
+            .assertIsDisplayed()
+
+        // 4. Verify notification card background is transparent when container blur is ON
+        assertTrue(PanelPreferences.enableContainerBlur.value)
     }
 }
