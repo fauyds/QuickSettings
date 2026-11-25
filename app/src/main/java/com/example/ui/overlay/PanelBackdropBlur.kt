@@ -662,82 +662,80 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
     uniform float2 uRadii[18];
     uniform int regionCount;
 
-    float resolvedRadius(float2 p, float2 halfSize, float topR, float botR) {
+    float smootherstep(float e0, float e1, float x) {
+        float t = clamp((x - e0) / max(e1 - e0, 0.0001), 0.0, 1.0);
+        return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+    }
+
+    float sminC2(float a, float b, float k) {
+        float safeK = max(k, 0.0001);
+        float h = max(safeK - abs(a - b), 0.0) / safeK;
+        return min(a, b) - (h * h * h) * (safeK * 0.16666667);
+    }
+
+    float resolvedRadius(float2 p, float2 halfSize, float topR, float botR, float dScale) {
         float maxR = min(halfSize.x, halfSize.y);
         float tR = clamp(topR, 0.0, maxR);
         float bR = clamp(botR, 0.0, maxR);
-        float yBlend = clamp(maxR * 0.15, 1.0, 16.0);
-        return mix(tR, bR, smoothstep(-yBlend, yBlend, p.y));
+        float yBlend = clamp(halfSize.y * 0.35, 4.0 * dScale, 28.0 * dScale);
+        return mix(tR, bR, smootherstep(-yBlend, yBlend, p.y));
     }
 
-    float sdRoundRect(float2 p, float2 halfSize, float topR, float botR) {
-        float cr = resolvedRadius(p, halfSize, topR, botR);
+    float sdRoundRect(float2 p, float2 halfSize, float topR, float botR, float dScale) {
+        float cr = resolvedRadius(p, halfSize, topR, botR, dScale);
         float2 d = abs(p) - (halfSize - float2(cr));
         return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - cr;
     }
 
-    float smoothInnerDist(float2 local, float2 halfSize, float topR, float botR) {
-        float cr = resolvedRadius(local, halfSize, topR, botR);
-        float2 d = abs(local) - (halfSize - float2(cr));
-        if (d.x > 0.0 && d.y > 0.0) {
-            return cr - length(d);
-        } else if (d.x > 0.0) {
-            return cr - d.x;
-        } else if (d.y > 0.0) {
-            return cr - d.y;
-        }
-        float a = max(-d.x, 0.0);
-        float b = max(-d.y, 0.0);
-        float coreDist = (a * b) / sqrt(a * a + b * b + 0.0001);
-        return cr + coreDist;
-    }
-
-    float2 smoothRoundRectNormal(
+    float smoothLensDist(
         float2 local,
         float2 halfSize,
         float topR,
         float botR,
-        float distIn,
         float bevelW,
         float dScale
     ) {
-        float cr = resolvedRadius(local, halfSize, topR, botR);
-        float maxR = min(halfSize.x, halfSize.y) * 0.9;
-        float minInnerR = min(maxR, max(cr, bevelW * 0.55));
-        float effCr = mix(cr, minInnerR, smoothstep(0.0, max(bevelW * 0.5, 1.0), max(distIn, 0.0)));
+        float cr = resolvedRadius(local, halfSize, topR, botR, dScale);
+        float dGeom = -sdRoundRect(local, halfSize, topR, botR, dScale);
 
-        float2 d = abs(local) - (halfSize - float2(effCr));
-        float2 sgn = float2(local.x >= 0.0 ? 1.0 : -1.0, local.y >= 0.0 ? 1.0 : -1.0);
-        float2 nLocal;
-        if (d.x > 0.0 && d.y > 0.0) {
-            float lenD = length(d);
-            nLocal = (lenD > 0.001) ? (d / lenD) : float2(0.70710678, 0.70710678);
-        } else if (d.x > 0.0) {
-            nLocal = float2(1.0, 0.0);
-        } else if (d.y > 0.0) {
-            nLocal = float2(0.0, 1.0);
-        } else {
-            float a = max(-d.x, 0.0);
-            float b = max(-d.y, 0.0);
-            float sumAB = a + b;
-            float t = (sumAB > 0.0001) ? (b / sumAB) : 0.5;
-            float angle = (1.0 - t) * 1.57079633;
-            nLocal = float2(cos(angle), sin(angle));
-        }
+        float cx = min(halfSize.x * 0.12, 16.0 * dScale);
+        float cy = min(halfSize.y * 0.12, 16.0 * dScale);
+        float sx = sqrt(halfSize.x * halfSize.x + cx * cx) - sqrt(local.x * local.x + cx * cx);
+        float sy = sqrt(halfSize.y * halfSize.y + cy * cy) - sqrt(local.y * local.y + cy * cy);
 
-        float2 outN = sgn * nLocal;
-        float tx = smoothstep(0.0, max(min(halfSize.x * 0.35, 12.0 * dScale), 1.0), abs(local.x));
-        float ty = smoothstep(0.0, max(min(halfSize.y * 0.35, 12.0 * dScale), 1.0), abs(local.y));
-        outN = float2(outN.x * tx, outN.y * ty);
-        float nLen = length(outN);
-        return (nLen > 0.0001) ? (outN / nLen) : float2(0.0, -1.0);
+        float maxHalf = min(halfSize.x, halfSize.y);
+        float kSmooth = clamp(max(cr * 1.15, bevelW * 0.78), 4.0, maxHalf * 0.92);
+        float wallDist = sminC2(sx, sy, kSmooth);
+
+        float blendStart = min(cr * 0.30, bevelW * 0.22);
+        float blendEnd = max(blendStart + 4.0 * dScale, bevelW * 0.72);
+        float tBlend = smootherstep(blendStart, blendEnd, dGeom);
+        return mix(dGeom, wallDist, tBlend);
+    }
+
+    float2 smoothLensNormal(
+        float2 local,
+        float2 halfSize,
+        float topR,
+        float botR,
+        float bevelW,
+        float dScale
+    ) {
+        float eps = clamp(1.75 * dScale, 1.5, 8.0);
+        float gx = smoothLensDist(local + float2(eps, 0.0), halfSize, topR, botR, bevelW, dScale)
+                 - smoothLensDist(local - float2(eps, 0.0), halfSize, topR, botR, bevelW, dScale);
+        float gy = smoothLensDist(local + float2(0.0, eps), halfSize, topR, botR, bevelW, dScale)
+                 - smoothLensDist(local - float2(0.0, eps), halfSize, topR, botR, bevelW, dScale);
+        float2 grad = float2(-gx, -gy);
+        float softFloor = 0.35 * eps;
+        return grad * inversesqrt(dot(grad, grad) + softFloor * softFloor);
     }
 
     half4 main(float2 fragCoord) {
         half4 base = content.eval(fragCoord);
         float s = clamp(sensitivity, 0.1, 1.0);
         float dScale = max(density, 1.0);
-        float bevelW = (14.0 + 22.0 * s) * dScale;
+        float bevelW = (16.0 + 26.0 * s) * dScale;
 
         for (int i = 0; i < 18; i++) {
             if (i >= regionCount) break;
@@ -752,41 +750,52 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
             float2 local = fragCoord - center;
             float topR = uRadii[i].x;
             float botR = uRadii[i].y;
-            float sdf = sdRoundRect(local, halfSize, topR, botR);
+            float sdf = sdRoundRect(local, halfSize, topR, botR, dScale);
             if (sdf > 0.0) continue;
 
-            // Smooth C1/C-infinity inward distance & singularity-free analytical normal
-            float distIn = smoothInnerDist(local, halfSize, topR, botR);
+            // C2-continuous inward lens distance & singularity-free gradient normal
+            float distIn = max(smoothLensDist(local, halfSize, topR, botR, bevelW, dScale), 0.0);
             float rimDistIn = -sdf;
-            float2 n = smoothRoundRectNormal(local, halfSize, topR, botR, distIn, bevelW, dScale);
+            float2 n = smoothLensNormal(local, halfSize, topR, botR, bevelW, dScale);
 
-            // Optical curved bevel chamfer + subtle peripheral pillow lens warp
-            float edgeT = 1.0 - smoothstep(0.0, bevelW, distIn);
-            float bevelMag = pow(edgeT, 1.45) * (14.0 + 36.0 * s) * dScale;
+            // Quintic C2 bevel chamfer + soft peripheral dome warp
+            float edgeT = 1.0 - smootherstep(0.0, bevelW, distIn);
+            float bevelMag = (edgeT * edgeT * mix(0.55, 1.0, edgeT)) * (14.0 + 34.0 * s) * dScale;
             float2 normLocal = local / max(halfSize, float2(1.0));
-            float radialWeight = smoothstep(0.25, 1.0, length(normLocal)) * (1.0 - smoothstep(bevelW, bevelW * 3.0, distIn));
+            float radialWeight = smootherstep(0.18, 1.0, length(normLocal)) * (1.0 - smootherstep(bevelW * 0.5, bevelW * 3.2, distIn));
             float domeMag = radialWeight * (3.5 + 8.5 * s) * dScale;
 
             float2 disp = -n * (bevelMag + domeMag);
 
-            // Chromatic dispersion: Red, Green, and Blue wavelengths bend at slightly different indices
-            float chroma = (0.12 + 0.16 * s) * edgeT;
-            float2 uvG = clamp(fragCoord + disp, float2(0.5), resolution - float2(0.5));
-            float2 uvR = clamp(fragCoord + disp * (1.0 - chroma), float2(0.5), resolution - float2(0.5));
-            float2 uvB = clamp(fragCoord + disp * (1.0 + chroma), float2(0.5), resolution - float2(0.5));
+            // Smooth 5-tap chromatic dispersion across RGB wavelengths
+            float chroma = (0.11 + 0.15 * s) * edgeT;
+            float2 minUv = float2(0.5);
+            float2 maxUv = resolution - float2(0.5);
+            float2 uvR  = clamp(fragCoord + disp * (1.0 - chroma), minUv, maxUv);
+            float2 uvRG = clamp(fragCoord + disp * (1.0 - 0.45 * chroma), minUv, maxUv);
+            float2 uvG  = clamp(fragCoord + disp, minUv, maxUv);
+            float2 uvGB = clamp(fragCoord + disp * (1.0 + 0.45 * chroma), minUv, maxUv);
+            float2 uvB  = clamp(fragCoord + disp * (1.0 + chroma), minUv, maxUv);
 
-            half4 cG = content.eval(uvG);
-            half cR = content.eval(uvR).r;
-            half cB = content.eval(uvB).b;
-            half4 refracted = half4(cR, cG.g, cB, cG.a);
+            half4 sR  = content.eval(uvR);
+            half4 sRG = content.eval(uvRG);
+            half4 sG  = content.eval(uvG);
+            half4 sGB = content.eval(uvGB);
+            half4 sB  = content.eval(uvB);
 
-            // Physically derived Fresnel specular rim + subtle inner caustic
-            float rimMask = smoothstep(0.0, 1.5 * dScale, rimDistIn) * (1.0 - smoothstep(1.2 * dScale, 6.0 * dScale, rimDistIn));
-            float fresnel = pow(edgeT, 3.0);
+            half cR = mix(sR.r, sRG.r, half(0.32));
+            half cG = mix(sG.g, (sRG.g + sGB.g) * half(0.5), half(0.35));
+            half cB = mix(sB.b, sGB.b, half(0.32));
+            half cA = max(sG.a, max(sR.a, sB.a));
+            half4 refracted = half4(cR, cG, cB, cA);
+
+            // Quintic Fresnel specular rim + organic inner caustic
+            float rimMask = smootherstep(0.0, 1.6 * dScale, rimDistIn) * (1.0 - smootherstep(1.2 * dScale, 6.8 * dScale, rimDistIn));
+            float fresnel = edgeT * edgeT * edgeT;
             float keyLight = clamp(dot(n, normalize(float2(-0.55, -0.83))), 0.0, 1.0);
             float backLight = clamp(dot(n, normalize(float2(0.55, 0.83))), 0.0, 1.0);
-            float rimGlow = (0.28 + 0.72 * keyLight + 0.35 * backLight) * rimMask * (0.14 + 0.30 * s);
-            float innerCaustic = fresnel * (0.04 + 0.08 * s) * (isDark > 0.5 ? 0.65 : 0.90);
+            float rimGlow = (0.28 + 0.72 * keyLight + 0.35 * backLight) * rimMask * (0.14 + 0.28 * s);
+            float innerCaustic = fresnel * (0.035 + 0.075 * s) * (0.55 + 0.45 * keyLight) * (isDark > 0.5 ? 0.65 : 0.90);
 
             half3 finalRgb = clamp(refracted.rgb + half3(rimGlow + innerCaustic), 0.0, 1.0);
             return half4(finalRgb, refracted.a);
@@ -804,95 +813,93 @@ private const val FROSTED_GLASS_CARD_SURFACE_AGSL = """
     uniform float sensitivity;
     uniform float isDark;
 
-    float resolvedRadius(float2 p, float2 halfSize, float topR, float botR) {
+    float smootherstep(float e0, float e1, float x) {
+        float t = clamp((x - e0) / max(e1 - e0, 0.0001), 0.0, 1.0);
+        return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+    }
+
+    float sminC2(float a, float b, float k) {
+        float safeK = max(k, 0.0001);
+        float h = max(safeK - abs(a - b), 0.0) / safeK;
+        return min(a, b) - (h * h * h) * (safeK * 0.16666667);
+    }
+
+    float resolvedRadius(float2 p, float2 halfSize, float topR, float botR, float dScale) {
         float maxR = min(halfSize.x, halfSize.y);
         float tR = clamp(topR, 0.0, maxR);
         float bR = clamp(botR, 0.0, maxR);
-        float yBlend = clamp(maxR * 0.15, 1.0, 16.0);
-        return mix(tR, bR, smoothstep(-yBlend, yBlend, p.y));
+        float yBlend = clamp(halfSize.y * 0.35, 4.0 * dScale, 28.0 * dScale);
+        return mix(tR, bR, smootherstep(-yBlend, yBlend, p.y));
     }
 
-    float sdRoundRect(float2 p, float2 halfSize, float topR, float botR) {
-        float cr = resolvedRadius(p, halfSize, topR, botR);
+    float sdRoundRect(float2 p, float2 halfSize, float topR, float botR, float dScale) {
+        float cr = resolvedRadius(p, halfSize, topR, botR, dScale);
         float2 d = abs(p) - (halfSize - float2(cr));
         return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - cr;
     }
 
-    float smoothInnerDist(float2 local, float2 halfSize, float topR, float botR) {
-        float cr = resolvedRadius(local, halfSize, topR, botR);
-        float2 d = abs(local) - (halfSize - float2(cr));
-        if (d.x > 0.0 && d.y > 0.0) {
-            return cr - length(d);
-        } else if (d.x > 0.0) {
-            return cr - d.x;
-        } else if (d.y > 0.0) {
-            return cr - d.y;
-        }
-        float a = max(-d.x, 0.0);
-        float b = max(-d.y, 0.0);
-        float coreDist = (a * b) / sqrt(a * a + b * b + 0.0001);
-        return cr + coreDist;
-    }
-
-    float2 smoothRoundRectNormal(
+    float smoothLensDist(
         float2 local,
         float2 halfSize,
         float topR,
         float botR,
-        float distIn,
         float bevelW,
         float dScale
     ) {
-        float cr = resolvedRadius(local, halfSize, topR, botR);
-        float maxR = min(halfSize.x, halfSize.y) * 0.9;
-        float minInnerR = min(maxR, max(cr, bevelW * 0.55));
-        float effCr = mix(cr, minInnerR, smoothstep(0.0, max(bevelW * 0.5, 1.0), max(distIn, 0.0)));
+        float cr = resolvedRadius(local, halfSize, topR, botR, dScale);
+        float dGeom = -sdRoundRect(local, halfSize, topR, botR, dScale);
 
-        float2 d = abs(local) - (halfSize - float2(effCr));
-        float2 sgn = float2(local.x >= 0.0 ? 1.0 : -1.0, local.y >= 0.0 ? 1.0 : -1.0);
-        float2 nLocal;
-        if (d.x > 0.0 && d.y > 0.0) {
-            float lenD = length(d);
-            nLocal = (lenD > 0.001) ? (d / lenD) : float2(0.70710678, 0.70710678);
-        } else if (d.x > 0.0) {
-            nLocal = float2(1.0, 0.0);
-        } else if (d.y > 0.0) {
-            nLocal = float2(0.0, 1.0);
-        } else {
-            float a = max(-d.x, 0.0);
-            float b = max(-d.y, 0.0);
-            float sumAB = a + b;
-            float t = (sumAB > 0.0001) ? (b / sumAB) : 0.5;
-            float angle = (1.0 - t) * 1.57079633;
-            nLocal = float2(cos(angle), sin(angle));
-        }
+        float cx = min(halfSize.x * 0.12, 16.0 * dScale);
+        float cy = min(halfSize.y * 0.12, 16.0 * dScale);
+        float sx = sqrt(halfSize.x * halfSize.x + cx * cx) - sqrt(local.x * local.x + cx * cx);
+        float sy = sqrt(halfSize.y * halfSize.y + cy * cy) - sqrt(local.y * local.y + cy * cy);
 
-        float2 outN = sgn * nLocal;
-        float tx = smoothstep(0.0, max(min(halfSize.x * 0.35, 12.0 * dScale), 1.0), abs(local.x));
-        float ty = smoothstep(0.0, max(min(halfSize.y * 0.35, 12.0 * dScale), 1.0), abs(local.y));
-        outN = float2(outN.x * tx, outN.y * ty);
-        float nLen = length(outN);
-        return (nLen > 0.0001) ? (outN / nLen) : float2(0.0, -1.0);
+        float maxHalf = min(halfSize.x, halfSize.y);
+        float kSmooth = clamp(max(cr * 1.15, bevelW * 0.78), 4.0, maxHalf * 0.92);
+        float wallDist = sminC2(sx, sy, kSmooth);
+
+        float blendStart = min(cr * 0.30, bevelW * 0.22);
+        float blendEnd = max(blendStart + 4.0 * dScale, bevelW * 0.72);
+        float tBlend = smootherstep(blendStart, blendEnd, dGeom);
+        return mix(dGeom, wallDist, tBlend);
+    }
+
+    float2 smoothLensNormal(
+        float2 local,
+        float2 halfSize,
+        float topR,
+        float botR,
+        float bevelW,
+        float dScale
+    ) {
+        float eps = clamp(1.75 * dScale, 1.5, 8.0);
+        float gx = smoothLensDist(local + float2(eps, 0.0), halfSize, topR, botR, bevelW, dScale)
+                 - smoothLensDist(local - float2(eps, 0.0), halfSize, topR, botR, bevelW, dScale);
+        float gy = smoothLensDist(local + float2(0.0, eps), halfSize, topR, botR, bevelW, dScale)
+                 - smoothLensDist(local - float2(0.0, eps), halfSize, topR, botR, bevelW, dScale);
+        float2 grad = float2(-gx, -gy);
+        float softFloor = 0.35 * eps;
+        return grad * inversesqrt(dot(grad, grad) + softFloor * softFloor);
     }
 
     half4 main(float2 fragCoord) {
         float2 halfSize = cardSize * 0.5;
         if (halfSize.x <= 1.0 || halfSize.y <= 1.0) return half4(0.0);
 
+        float dScale = max(density, 1.0);
         float2 local = fragCoord - halfSize;
-        float sdf = sdRoundRect(local, halfSize, topRadius, botRadius);
+        float sdf = sdRoundRect(local, halfSize, topRadius, botRadius, dScale);
         if (sdf > 0.0) return half4(0.0);
 
-        float dScale = max(density, 1.0);
         float s = clamp(sensitivity, 0.1, 1.0);
-        float bevelW = (10.0 + 14.0 * s) * dScale;
+        float bevelW = (12.0 + 16.0 * s) * dScale;
 
-        float distIn = smoothInnerDist(local, halfSize, topRadius, botRadius);
+        float distIn = max(smoothLensDist(local, halfSize, topRadius, botRadius, bevelW, dScale), 0.0);
         float rimDistIn = -sdf;
-        float2 n = smoothRoundRectNormal(local, halfSize, topRadius, botRadius, distIn, bevelW, dScale);
+        float2 n = smoothLensNormal(local, halfSize, topRadius, botRadius, bevelW, dScale);
 
-        float edgeT = 1.0 - smoothstep(0.0, bevelW, distIn);
-        float rimBand = smoothstep(0.0, 1.35 * dScale, rimDistIn) * (1.0 - smoothstep(1.1 * dScale, 4.8 * dScale, rimDistIn));
+        float edgeT = 1.0 - smootherstep(0.0, bevelW, distIn);
+        float rimBand = smootherstep(0.0, 1.5 * dScale, rimDistIn) * (1.0 - smootherstep(1.1 * dScale, 5.4 * dScale, rimDistIn));
 
         float keyLight = clamp(dot(n, normalize(float2(-0.55, -0.83))), 0.0, 1.0);
         float counterLight = clamp(dot(n, normalize(float2(0.55, 0.83))), 0.0, 1.0);
@@ -905,9 +912,9 @@ private const val FROSTED_GLASS_CARD_SURFACE_AGSL = """
             clamp(1.0 - 0.18 * spectrumPhase, 0.82, 1.0)
         );
 
-        float highlightStrength = (0.14 + 0.28 * s) * (0.28 + 0.72 * keyLight) * rimBand;
-        float causticStrength = pow(edgeT, 2.6) * (0.04 + 0.07 * s) * (0.4 + 0.6 * keyLight);
-        float shadowStrength = (isDark > 0.5 ? 0.28 : 0.12) * s * counterLight * rimBand;
+        float highlightStrength = (0.14 + 0.26 * s) * (0.28 + 0.72 * keyLight) * rimBand;
+        float causticStrength = (edgeT * edgeT * edgeT) * (0.04 + 0.07 * s) * (0.4 + 0.6 * keyLight);
+        float shadowStrength = (isDark > 0.5 ? 0.26 : 0.12) * s * counterLight * rimBand;
 
         half3 lightColor = prismTint * half(highlightStrength + causticStrength);
         float outAlpha = clamp(highlightStrength + causticStrength + shadowStrength, 0.0, 0.65);
@@ -928,7 +935,7 @@ fun createAndroid16FrostedBackdropColorFilter(
     transparency: Float = 0.40f
 ): RuntimeColorFilter? {
     return try {
-        val radiusNormalized = (blurRadiusDp.coerceIn(4f, 60f) / 60f)
+        val radiusNormalized = (blurRadiusDp.coerceIn(0f, 60f) / 60f)
         val glassOpacity = (1f - transparency.coerceIn(0f, 0.95f)).coerceIn(0.05f, 1f)
         RuntimeColorFilter(FROSTED_BACKDROP_AGSL).apply {
             setFloatUniform("saturationBoost", 1.18f + 0.10f * radiusNormalized)
@@ -1075,7 +1082,32 @@ fun createFrostedBackdropRenderEffect(
     viewportHeightPx: Float = 0f,
     density: Float = 2.625f
 ): ComposeRenderEffect? {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || blurRadiusPx <= 0.5f) return null
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
+
+    val wantsRefraction = enableGlassRefraction &&
+        isRuntimeShaderRefractionSupported() &&
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        refractionRegions.isNotEmpty() &&
+        viewportWidthPx > 1f &&
+        viewportHeightPx > 1f
+
+    if (blurRadiusPx <= 0.5f) {
+        if (!wantsRefraction) return null
+        val refractionOnly = createLiquidGlassRefractionRuntimeEffect(
+            regions = refractionRegions,
+            viewportWidthPx = viewportWidthPx,
+            viewportHeightPx = viewportHeightPx,
+            density = density,
+            sensitivity = glassRefractionSensitivity,
+            isDark = isDark
+        ) ?: return null
+        return try {
+            refractionOnly.asComposeRenderEffect()
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
     val baseBlur = try {
         AndroidRenderEffect.createBlurEffect(
             blurRadiusPx,
@@ -1105,13 +1137,7 @@ fun createFrostedBackdropRenderEffect(
         baseBlur
     }
 
-    if (enableGlassRefraction &&
-        isRuntimeShaderRefractionSupported() &&
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-        refractionRegions.isNotEmpty() &&
-        viewportWidthPx > 1f &&
-        viewportHeightPx > 1f
-    ) {
+    if (wantsRefraction) {
         val refractionEffect = createLiquidGlassRefractionRuntimeEffect(
             regions = refractionRegions,
             viewportWidthPx = viewportWidthPx,
@@ -1306,7 +1332,7 @@ fun LiveScreenRefractionBackdrop(
     if (activeRegions.isEmpty() || revealAlpha <= 0.01f) return
 
     val density = LocalDensity.current
-    val effectiveBlurDp = blurRadiusDp.coerceIn(1f, 80f)
+    val effectiveBlurDp = blurRadiusDp.coerceIn(0f, 80f)
     val effectiveBlurPx = with(density) { effectiveBlurDp.dp.toPx() }
     var viewportWidthPx by remember { mutableStateOf(screenBitmap.width.toFloat()) }
     var viewportHeightPx by remember { mutableStateOf(screenBitmap.height.toFloat()) }
@@ -1417,7 +1443,7 @@ fun FrostedPreviewBackdrop(
     }
     val shouldBlurFullScreen = effectiveBlur && !blurOnlyBehindQsCard
     val shouldBlurQsOnly = effectiveBlur && blurOnlyBehindQsCard && activeRegions.isNotEmpty()
-    val effectiveBlurDp = blurRadiusDp.coerceIn(1f, 80f)
+    val effectiveBlurDp = blurRadiusDp.coerceIn(0f, 80f)
     val density = LocalDensity.current
     val effectiveBlurPx = with(density) { effectiveBlurDp.dp.toPx() }
     val isDark = MaterialTheme.colorScheme.surface.let {
@@ -1459,10 +1485,11 @@ fun FrostedPreviewBackdrop(
             clip = true
             renderEffect = frostedRenderEffect
         }
-        else -> Modifier.blur(
+        effectiveBlurDp > 0.5f -> Modifier.blur(
             radius = effectiveBlurDp.dp,
             edgeTreatment = BlurredEdgeTreatment.Rectangle
         )
+        else -> Modifier
     }
 
     Box(

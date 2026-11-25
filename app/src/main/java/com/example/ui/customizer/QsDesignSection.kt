@@ -5501,6 +5501,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsState()
                     val refractionSensitivity by PanelPreferences.glassRefractionSensitivity.collectAsState()
                     val transparencyPercent = kotlin.math.round(containerBlurTransparency * 100f).toInt().coerceIn(0, 95)
+                    val blurPercent = kotlin.math.round((containerBlurRadiusDp / 60f) * 100f).toInt().coerceIn(0, 100)
                     val refractionPercent = kotlin.math.round(refractionSensitivity * 100f).toInt().coerceIn(10, 100)
 
                     val modes = GlassBackdropMode.entries
@@ -5647,13 +5648,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
-                                            text = "Backdrop blur intensity (4 – 60 dp)",
+                                            text = "Backdrop blur intensity (0% – 100%)",
                                             fontSize = 11.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                     Text(
-                                        text = "${kotlin.math.round(containerBlurRadiusDp).toInt()} dp",
+                                        text = "$blurPercent%",
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary,
@@ -5661,14 +5662,14 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                     )
                                 }
                                 Slider(
-                                    value = containerBlurRadiusDp,
+                                    value = blurPercent.toFloat(),
                                     onValueChange = {
                                         PanelPreferences.setContainerBlurRadiusDp(
                                             context,
-                                            kotlin.math.round(it).coerceIn(4f, 60f)
+                                            (kotlin.math.round(it).coerceIn(0f, 100f) / 100f) * 60f
                                         )
                                     },
-                                    valueRange = 4f..60f,
+                                    valueRange = 0f..100f,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .testTag("frosted_glass_blur_sensitivity_slider"),

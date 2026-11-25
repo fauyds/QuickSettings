@@ -2122,7 +2122,7 @@ object PanelPreferences {
         _enableContainerBlur.value = prefs.getBoolean(KEY_ENABLE_CONTAINER_BLUR, false)
         _blurOnlyBehindQsCard.value = prefs.getBoolean(KEY_BLUR_ONLY_BEHIND_QS_CARD, false)
         _enableNotificationBlur.value = prefs.getBoolean(KEY_ENABLE_NOTIFICATION_BLUR, true)
-        _containerBlurRadiusDp.value = prefs.getFloat(KEY_CONTAINER_BLUR_SENSITIVITY_DP, 24f).coerceIn(4f, 60f)
+        _containerBlurRadiusDp.value = prefs.getFloat(KEY_CONTAINER_BLUR_SENSITIVITY_DP, 24f).coerceIn(0f, 60f)
         _containerBlurTransparency.value = prefs.getFloat(KEY_CONTAINER_BLUR_TRANSPARENCY, 0.40f).coerceIn(0f, 0.95f)
         val savedPanelStyleId = prefs.getString(KEY_PANEL_STYLE, null)
         val resolvedPanelStyle = if (savedPanelStyleId != null) {
@@ -4106,7 +4106,7 @@ object PanelPreferences {
     }
 
     fun setContainerBlurRadiusDp(context: Context, radiusDp: Float) {
-        val clamped = radiusDp.coerceIn(4f, 60f)
+        val clamped = radiusDp.coerceIn(0f, 60f)
         _containerBlurRadiusDp.value = clamped
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putFloat(KEY_CONTAINER_BLUR_SENSITIVITY_DP, clamped).apply()

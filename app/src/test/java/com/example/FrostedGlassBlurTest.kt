@@ -382,6 +382,14 @@ class FrostedGlassBlurTest {
         assertTrue(PanelPreferences.enableContainerBlur.value)
         assertEquals(42f, PanelPreferences.containerBlurRadiusDp.value, 0.01f)
         assertEquals(0.70f, PanelPreferences.containerBlurTransparency.value, 0.01f)
+
+        // Verify minimum blur radius goes all the way down to 0% (0f dp)
+        PanelPreferences.setContainerBlurRadiusDp(context, 0f)
+        PanelPreferences.init(context)
+        assertEquals(0f, PanelPreferences.containerBlurRadiusDp.value, 0.001f)
+
+        PanelPreferences.setContainerBlurRadiusDp(context, -5f)
+        assertEquals(0f, PanelPreferences.containerBlurRadiusDp.value, 0.001f)
     }
 
     @Test
@@ -436,6 +444,17 @@ class FrostedGlassBlurTest {
         composeTestRule.onNodeWithTag("frosted_glass_transparency_slider")
             .performScrollTo()
             .assertIsDisplayed()
+
+        // Setting blur radius to 0f displays 0% cleanly
+        PanelPreferences.setContainerBlurRadiusDp(context, 0f)
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("frosted_glass_blur_sensitivity_value", useUnmergedTree = true)
+            .let { node ->
+                node.fetchSemanticsNode().let { sem ->
+                    val texts = sem.config[androidx.compose.ui.semantics.SemanticsProperties.Text]
+                    assertEquals("0%", texts.joinToString("") { it.text })
+                }
+            }
     }
 
     @Test
@@ -1144,6 +1163,20 @@ class FrostedGlassBlurTest {
             density = 3f
         )
         assertNotNull(chainedWithRefraction)
+
+        val zeroBlurWithRefraction = com.example.ui.overlay.createFrostedBackdropRenderEffect(
+            blurRadiusPx = 0f,
+            isDark = true,
+            blurRadiusDp = 0f,
+            transparency = 0.45f,
+            enableGlassRefraction = true,
+            glassRefractionSensitivity = 0.8f,
+            refractionRegions = listOf(qsRegion, notifRegion),
+            viewportWidthPx = 1080f,
+            viewportHeightPx = 1920f,
+            density = 3f
+        )
+        assertNotNull(zeroBlurWithRefraction)
 
         val chainedWithoutRefraction = com.example.ui.overlay.createFrostedBackdropRenderEffect(
             blurRadiusPx = 48f,
