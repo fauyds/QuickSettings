@@ -224,7 +224,7 @@ object CustomShadowHelper {
             return
         }
 
-        val frostedSurfaceDrawable = if (enableFrostedGlass && !isCircle) {
+        val frostedSurfaceDrawable = if (enableFrostedGlass && !isCircle && isAndroid16FrostedGlassSupported()) {
             FrostedGlassSurfaceDrawable(
                 radii = radii?.copyOf(),
                 cornerRadius = cornerRadius,
@@ -587,7 +587,7 @@ class FrostedGlassSurfaceDrawable(
         get() = isAndroid16FrostedGlassSupported() && api36ColorFilter != null
 
     val usesRefractionShader: Boolean
-        get() = enableGlassRefraction && isRuntimeShaderRefractionSupported()
+        get() = enableGlassRefraction && isAndroid16FrostedGlassSupported() && isRuntimeShaderRefractionSupported()
 
     private val sheenPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
@@ -642,25 +642,17 @@ class FrostedGlassSurfaceDrawable(
         }
     }
 
+    private var shadersConfigured = false
+
     private fun updateShaders(bounds: Rect) {
         if (bounds.width() <= 0 || bounds.height() <= 0) {
             sheenPaint.shader = null
             refractionBevelPaint.shader = null
             return
         }
-        val clampedTransparency = transparency.coerceIn(0f, 0.95f)
-        val sheenStrength = ((1f - clampedTransparency) * if (isDark) 0.09f else 0.14f)
-            .coerceIn(0.015f, 0.16f)
-        val topSheenColor = Color.argb((sheenStrength * 255f).roundToInt().coerceIn(0, 255), 255, 255, 255)
-        sheenPaint.shader = LinearGradient(
-            bounds.left.toFloat(),
-            bounds.top.toFloat(),
-            bounds.left.toFloat(),
-            bounds.bottom.toFloat(),
-            topSheenColor,
-            Color.TRANSPARENT,
-            Shader.TileMode.CLAMP
-        )
+        sheenPaint.shader = null
+        sheenPaint.color = Color.TRANSPARENT
+        shadersConfigured = true
 
         if (enableGlassRefraction && isRuntimeShaderRefractionSupported() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val topR = radii?.takeIf { it.size >= 8 }?.get(0) ?: cornerRadius
@@ -681,21 +673,12 @@ class FrostedGlassSurfaceDrawable(
 
     override fun draw(canvas: Canvas) {
         if (cachedPath.isEmpty || bounds.width() <= 0 || bounds.height() <= 0) return
-        if (sheenPaint.shader == null) updateShaders(bounds)
-
-        canvas.save()
-        canvas.clipPath(cachedPath)
-        canvas.drawRect(
-            bounds.left.toFloat(),
-            bounds.top.toFloat(),
-            bounds.right.toFloat(),
-            bounds.bottom.toFloat(),
-            sheenPaint
-        )
+        if (!shadersConfigured) updateShaders(bounds)
 
         val bevelShader = refractionBevelPaint.shader
         if (enableGlassRefraction && bevelShader != null) {
             canvas.save()
+            canvas.clipPath(cachedPath)
             canvas.translate(bounds.left.toFloat(), bounds.top.toFloat())
             canvas.drawRect(
                 0f,
@@ -706,7 +689,6 @@ class FrostedGlassSurfaceDrawable(
             )
             canvas.restore()
         }
-        canvas.restore()
     }
 
     override fun setAlpha(alpha: Int) {

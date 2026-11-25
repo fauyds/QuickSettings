@@ -740,9 +740,10 @@ class NotificationListView @JvmOverloads constructor(
         val shadowElevation = PanelPreferences.panelShadowElevation.value
         val shadowOffsetY = PanelPreferences.panelShadowOffsetY.value
         val panelShadowAlpha = PanelPreferences.panelShadowAlpha.value
-        val cardRadius = PanelPreferences.panelOuterCorner.value * density
+        val cardRadius = if (PanelPreferences.isAndroidOreoStyle(context)) 0f else PanelPreferences.panelOuterCorner.value * density
         lastCardCornerRadiusPx = cardRadius
-        val rawContainerBlur = PanelPreferences.enableContainerBlur.value
+        val glassSupported = com.example.ui.overlay.isAndroid16FrostedGlassSupported()
+        val rawContainerBlur = PanelPreferences.enableContainerBlur.value && glassSupported
         val enableNotificationBlur = PanelPreferences.enableNotificationBlur.value
         val enableContainerBlur = rawContainerBlur
         val containerBlurTransparency = PanelPreferences.containerBlurTransparency.value
@@ -754,7 +755,7 @@ class NotificationListView @JvmOverloads constructor(
             rawCardBg
         }
         val permDrawable = MonetThemeHelper.createMonetCardDrawable(context, isDark, cardRadius, showStroke = false, customBgColor = cardBg)
-        val enableGlassRefraction = PanelPreferences.enableGlassRefraction.value
+        val enableGlassRefraction = PanelPreferences.isLiquidGlassActive()
         val glassRefractionSensitivity = PanelPreferences.glassRefractionSensitivity.value
         val enablePanelTopRim = PanelPreferences.enablePanelTopRim.value
         CustomShadowHelper.applyCustomShadowBackground(

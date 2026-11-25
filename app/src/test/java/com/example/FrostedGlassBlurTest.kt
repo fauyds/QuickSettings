@@ -25,6 +25,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
+import com.example.data.GlassBackdropMode
 import com.example.data.PanelPreferences
 import com.example.ui.overlay.BlurredContainerCard
 import com.example.ui.overlay.FrostedPreviewBackdrop
@@ -321,11 +322,11 @@ class FrostedGlassBlurTest {
         }
         composeTestRule.waitForIdle()
 
-        // When container blur is disabled, frosted_glass_qs_only_toggle is hidden
+        // When glass mode is OFF, frosted_glass_qs_only_toggle is hidden
         composeTestRule.onNodeWithTag("frosted_glass_qs_only_toggle").assertDoesNotExist()
 
-        // Enable frosted glass blur so frosted_glass_qs_only_toggle appears
-        composeTestRule.onNodeWithTag("frosted_glass_toggle")
+        // Switch to Frosted Glass mode so frosted_glass_qs_only_toggle appears
+        composeTestRule.onNodeWithTag("glass_mode_frosted")
             .performScrollTo()
             .performClick()
         composeTestRule.waitForIdle()
@@ -336,6 +337,7 @@ class FrostedGlassBlurTest {
         composeTestRule.waitForIdle()
         assertTrue(PanelPreferences.blurOnlyBehindQsCard.value)
         assertTrue(PanelPreferences.enableContainerBlur.value)
+        assertEquals(GlassBackdropMode.FROSTED, PanelPreferences.glassBackdropMode.value)
     }
 
     @Test
@@ -413,12 +415,13 @@ class FrostedGlassBlurTest {
             ).fetchSemanticsNodes().size
         )
 
-        // Enable frosted glass blur
-        composeTestRule.onNodeWithTag("frosted_glass_toggle")
+        // Enable Frosted Glass mode
+        composeTestRule.onNodeWithTag("glass_mode_frosted")
             .performScrollTo()
             .performClick()
         composeTestRule.waitForIdle()
         assertTrue(PanelPreferences.enableContainerBlur.value)
+        assertEquals(GlassBackdropMode.FROSTED, PanelPreferences.glassBackdropMode.value)
 
         // Both sliders and value readouts appear when blur is enabled
         composeTestRule.onNodeWithTag("frosted_glass_blur_sensitivity_value", useUnmergedTree = true)
@@ -504,44 +507,50 @@ class FrostedGlassBlurTest {
 
     @Test
     @Config(sdk = [35])
-    fun `Android 15 fallback disables Android 16 AGSL check while preserving RenderEffect blur`() {
+    fun `Android 15 disables Frosted and Liquid glass support cleanly`() {
         assertFalse(com.example.ui.overlay.isAndroid16FrostedGlassSupported())
+        assertFalse(com.example.ui.overlay.isRuntimeShaderRefractionSupported())
+        assertFalse(PanelPreferences.isGlassBackdropSupported())
 
-        val api35Effect = com.example.ui.overlay.createFrostedBackdropRenderEffect(
-            blurRadiusPx = 48f,
-            isDark = true,
-            blurRadiusDp = 16f,
-            transparency = 0.40f
-        )
-        assertTrue(api35Effect != null)
+        PanelPreferences.setGlassBackdropMode(context, GlassBackdropMode.LIQUID)
+        assertEquals(GlassBackdropMode.OFF, PanelPreferences.effectiveGlassBackdropMode())
+        assertFalse(PanelPreferences.isAnyGlassActive())
+        assertFalse(PanelPreferences.isFrostedGlassActive())
+        assertFalse(PanelPreferences.isLiquidGlassActive())
     }
 
     @Test
-    fun `monetSurfaceTransparency and glassRefraction persist and sync with ThemeManager`() {
+    fun `monetSurfaceTransparency and glassBackdropMode persist and sync with ThemeManager`() {
         assertEquals(0.0f, PanelPreferences.monetSurfaceTransparency.value, 0.01f)
-        assertTrue(PanelPreferences.enableGlassRefraction.value)
+        assertEquals(GlassBackdropMode.OFF, PanelPreferences.glassBackdropMode.value)
+        assertFalse(PanelPreferences.enableGlassRefraction.value)
         assertEquals(0.5f, PanelPreferences.glassRefractionSensitivity.value, 0.01f)
 
         PanelPreferences.setShowMonetSurfaceBackground(context, true)
         PanelPreferences.setMonetSurfaceTransparency(context, 0.45f)
-        PanelPreferences.setEnableGlassRefraction(context, true)
+        PanelPreferences.setGlassBackdropMode(context, GlassBackdropMode.LIQUID)
         PanelPreferences.setGlassRefractionSensitivity(context, 0.85f)
 
         // Reload preferences cleanly
         PanelPreferences.init(context)
         assertTrue(PanelPreferences.showMonetSurfaceBackground.value)
         assertEquals(0.45f, PanelPreferences.monetSurfaceTransparency.value, 0.01f)
+        assertEquals(GlassBackdropMode.LIQUID, PanelPreferences.glassBackdropMode.value)
         assertTrue(PanelPreferences.enableGlassRefraction.value)
+        assertTrue(PanelPreferences.isLiquidGlassActive())
         assertEquals(0.85f, PanelPreferences.glassRefractionSensitivity.value, 0.01f)
 
         // Save theme snapshot and restore
         val savedTheme = com.example.data.ThemeManager.saveCurrentSettingsAsTheme(context, "Refraction Test")
         PanelPreferences.setMonetSurfaceTransparency(context, 0.10f)
-        PanelPreferences.setEnableGlassRefraction(context, false)
+        PanelPreferences.setGlassBackdropMode(context, GlassBackdropMode.FROSTED)
         PanelPreferences.setGlassRefractionSensitivity(context, 0.20f)
+        assertFalse(PanelPreferences.enableGlassRefraction.value)
+        assertTrue(PanelPreferences.isFrostedGlassActive())
 
         assertTrue(com.example.data.ThemeManager.applyTheme(context, savedTheme))
         assertEquals(0.45f, PanelPreferences.monetSurfaceTransparency.value, 0.01f)
+        assertEquals(GlassBackdropMode.LIQUID, PanelPreferences.glassBackdropMode.value)
         assertTrue(PanelPreferences.enableGlassRefraction.value)
         assertEquals(0.85f, PanelPreferences.glassRefractionSensitivity.value, 0.01f)
     }
@@ -586,7 +595,7 @@ class FrostedGlassBlurTest {
     }
 
     @Test
-    fun `Glass Edge Refraction toggle and sensitivity slider display and update in QsDesignSection`() {
+    fun `Liquid Glass mode displays Refraction Sensitivity slider while Frosted mode keeps it hidden`() {
         composeTestRule.setContent {
             QuickPanelTheme(darkTheme = true) {
                 androidx.compose.foundation.layout.Column(
@@ -598,28 +607,33 @@ class FrostedGlassBlurTest {
         }
         composeTestRule.waitForIdle()
 
-        // Toggle frosted glass blur on so the frosted card options expand
-        composeTestRule.onNodeWithTag("frosted_glass_toggle")
+        // Switch to Frosted Glass mode -> blur sliders appear, refraction slider remains hidden
+        composeTestRule.onNodeWithTag("glass_mode_frosted")
             .performScrollTo()
             .performClick()
         composeTestRule.waitForIdle()
 
-        // Toggle blurOnlyBehindQsCard on so notification & glass edge refraction toggles expand
-        composeTestRule.onNodeWithTag("frosted_glass_qs_only_toggle")
-            .performScrollTo()
-            .performClick()
-        composeTestRule.waitForIdle()
-
-        // Glass edge refraction toggle is visible
-        composeTestRule.onNodeWithTag("glass_refraction_toggle")
+        composeTestRule.onNodeWithTag("frosted_glass_blur_sensitivity_slider")
             .performScrollTo()
             .assertIsDisplayed()
+        composeTestRule.onNodeWithTag("glass_refraction_sensitivity_slider").assertDoesNotExist()
 
-        // Sensitivity slider is visible when enabled
+        // Switch to Liquid Glass mode -> refraction sensitivity slider & notification card blur appear
+        composeTestRule.onNodeWithTag("glass_mode_liquid")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        assertEquals(GlassBackdropMode.LIQUID, PanelPreferences.glassBackdropMode.value)
+        assertTrue(PanelPreferences.enableGlassRefraction.value)
+
         composeTestRule.onNodeWithTag("glass_refraction_sensitivity_value", useUnmergedTree = true)
             .performScrollTo()
             .assertIsDisplayed()
         composeTestRule.onNodeWithTag("glass_refraction_sensitivity_slider")
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag("notification_card_blur_toggle")
             .performScrollTo()
             .assertIsDisplayed()
     }
@@ -903,11 +917,11 @@ class FrostedGlassBlurTest {
 
         assertFalse(PanelPreferences.enableNotificationBlur.value)
 
-        // When container blur is disabled, notification_card_blur_toggle is hidden
+        // When glass mode is OFF, notification_card_blur_toggle is hidden
         composeTestRule.onNodeWithTag("notification_card_blur_toggle").assertDoesNotExist()
 
-        // Enable frosted glass blur and QS-only blur to display notification blur toggle
-        composeTestRule.onNodeWithTag("frosted_glass_toggle")
+        // Enable Frosted Glass mode and QS-only blur to display notification blur toggle
+        composeTestRule.onNodeWithTag("glass_mode_frosted")
             .performScrollTo()
             .performClick()
         composeTestRule.waitForIdle()
@@ -1168,8 +1182,8 @@ class FrostedGlassBlurTest {
     }
 
     @Test
-    @Config(sdk = [32])
-    fun `RuntimeShader refraction cleanly reports unsupported below API 33`() {
+    @Config(sdk = [35])
+    fun `RuntimeShader refraction cleanly reports unsupported at and below API 35`() {
         assertFalse(com.example.ui.overlay.isRuntimeShaderRefractionSupported())
         val drawable = com.example.ui.notification.FrostedGlassSurfaceDrawable(
             cornerRadius = 32f,
@@ -1267,11 +1281,10 @@ class FrostedGlassBlurTest {
     }
 
     @Test
-    fun `Frosted glass sub-toggles hide when master blur is disabled and appear conditionally`() {
-        PanelPreferences.setEnableContainerBlur(context, false)
+    fun `Frosted and Liquid Glass segmented selector reveals mode-specific controls cleanly`() {
+        PanelPreferences.setGlassBackdropMode(context, GlassBackdropMode.OFF)
         PanelPreferences.setBlurOnlyBehindQsCard(context, false)
         PanelPreferences.setEnableNotificationBlur(context, false)
-        PanelPreferences.setEnableGlassRefraction(context, false)
 
         composeTestRule.setContent {
             QuickPanelTheme(darkTheme = true) {
@@ -1284,13 +1297,16 @@ class FrostedGlassBlurTest {
         }
         composeTestRule.waitForIdle()
 
-        // 1. When Enable Frosted Glass Blur is OFF, all 3 sub-toggles MUST BE HIDDEN
+        // 1. When Glass Backdrop Effect is OFF, all sub-controls MUST BE HIDDEN
+        composeTestRule.onNodeWithTag("glass_mode_off").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithTag("glass_mode_frosted").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithTag("glass_mode_liquid").performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithTag("frosted_glass_qs_only_toggle").assertDoesNotExist()
         composeTestRule.onNodeWithTag("notification_card_blur_toggle").assertDoesNotExist()
-        composeTestRule.onNodeWithTag("glass_refraction_toggle").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("glass_refraction_sensitivity_slider").assertDoesNotExist()
 
-        // 2. Enable Frosted Glass Blur -> Blur Behind QS/QQS Only toggle appears
-        composeTestRule.onNodeWithTag("frosted_glass_toggle")
+        // 2. Select Frosted Glass mode -> Blur Behind QS/QQS Only appears; Notification & Refraction stay hidden
+        composeTestRule.onNodeWithTag("glass_mode_frosted")
             .performScrollTo()
             .performClick()
         composeTestRule.waitForIdle()
@@ -1299,9 +1315,9 @@ class FrostedGlassBlurTest {
             .performScrollTo()
             .assertIsDisplayed()
         composeTestRule.onNodeWithTag("notification_card_blur_toggle").assertDoesNotExist()
-        composeTestRule.onNodeWithTag("glass_refraction_toggle").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("glass_refraction_sensitivity_slider").assertDoesNotExist()
 
-        // 3. Enable Blur Behind QS/QQS Only -> Notification Card Blur & Glass Edge Refraction appear
+        // 3. Enable Blur Behind QS/QQS Only in Frosted mode -> Notification Card Blur appears (Refraction stays hidden)
         composeTestRule.onNodeWithTag("frosted_glass_qs_only_toggle")
             .performScrollTo()
             .performClick()
@@ -1310,11 +1326,176 @@ class FrostedGlassBlurTest {
         composeTestRule.onNodeWithTag("notification_card_blur_toggle")
             .performScrollTo()
             .assertIsDisplayed()
-        composeTestRule.onNodeWithTag("glass_refraction_toggle")
+        composeTestRule.onNodeWithTag("glass_refraction_sensitivity_slider").assertDoesNotExist()
+
+        // 4. Select Liquid Glass mode -> Refraction Sensitivity slider appears cleanly
+        composeTestRule.onNodeWithTag("glass_mode_liquid")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("glass_refraction_sensitivity_slider")
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag("notification_card_blur_toggle")
             .performScrollTo()
             .assertIsDisplayed()
 
-        // 4. Verify notification card background is transparent when container blur is ON
-        assertTrue(PanelPreferences.enableContainerBlur.value)
+        // 5. Select Off -> everything collapses back cleanly
+        composeTestRule.onNodeWithTag("glass_mode_off")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+        assertFalse(PanelPreferences.enableContainerBlur.value)
+        assertFalse(PanelPreferences.enableGlassRefraction.value)
+    }
+
+    @Test
+    @Config(sdk = [35])
+    fun `Android 15 and below completely hide Glass Backdrop card, search entry, and disable custom shadow glass`() {
+        // Even if previously pinned or enabled in prefs, API 35 hides and disables Glass Backdrop
+        if (!com.example.ui.customizer.PinnedCardsManager.isCardPinned("frosted_glass_panel_card")) {
+            com.example.ui.customizer.PinnedCardsManager.togglePin(
+                "frosted_glass_panel_card",
+                com.example.ui.customizer.CustomizeCategory.QS_DESIGN,
+                context
+            )
+        }
+        PanelPreferences.setGlassBackdropMode(context, GlassBackdropMode.LIQUID)
+
+        assertTrue(com.example.ui.customizer.HiddenFeatureCatalog.isCardHidden("frosted_glass_panel_card", emptyList()))
+        assertTrue(
+            com.example.ui.customizer.HiddenFeatureCatalog.isSearchFeatureHidden(
+                com.example.ui.customizer.FavoriteFeature.DESIGN_FROSTED_GLASS,
+                emptyList()
+            )
+        )
+        assertFalse(PanelPreferences.isAnyGlassActive())
+
+        val view = android.view.View(context)
+        val content = android.graphics.drawable.GradientDrawable().apply {
+            cornerRadius = 24f
+            setColor(android.graphics.Color.DKGRAY)
+        }
+        com.example.ui.notification.CustomShadowHelper.applyCustomShadowBackground(
+            view = view,
+            contentDrawable = content,
+            cornerRadius = 24f,
+            elevation = 8f,
+            isDark = true,
+            enableFrostedGlass = true,
+            enableGlassRefraction = true
+        )
+        val hasFrostedLayer = (view.background as? android.graphics.drawable.LayerDrawable)?.let { layers ->
+            (0 until layers.numberOfLayers).any { idx ->
+                layers.getDrawable(idx) is com.example.ui.notification.FrostedGlassSurfaceDrawable
+            }
+        } ?: false
+        assertFalse(hasFrostedLayer)
+
+        composeTestRule.setContent {
+            QuickPanelTheme(darkTheme = true) {
+                androidx.compose.foundation.layout.Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
+                    com.example.ui.customizer.QsDesignSection()
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("frosted_glass_panel_card").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("glass_mode_off").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("glass_mode_frosted").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("glass_mode_liquid").assertDoesNotExist()
+    }
+
+    @Test
+    fun `BlurredContainerCard matches asymmetric panel corner shape in Liquid and Frosted modes`() {
+        val asymmetricShape = androidx.compose.foundation.shape.RoundedCornerShape(
+            topStart = 32.dp,
+            topEnd = 32.dp,
+            bottomStart = 8.dp,
+            bottomEnd = 8.dp
+        )
+
+        PanelPreferences.setGlassBackdropMode(context, GlassBackdropMode.LIQUID)
+        composeTestRule.setContent {
+            QuickPanelTheme(darkTheme = true) {
+                BlurredContainerCard(
+                    shape = asymmetricShape,
+                    modifier = Modifier
+                        .padding(12.dp)
+                        .testTag("matched_corner_glass_card")
+                ) {
+                    Text(
+                        text = "Matched Glass Card",
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("matched_corner_glass_card").assertIsDisplayed()
+
+        // Switching to Frosted mode disables Liquid refraction while preserving Frosted blur
+        PanelPreferences.setGlassBackdropMode(context, GlassBackdropMode.FROSTED)
+        composeTestRule.waitForIdle()
+        assertTrue(PanelPreferences.isFrostedGlassActive())
+        assertFalse(PanelPreferences.isLiquidGlassActive())
+    }
+
+    @Test
+    fun `isSystemUiShadeWindow detects expanded SystemUI shade while ignoring thin status bar and volume dialogs`() {
+        val density = 3f
+        val screenH = 2400
+
+        // Thin status bar at top: NOT an expanded shade
+        assertFalse(
+            com.example.service.QuickPanelAccessibilityService.isSystemUiShadeWindow(
+                packageName = "com.android.systemui",
+                title = "StatusBar",
+                windowType = android.view.accessibility.AccessibilityWindowInfo.TYPE_SYSTEM,
+                boundsHeightPx = 120,
+                screenHeightPx = screenH,
+                density = density
+            )
+        )
+
+        // Volume dialog: ignored
+        assertFalse(
+            com.example.service.QuickPanelAccessibilityService.isSystemUiShadeWindow(
+                packageName = "com.android.systemui",
+                title = "VolumeDialog",
+                windowType = android.view.accessibility.AccessibilityWindowInfo.TYPE_SYSTEM,
+                boundsHeightPx = 900,
+                screenHeightPx = screenH,
+                density = density
+            )
+        )
+
+        // Expanded NotificationShade: detected cleanly
+        assertTrue(
+            com.example.service.QuickPanelAccessibilityService.isSystemUiShadeWindow(
+                packageName = "com.android.systemui",
+                title = "NotificationShade",
+                windowType = android.view.accessibility.AccessibilityWindowInfo.TYPE_SYSTEM,
+                boundsHeightPx = 2400,
+                screenHeightPx = screenH,
+                density = density
+            )
+        )
+
+        // Own overlay window: never treated as SystemUI stock shade
+        assertFalse(
+            com.example.service.QuickPanelAccessibilityService.isSystemUiShadeWindow(
+                packageName = "com.android.systemui",
+                title = "NotificationShade",
+                windowType = android.view.accessibility.AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY,
+                boundsHeightPx = 2400,
+                screenHeightPx = screenH,
+                density = density
+            )
+        )
     }
 }

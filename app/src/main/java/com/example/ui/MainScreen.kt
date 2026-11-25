@@ -216,10 +216,14 @@ fun MainScreen(viewModel: MainViewModel) {
             // Screen content switcher
             when (selectedTab) {
                 0 -> {
-                    val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsStateWithLifecycle()
+                    val glassMode by PanelPreferences.glassBackdropMode.collectAsStateWithLifecycle()
+                    val rawEnableContainerBlur by PanelPreferences.enableContainerBlur.collectAsStateWithLifecycle()
+                    val glassSupported = com.example.ui.overlay.isAndroid16FrostedGlassSupported()
+                    val enableContainerBlur = rawEnableContainerBlur && glassSupported
                     val blurOnlyBehindQsCard by PanelPreferences.blurOnlyBehindQsCard.collectAsStateWithLifecycle()
                     val containerBlurRadiusDp by PanelPreferences.containerBlurRadiusDp.collectAsStateWithLifecycle()
                     val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsStateWithLifecycle()
+                    val glassRefractionSensitivity by PanelPreferences.glassRefractionSensitivity.collectAsStateWithLifecycle()
                     var hostPosInRoot by remember { mutableStateOf(Offset.Zero) }
                     var rawQsBlurRegions by remember { mutableStateOf<Map<String, QsCardBlurBounds>>(emptyMap()) }
                     var rawNotifBlurRegions by remember { mutableStateOf<List<QsCardBlurBounds>>(emptyList()) }
@@ -257,6 +261,8 @@ fun MainScreen(viewModel: MainViewModel) {
                             blurRadiusDp = containerBlurRadiusDp,
                             transparency = containerBlurTransparency,
                             extraBlurRegions = localExtraBlurRegions,
+                            enableGlassRefraction = glassSupported && glassMode == com.example.data.GlassBackdropMode.LIQUID,
+                            glassRefractionSensitivity = glassRefractionSensitivity,
                             modifier = Modifier.matchParentSize()
                         )
                         CompositionLocalProvider(

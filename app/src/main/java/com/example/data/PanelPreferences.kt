@@ -22,6 +22,17 @@ enum class ThemeMode(val id: String, val displayName: String) {
     }
 }
 
+enum class GlassBackdropMode(val id: String, val label: String) {
+    OFF("off", "Off"),
+    FROSTED("frosted", "Frosted"),
+    LIQUID("liquid", "Liquid");
+
+    companion object {
+        fun fromId(id: String?): GlassBackdropMode =
+            entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: OFF
+    }
+}
+
 enum class ComplicationArcMonetMode(val id: String, val label: String) {
     DEFAULT("default", "Auto (Default)"),
     PRIMARY("primary", "Primary"),
@@ -426,13 +437,32 @@ object PanelPreferences {
     private val _monetSurfaceTransparency = MutableStateFlow(0.0f)
     val monetSurfaceTransparency: StateFlow<Float> = _monetSurfaceTransparency.asStateFlow()
 
-    private val _enableGlassRefraction = MutableStateFlow(true)
+    private val _glassBackdropMode = MutableStateFlow(GlassBackdropMode.OFF)
+    val glassBackdropMode: StateFlow<GlassBackdropMode> = _glassBackdropMode.asStateFlow()
+
+    private val _enableGlassRefraction = MutableStateFlow(false)
     val enableGlassRefraction: StateFlow<Boolean> = _enableGlassRefraction.asStateFlow()
 
     private val _glassRefractionSensitivity = MutableStateFlow(0.5f)
     val glassRefractionSensitivity: StateFlow<Float> = _glassRefractionSensitivity.asStateFlow()
 
+    fun isGlassBackdropSupported(): Boolean =
+        android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.BAKLAVA
+
+    fun effectiveGlassBackdropMode(): GlassBackdropMode =
+        if (isGlassBackdropSupported()) _glassBackdropMode.value else GlassBackdropMode.OFF
+
+    fun isFrostedGlassActive(): Boolean =
+        effectiveGlassBackdropMode() == GlassBackdropMode.FROSTED
+
+    fun isLiquidGlassActive(): Boolean =
+        effectiveGlassBackdropMode() == GlassBackdropMode.LIQUID
+
+    fun isAnyGlassActive(): Boolean =
+        effectiveGlassBackdropMode() != GlassBackdropMode.OFF
+
     private const val KEY_MONET_SURFACE_TRANSPARENCY = "monet_surface_transparency"
+    private const val KEY_GLASS_BACKDROP_MODE = "glass_backdrop_mode"
     private const val KEY_ENABLE_GLASS_REFRACTION = "enable_glass_refraction"
     private const val KEY_GLASS_REFRACTION_SENSITIVITY = "glass_refraction_sensitivity"
 
@@ -2185,7 +2215,21 @@ object PanelPreferences {
         _customHeaderMonetGradientHeight.value = prefs.getFloat(KEY_CUSTOM_HEADER_MONET_GRADIENT_HEIGHT, 85f)
         _showMonetSurfaceBackground.value = prefs.getBoolean(KEY_SHOW_MONET_SURFACE_BACKGROUND, false)
         _monetSurfaceTransparency.value = prefs.getFloat(KEY_MONET_SURFACE_TRANSPARENCY, 0.0f).coerceIn(0f, 0.95f)
-        _enableGlassRefraction.value = prefs.getBoolean(KEY_ENABLE_GLASS_REFRACTION, true)
+        val savedGlassModeRaw = getSafeString(prefs, KEY_GLASS_BACKDROP_MODE, null)
+        val resolvedGlassMode = if (savedGlassModeRaw != null) {
+            GlassBackdropMode.fromId(savedGlassModeRaw)
+        } else {
+            val legacyBlur = prefs.getBoolean(KEY_ENABLE_CONTAINER_BLUR, false)
+            val legacyRefraction = prefs.getBoolean(KEY_ENABLE_GLASS_REFRACTION, false)
+            when {
+                !legacyBlur -> GlassBackdropMode.OFF
+                legacyRefraction -> GlassBackdropMode.LIQUID
+                else -> GlassBackdropMode.FROSTED
+            }
+        }
+        _glassBackdropMode.value = resolvedGlassMode
+        _enableContainerBlur.value = resolvedGlassMode != GlassBackdropMode.OFF
+        _enableGlassRefraction.value = resolvedGlassMode == GlassBackdropMode.LIQUID
         _glassRefractionSensitivity.value = prefs.getFloat(KEY_GLASS_REFRACTION_SENSITIVITY, 0.5f).coerceIn(0.1f, 1.0f)
         _showHeaderComplications.value = prefs.getBoolean(KEY_SHOW_HEADER_COMPLICATIONS, true)
         _complicationSublinePlacement.value = com.example.model.ComplicationSublinePlacement.fromId(
@@ -2850,7 +2894,7 @@ object PanelPreferences {
 
         val targetShowMonetSurfaceBg = if (isInitialized) readStyleBool(KEY_SHOW_MONET_SURFACE_BACKGROUND, false) else false
         val targetMonetSurfaceTransparency = if (isInitialized) readStyleFloat(KEY_MONET_SURFACE_TRANSPARENCY, 0.0f).coerceIn(0f, 0.95f) else 0.0f
-        val targetEnableGlassRefraction = if (isInitialized) readStyleBool(KEY_ENABLE_GLASS_REFRACTION, true) else true
+        val targetEnableGlassRefraction = _glassBackdropMode.value == GlassBackdropMode.LIQUID
         val targetGlassRefractionSensitivity = if (isInitialized) readStyleFloat(KEY_GLASS_REFRACTION_SENSITIVITY, 0.5f).coerceIn(0.1f, 1.0f) else 0.5f
         val targetShowQsTileGradient = if (isInitialized) readStyleBool(KEY_SHOW_QS_TILE_GRADIENT, false) else false
         val targetShowCarrier = if (isInitialized) readStyleBool(KEY_SHOW_CARRIER, true) else true
@@ -4025,10 +4069,28 @@ object PanelPreferences {
         setProgressBarStyle(context, style)
     }
 
-    fun setEnableContainerBlur(context: Context, enabled: Boolean) {
-        _enableContainerBlur.value = enabled
+    fun setGlassBackdropMode(context: Context, mode: GlassBackdropMode) {
+        _glassBackdropMode.value = mode
+        val blurActive = mode != GlassBackdropMode.OFF
+        val refractionActive = mode == GlassBackdropMode.LIQUID
+        _enableContainerBlur.value = blurActive
+        _enableGlassRefraction.value = refractionActive
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_ENABLE_CONTAINER_BLUR, enabled).apply()
+        prefs.edit()
+            .putString(KEY_GLASS_BACKDROP_MODE, mode.id)
+            .putBoolean(KEY_ENABLE_CONTAINER_BLUR, blurActive)
+            .putBoolean(KEY_ENABLE_GLASS_REFRACTION, refractionActive)
+            .putBoolean(getStyleKey(KEY_ENABLE_GLASS_REFRACTION), refractionActive)
+            .apply()
+    }
+
+    fun setEnableContainerBlur(context: Context, enabled: Boolean) {
+        val nextMode = when {
+            !enabled -> GlassBackdropMode.OFF
+            _glassBackdropMode.value == GlassBackdropMode.LIQUID -> GlassBackdropMode.LIQUID
+            else -> GlassBackdropMode.FROSTED
+        }
+        setGlassBackdropMode(context, nextMode)
     }
 
     fun setBlurOnlyBehindQsCard(context: Context, enabled: Boolean) {
@@ -4380,13 +4442,12 @@ object PanelPreferences {
     }
 
     fun setEnableGlassRefraction(context: Context, enabled: Boolean) {
-        _enableGlassRefraction.value = enabled
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit()
-            .putBoolean(KEY_ENABLE_GLASS_REFRACTION, enabled)
-            .putBoolean(getStyleKey(KEY_ENABLE_GLASS_REFRACTION), enabled)
-            .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
-            .apply()
+        val nextMode = when {
+            enabled -> GlassBackdropMode.LIQUID
+            _enableContainerBlur.value -> GlassBackdropMode.FROSTED
+            else -> GlassBackdropMode.OFF
+        }
+        setGlassBackdropMode(context, nextMode)
     }
 
     fun setGlassRefractionSensitivity(context: Context, sensitivity: Float) {
@@ -5771,6 +5832,7 @@ object PanelPreferences {
         KEY_ENABLE_NOTIFICATION_BLUR,
         KEY_CONTAINER_BLUR_SENSITIVITY_DP,
         KEY_CONTAINER_BLUR_TRANSPARENCY,
+        KEY_GLASS_BACKDROP_MODE,
         KEY_ENABLE_GLASS_REFRACTION,
         KEY_GLASS_REFRACTION_SENSITIVITY,
         // Grid / QQS / Tiles / Fonts / Labels
@@ -6011,6 +6073,7 @@ object PanelPreferences {
         _qsBackgroundColor.value?.let { settingsJson.put(KEY_QS_BACKGROUND_COLOR, it) }
         _qsPanelBackgroundColor.value?.let { settingsJson.put(KEY_QS_PANEL_BACKGROUND_COLOR, it) }
         settingsJson.put(KEY_QS_BACKGROUND_CORNER, _qsBackgroundCorner.value.toDouble())
+        settingsJson.put(KEY_GLASS_BACKDROP_MODE, _glassBackdropMode.value.id)
         settingsJson.put(KEY_ENABLE_CONTAINER_BLUR, _enableContainerBlur.value)
         settingsJson.put(KEY_BLUR_ONLY_BEHIND_QS_CARD, _blurOnlyBehindQsCard.value)
         settingsJson.put(KEY_ENABLE_NOTIFICATION_BLUR, _enableNotificationBlur.value)

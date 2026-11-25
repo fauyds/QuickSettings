@@ -74,6 +74,7 @@ import com.example.ui.overlay.QuickSettingsPanel
 import com.example.ui.overlay.applyWindowBlurBehind
 import com.example.ui.overlay.computeQsBlurWindowPlan
 import com.example.ui.overlay.computeWindowBlurBehindRadiusPx
+import com.example.ui.overlay.isAndroid16FrostedGlassSupported
 import com.example.ui.overlay.isCrossWindowBlurSupported
 import com.example.ui.overlay.rememberCrossWindowBlurSupported
 import com.example.ui.theme.QuickPanelTheme
@@ -421,7 +422,8 @@ class QuickSettingsOverlayService : Service() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
             }
-            val initialBlurEnabled = PanelPreferences.enableContainerBlur.value &&
+            val initialBlurEnabled = isAndroid16FrostedGlassSupported() &&
+                PanelPreferences.enableContainerBlur.value &&
                 !PanelPreferences.blurOnlyBehindQsCard.value &&
                 PanelPreferences.disablePanelAnimations.value &&
                 isCrossWindowBlurSupported(this@QuickSettingsOverlayService)
@@ -481,7 +483,8 @@ class QuickSettingsOverlayService : Service() {
 
                     val animSpeedScale by PanelPreferences.animationSpeedScale.collectAsState()
                     val disablePanelAnimations by PanelPreferences.disablePanelAnimations.collectAsState()
-                    val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+                    val rawEnableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+                    val enableContainerBlur = rawEnableContainerBlur && isAndroid16FrostedGlassSupported()
                     val blurOnlyBehindQsCard by PanelPreferences.blurOnlyBehindQsCard.collectAsState()
                     val containerBlurRadiusDp by PanelPreferences.containerBlurRadiusDp.collectAsState()
                     val crossWindowBlurSupported = rememberCrossWindowBlurSupported()

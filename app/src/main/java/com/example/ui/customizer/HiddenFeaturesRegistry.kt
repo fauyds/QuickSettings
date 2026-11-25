@@ -161,7 +161,7 @@ object HiddenFeatureCatalog {
         "element_colors_preference_card" to CardMeta("Per-Element Accent Colors", CustomizeCategory.QS_DESIGN, Icons.Default.ColorLens, FavoriteFeature.DESIGN_ELEMENT_COLORS.id),
         "header_status_background_card" to CardMeta("Header & Status Backgrounds", CustomizeCategory.QS_DESIGN, Icons.Default.RoundedCorner, FavoriteFeature.DESIGN_HEADER_STATUS_BACKGROUNDS.id),
         "footer_icon_background_card" to CardMeta("Footer Icon Backgrounds", CustomizeCategory.QS_DESIGN, Icons.Default.CropSquare, FavoriteFeature.DESIGN_FOOTER_ICON_BACKGROUNDS.id),
-        "frosted_glass_panel_card" to CardMeta("Frosted Glass Panel Backdrop", CustomizeCategory.QS_DESIGN, Icons.Default.AutoAwesome, FavoriteFeature.DESIGN_FROSTED_GLASS.id),
+        "frosted_glass_panel_card" to CardMeta("Glass Backdrop Effect", CustomizeCategory.QS_DESIGN, Icons.Default.AutoAwesome, FavoriteFeature.DESIGN_FROSTED_GLASS.id),
         "header_complication_tiles_card" to CardMeta("Complication QS Tiles", CustomizeCategory.QS_DESIGN, Icons.Default.Apps),
         "move_brightness_bottom_card" to CardMeta("Move Brightness to Bottom", CustomizeCategory.QS_DESIGN, Icons.Default.Tune, FavoriteFeature.DESIGN_BRIGHTNESS_BOTTOM.id),
         "brightness_in_qqs_card" to CardMeta("Brightness Slider in QQS", CustomizeCategory.QS_DESIGN, Icons.Default.Tune, FavoriteFeature.DESIGN_BRIGHTNESS_QQS.id),
@@ -261,6 +261,9 @@ object HiddenFeatureCatalog {
     }
 
     fun isCardHidden(cardId: String, hiddenIds: List<String>): Boolean {
+        if (cardId == "frosted_glass_panel_card" && !com.example.ui.overlay.isAndroid16FrostedGlassSupported()) {
+            return true
+        }
         if (hiddenIds.contains(cardId)) return true
         val aliases = cardAliases[cardId]
         if (aliases != null && aliases.any { hiddenIds.contains(it) }) return true
@@ -274,6 +277,9 @@ object HiddenFeatureCatalog {
     }
 
     fun isSearchFeatureHidden(feature: FavoriteFeature, hiddenIds: List<String>): Boolean {
+        if (feature == FavoriteFeature.DESIGN_FROSTED_GLASS && !com.example.ui.overlay.isAndroid16FrostedGlassSupported()) {
+            return true
+        }
         if (hiddenIds.contains(feature.id)) return true
         if (isCategoryHidden(feature.category, hiddenIds)) return true
         val directCard = favoriteToPrimaryCardId[feature.id]

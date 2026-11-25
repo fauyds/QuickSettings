@@ -172,7 +172,7 @@ class TriggerContainerLayout @JvmOverloads constructor(
                 touchDownTime = System.currentTimeMillis()
                 isTrackingSwipe = true
                 if (QuickPanelAccessibilityService.isRunning) {
-                    QuickPanelAccessibilityService.instance?.preCaptureScreenBackdropIfNeeded()
+                    QuickPanelAccessibilityService.instance?.resetBackdropCaptureForNewGesture()
                 }
                 QuickPanelAccessibilityService.collapseStockNotificationShade()
                 super.dispatchTouchEvent(ev)

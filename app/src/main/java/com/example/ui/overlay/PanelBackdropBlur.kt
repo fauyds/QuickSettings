@@ -39,7 +39,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.example.data.GlassBackdropMode
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Email
@@ -660,11 +662,33 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
     uniform float2 uRadii[18];
     uniform int regionCount;
 
+    float resolvedRadius(float2 p, float2 halfSize, float topR, float botR) {
+        float maxR = min(halfSize.x, halfSize.y);
+        float tR = clamp(topR, 0.0, maxR);
+        float bR = clamp(botR, 0.0, maxR);
+        float yBlend = clamp(maxR * 0.15, 1.0, 16.0);
+        return mix(tR, bR, smoothstep(-yBlend, yBlend, p.y));
+    }
+
     float sdRoundRect(float2 p, float2 halfSize, float topR, float botR) {
-        float cr = (p.y < 0.0) ? topR : botR;
-        cr = clamp(cr, 0.0, min(halfSize.x, halfSize.y));
+        float cr = resolvedRadius(p, halfSize, topR, botR);
         float2 d = abs(p) - (halfSize - float2(cr));
         return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - cr;
+    }
+
+    float2 smoothRoundRectNormal(float2 local, float2 halfSize, float topR, float botR) {
+        float cr = resolvedRadius(local, halfSize, topR, botR);
+        float2 q = abs(local) - (halfSize - float2(cr));
+        float2 sgn = float2(local.x >= 0.0 ? 1.0 : -1.0, local.y >= 0.0 ? 1.0 : -1.0);
+        if (q.x > 0.0 || q.y > 0.0) {
+            float2 posQ = max(q, float2(0.0));
+            float posLen = length(posQ);
+            return (posLen > 0.0001) ? (sgn * (posQ / posLen)) : float2(0.0, -1.0);
+        }
+        float2 dIn = -q;
+        float2 raw = float2(dIn.y * dIn.y * dIn.y, dIn.x * dIn.x * dIn.x);
+        float rawLen = length(raw);
+        return (rawLen > 0.000001) ? (sgn * (raw / rawLen)) : (sgn * float2(0.70710678, 0.70710678));
     }
 
     half4 main(float2 fragCoord) {
@@ -691,15 +715,8 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
 
             float distIn = -sdf;
 
-            // Smooth surface normal from central-difference SDF gradient
-            float eps = 1.5;
-            float gx = sdRoundRect(local + float2(eps, 0.0), halfSize, topR, botR)
-                     - sdRoundRect(local - float2(eps, 0.0), halfSize, topR, botR);
-            float gy = sdRoundRect(local + float2(0.0, eps), halfSize, topR, botR)
-                     - sdRoundRect(local - float2(0.0, eps), halfSize, topR, botR);
-            float2 n = float2(gx, gy);
-            float nLen = length(n);
-            n = (nLen > 0.0001) ? (n / nLen) : float2(0.0, -1.0);
+            // Exact C1/C2 smooth analytical surface normal (eliminates 45-degree diagonal miter seams)
+            float2 n = smoothRoundRectNormal(local, halfSize, topR, botR);
 
             // Optical curved bevel chamfer + subtle peripheral pillow lens warp
             float edgeT = 1.0 - smoothstep(0.0, bevelW, distIn);
@@ -745,11 +762,33 @@ private const val FROSTED_GLASS_CARD_SURFACE_AGSL = """
     uniform float sensitivity;
     uniform float isDark;
 
+    float resolvedRadius(float2 p, float2 halfSize, float topR, float botR) {
+        float maxR = min(halfSize.x, halfSize.y);
+        float tR = clamp(topR, 0.0, maxR);
+        float bR = clamp(botR, 0.0, maxR);
+        float yBlend = clamp(maxR * 0.15, 1.0, 16.0);
+        return mix(tR, bR, smoothstep(-yBlend, yBlend, p.y));
+    }
+
     float sdRoundRect(float2 p, float2 halfSize, float topR, float botR) {
-        float cr = (p.y < 0.0) ? topR : botR;
-        cr = clamp(cr, 0.0, min(halfSize.x, halfSize.y));
+        float cr = resolvedRadius(p, halfSize, topR, botR);
         float2 d = abs(p) - (halfSize - float2(cr));
         return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - cr;
+    }
+
+    float2 smoothRoundRectNormal(float2 local, float2 halfSize, float topR, float botR) {
+        float cr = resolvedRadius(local, halfSize, topR, botR);
+        float2 q = abs(local) - (halfSize - float2(cr));
+        float2 sgn = float2(local.x >= 0.0 ? 1.0 : -1.0, local.y >= 0.0 ? 1.0 : -1.0);
+        if (q.x > 0.0 || q.y > 0.0) {
+            float2 posQ = max(q, float2(0.0));
+            float posLen = length(posQ);
+            return (posLen > 0.0001) ? (sgn * (posQ / posLen)) : float2(0.0, -1.0);
+        }
+        float2 dIn = -q;
+        float2 raw = float2(dIn.y * dIn.y * dIn.y, dIn.x * dIn.x * dIn.x);
+        float rawLen = length(raw);
+        return (rawLen > 0.000001) ? (sgn * (raw / rawLen)) : (sgn * float2(0.70710678, 0.70710678));
     }
 
     half4 main(float2 fragCoord) {
@@ -764,14 +803,7 @@ private const val FROSTED_GLASS_CARD_SURFACE_AGSL = """
         float dScale = max(density, 1.0);
         float s = clamp(sensitivity, 0.1, 1.0);
 
-        float eps = 1.5;
-        float gx = sdRoundRect(local + float2(eps, 0.0), halfSize, topRadius, botRadius)
-                 - sdRoundRect(local - float2(eps, 0.0), halfSize, topRadius, botRadius);
-        float gy = sdRoundRect(local + float2(0.0, eps), halfSize, topRadius, botRadius)
-                 - sdRoundRect(local - float2(0.0, eps), halfSize, topRadius, botRadius);
-        float2 n = float2(gx, gy);
-        float nLen = length(n);
-        n = (nLen > 0.0001) ? (n / nLen) : float2(0.0, -1.0);
+        float2 n = smoothRoundRectNormal(local, halfSize, topRadius, botRadius);
 
         float bevelW = (10.0 + 14.0 * s) * dScale;
         float edgeT = 1.0 - smoothstep(0.0, bevelW, distIn);
@@ -802,7 +834,7 @@ fun isAndroid16FrostedGlassSupported(): Boolean =
     Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA
 
 fun isRuntimeShaderRefractionSupported(): Boolean =
-    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+    Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA
 
 @RequiresApi(Build.VERSION_CODES.BAKLAVA)
 fun createAndroid16FrostedBackdropColorFilter(
@@ -989,6 +1021,7 @@ fun createFrostedBackdropRenderEffect(
     }
 
     if (enableGlassRefraction &&
+        isRuntimeShaderRefractionSupported() &&
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
         refractionRegions.isNotEmpty() &&
         viewportWidthPx > 1f &&
@@ -1043,99 +1076,61 @@ fun Modifier.frostedGlassSurface(
     enableBlur: Boolean,
     isDark: Boolean,
     transparency: Float? = null,
-    cornerRadiusDp: Float = 24f
+    cornerRadiusDp: Float = 24f,
+    topCornerRadiusDp: Float = cornerRadiusDp,
+    bottomCornerRadiusDp: Float = cornerRadiusDp,
+    shape: Shape? = null,
+    enableRefractionOverride: Boolean? = null
 ): Modifier = composed {
+    val supportedBlur = enableBlur && isAndroid16FrostedGlassSupported()
     val effectiveColor = frostedContainerColor(
         baseColor = baseColor,
-        enableBlur = enableBlur,
+        enableBlur = supportedBlur,
         isDark = isDark,
         transparency = transparency
     )
-    if (!enableBlur) {
+    if (!supportedBlur) {
         return@composed this.background(effectiveColor)
     }
 
     val resolvedTransparency = transparency ?: if (isDark) 0.44f else 0.32f
-    val api36ColorFilter = remember(isDark, resolvedTransparency) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
-            createAndroid16FrostedSurfaceColorFilter(
-                isDark = isDark,
-                transparency = resolvedTransparency
-            )
-        } else {
-            null
-        }
-    }
-    val api36Xfermode = remember(isDark, resolvedTransparency) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
-            createAndroid16FrostedSurfaceXfermode(
-                isDark = isDark,
-                transparency = resolvedTransparency
-            )
-        } else {
-            null
-        }
-    }
-    val surfacePaint = remember(api36ColorFilter, api36Xfermode) {
-        Paint().apply {
-            isAntiAlias = true
-            if (api36ColorFilter != null) {
-                colorFilter = api36ColorFilter
-            }
-            if (api36Xfermode != null) {
-                xfermode = api36Xfermode
-            }
-        }
-    }
     val bevelPaint = remember {
         Paint().apply {
             isAntiAlias = true
         }
     }
 
-    val enableRefraction by PanelPreferences.enableGlassRefraction.collectAsState()
+    val glassMode by PanelPreferences.glassBackdropMode.collectAsState()
+    val enableRefraction = (enableRefractionOverride ?: (glassMode == GlassBackdropMode.LIQUID)) &&
+        isRuntimeShaderRefractionSupported()
     val refractionSensitivity by PanelPreferences.glassRefractionSensitivity.collectAsState()
     val density = LocalDensity.current
-
-    val sheenStrength = ((1f - resolvedTransparency.coerceIn(0f, 0.95f)) * if (isDark) 0.09f else 0.14f)
-        .coerceIn(0.015f, 0.16f)
-    val topSheen = Color.White.copy(alpha = sheenStrength)
-    val bottomSheen = Color.Transparent
-    val cornerPx = with(density) { cornerRadiusDp.coerceAtLeast(0f).dp.toPx() }
+    val topCornerPx = with(density) { topCornerRadiusDp.coerceAtLeast(0f).dp.toPx() }
+    val bottomCornerPx = with(density) { bottomCornerRadiusDp.coerceAtLeast(0f).dp.toPx() }
     val densityPx = density.density
 
     this
         .background(effectiveColor)
         .drawBehind {
             if (size.width <= 0f || size.height <= 0f) return@drawBehind
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA && api36ColorFilter != null) {
-                drawIntoCanvas { canvas ->
-                    surfacePaint.shader = LinearGradient(
-                        0f,
-                        0f,
-                        0f,
-                        size.height,
-                        topSheen.toArgb(),
-                        bottomSheen.toArgb(),
-                        Shader.TileMode.CLAMP
-                    )
-                    canvas.nativeCanvas.drawRect(0f, 0f, size.width, size.height, surfacePaint)
-                }
-            } else {
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(topSheen, bottomSheen)
-                    )
-                )
-            }
 
-            // Real AGSL rounded-rect SDF Fresnel dispersion & bevel shader on API 33+
+            // Real AGSL rounded-rect SDF Fresnel dispersion & bevel shader (Liquid Glass mode on API 36+)
             if (enableRefraction && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val resolvedTopRadiusPx = if (shape is CornerBasedShape) {
+                    maxOf(shape.topStart.toPx(size, this), shape.topEnd.toPx(size, this))
+                } else {
+                    topCornerPx
+                }
+                val resolvedBottomRadiusPx = if (shape is CornerBasedShape) {
+                    maxOf(shape.bottomStart.toPx(size, this), shape.bottomEnd.toPx(size, this))
+                } else {
+                    bottomCornerPx
+                }
                 val bevelShader = createFrostedGlassCardBevelShader(
                     widthPx = size.width,
                     heightPx = size.height,
-                    topRadiusPx = cornerPx,
-                    bottomRadiusPx = cornerPx,
+                    topRadiusPx = resolvedTopRadiusPx,
+                    bottomRadiusPx = resolvedBottomRadiusPx,
                     density = densityPx,
                     sensitivity = refractionSensitivity,
                     isDark = isDark
@@ -1208,7 +1203,13 @@ fun LiveScreenRefractionBackdrop(
     hostOffsetY: Float = 0f,
     modifier: Modifier = Modifier
 ) {
-    if (!enableBlur || !enableRefraction || screenBitmap == null || screenBitmap.isRecycled) return
+    if (!isAndroid16FrostedGlassSupported() ||
+        !isRuntimeShaderRefractionSupported() ||
+        !enableBlur ||
+        !enableRefraction ||
+        screenBitmap == null ||
+        screenBitmap.isRecycled
+    ) return
     val activeRegions = remember(qsCardBounds, extraBlurRegions) {
         buildList {
             if (qsCardBounds != null && qsCardBounds.isValid) add(qsCardBounds)
@@ -1314,9 +1315,11 @@ fun FrostedPreviewBackdrop(
     enableGlassRefraction: Boolean? = null,
     glassRefractionSensitivity: Float? = null
 ) {
-    val prefRefraction by PanelPreferences.enableGlassRefraction.collectAsState()
+    val glassMode by PanelPreferences.glassBackdropMode.collectAsState()
     val prefRefractionSens by PanelPreferences.glassRefractionSensitivity.collectAsState()
-    val resolvedRefraction = enableGlassRefraction ?: prefRefraction
+    val effectiveBlur = enableBlur && isAndroid16FrostedGlassSupported()
+    val resolvedRefraction = (enableGlassRefraction ?: (glassMode == GlassBackdropMode.LIQUID)) &&
+        isRuntimeShaderRefractionSupported()
     val resolvedRefractionSens = glassRefractionSensitivity ?: prefRefractionSens
 
     val activeRegions = remember(qsCardBounds, extraBlurRegions) {
@@ -1327,8 +1330,8 @@ fun FrostedPreviewBackdrop(
             }
         }
     }
-    val shouldBlurFullScreen = enableBlur && !blurOnlyBehindQsCard
-    val shouldBlurQsOnly = enableBlur && blurOnlyBehindQsCard && activeRegions.isNotEmpty()
+    val shouldBlurFullScreen = effectiveBlur && !blurOnlyBehindQsCard
+    val shouldBlurQsOnly = effectiveBlur && blurOnlyBehindQsCard && activeRegions.isNotEmpty()
     val effectiveBlurDp = blurRadiusDp.coerceIn(1f, 80f)
     val density = LocalDensity.current
     val effectiveBlurPx = with(density) { effectiveBlurDp.dp.toPx() }
@@ -1339,7 +1342,7 @@ fun FrostedPreviewBackdrop(
     var viewportHeightPx by remember { mutableStateOf(0f) }
 
     val frostedRenderEffect = remember(
-        enableBlur,
+        effectiveBlur,
         effectiveBlurPx,
         isDark,
         effectiveBlurDp,
@@ -1351,7 +1354,7 @@ fun FrostedPreviewBackdrop(
         viewportHeightPx,
         density.density
     ) {
-        if (!enableBlur) null
+        if (!effectiveBlur) null
         else createFrostedBackdropRenderEffect(
             blurRadiusPx = effectiveBlurPx,
             isDark = isDark,
@@ -1427,54 +1430,17 @@ fun FrostedPreviewBackdrop(
 private fun PreviewBackdropScene(
     modifier: Modifier = Modifier
 ) {
+    val isDark = MaterialTheme.colorScheme.surface.let {
+        (0.2126f * it.red + 0.7152f * it.green + 0.0722f * it.blue) < 0.5f
+    }
+    val solidWallpaperColor = if (isDark) Color(0xFF1B1D21) else Color(0xFFE2E4E9)
     val primaryColor = MaterialTheme.colorScheme.primary
     val tertiaryColor = MaterialTheme.colorScheme.tertiary
     val secondaryColor = MaterialTheme.colorScheme.secondary
-    val surfaceColor = MaterialTheme.colorScheme.surfaceVariant
 
     Box(
-        modifier = modifier.background(
-            Brush.verticalGradient(
-                colors = listOf(
-                    primaryColor.copy(alpha = 0.55f),
-                    secondaryColor.copy(alpha = 0.45f),
-                    tertiaryColor.copy(alpha = 0.52f),
-                    surfaceColor.copy(alpha = 0.85f)
-                )
-            )
-        )
+        modifier = modifier.background(solidWallpaperColor)
     ) {
-        // Atmospheric wallpaper shapes so behind-panel blur has visible texture & depth
-        Box(
-            modifier = Modifier
-                .size(260.dp)
-                .offset(x = (-40).dp, y = 40.dp)
-                .clip(CircleShape)
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            tertiaryColor.copy(alpha = 0.85f),
-                            Color.Transparent
-                        )
-                    )
-                )
-        )
-        Box(
-            modifier = Modifier
-                .size(280.dp)
-                .align(Alignment.BottomEnd)
-                .offset(x = 50.dp, y = (-80).dp)
-                .clip(CircleShape)
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            primaryColor.copy(alpha = 0.80f),
-                            Color.Transparent
-                        )
-                    )
-                )
-        )
-
         // Simulated underlying home-screen widgets & app icons beneath the shade
         Column(
             modifier = Modifier

@@ -494,7 +494,7 @@ class NotificationAdapter(
                 )
             }
 
-            val enableContainerBlur = PanelPreferences.enableContainerBlur.value
+            val enableContainerBlur = PanelPreferences.enableContainerBlur.value && com.example.ui.overlay.isAndroid16FrostedGlassSupported()
             val enableNotificationBlur = PanelPreferences.enableNotificationBlur.value
             val containerBlurTransparency = PanelPreferences.containerBlurTransparency.value
             val frostedAlpha = 1f - containerBlurTransparency.coerceIn(0f, 0.95f)
@@ -545,7 +545,7 @@ class NotificationAdapter(
                 enableTopRimBackground = PanelPreferences.enablePanelTopRim.value && !isKitKatStyle,
                 enableFrostedGlass = enableContainerBlur && enableNotificationBlur,
                 frostedTransparency = containerBlurTransparency,
-                enableGlassRefraction = PanelPreferences.enableGlassRefraction.value,
+                enableGlassRefraction = PanelPreferences.isLiquidGlassActive(),
                 glassRefractionSensitivity = PanelPreferences.glassRefractionSensitivity.value
             )
             CustomShadowHelper.applyPanelTopRimForeground(
@@ -867,7 +867,7 @@ class NotificationAdapter(
             val fallbackBg = customCardBackgroundColor ?: if (isDark) Color.parseColor("#25262B") else Color.parseColor("#EAEBEF")
             val fallbackAccent = customPrimaryColor ?: MonetThemeHelper.getPrimaryAccent(context, isDark)
 
-            val enableContainerBlur = PanelPreferences.enableContainerBlur.value
+            val enableContainerBlur = PanelPreferences.enableContainerBlur.value && com.example.ui.overlay.isAndroid16FrostedGlassSupported()
             val enableNotificationBlur = PanelPreferences.enableNotificationBlur.value
             val containerBlurTransparency = PanelPreferences.containerBlurTransparency.value
             val frostedAlpha = 1f - containerBlurTransparency.coerceIn(0f, 0.95f)
@@ -955,7 +955,7 @@ class NotificationAdapter(
                 enableTopRimBackground = PanelPreferences.enablePanelTopRim.value,
                 enableFrostedGlass = enableContainerBlur && enableNotificationBlur,
                 frostedTransparency = containerBlurTransparency,
-                enableGlassRefraction = PanelPreferences.enableGlassRefraction.value,
+                enableGlassRefraction = PanelPreferences.isLiquidGlassActive(),
                 glassRefractionSensitivity = PanelPreferences.glassRefractionSensitivity.value
             )
             CustomShadowHelper.applyPanelTopRimForeground(
@@ -1307,7 +1307,7 @@ class NotificationAdapter(
                 )
             }
 
-            val enableContainerBlur = PanelPreferences.enableContainerBlur.value
+            val enableContainerBlur = PanelPreferences.enableContainerBlur.value && com.example.ui.overlay.isAndroid16FrostedGlassSupported()
             val enableNotificationBlur = PanelPreferences.enableNotificationBlur.value
             val containerBlurTransparency = PanelPreferences.containerBlurTransparency.value
             val frostedAlpha = 1f - containerBlurTransparency.coerceIn(0f, 0.95f)
@@ -1363,7 +1363,7 @@ class NotificationAdapter(
                 enableTopRimBackground = PanelPreferences.enablePanelTopRim.value,
                 enableFrostedGlass = enableContainerBlur && enableNotificationBlur,
                 frostedTransparency = containerBlurTransparency,
-                enableGlassRefraction = PanelPreferences.enableGlassRefraction.value,
+                enableGlassRefraction = PanelPreferences.isLiquidGlassActive(),
                 glassRefractionSensitivity = PanelPreferences.glassRefractionSensitivity.value
             )
             CustomShadowHelper.applyPanelTopRimForeground(
@@ -1510,7 +1510,7 @@ class NotificationAdapter(
                 )
             }
 
-            val enableContainerBlur = com.example.data.PanelPreferences.enableContainerBlur.value
+            val enableContainerBlur = com.example.data.PanelPreferences.enableContainerBlur.value && com.example.ui.overlay.isAndroid16FrostedGlassSupported()
             val enableNotificationBlur = com.example.data.PanelPreferences.enableNotificationBlur.value
             val containerBlurTransparency = com.example.data.PanelPreferences.containerBlurTransparency.value
             val frostedAlpha = 1f - containerBlurTransparency.coerceIn(0f, 0.95f)
@@ -1560,7 +1560,7 @@ class NotificationAdapter(
                 enableTopRimBackground = com.example.data.PanelPreferences.enablePanelTopRim.value && !isKitKatStyle,
                 enableFrostedGlass = enableContainerBlur && enableNotificationBlur,
                 frostedTransparency = containerBlurTransparency,
-                enableGlassRefraction = com.example.data.PanelPreferences.enableGlassRefraction.value,
+                enableGlassRefraction = com.example.data.PanelPreferences.isLiquidGlassActive(),
                 glassRefractionSensitivity = com.example.data.PanelPreferences.glassRefractionSensitivity.value
             )
             CustomShadowHelper.applyPanelTopRimForeground(

@@ -76,10 +76,13 @@ import com.example.ui.overlay.QsCardBlurBounds
 import com.example.ui.overlay.QsMultiCardBlurWindowHost
 import com.example.ui.overlay.QsExpansionStage
 import com.example.ui.overlay.QuickSettingsPanel
+import com.example.data.GlassBackdropMode
 import com.example.ui.overlay.applyWindowBlurBehind
 import com.example.ui.overlay.computeQsBlurWindowPlan
 import com.example.ui.overlay.computeWindowBlurBehindRadiusPx
+import com.example.ui.overlay.isAndroid16FrostedGlassSupported
 import com.example.ui.overlay.isCrossWindowBlurSupported
+import com.example.ui.overlay.isRuntimeShaderRefractionSupported
 import com.example.ui.overlay.rememberCrossWindowBlurSupported
 import com.example.ui.theme.LocalIsDarkTheme
 import com.example.ui.theme.QuickPanelTheme
@@ -236,6 +239,45 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         ): Boolean {
             return instance?.clickSystemUiTile(tileLabel, keywords, specifier) ?: false
         }
+
+        internal fun isSystemUiShadeWindow(
+            packageName: String?,
+            title: CharSequence?,
+            windowType: Int,
+            boundsHeightPx: Int,
+            screenHeightPx: Int,
+            density: Float
+        ): Boolean {
+            if (windowType == AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY) return false
+            val pkg = packageName?.lowercase()?.trim().orEmpty()
+            val titleLower = title?.toString()?.lowercase()?.trim().orEmpty()
+            val whitelist = PanelPreferences.stockShadeWhitelist.value
+            val isSystemUiPkg = pkg.isNotEmpty() && (
+                pkg == "com.android.systemui" ||
+                    pkg.endsWith(".systemui") ||
+                    whitelist.any { it.equals(pkg, ignoreCase = true) }
+                )
+            if (!isSystemUiPkg) return false
+            if (titleLower.contains("volume")) return false
+
+            val hasShadeTitle = titleLower.contains("notification shade") ||
+                titleLower.contains("notificationshade") ||
+                titleLower.contains("quick settings") ||
+                titleLower.contains("quicksettings") ||
+                titleLower.contains("control center") ||
+                titleLower.contains("status_bar_expanded")
+            val minExplicitTitleHeightPx = (80f * density).toInt()
+            if (hasShadeTitle && boundsHeightPx > minExplicitTitleHeightPx) {
+                return true
+            }
+
+            val minShadeHeightPx = if (screenHeightPx > 0) {
+                maxOf((140f * density).toInt(), (screenHeightPx * 0.22f).toInt())
+            } else {
+                (140f * density).toInt()
+            }
+            return boundsHeightPx >= minShadeHeightPx
+        }
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -269,6 +311,8 @@ class QuickPanelAccessibilityService : AccessibilityService() {
     val capturedBackdropBitmap: StateFlow<android.graphics.Bitmap?> = _capturedBackdropBitmap.asStateFlow()
     private var lastBackdropCaptureTimeMs = 0L
     private var isBackdropCaptureInFlight = false
+    internal var captureGeneration = 0L
+        private set
     private val mainHandler = Handler(Looper.getMainLooper())
 
     val pullDownOffset = MutableStateFlow<Float?>(null)
@@ -281,22 +325,106 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         pullDownOffset.value = null
     }
 
-    fun preCaptureScreenBackdropIfNeeded(onComplete: (() -> Unit)? = null) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            onComplete?.invoke()
+    fun resetBackdropCaptureForNewGesture() {
+        captureGeneration++
+        isBackdropCaptureInFlight = false
+        lastBackdropCaptureTimeMs = 0L
+        triggerStripView?.alpha = 1f
+        if (!isPanelShowing && !isPendingShowOverlay) {
+            clearCapturedBackdropBitmap()
+        }
+    }
+
+    internal fun isSystemUiShadeVisible(): Boolean {
+        return try {
+            val dm = resources.displayMetrics
+            val screenH = dm.heightPixels
+            val density = dm.density
+            val currentWindows = windows ?: return false
+            currentWindows.any { win ->
+                val bounds = Rect()
+                win.getBoundsInScreen(bounds)
+                val pkg = try {
+                    win.root?.packageName?.toString()
+                } catch (_: Throwable) {
+                    null
+                }
+                isSystemUiShadeWindow(
+                    packageName = pkg,
+                    title = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) win.title else null,
+                    windowType = win.type,
+                    boundsHeightPx = bounds.height(),
+                    screenHeightPx = screenH,
+                    density = density
+                )
+            }
+        } catch (_: Throwable) {
+            false
+        }
+    }
+
+    private fun captureFreshBackdropAndLaunch(initialStage: QsExpansionStage) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA ||
+            !isAndroid16FrostedGlassSupported() ||
+            !isRuntimeShaderRefractionSupported() ||
+            !PanelPreferences.isLiquidGlassActive()
+        ) {
+            showOverlayPanelInternal(initialStage)
             return
         }
-        if (isPanelShowing || !PanelPreferences.enableContainerBlur.value || !PanelPreferences.enableGlassRefraction.value) {
-            onComplete?.invoke()
-            return
+
+        isPendingShowOverlay = true
+        val requestGen = ++captureGeneration
+        collapseStockNotificationShade()
+        triggerStripView?.alpha = 0f
+
+        serviceScope.launch {
+            var waitedMs = 0L
+            val wasShadeVisibleInitially = isSystemUiShadeVisible()
+            if (wasShadeVisibleInitially) {
+                while (waitedMs < 160L && isSystemUiShadeVisible()) {
+                    if (requestGen != captureGeneration || isPanelShowing || isLockedOrUnlocking()) {
+                        triggerStripView?.alpha = 1f
+                        isPendingShowOverlay = false
+                        return@launch
+                    }
+                    delay(16L)
+                    waitedMs += 16L
+                }
+                // Let SurfaceFlinger commit the frame without stock shade layers to avoid ghosting
+                delay(24L)
+            }
+
+            if (requestGen != captureGeneration || isPanelShowing || isLockedOrUnlocking()) {
+                triggerStripView?.alpha = 1f
+                isPendingShowOverlay = false
+                return@launch
+            }
+
+            val launched = java.util.concurrent.atomic.AtomicBoolean(false)
+            val finishLaunch = Runnable {
+                triggerStripView?.alpha = 1f
+                if (launched.compareAndSet(false, true)) {
+                    isPendingShowOverlay = false
+                    if (requestGen == captureGeneration && !isLockedOrUnlocking()) {
+                        showOverlayPanelInternal(initialStage)
+                    }
+                }
+            }
+            mainHandler.postDelayed(finishLaunch, 260L)
+            takeBackdropScreenshotForGeneration(requestGen) {
+                mainHandler.removeCallbacks(finishLaunch)
+                finishLaunch.run()
+            }
         }
-        val now = android.os.SystemClock.uptimeMillis()
-        if (isBackdropCaptureInFlight) {
-            onComplete?.invoke()
-            return
-        }
-        val existing = _capturedBackdropBitmap.value
-        if (existing != null && !existing.isRecycled && (now - lastBackdropCaptureTimeMs) < 350L) {
+    }
+
+    private fun takeBackdropScreenshotForGeneration(
+        requestGen: Long,
+        onComplete: (() -> Unit)? = null
+    ) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
+            triggerStripView?.alpha = 1f
             onComplete?.invoke()
             return
         }
@@ -308,7 +436,7 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                 object : TakeScreenshotCallback {
                     override fun onSuccess(screenshot: ScreenshotResult) {
                         isBackdropCaptureInFlight = false
-                        lastBackdropCaptureTimeMs = android.os.SystemClock.uptimeMillis()
+                        triggerStripView?.alpha = 1f
                         val hb = screenshot.hardwareBuffer
                         val wrapped = try {
                             android.graphics.Bitmap.wrapHardwareBuffer(hb, screenshot.colorSpace)
@@ -319,7 +447,8 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                                 hb.close()
                             } catch (_: Throwable) {}
                         }
-                        if (wrapped != null && !isPanelShowing) {
+                        if (wrapped != null && requestGen == captureGeneration && !isLockedOrUnlocking()) {
+                            lastBackdropCaptureTimeMs = android.os.SystemClock.uptimeMillis()
                             val previous = _capturedBackdropBitmap.value
                             _capturedBackdropBitmap.value = wrapped
                             if (previous != null && previous !== wrapped && !previous.isRecycled) {
@@ -333,14 +462,36 @@ class QuickPanelAccessibilityService : AccessibilityService() {
 
                     override fun onFailure(errorCode: Int) {
                         isBackdropCaptureInFlight = false
+                        triggerStripView?.alpha = 1f
                         onComplete?.invoke()
                     }
                 }
             )
         } catch (_: Throwable) {
             isBackdropCaptureInFlight = false
+            triggerStripView?.alpha = 1f
             onComplete?.invoke()
         }
+    }
+
+    fun preCaptureScreenBackdropIfNeeded(onComplete: (() -> Unit)? = null) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA ||
+            !isAndroid16FrostedGlassSupported() ||
+            !isRuntimeShaderRefractionSupported()
+        ) {
+            onComplete?.invoke()
+            return
+        }
+        if (isPanelShowing || !PanelPreferences.isLiquidGlassActive()) {
+            onComplete?.invoke()
+            return
+        }
+        if (isBackdropCaptureInFlight) {
+            onComplete?.invoke()
+            return
+        }
+        val requestGen = ++captureGeneration
+        takeBackdropScreenshotForGeneration(requestGen, onComplete)
     }
 
     private fun clearCapturedBackdropBitmap() {
@@ -1477,29 +1628,13 @@ class QuickPanelAccessibilityService : AccessibilityService() {
             return
         }
 
-        val now = android.os.SystemClock.uptimeMillis()
-        val existing = _capturedBackdropBitmap.value
-        val hasFreshBackdrop = existing != null && !existing.isRecycled && (now - lastBackdropCaptureTimeMs) < 650L
-        val shouldCaptureFirst = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            PanelPreferences.enableContainerBlur.value &&
-            PanelPreferences.enableGlassRefraction.value &&
-            !hasFreshBackdrop &&
-            !isBackdropCaptureInFlight
+        val shouldCaptureLiveBackdrop = Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA &&
+            isAndroid16FrostedGlassSupported() &&
+            isRuntimeShaderRefractionSupported() &&
+            PanelPreferences.isLiquidGlassActive()
 
-        if (shouldCaptureFirst) {
-            isPendingShowOverlay = true
-            val launched = java.util.concurrent.atomic.AtomicBoolean(false)
-            val finishLaunch = Runnable {
-                if (launched.compareAndSet(false, true)) {
-                    isPendingShowOverlay = false
-                    showOverlayPanelInternal(initialStage)
-                }
-            }
-            mainHandler.postDelayed(finishLaunch, 65L)
-            preCaptureScreenBackdropIfNeeded {
-                mainHandler.removeCallbacks(finishLaunch)
-                finishLaunch.run()
-            }
+        if (shouldCaptureLiveBackdrop) {
+            captureFreshBackdropAndLaunch(initialStage)
             return
         }
 
@@ -1549,7 +1684,8 @@ class QuickPanelAccessibilityService : AccessibilityService() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
-            val initialBlurEnabled = PanelPreferences.enableContainerBlur.value &&
+            val initialBlurEnabled = isAndroid16FrostedGlassSupported() &&
+                PanelPreferences.enableContainerBlur.value &&
                 !PanelPreferences.blurOnlyBehindQsCard.value &&
                 PanelPreferences.disablePanelAnimations.value &&
                 isCrossWindowBlurSupported(this@QuickPanelAccessibilityService)
@@ -1609,11 +1745,13 @@ class QuickPanelAccessibilityService : AccessibilityService() {
 
                     val animSpeedScale by PanelPreferences.animationSpeedScale.collectAsState()
                     val disablePanelAnimations by PanelPreferences.disablePanelAnimations.collectAsState()
-                    val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+                    val glassBackdropMode by PanelPreferences.glassBackdropMode.collectAsState()
+                    val rawEnableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+                    val glassSupported = isAndroid16FrostedGlassSupported()
+                    val enableContainerBlur = rawEnableContainerBlur && glassSupported
                     val blurOnlyBehindQsCard by PanelPreferences.blurOnlyBehindQsCard.collectAsState()
                     val containerBlurRadiusDp by PanelPreferences.containerBlurRadiusDp.collectAsState()
                     val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsState()
-                    val enableGlassRefraction by PanelPreferences.enableGlassRefraction.collectAsState()
                     val glassRefractionSensitivity by PanelPreferences.glassRefractionSensitivity.collectAsState()
                     val capturedBackdrop by capturedBackdropBitmap.collectAsState()
                     val isDarkOverlay = LocalIsDarkTheme.current
@@ -1905,7 +2043,7 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                         LiveScreenRefractionBackdrop(
                             screenBitmap = capturedBackdrop,
                             enableBlur = enableContainerBlur,
-                            enableRefraction = enableGlassRefraction,
+                            enableRefraction = glassSupported && glassBackdropMode == GlassBackdropMode.LIQUID,
                             refractionSensitivity = glassRefractionSensitivity,
                             blurRadiusDp = containerBlurRadiusDp,
                             transparency = containerBlurTransparency,
@@ -2067,6 +2205,10 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         lifecycleOwner = null
         isPanelShowing = false
         isPendingShowOverlay = false
+        captureGeneration++
+        isBackdropCaptureInFlight = false
+        lastBackdropCaptureTimeMs = 0L
+        triggerStripView?.alpha = 1f
         expansionStage.value = QsExpansionStage.COLLAPSED
         dismissAnimatedCallback = null
         clearCapturedBackdropBitmap()
@@ -2178,7 +2320,7 @@ class AccessibilityStatusTriggerView(context: Context) : View(context) {
                 startY = event.rawY
                 startX = event.rawX
                 isDragging = true
-                QuickPanelAccessibilityService.instance?.preCaptureScreenBackdropIfNeeded()
+                QuickPanelAccessibilityService.instance?.resetBackdropCaptureForNewGesture()
                 QuickPanelAccessibilityService.instance?.notifyUserDragging(true)
                 setPressedState(true)
                 QuickPanelAccessibilityService.collapseStockNotificationShade()

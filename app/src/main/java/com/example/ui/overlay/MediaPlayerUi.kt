@@ -196,7 +196,8 @@ fun CompactMediaNotificationCard(
     val artworkShape = RoundedCornerShape(effectiveCorner.dp)
 
     val isDark = com.example.ui.theme.LocalIsDarkTheme.current
-    val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+    val rawEnableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+    val enableContainerBlur = rawEnableContainerBlur && isAndroid16FrostedGlassSupported()
     val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsState()
     val effectiveCardColor = frostedContainerColor(backgroundColor, enableContainerBlur, isDark, containerBlurTransparency)
     val primaryTextColor = if (isDark) Color.White else Color(0xFF1C1B1F)
@@ -227,7 +228,8 @@ fun CompactMediaNotificationCard(
                         enableBlur = true,
                         isDark = isDark,
                         transparency = containerBlurTransparency,
-                        cornerRadiusDp = effectiveCornerFloat
+                        cornerRadiusDp = effectiveCornerFloat,
+                        shape = cardShape
                     )
                 } else {
                     Modifier
@@ -454,7 +456,8 @@ fun AdaptiveMediaPlayerCard(
         }
     }
 
-    val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+    val rawEnableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+    val enableContainerBlur = rawEnableContainerBlur && isAndroid16FrostedGlassSupported()
     val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsState()
     val cardColor = frostedContainerColor(
         baseColor = artworkColor ?: backgroundColor,
@@ -556,7 +559,8 @@ fun AdaptiveMediaPlayerCard(
                             enableBlur = true,
                             isDark = isDark,
                             transparency = containerBlurTransparency,
-                            cornerRadiusDp = effectiveCornerFloat
+                            cornerRadiusDp = effectiveCornerFloat,
+                            shape = effectiveShape
                         )
                     } else {
                         Modifier

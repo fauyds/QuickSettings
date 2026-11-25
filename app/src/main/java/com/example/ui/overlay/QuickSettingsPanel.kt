@@ -51,6 +51,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ripple
 import androidx.compose.foundation.border
 import com.example.data.TileShape
+import com.example.data.GlassBackdropMode
 import com.example.data.ProgressBarStyle
 import com.example.data.QsPageIndicatorStyle
 import com.example.data.BatteryPercentageLocation
@@ -898,7 +899,7 @@ fun QuickSettingsPanel(
                             .then(
                                 when {
                                     showCustomHeaderImage && customHeaderImageUri.isNotBlank() -> {
-                                        val enableHeaderFrosted = PanelPreferences.enableContainerBlur.collectAsState().value
+                                        val enableHeaderFrosted = PanelPreferences.enableContainerBlur.collectAsState().value && isAndroid16FrostedGlassSupported()
                                         val headerFrostedTransparency = PanelPreferences.containerBlurTransparency.collectAsState().value
                                         Modifier
                                              .height(customHeaderImageHeight.dp)
@@ -2716,7 +2717,7 @@ fun MarshmallowTileEditorScreen(
             Color(android.graphics.Color.argb(255, r, g, b))
         }
     }
-    val enableNHeaderFrosted = PanelPreferences.enableContainerBlur.collectAsState().value
+    val enableNHeaderFrosted = PanelPreferences.enableContainerBlur.collectAsState().value && isAndroid16FrostedGlassSupported()
     val nHeaderFrostedTransparency = PanelPreferences.containerBlurTransparency.collectAsState().value
     val darkHeaderBg = frostedContainerColor(rawDarkHeaderBg, enableNHeaderFrosted, isDark, nHeaderFrostedTransparency)
 
@@ -5348,7 +5349,7 @@ fun UnifiedQsPanel(
                     Color(android.graphics.Color.argb(255, r, g, b))
                 }
             }
-            val enableMHeaderFrosted = PanelPreferences.enableContainerBlur.collectAsState().value
+            val enableMHeaderFrosted = PanelPreferences.enableContainerBlur.collectAsState().value && isAndroid16FrostedGlassSupported()
             val mHeaderFrostedTransparency = PanelPreferences.containerBlurTransparency.collectAsState().value
             val darkHeaderBg = frostedContainerColor(rawDarkHeaderBg, enableMHeaderFrosted, isDark, mHeaderFrostedTransparency)
             val textLightSecondary = Color(MonetThemeHelper.getTextSecondary(context, isDark))
@@ -6857,7 +6858,7 @@ fun UnifiedQsPanel(
                                 val qqsAlpha = ((0.5f - morphProgress) / 0.5f).coerceIn(0f, 1f)
                                 val qqsScale = 1f - (morphProgress * 0.08f)
                                 val dQqsScrollState = rememberScrollState()
-                                val enableQqsBlur = PanelPreferences.enableContainerBlur.collectAsState().value
+                                val enableQqsBlur = PanelPreferences.enableContainerBlur.collectAsState().value && isAndroid16FrostedGlassSupported()
                                 val qqsBlurTransparency = PanelPreferences.containerBlurTransparency.collectAsState().value
                                 val qqsFadeBgColor = frostedContainerColor(
                                     com.example.ui.theme.getQsPanelBackgroundColor(isDark),
@@ -7971,15 +7972,18 @@ fun NotificationsCard(
         }
     }
 
-    val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+    val glassBackdropMode by PanelPreferences.glassBackdropMode.collectAsState()
+    val rawEnableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+    val enableContainerBlur = rawEnableContainerBlur && isAndroid16FrostedGlassSupported()
     val enableNotificationBlur by PanelPreferences.enableNotificationBlur.collectAsState()
     val blurOnlyBehindQsCard by PanelPreferences.blurOnlyBehindQsCard.collectAsState()
     val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsState()
     val enableGlassRefraction by PanelPreferences.enableGlassRefraction.collectAsState()
+    val isLiquidGlass = enableContainerBlur && (glassBackdropMode == GlassBackdropMode.LIQUID || enableGlassRefraction)
     val glassRefractionSensitivity by PanelPreferences.glassRefractionSensitivity.collectAsState()
     val onNotificationBlurRegionsChanged = LocalOnNotificationBlurRegionsChanged.current
     val applyNotifSurfaceBlur = enableContainerBlur && enableNotificationBlur
-    val reportPerNotifBlur = applyNotifSurfaceBlur && (blurOnlyBehindQsCard || enableGlassRefraction) && onNotificationBlurRegionsChanged != null
+    val reportPerNotifBlur = applyNotifSurfaceBlur && (blurOnlyBehindQsCard || isLiquidGlass) && onNotificationBlurRegionsChanged != null
     val resolvedNotifBgColor = frostedContainerColor(
         baseColor = notifBgColor,
         enableBlur = enableContainerBlur,
@@ -8021,7 +8025,7 @@ fun NotificationsCard(
             update = { view ->
                 // Read category & glass refraction state flows inside update block so Compose re-invokes updateData on changes
                 val _catSync = Triple(categorySortingEnabled, customCategories, categoryExpandedStates)
-                val _glassSync = Triple(enableNotificationBlur, enableGlassRefraction, glassRefractionSensitivity)
+                val _glassSync = Triple(enableNotificationBlur, isLiquidGlass, glassRefractionSensitivity)
                 view.clipChildren = true
                 view.clipToPadding = true
                 view.composeHostView = hostView
@@ -8131,7 +8135,8 @@ fun NotificationItemRow(
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
     val disablePanelAnimations by com.example.data.PanelPreferences.disablePanelAnimations.collectAsState()
-    val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+    val rawEnableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+    val enableContainerBlur = rawEnableContainerBlur && isAndroid16FrostedGlassSupported()
     val enableNotificationBlur by PanelPreferences.enableNotificationBlur.collectAsState()
     val applyNotifBlur = enableContainerBlur && enableNotificationBlur
     var offsetX by remember(item.key) { mutableFloatStateOf(0f) }
@@ -9924,7 +9929,7 @@ fun BlurredContainerCard(
     val enablePanelShadows by PanelPreferences.enablePanelShadows.collectAsState()
     val enablePanelTopRim by PanelPreferences.enablePanelTopRim.collectAsState()
     val rawEnableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
-    val enableContainerBlur = enableBlurOverride ?: rawEnableContainerBlur
+    val enableContainerBlur = (enableBlurOverride ?: rawEnableContainerBlur) && isAndroid16FrostedGlassSupported()
     val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsState()
     val panelShadowElevation by PanelPreferences.panelShadowElevation.collectAsState()
     val panelShadowOffsetY by PanelPreferences.panelShadowOffsetY.collectAsState()
@@ -10011,7 +10016,8 @@ fun BlurredContainerCard(
                     baseColor = containerColor,
                     enableBlur = enableContainerBlur,
                     isDark = isDark,
-                    transparency = containerBlurTransparency
+                    transparency = containerBlurTransparency,
+                    shape = shape
                 )
                 .panelTopRimBackground(enabled = enablePanelTopRim)
                 .then(

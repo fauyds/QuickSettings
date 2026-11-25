@@ -407,7 +407,8 @@ fun QsOverlaySurface(
         basePanelBg
     }
 
-    val enableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+    val rawEnableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
+    val enableContainerBlur = rawEnableContainerBlur && isAndroid16FrostedGlassSupported()
     val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsState()
     val rawCardContainerBg = config.qsPanelBackgroundColor?.let { Color(it) } ?: if (config.showMonetSurfaceBackground) {
         monetSurfaceBg
@@ -646,7 +647,8 @@ fun QsOverlaySurface(
                                 baseColor = rawCardContainerBg,
                                 enableBlur = enableContainerBlur,
                                 isDark = isPanelDark,
-                                transparency = containerBlurTransparency
+                                transparency = containerBlurTransparency,
+                                shape = RoundedCornerShape(innerCorner)
                             )
                             .padding(12.dp)
                     ) {
@@ -897,7 +899,8 @@ fun QsOverlaySurface(
                                 baseColor = rawCardContainerBg,
                                 enableBlur = enableContainerBlur,
                                 isDark = isPanelDark,
-                                transparency = containerBlurTransparency
+                                transparency = containerBlurTransparency,
+                                shape = RoundedCornerShape(innerCorner)
                             )
                             .padding(12.dp)
                     ) {

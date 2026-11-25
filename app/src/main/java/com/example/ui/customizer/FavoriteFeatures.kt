@@ -597,11 +597,11 @@ enum class FavoriteFeature(
     ),
     DESIGN_FROSTED_GLASS(
         id = "design_frosted_glass",
-        title = "Frosted Glass Panel Backdrop",
+        title = "Glass Backdrop Effect",
         category = CustomizeCategory.QS_DESIGN,
-        description = "Enable container blur, sensitivity, and transparency for QS panel containers, notifications, and surface cards, with option to blur behind QS/QQS only",
+        description = "Choose between Frosted Glass blur or optical Liquid Glass refraction for QS panels, notifications, and surface cards",
         icon = Icons.Default.AutoAwesome,
-        keywords = "frosted glass blur container blur backdrop translucent transparency sensitivity radius qs qqs only"
+        keywords = "frosted liquid glass blur refraction edge dispersion container backdrop translucent transparency sensitivity radius qs qqs only"
     ),
     DESIGN_BRIGHTNESS_BOTTOM(
         id = "design_brightness_bottom",
@@ -1213,6 +1213,7 @@ fun ManageFavoriteFeaturesDialog(
         val tokens = searchQuery.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
         FavoriteFeature.entries.filter { feat ->
             feat.isSearchable &&
+                !HiddenFeatureCatalog.isSearchFeatureHidden(feat, emptyList()) &&
                 (selectedCategoryFilter == null || feat.category == selectedCategoryFilter) &&
                 (tokens.isEmpty() || tokens.all { token ->
                     feat.title.contains(token, ignoreCase = true) ||

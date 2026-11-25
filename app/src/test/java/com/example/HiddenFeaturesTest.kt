@@ -409,7 +409,7 @@ class HiddenFeaturesTest {
     }
 
     @Test
-    fun `Frosted Glass Panel card displays and toggles enableContainerBlur successfully`() {
+    fun `Glass Backdrop card displays and switches glassBackdropMode successfully`() {
         composeTestRule.setContent {
             QuickPanelTheme(darkTheme = false) {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
@@ -424,11 +424,15 @@ class HiddenFeaturesTest {
             .assertIsDisplayed()
 
         assertFalse(PanelPreferences.enableContainerBlur.value)
+        assertEquals(com.example.data.GlassBackdropMode.OFF, PanelPreferences.glassBackdropMode.value)
 
-        composeTestRule.onNodeWithTag("frosted_glass_toggle")
+        composeTestRule.onNodeWithTag("glass_mode_frosted")
+            .performScrollTo()
             .performClick()
         composeTestRule.waitForIdle()
 
         assertTrue(PanelPreferences.enableContainerBlur.value)
+        assertEquals(com.example.data.GlassBackdropMode.FROSTED, PanelPreferences.glassBackdropMode.value)
+        assertFalse(PanelPreferences.enableGlassRefraction.value)
     }
 }
