@@ -2228,6 +2228,16 @@ internal fun RenderThemesAndMiscAndAboutActions(feature: FavoriteFeature, modifi
             )
         }
 
+        FavoriteFeature.MISC_ENDLESS_ROOT -> {
+            val endlessRoot by PanelPreferences.endlessRootMode.collectAsState()
+            FeatureSwitchRow(
+                label = "Endless Root Mode",
+                checked = endlessRoot,
+                onCheckedChange = { PanelPreferences.setEndlessRootMode(context, it) },
+                modifier = modifier
+            )
+        }
+
         FavoriteFeature.MISC_MIN_BRIGHTNESS -> {
             val minBrightness by PanelPreferences.minBrightness.collectAsState()
             val presets = listOf(1, 5, 10, 20, 40)

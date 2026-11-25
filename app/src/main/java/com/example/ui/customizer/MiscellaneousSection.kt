@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.PublishedWithChanges
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Timelapse
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.VolumeUp
@@ -107,6 +108,7 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
     val customBlacklistClasses by PanelPreferences.customBlacklistClasses.collectAsState()
 
     val forceShowMediaPreview by PanelPreferences.forceShowMediaPreview.collectAsState()
+    val endlessRootMode by PanelPreferences.endlessRootMode.collectAsState()
 
     val pinnedIds by PinnedCardsManager.getPinnedCardIds(CustomizeCategory.MISCELLANEOUS, context).collectAsState()
     val hiddenIds by PinnedCardsManager.getHiddenCardIds().collectAsState()
@@ -1154,6 +1156,79 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
         }
     }
 
+    // 9. Endless Root Mode Card
+    val endlessRootModeCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
+        PinnableCardWrapper("endless_root_mode_card", CustomizeCategory.MISCELLANEOUS, "Endless Root Mode") {
+            SettingsCard(
+                shape = shape,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("endless_root_mode_card")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Terminal,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                        ) {
+                            Text(
+                                text = "Endless Root Mode",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 17.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Maintains a persistent background root shell daemon indefinitely so root access never expires, times out, or drops privileged control.",
+                                fontSize = 12.sp,
+                                lineHeight = 15.sp,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Switch(
+                        checked = endlessRootMode,
+                        onCheckedChange = { PanelPreferences.setEndlessRootMode(context, it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                        ),
+                        modifier = Modifier.testTag("endless_root_mode_toggle")
+                    )
+                }
+            }
+        }
+    }
+
     // 9. Minimum Brightness Card
     val minBrightnessCard = @Composable { shape: androidx.compose.ui.graphics.Shape ->
         PinnableCardWrapper("min_brightness_card", CustomizeCategory.MISCELLANEOUS, "Minimum Brightness") {
@@ -1324,6 +1399,7 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
         if (!isHidden("panel_replacement_delay_card") && pinnedIds.contains("panel_replacement_delay_card")) pinnedCards.add(panelReplacementDelayCard)
         if (!isHidden("stock_shade_override_card") && pinnedIds.contains("stock_shade_override_card")) pinnedCards.add(stockShadeOverrideCard)
         if (!isHidden("force_show_media_preview_card") && pinnedIds.contains("force_show_media_preview_card")) pinnedCards.add(forceShowMediaPreviewCard)
+        if (!isHidden("endless_root_mode_card") && pinnedIds.contains("endless_root_mode_card")) pinnedCards.add(endlessRootModeCard)
         if (!isHidden("min_brightness_card") && pinnedIds.contains("min_brightness_card")) pinnedCards.add(minBrightnessCard)
         if (!isHidden("max_brightness_card") && pinnedIds.contains("max_brightness_card")) pinnedCards.add(maxBrightnessCard)
 
@@ -1399,13 +1475,21 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
         }
 
         // 6. Unpinned Debug
-        val showDebug = !isHidden("force_show_media_preview_card") && !pinnedIds.contains("force_show_media_preview_card")
+        val showMediaPreview = !isHidden("force_show_media_preview_card") && !pinnedIds.contains("force_show_media_preview_card")
+        val showEndlessRoot = !isHidden("endless_root_mode_card") && !pinnedIds.contains("endless_root_mode_card")
+        val showDebug = showMediaPreview || showEndlessRoot
         if (showDebug) {
+            val debugCards = mutableListOf<@Composable (androidx.compose.ui.graphics.Shape) -> Unit>()
+            if (showMediaPreview) debugCards.add(forceShowMediaPreviewCard)
+            if (showEndlessRoot) debugCards.add(endlessRootModeCard)
+
             CollapsibleSubheaderSection(
                 title = "Debug",
                 icon = Icons.Default.BugReport
             ) {
-                forceShowMediaPreviewCard(CustomizeCardShapes.SingleCard)
+                debugCards.forEachIndexed { index, card ->
+                    card(CustomizeCardShapes.getShapeForIndex(index, debugCards.size))
+                }
             }
         }
 

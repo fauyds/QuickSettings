@@ -58,6 +58,7 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Style
 import androidx.compose.material.icons.filled.SyncAlt
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Tune
@@ -210,6 +211,7 @@ object HiddenFeatureCatalog {
         "panel_replacement_delay_card" to CardMeta("Panel Replacement Delay", CustomizeCategory.MISCELLANEOUS, Icons.Default.Timer, FavoriteFeature.MISC_REPLACEMENT_DELAY.id),
         "stock_shade_override_card" to CardMeta("Stock Shade Auto-Override", CustomizeCategory.MISCELLANEOUS, Icons.Default.AutoAwesome, FavoriteFeature.MISC_SYSTEM_OVERRIDE.id),
         "force_show_media_preview_card" to CardMeta("Force Show Preview Placeholder", CustomizeCategory.MISCELLANEOUS, Icons.Default.Image, FavoriteFeature.MISC_MEDIA_PREVIEW.id),
+        "endless_root_mode_card" to CardMeta("Endless Root Mode", CustomizeCategory.MISCELLANEOUS, Icons.Default.Terminal, FavoriteFeature.MISC_ENDLESS_ROOT.id),
         "min_brightness_card" to CardMeta("Minimum Brightness", CustomizeCategory.MISCELLANEOUS, Icons.Default.BrightnessLow, FavoriteFeature.MISC_MIN_BRIGHTNESS.id),
         "max_brightness_card" to CardMeta("Maximum Brightness", CustomizeCategory.MISCELLANEOUS, Icons.Default.BrightnessHigh, FavoriteFeature.MISC_MAX_BRIGHTNESS.id),
 

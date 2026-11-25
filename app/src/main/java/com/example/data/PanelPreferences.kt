@@ -372,6 +372,7 @@ object PanelPreferences {
     private const val KEY_DRAG_HANDLE_VERTICAL_OFFSET = "drag_handle_vertical_offset"
     private const val KEY_DRAG_HANDLE_LENGTH = "drag_handle_length"
     private const val KEY_FORCE_SHOW_MEDIA_PREVIEW = "force_show_media_preview"
+    private const val KEY_ENDLESS_ROOT_MODE = "endless_root_mode"
     private const val KEY_SHOW_MEDIA_IN_NOTIFICATION_CONTAINER = "show_media_in_notification_container"
     private const val KEY_MEDIA_NOTIFICATION_STYLE = "media_notification_style"
     private const val KEY_USE_MEDIA_ARTWORK_COLORS = "use_media_artwork_colors"
@@ -1959,6 +1960,9 @@ object PanelPreferences {
     private val _forceShowMediaPreview = MutableStateFlow(false)
     val forceShowMediaPreview: StateFlow<Boolean> = _forceShowMediaPreview.asStateFlow()
 
+    private val _endlessRootMode = MutableStateFlow(false)
+    val endlessRootMode: StateFlow<Boolean> = _endlessRootMode.asStateFlow()
+
     private val _showMediaInNotificationContainer = MutableStateFlow(false)
     val showMediaInNotificationContainer: StateFlow<Boolean> = _showMediaInNotificationContainer.asStateFlow()
 
@@ -2171,6 +2175,7 @@ object PanelPreferences {
             _customBlacklistClasses.value = savedBlacklistClasses
         }
         _forceShowMediaPreview.value = prefs.getBoolean(KEY_FORCE_SHOW_MEDIA_PREVIEW, false)
+        _endlessRootMode.value = prefs.getBoolean(KEY_ENDLESS_ROOT_MODE, false)
         _showMediaInNotificationContainer.value = prefs.getBoolean(KEY_SHOW_MEDIA_IN_NOTIFICATION_CONTAINER, false)
         val savedMediaNotifStyle = prefs.getString(KEY_MEDIA_NOTIFICATION_STYLE, null)
         _mediaNotificationStyle.value = MediaNotificationStyle.fromId(savedMediaNotifStyle)
@@ -3247,6 +3252,17 @@ object PanelPreferences {
         _forceShowMediaPreview.value = force
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_FORCE_SHOW_MEDIA_PREVIEW, force).apply()
+    }
+
+    fun setEndlessRootMode(context: Context, enabled: Boolean) {
+        _endlessRootMode.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_ENDLESS_ROOT_MODE, enabled).apply()
+        try {
+            val engine = com.example.system.NativeTileManager.instance?.privilegeEngine
+                ?: com.example.system.PrivilegeEngine(context)
+            engine.setEndlessRootMode(enabled)
+        } catch (_: Exception) {}
     }
 
     fun setShowMediaInNotificationContainer(context: Context, show: Boolean) {
@@ -5953,6 +5969,7 @@ object PanelPreferences {
         KEY_CLEAR_ALL_ICON_SIZE,
         // Media Artwork & Notification Container
         KEY_FORCE_SHOW_MEDIA_PREVIEW,
+        KEY_ENDLESS_ROOT_MODE,
         KEY_SHOW_MEDIA_IN_NOTIFICATION_CONTAINER,
         KEY_MEDIA_NOTIFICATION_STYLE,
         KEY_USE_MEDIA_ARTWORK_COLORS,
@@ -6208,6 +6225,7 @@ object PanelPreferences {
 
         // Media Artwork & Notification Container
         settingsJson.put(KEY_FORCE_SHOW_MEDIA_PREVIEW, _forceShowMediaPreview.value)
+        settingsJson.put(KEY_ENDLESS_ROOT_MODE, _endlessRootMode.value)
         settingsJson.put(KEY_SHOW_MEDIA_IN_NOTIFICATION_CONTAINER, _showMediaInNotificationContainer.value)
         settingsJson.put(KEY_MEDIA_NOTIFICATION_STYLE, _mediaNotificationStyle.value.id)
         settingsJson.put(KEY_USE_MEDIA_ARTWORK_COLORS, _useMediaArtworkColors.value)

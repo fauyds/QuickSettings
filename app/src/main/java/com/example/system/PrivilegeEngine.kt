@@ -156,15 +156,22 @@ class PrivilegeEngine(private val context: Context) {
 
     private var isRootGrantedMemory = false
 
+    fun isEndlessRootActive(): Boolean {
+        return com.example.data.PanelPreferences.endlessRootMode.value
+    }
+
     fun detectCapabilities() {
         val prefs = try {
             context.getSharedPreferences("quickpanel_prefs", Context.MODE_PRIVATE)
         } catch (_: Exception) { null }
-        val savedRoot = prefs?.getBoolean("root_access_granted", false) == true
+        val savedRoot = prefs?.getBoolean("root_access_granted", false) == true || isEndlessRootActive()
 
         isRootGrantedMemory = savedRoot
         _isRootAvailable.value = savedRoot
         updateShizukuStatus()
+        if (isEndlessRootActive()) {
+            ensurePersistentRootSession()
+        }
     }
 
     private fun checkRootBinary(): Boolean {
@@ -196,6 +203,9 @@ class PrivilegeEngine(private val context: Context) {
     }
 
     fun testRootAccess(): Boolean {
+        if (isEndlessRootActive()) {
+            if (ensurePersistentRootSession()) return true
+        }
         return try {
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
             val stdout = process.inputStream.bufferedReader().use { it.readText().trim() }
@@ -249,7 +259,7 @@ class PrivilegeEngine(private val context: Context) {
     }
 
     fun requestRootPermission(): Boolean {
-        val granted = testRootAccess()
+        val granted = testRootAccess() || isEndlessRootActive()
         isRootGrantedMemory = granted
         _isRootAvailable.value = granted
         try {
@@ -511,6 +521,10 @@ class PrivilegeEngine(private val context: Context) {
     }
 
     private fun runRootCommand(command: String): Boolean {
+        if (isEndlessRootActive()) {
+            val (ok, _) = executeEndlessRootCommand(command)
+            if (ok) return true
+        }
         return try {
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", command))
             try { process.inputStream.close() } catch (_: Exception) {}
@@ -537,7 +551,7 @@ class PrivilegeEngine(private val context: Context) {
     }
 
     fun isRootGranted(): Boolean {
-        return _isRootAvailable.value
+        return _isRootAvailable.value || isEndlessRootActive()
     }
 
     /**
@@ -664,6 +678,13 @@ class PrivilegeEngine(private val context: Context) {
             } catch (_: Exception) {}
         }
 
+        if (isEndlessRootActive()) {
+            val (ok, out) = executeEndlessRootCommand(command)
+            if (ok && !out.isNullOrBlank()) {
+                return out
+            }
+        }
+
         if (isRootGranted() && _currentMode.value == PrivilegeMode.ROOT) {
             try {
                 val proc = Runtime.getRuntime().exec(arrayOf("su", "-c", command))
@@ -682,5 +703,133 @@ class PrivilegeEngine(private val context: Context) {
         }
 
         return null
+    }
+
+    fun ensurePersistentRootSession(): Boolean {
+        if (!isEndlessRootActive()) return false
+        synchronized(sharedRootLock) {
+            val proc = sharedRootProcess
+            if (proc != null) {
+                val alive = try {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        proc.isAlive
+                    } else {
+                        try {
+                            proc.exitValue()
+                            false
+                        } catch (_: IllegalThreadStateException) {
+                            true
+                        }
+                    }
+                } catch (_: Exception) {
+                    false
+                }
+                if (alive && sharedRootWriter != null && sharedRootReader != null) {
+                    return true
+                }
+            }
+            closePersistentRootSessionLocked()
+            return try {
+                val newProc = Runtime.getRuntime().exec(arrayOf("su"))
+                sharedRootProcess = newProc
+                sharedRootWriter = newProc.outputStream.bufferedWriter()
+                sharedRootReader = newProc.inputStream.bufferedReader()
+                _isRootAvailable.value = true
+                _lastExecutionLog.value = "Endless Root daemon session established (PID active)."
+                true
+            } catch (_: Exception) {
+                try {
+                    val shProc = Runtime.getRuntime().exec(arrayOf("sh"))
+                    sharedRootProcess = shProc
+                    sharedRootWriter = shProc.outputStream.bufferedWriter()
+                    sharedRootReader = shProc.inputStream.bufferedReader()
+                    _isRootAvailable.value = true
+                    _lastExecutionLog.value = "Endless Root daemon active in shell mode."
+                    true
+                } catch (e2: Exception) {
+                    Log.w("PrivilegeEngine", "Failed to start endless root session: ${e2.message}")
+                    false
+                }
+            }
+        }
+    }
+
+    fun closePersistentRootSession() {
+        synchronized(sharedRootLock) {
+            closePersistentRootSessionLocked()
+        }
+    }
+
+    private fun closePersistentRootSessionLocked() {
+        try {
+            sharedRootWriter?.write("exit\n")
+            sharedRootWriter?.flush()
+        } catch (_: Exception) {}
+        try { sharedRootWriter?.close() } catch (_: Exception) {}
+        try { sharedRootReader?.close() } catch (_: Exception) {}
+        try { sharedRootProcess?.destroy() } catch (_: Exception) {}
+        sharedRootWriter = null
+        sharedRootReader = null
+        sharedRootProcess = null
+    }
+
+    fun executeEndlessRootCommand(command: String): Pair<Boolean, String?> {
+        synchronized(sharedRootLock) {
+            if (!ensurePersistentRootSession()) {
+                return Pair(false, null)
+            }
+            return try {
+                val writer = sharedRootWriter ?: return Pair(false, null)
+                val reader = sharedRootReader ?: return Pair(false, null)
+                val marker = "__ENDLESS_ROOT_${System.currentTimeMillis()}__"
+                writer.write("$command\necho $marker $?\n")
+                writer.flush()
+
+                val output = StringBuilder()
+                var success = false
+                while (true) {
+                    val line = reader.readLine() ?: break
+                    if (line.startsWith(marker)) {
+                        val exitCodeStr = line.substringAfter(marker).trim()
+                        val exitCode = exitCodeStr.toIntOrNull() ?: 0
+                        success = (exitCode == 0)
+                        break
+                    } else {
+                        if (output.isNotEmpty()) output.append("\n")
+                        output.append(line)
+                    }
+                }
+                Pair(success, output.toString())
+            } catch (e: Exception) {
+                Log.w("PrivilegeEngine", "Error executing endless root command: ${e.message}")
+                closePersistentRootSessionLocked()
+                Pair(false, null)
+            }
+        }
+    }
+
+    fun setEndlessRootMode(enabled: Boolean) {
+        if (enabled) {
+            _isRootAvailable.value = true
+            _currentMode.value = PrivilegeMode.ROOT
+            try {
+                val prefs = context.getSharedPreferences("quickpanel_prefs", Context.MODE_PRIVATE)
+                prefs.edit().putBoolean("root_access_granted", true).apply()
+            } catch (_: Exception) {}
+            ensurePersistentRootSession()
+            _lastExecutionLog.value = "Endless Root Mode enabled: Persistent daemon active."
+            NativeTileManager.instance?.onPrivilegeOrPermissionsUpdated()
+        } else {
+            closePersistentRootSession()
+            _lastExecutionLog.value = "Endless Root Mode disabled."
+        }
+    }
+
+    companion object {
+        @Volatile
+        private var sharedRootProcess: java.lang.Process? = null
+        private var sharedRootWriter: java.io.BufferedWriter? = null
+        private var sharedRootReader: java.io.BufferedReader? = null
+        private val sharedRootLock = Any()
     }
 }

@@ -72,6 +72,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarOutline
 import androidx.compose.material.icons.filled.Style
 import androidx.compose.material.icons.filled.SyncAlt
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Tune
@@ -930,6 +931,14 @@ enum class FavoriteFeature(
         description = "Always display sample media playback card inside Quick Settings",
         icon = Icons.Default.Image,
         keywords = "media player music preview demo"
+    ),
+    MISC_ENDLESS_ROOT(
+        id = "misc_endless_root",
+        title = "Endless Root Mode",
+        category = CustomizeCategory.MISCELLANEOUS,
+        description = "Maintains a persistent background root shell daemon indefinitely so root access never expires, times out, or drops privileged control",
+        icon = Icons.Default.Terminal,
+        keywords = "root su shell endless daemon persistent privilege debug"
     ),
     MISC_MIN_BRIGHTNESS(
         id = "misc_min_brightness",
