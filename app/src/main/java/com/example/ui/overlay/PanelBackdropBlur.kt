@@ -753,10 +753,18 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
             float sdf = sdRoundRect(local, halfSize, topR, botR, dScale);
             if (sdf > 0.0) continue;
 
+            // Keep internal lens refraction slightly rounded even when actual card corners are squared (0dp)
+            float maxR = min(halfSize.x, halfSize.y);
+            float minInnerRound = min(maxR * 0.58, max(18.0 * dScale, bevelW * 0.78));
+            float lensTopR = clamp(max(topR, minInnerRound), 0.0, maxR);
+            float lensBotR = clamp(max(botR, minInnerRound), 0.0, maxR);
+
             // C2-continuous inward lens distance & singularity-free gradient normal
-            float distIn = max(smoothLensDist(local, halfSize, topR, botR, bevelW, dScale), 0.0);
+            float rawLensDist = smoothLensDist(local, halfSize, lensTopR, lensBotR, bevelW, dScale);
+            float distIn = max(rawLensDist, 0.0);
+            float cornerEase = 1.0 - 0.35 * smootherstep(0.0, max(minInnerRound * 0.45, 2.0), max(-rawLensDist, 0.0));
             float rimDistIn = -sdf;
-            float2 n = smoothLensNormal(local, halfSize, topR, botR, bevelW, dScale);
+            float2 n = smoothLensNormal(local, halfSize, lensTopR, lensBotR, bevelW, dScale);
 
             // Quintic C2 bevel chamfer + soft peripheral dome warp
             float edgeT = 1.0 - smootherstep(0.0, bevelW, distIn);
@@ -791,7 +799,7 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
 
             // Quintic Fresnel specular rim + organic inner caustic
             float rimMask = smootherstep(0.0, 1.6 * dScale, rimDistIn) * (1.0 - smootherstep(1.2 * dScale, 6.8 * dScale, rimDistIn));
-            float fresnel = edgeT * edgeT * edgeT;
+            float fresnel = edgeT * edgeT * edgeT * cornerEase;
             float keyLight = clamp(dot(n, normalize(float2(-0.55, -0.83))), 0.0, 1.0);
             float backLight = clamp(dot(n, normalize(float2(0.55, 0.83))), 0.0, 1.0);
             float rimGlow = (0.28 + 0.72 * keyLight + 0.35 * backLight) * rimMask * (0.14 + 0.28 * s);
@@ -894,9 +902,17 @@ private const val FROSTED_GLASS_CARD_SURFACE_AGSL = """
         float s = clamp(sensitivity, 0.1, 1.0);
         float bevelW = (12.0 + 16.0 * s) * dScale;
 
-        float distIn = max(smoothLensDist(local, halfSize, topRadius, botRadius, bevelW, dScale), 0.0);
+        // Keep internal bevel curvature slightly rounded even when card corners are squared (0dp)
+        float maxR = min(halfSize.x, halfSize.y);
+        float minInnerRound = min(maxR * 0.58, max(16.0 * dScale, bevelW * 0.78));
+        float lensTopR = clamp(max(topRadius, minInnerRound), 0.0, maxR);
+        float lensBotR = clamp(max(botRadius, minInnerRound), 0.0, maxR);
+
+        float rawLensDist = smoothLensDist(local, halfSize, lensTopR, lensBotR, bevelW, dScale);
+        float distIn = max(rawLensDist, 0.0);
+        float cornerEase = 1.0 - 0.35 * smootherstep(0.0, max(minInnerRound * 0.45, 2.0), max(-rawLensDist, 0.0));
         float rimDistIn = -sdf;
-        float2 n = smoothLensNormal(local, halfSize, topRadius, botRadius, bevelW, dScale);
+        float2 n = smoothLensNormal(local, halfSize, lensTopR, lensBotR, bevelW, dScale);
 
         float edgeT = 1.0 - smootherstep(0.0, bevelW, distIn);
         float rimBand = smootherstep(0.0, 1.5 * dScale, rimDistIn) * (1.0 - smootherstep(1.1 * dScale, 5.4 * dScale, rimDistIn));
@@ -913,7 +929,7 @@ private const val FROSTED_GLASS_CARD_SURFACE_AGSL = """
         );
 
         float highlightStrength = (0.14 + 0.26 * s) * (0.28 + 0.72 * keyLight) * rimBand;
-        float causticStrength = (edgeT * edgeT * edgeT) * (0.04 + 0.07 * s) * (0.4 + 0.6 * keyLight);
+        float causticStrength = (edgeT * edgeT * edgeT) * cornerEase * (0.04 + 0.07 * s) * (0.4 + 0.6 * keyLight);
         float shadowStrength = (isDark > 0.5 ? 0.26 : 0.12) * s * counterLight * rimBand;
 
         half3 lightColor = prismTint * half(highlightStrength + causticStrength);
