@@ -676,19 +676,61 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
         return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - cr;
     }
 
-    float2 smoothRoundRectNormal(float2 local, float2 halfSize, float topR, float botR) {
+    float smoothInnerDist(float2 local, float2 halfSize, float topR, float botR) {
         float cr = resolvedRadius(local, halfSize, topR, botR);
-        float2 q = abs(local) - (halfSize - float2(cr));
-        float2 sgn = float2(local.x >= 0.0 ? 1.0 : -1.0, local.y >= 0.0 ? 1.0 : -1.0);
-        if (q.x > 0.0 || q.y > 0.0) {
-            float2 posQ = max(q, float2(0.0));
-            float posLen = length(posQ);
-            return (posLen > 0.0001) ? (sgn * (posQ / posLen)) : float2(0.0, -1.0);
+        float2 d = abs(local) - (halfSize - float2(cr));
+        if (d.x > 0.0 && d.y > 0.0) {
+            return cr - length(d);
+        } else if (d.x > 0.0) {
+            return cr - d.x;
+        } else if (d.y > 0.0) {
+            return cr - d.y;
         }
-        float2 dIn = -q;
-        float2 raw = float2(dIn.y * dIn.y * dIn.y, dIn.x * dIn.x * dIn.x);
-        float rawLen = length(raw);
-        return (rawLen > 0.000001) ? (sgn * (raw / rawLen)) : (sgn * float2(0.70710678, 0.70710678));
+        float a = max(-d.x, 0.0);
+        float b = max(-d.y, 0.0);
+        float coreDist = (a * b) / sqrt(a * a + b * b + 0.0001);
+        return cr + coreDist;
+    }
+
+    float2 smoothRoundRectNormal(
+        float2 local,
+        float2 halfSize,
+        float topR,
+        float botR,
+        float distIn,
+        float bevelW,
+        float dScale
+    ) {
+        float cr = resolvedRadius(local, halfSize, topR, botR);
+        float maxR = min(halfSize.x, halfSize.y) * 0.9;
+        float minInnerR = min(maxR, max(cr, bevelW * 0.55));
+        float effCr = mix(cr, minInnerR, smoothstep(0.0, max(bevelW * 0.5, 1.0), max(distIn, 0.0)));
+
+        float2 d = abs(local) - (halfSize - float2(effCr));
+        float2 sgn = float2(local.x >= 0.0 ? 1.0 : -1.0, local.y >= 0.0 ? 1.0 : -1.0);
+        float2 nLocal;
+        if (d.x > 0.0 && d.y > 0.0) {
+            float lenD = length(d);
+            nLocal = (lenD > 0.001) ? (d / lenD) : float2(0.70710678, 0.70710678);
+        } else if (d.x > 0.0) {
+            nLocal = float2(1.0, 0.0);
+        } else if (d.y > 0.0) {
+            nLocal = float2(0.0, 1.0);
+        } else {
+            float a = max(-d.x, 0.0);
+            float b = max(-d.y, 0.0);
+            float sumAB = a + b;
+            float t = (sumAB > 0.0001) ? (b / sumAB) : 0.5;
+            float angle = (1.0 - t) * 1.57079633;
+            nLocal = float2(cos(angle), sin(angle));
+        }
+
+        float2 outN = sgn * nLocal;
+        float tx = smoothstep(0.0, max(min(halfSize.x * 0.35, 12.0 * dScale), 1.0), abs(local.x));
+        float ty = smoothstep(0.0, max(min(halfSize.y * 0.35, 12.0 * dScale), 1.0), abs(local.y));
+        outN = float2(outN.x * tx, outN.y * ty);
+        float nLen = length(outN);
+        return (nLen > 0.0001) ? (outN / nLen) : float2(0.0, -1.0);
     }
 
     half4 main(float2 fragCoord) {
@@ -713,10 +755,10 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
             float sdf = sdRoundRect(local, halfSize, topR, botR);
             if (sdf > 0.0) continue;
 
-            float distIn = -sdf;
-
-            // Exact C1/C2 smooth analytical surface normal (eliminates 45-degree diagonal miter seams)
-            float2 n = smoothRoundRectNormal(local, halfSize, topR, botR);
+            // Smooth C1/C-infinity inward distance & singularity-free analytical normal
+            float distIn = smoothInnerDist(local, halfSize, topR, botR);
+            float rimDistIn = -sdf;
+            float2 n = smoothRoundRectNormal(local, halfSize, topR, botR, distIn, bevelW, dScale);
 
             // Optical curved bevel chamfer + subtle peripheral pillow lens warp
             float edgeT = 1.0 - smoothstep(0.0, bevelW, distIn);
@@ -739,7 +781,7 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
             half4 refracted = half4(cR, cG.g, cB, cG.a);
 
             // Physically derived Fresnel specular rim + subtle inner caustic
-            float rimMask = smoothstep(0.0, 1.5 * dScale, distIn) * (1.0 - smoothstep(1.2 * dScale, 6.0 * dScale, distIn));
+            float rimMask = smoothstep(0.0, 1.5 * dScale, rimDistIn) * (1.0 - smoothstep(1.2 * dScale, 6.0 * dScale, rimDistIn));
             float fresnel = pow(edgeT, 3.0);
             float keyLight = clamp(dot(n, normalize(float2(-0.55, -0.83))), 0.0, 1.0);
             float backLight = clamp(dot(n, normalize(float2(0.55, 0.83))), 0.0, 1.0);
@@ -776,19 +818,61 @@ private const val FROSTED_GLASS_CARD_SURFACE_AGSL = """
         return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - cr;
     }
 
-    float2 smoothRoundRectNormal(float2 local, float2 halfSize, float topR, float botR) {
+    float smoothInnerDist(float2 local, float2 halfSize, float topR, float botR) {
         float cr = resolvedRadius(local, halfSize, topR, botR);
-        float2 q = abs(local) - (halfSize - float2(cr));
-        float2 sgn = float2(local.x >= 0.0 ? 1.0 : -1.0, local.y >= 0.0 ? 1.0 : -1.0);
-        if (q.x > 0.0 || q.y > 0.0) {
-            float2 posQ = max(q, float2(0.0));
-            float posLen = length(posQ);
-            return (posLen > 0.0001) ? (sgn * (posQ / posLen)) : float2(0.0, -1.0);
+        float2 d = abs(local) - (halfSize - float2(cr));
+        if (d.x > 0.0 && d.y > 0.0) {
+            return cr - length(d);
+        } else if (d.x > 0.0) {
+            return cr - d.x;
+        } else if (d.y > 0.0) {
+            return cr - d.y;
         }
-        float2 dIn = -q;
-        float2 raw = float2(dIn.y * dIn.y * dIn.y, dIn.x * dIn.x * dIn.x);
-        float rawLen = length(raw);
-        return (rawLen > 0.000001) ? (sgn * (raw / rawLen)) : (sgn * float2(0.70710678, 0.70710678));
+        float a = max(-d.x, 0.0);
+        float b = max(-d.y, 0.0);
+        float coreDist = (a * b) / sqrt(a * a + b * b + 0.0001);
+        return cr + coreDist;
+    }
+
+    float2 smoothRoundRectNormal(
+        float2 local,
+        float2 halfSize,
+        float topR,
+        float botR,
+        float distIn,
+        float bevelW,
+        float dScale
+    ) {
+        float cr = resolvedRadius(local, halfSize, topR, botR);
+        float maxR = min(halfSize.x, halfSize.y) * 0.9;
+        float minInnerR = min(maxR, max(cr, bevelW * 0.55));
+        float effCr = mix(cr, minInnerR, smoothstep(0.0, max(bevelW * 0.5, 1.0), max(distIn, 0.0)));
+
+        float2 d = abs(local) - (halfSize - float2(effCr));
+        float2 sgn = float2(local.x >= 0.0 ? 1.0 : -1.0, local.y >= 0.0 ? 1.0 : -1.0);
+        float2 nLocal;
+        if (d.x > 0.0 && d.y > 0.0) {
+            float lenD = length(d);
+            nLocal = (lenD > 0.001) ? (d / lenD) : float2(0.70710678, 0.70710678);
+        } else if (d.x > 0.0) {
+            nLocal = float2(1.0, 0.0);
+        } else if (d.y > 0.0) {
+            nLocal = float2(0.0, 1.0);
+        } else {
+            float a = max(-d.x, 0.0);
+            float b = max(-d.y, 0.0);
+            float sumAB = a + b;
+            float t = (sumAB > 0.0001) ? (b / sumAB) : 0.5;
+            float angle = (1.0 - t) * 1.57079633;
+            nLocal = float2(cos(angle), sin(angle));
+        }
+
+        float2 outN = sgn * nLocal;
+        float tx = smoothstep(0.0, max(min(halfSize.x * 0.35, 12.0 * dScale), 1.0), abs(local.x));
+        float ty = smoothstep(0.0, max(min(halfSize.y * 0.35, 12.0 * dScale), 1.0), abs(local.y));
+        outN = float2(outN.x * tx, outN.y * ty);
+        float nLen = length(outN);
+        return (nLen > 0.0001) ? (outN / nLen) : float2(0.0, -1.0);
     }
 
     half4 main(float2 fragCoord) {
@@ -799,15 +883,16 @@ private const val FROSTED_GLASS_CARD_SURFACE_AGSL = """
         float sdf = sdRoundRect(local, halfSize, topRadius, botRadius);
         if (sdf > 0.0) return half4(0.0);
 
-        float distIn = -sdf;
         float dScale = max(density, 1.0);
         float s = clamp(sensitivity, 0.1, 1.0);
-
-        float2 n = smoothRoundRectNormal(local, halfSize, topRadius, botRadius);
-
         float bevelW = (10.0 + 14.0 * s) * dScale;
+
+        float distIn = smoothInnerDist(local, halfSize, topRadius, botRadius);
+        float rimDistIn = -sdf;
+        float2 n = smoothRoundRectNormal(local, halfSize, topRadius, botRadius, distIn, bevelW, dScale);
+
         float edgeT = 1.0 - smoothstep(0.0, bevelW, distIn);
-        float rimBand = smoothstep(0.0, 1.35 * dScale, distIn) * (1.0 - smoothstep(1.1 * dScale, 4.8 * dScale, distIn));
+        float rimBand = smoothstep(0.0, 1.35 * dScale, rimDistIn) * (1.0 - smoothstep(1.1 * dScale, 4.8 * dScale, rimDistIn));
 
         float keyLight = clamp(dot(n, normalize(float2(-0.55, -0.83))), 0.0, 1.0);
         float counterLight = clamp(dot(n, normalize(float2(0.55, 0.83))), 0.0, 1.0);
