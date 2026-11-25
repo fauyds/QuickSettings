@@ -465,6 +465,7 @@ object PanelPreferences {
     private const val KEY_GLASS_BACKDROP_MODE = "glass_backdrop_mode"
     private const val KEY_ENABLE_GLASS_REFRACTION = "enable_glass_refraction"
     private const val KEY_GLASS_REFRACTION_SENSITIVITY = "glass_refraction_sensitivity"
+    private const val KEY_GLASS_PERFORMANCE_MODE = "glass_performance_mode"
 
     private const val KEY_SHOW_HEADER_COMPLICATIONS = "show_header_complications"
     private const val KEY_COMPLICATION_SUBLINE_PLACEMENT = "complication_subline_placement"
@@ -1903,6 +1904,9 @@ object PanelPreferences {
     private val _containerBlurTransparency = MutableStateFlow(0.40f)
     val containerBlurTransparency: StateFlow<Float> = _containerBlurTransparency.asStateFlow()
 
+    private val _glassPerformanceMode = MutableStateFlow(false)
+    val glassPerformanceMode: StateFlow<Boolean> = _glassPerformanceMode.asStateFlow()
+
     private val _invisibleStatusBarTrigger = MutableStateFlow(false)
     val invisibleStatusBarTrigger: StateFlow<Boolean> = _invisibleStatusBarTrigger.asStateFlow()
 
@@ -2124,6 +2128,7 @@ object PanelPreferences {
         _enableNotificationBlur.value = prefs.getBoolean(KEY_ENABLE_NOTIFICATION_BLUR, true)
         _containerBlurRadiusDp.value = prefs.getFloat(KEY_CONTAINER_BLUR_SENSITIVITY_DP, 24f).coerceIn(0f, 60f)
         _containerBlurTransparency.value = prefs.getFloat(KEY_CONTAINER_BLUR_TRANSPARENCY, 0.40f).coerceIn(0f, 0.95f)
+        _glassPerformanceMode.value = prefs.getBoolean(KEY_GLASS_PERFORMANCE_MODE, false)
         val savedPanelStyleId = prefs.getString(KEY_PANEL_STYLE, null)
         val resolvedPanelStyle = if (savedPanelStyleId != null) {
             QsPanelStyle.fromId(savedPanelStyleId)
@@ -4119,6 +4124,12 @@ object PanelPreferences {
         prefs.edit().putFloat(KEY_CONTAINER_BLUR_TRANSPARENCY, clamped).apply()
     }
 
+    fun setGlassPerformanceMode(context: Context, enabled: Boolean) {
+        _glassPerformanceMode.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_GLASS_PERFORMANCE_MODE, enabled).apply()
+    }
+
     fun setInvisibleStatusBarTrigger(context: Context, enabled: Boolean) {
         _invisibleStatusBarTrigger.value = enabled
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -5835,6 +5846,7 @@ object PanelPreferences {
         KEY_GLASS_BACKDROP_MODE,
         KEY_ENABLE_GLASS_REFRACTION,
         KEY_GLASS_REFRACTION_SENSITIVITY,
+        KEY_GLASS_PERFORMANCE_MODE,
         // Grid / QQS / Tiles / Fonts / Labels
         KEY_GRID_LAYOUT,
         KEY_QQS_TILE_SIZE,
@@ -6081,6 +6093,7 @@ object PanelPreferences {
         settingsJson.put(KEY_CONTAINER_BLUR_TRANSPARENCY, _containerBlurTransparency.value.toDouble())
         settingsJson.put(KEY_ENABLE_GLASS_REFRACTION, _enableGlassRefraction.value)
         settingsJson.put(KEY_GLASS_REFRACTION_SENSITIVITY, _glassRefractionSensitivity.value.toDouble())
+        settingsJson.put(KEY_GLASS_PERFORMANCE_MODE, _glassPerformanceMode.value)
 
         // Grid / QQS / Tiles / Fonts / Labels
         settingsJson.put(KEY_GRID_LAYOUT, _gridLayout.value.id)

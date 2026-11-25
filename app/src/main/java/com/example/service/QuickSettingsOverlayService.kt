@@ -76,6 +76,7 @@ import com.example.ui.overlay.computeQsBlurWindowPlan
 import com.example.ui.overlay.computeWindowBlurBehindRadiusPx
 import com.example.ui.overlay.isAndroid16FrostedGlassSupported
 import com.example.ui.overlay.isCrossWindowBlurSupported
+import com.example.ui.overlay.quantizeBlurRegionsForPerformance
 import com.example.ui.overlay.rememberCrossWindowBlurSupported
 import com.example.ui.theme.QuickPanelTheme
 import kotlinx.coroutines.CoroutineScope
@@ -434,7 +435,8 @@ class QuickSettingsOverlayService : Service() {
                         enabled = true,
                         density = resources.displayMetrics.density,
                         fraction = 1f,
-                        maxBlurDp = PanelPreferences.containerBlurRadiusDp.value
+                        maxBlurDp = PanelPreferences.containerBlurRadiusDp.value,
+                        performanceMode = PanelPreferences.glassPerformanceMode.value
                     )
                 )
             }
@@ -487,6 +489,7 @@ class QuickSettingsOverlayService : Service() {
                     val enableContainerBlur = rawEnableContainerBlur && isAndroid16FrostedGlassSupported()
                     val blurOnlyBehindQsCard by PanelPreferences.blurOnlyBehindQsCard.collectAsState()
                     val containerBlurRadiusDp by PanelPreferences.containerBlurRadiusDp.collectAsState()
+                    val glassPerformanceMode by PanelPreferences.glassPerformanceMode.collectAsState()
                     val crossWindowBlurSupported = rememberCrossWindowBlurSupported()
                     val speedFactor = animSpeedScale.coerceAtLeast(0.01f)
                     val targetBackdropAlpha = when {
@@ -508,7 +511,7 @@ class QuickSettingsOverlayService : Service() {
                     var notifBlurRegions by remember { mutableStateOf<List<QsCardBlurBounds>>(emptyList()) }
 
                     // Sync behind-window SurfaceFlinger blur radius (full-screen or scoped behind QS/QQS + carrier + notification cards)
-                    LaunchedEffect(enableContainerBlur, blurOnlyBehindQsCard, containerBlurRadiusDp, crossWindowBlurSupported, targetBackdropAlpha, density) {
+                    LaunchedEffect(enableContainerBlur, blurOnlyBehindQsCard, containerBlurRadiusDp, crossWindowBlurSupported, targetBackdropAlpha, density, glassPerformanceMode) {
                         snapshotFlow {
                             val denom = targetBackdropAlpha.coerceAtLeast(0.01f)
                             val fraction = (backdropAlpha.value / denom).coerceIn(0f, 1f)
@@ -516,9 +519,22 @@ class QuickSettingsOverlayService : Service() {
                                 enabled = enableContainerBlur && crossWindowBlurSupported,
                                 density = density.density,
                                 fraction = fraction,
-                                maxBlurDp = containerBlurRadiusDp
+                                maxBlurDp = containerBlurRadiusDp,
+                                performanceMode = glassPerformanceMode
                             )
-                            Triple(desiredRadius, qsBlurRegions, notifBlurRegions)
+                            val activeRegions = if (glassPerformanceMode && qsBlurRegions.isNotEmpty()) {
+                                qsBlurRegions.mapValues { (_, bounds) ->
+                                    quantizeBlurRegionsForPerformance(listOf(bounds), stepPx = 2f).first()
+                                }
+                            } else {
+                                qsBlurRegions
+                            }
+                            val activeNotifRegions = if (glassPerformanceMode) {
+                                quantizeBlurRegionsForPerformance(notifBlurRegions, stepPx = 2f)
+                            } else {
+                                notifBlurRegions
+                            }
+                            Triple(desiredRadius, activeRegions, activeNotifRegions)
                         }.distinctUntilChanged().collect { (desiredRadius, regions, notifRegions) ->
                             val plan = computeQsBlurWindowPlan(desiredRadius, blurOnlyBehindQsCard)
                             val view = this@apply

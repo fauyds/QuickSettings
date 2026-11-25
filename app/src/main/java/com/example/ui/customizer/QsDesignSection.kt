@@ -5497,6 +5497,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     val glassMode by PanelPreferences.glassBackdropMode.collectAsState()
                     val blurOnlyBehindQsCard by PanelPreferences.blurOnlyBehindQsCard.collectAsState()
                     val notificationBlurEnabled by PanelPreferences.enableNotificationBlur.collectAsState()
+                    val glassPerformanceMode by PanelPreferences.glassPerformanceMode.collectAsState()
                     val containerBlurRadiusDp by PanelPreferences.containerBlurRadiusDp.collectAsState()
                     val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsState()
                     val refractionSensitivity by PanelPreferences.glassRefractionSensitivity.collectAsState()
@@ -5772,6 +5773,46 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                         uncheckedTrackColor = MaterialTheme.colorScheme.surface
                                     ),
                                     modifier = Modifier.testTag("frosted_glass_qs_only_toggle")
+                                )
+                            }
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(end = 12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
+                                    Text(
+                                        text = "Optimize Glass & Blur",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Performance mode — downscale blur passes, skip zero blur, and cache static frames to reduce GPU load.",
+                                        fontSize = 11.5.sp,
+                                        lineHeight = 14.sp,
+                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Switch(
+                                    checked = glassPerformanceMode,
+                                    onCheckedChange = { PanelPreferences.setGlassPerformanceMode(context, it) },
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                        uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                        uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                                    ),
+                                    modifier = Modifier.testTag("glass_performance_mode_toggle")
                                 )
                             }
 

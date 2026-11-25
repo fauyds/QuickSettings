@@ -189,23 +189,48 @@ fun Modifier.reportQsCardBlurBounds(
 
 /**
  * Computes the pixel blur radius to pass to window blur APIs.
- * Quantizes intermediate animation values into 4px steps so SurfaceFlinger does not get flooded
- * on every spring frame while still reaching exact 0px (closed/off) and full target radius (open).
+ * Quantizes intermediate animation values into 4px steps (or 8px steps in [performanceMode])
+ * so SurfaceFlinger does not get flooded on every spring frame while still reaching exact
+ * 0px (closed/off) and full target radius (open).
  */
 fun computeWindowBlurBehindRadiusPx(
     enabled: Boolean,
     density: Float,
     fraction: Float = 1f,
-    maxBlurDp: Float = DEFAULT_FROSTED_BLUR_RADIUS_DP
+    maxBlurDp: Float = DEFAULT_FROSTED_BLUR_RADIUS_DP,
+    performanceMode: Boolean = false
 ): Int {
-    if (!enabled || density <= 0f || maxBlurDp <= 0f) return 0
+    if (!enabled || density <= 0f || maxBlurDp <= 0f || (performanceMode && maxBlurDp < 0.75f)) return 0
     val clampedFraction = fraction.coerceIn(0f, 1f)
     if (clampedFraction <= 0.01f) return 0
     val maxPx = (maxBlurDp * density).roundToInt().coerceAtLeast(1)
+    if (performanceMode && maxPx <= 1) return 0
     if (clampedFraction >= 0.99f) return maxPx
     val rawPx = (maxPx * clampedFraction).roundToInt().coerceIn(0, maxPx)
     if (rawPx <= 0) return 0
-    return ((rawPx + 2) / 4 * 4).coerceIn(4, maxPx)
+    val step = if (performanceMode) 8 else 4
+    return ((rawPx + step / 2) / step * step).coerceIn(step.coerceAtMost(maxPx), maxPx)
+}
+
+/**
+ * Quantizes blur region coordinates to [stepPx] boundaries so sub-pixel layout jitter
+ * does not force RenderEffect/RuntimeShader rebuilds across frames when Performance Mode is active.
+ */
+fun quantizeBlurRegionsForPerformance(
+    regions: List<QsCardBlurBounds>,
+    stepPx: Float = 2f
+): List<QsCardBlurBounds> {
+    if (regions.isEmpty() || stepPx <= 0f) return regions
+    fun q(v: Float): Float = (v / stepPx).roundToInt() * stepPx
+    return regions.map { b ->
+        if (!b.isValid) b
+        else b.copy(
+            left = q(b.left),
+            top = q(b.top),
+            right = q(b.right),
+            bottom = q(b.bottom)
+        )
+    }
 }
 
 /**
@@ -658,6 +683,7 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
     uniform float density;
     uniform float sensitivity;
     uniform float isDark;
+    uniform float performanceMode;
     uniform float4 uRects[18];
     uniform float2 uRadii[18];
     uniform int regionCount;
@@ -775,27 +801,31 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
 
             float2 disp = -n * (bevelMag + domeMag);
 
-            // Smooth 5-tap chromatic dispersion across RGB wavelengths
+            // Chromatic dispersion across RGB wavelengths (3-tap in Performance Mode, 5-tap in full quality)
             float chroma = (0.11 + 0.15 * s) * edgeT;
             float2 minUv = float2(0.5);
             float2 maxUv = resolution - float2(0.5);
             float2 uvR  = clamp(fragCoord + disp * (1.0 - chroma), minUv, maxUv);
-            float2 uvRG = clamp(fragCoord + disp * (1.0 - 0.45 * chroma), minUv, maxUv);
             float2 uvG  = clamp(fragCoord + disp, minUv, maxUv);
-            float2 uvGB = clamp(fragCoord + disp * (1.0 + 0.45 * chroma), minUv, maxUv);
             float2 uvB  = clamp(fragCoord + disp * (1.0 + chroma), minUv, maxUv);
 
-            half4 sR  = content.eval(uvR);
-            half4 sRG = content.eval(uvRG);
-            half4 sG  = content.eval(uvG);
-            half4 sGB = content.eval(uvGB);
-            half4 sB  = content.eval(uvB);
-
-            half cR = mix(sR.r, sRG.r, half(0.32));
-            half cG = mix(sG.g, (sRG.g + sGB.g) * half(0.5), half(0.35));
-            half cB = mix(sB.b, sGB.b, half(0.32));
-            half cA = max(sG.a, max(sR.a, sB.a));
-            half4 refracted = half4(cR, cG, cB, cA);
+            half4 sR = content.eval(uvR);
+            half4 sG = content.eval(uvG);
+            half4 sB = content.eval(uvB);
+            half4 refracted;
+            if (performanceMode > 0.5) {
+                refracted = half4(sR.r, sG.g, sB.b, max(sG.a, max(sR.a, sB.a)));
+            } else {
+                float2 uvRG = clamp(fragCoord + disp * (1.0 - 0.45 * chroma), minUv, maxUv);
+                float2 uvGB = clamp(fragCoord + disp * (1.0 + 0.45 * chroma), minUv, maxUv);
+                half4 sRG = content.eval(uvRG);
+                half4 sGB = content.eval(uvGB);
+                half cR = mix(sR.r, sRG.r, half(0.32));
+                half cG = mix(sG.g, (sRG.g + sGB.g) * half(0.5), half(0.35));
+                half cB = mix(sB.b, sGB.b, half(0.32));
+                half cA = max(sG.a, max(sR.a, sB.a));
+                refracted = half4(cR, cG, cB, cA);
+            }
 
             // Quintic Fresnel specular rim + organic inner caustic
             float rimMask = smootherstep(0.0, 1.6 * dScale, rimDistIn) * (1.0 - smootherstep(1.2 * dScale, 6.8 * dScale, rimDistIn));
@@ -1044,7 +1074,8 @@ fun createLiquidGlassRefractionRuntimeEffect(
     viewportHeightPx: Float,
     density: Float,
     sensitivity: Float,
-    isDark: Boolean
+    isDark: Boolean,
+    performanceMode: Boolean = false
 ): AndroidRenderEffect? {
     val validRegions = regions.filter { it.isValid }.take(MAX_REFRACTION_REGIONS)
     if (validRegions.isEmpty() || viewportWidthPx <= 1f || viewportHeightPx <= 1f) return null
@@ -1068,6 +1099,7 @@ fun createLiquidGlassRefractionRuntimeEffect(
             setFloatUniform("density", density.coerceAtLeast(1f))
             setFloatUniform("sensitivity", sensitivity.coerceIn(0.1f, 1.0f))
             setFloatUniform("isDark", if (isDark) 1f else 0f)
+            setFloatUniform("performanceMode", if (performanceMode) 1f else 0f)
             setFloatUniform("uRects", rectsArray)
             setFloatUniform("uRadii", radiiArray)
             setIntUniform("regionCount", validRegions.size)
@@ -1079,51 +1111,17 @@ fun createLiquidGlassRefractionRuntimeEffect(
 }
 
 /**
- * Builds the GPU RenderEffect pipeline for frosted glass backdrops:
- * - Chains [AndroidRenderEffect.createBlurEffect] with Android 16's AGSL [RuntimeColorFilter]
- *   on API 36+.
- * - When [enableGlassRefraction] is true on API 33+ and [refractionRegions] has active glass cards
- *   with valid viewport size, chains [AndroidRenderEffect.createRuntimeShaderEffect] so underlying
- *   content is optically refracted and chromatically dispersed along every card boundary.
+ * Builds an API 31+ blur-only (plus API 36+ frosted color filter) [AndroidRenderEffect]
+ * for downscaled GPU blur passes in Performance Mode. Returns null if blur is 0 or negligible.
  */
-fun createFrostedBackdropRenderEffect(
+@RequiresApi(Build.VERSION_CODES.S)
+fun createFrostedBlurOnlyPlatformRenderEffect(
     blurRadiusPx: Float,
     isDark: Boolean,
     blurRadiusDp: Float = DEFAULT_FROSTED_BLUR_RADIUS_DP,
-    transparency: Float = 0.40f,
-    enableGlassRefraction: Boolean = false,
-    glassRefractionSensitivity: Float = 0.50f,
-    refractionRegions: List<QsCardBlurBounds> = emptyList(),
-    viewportWidthPx: Float = 0f,
-    viewportHeightPx: Float = 0f,
-    density: Float = 2.625f
-): ComposeRenderEffect? {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
-
-    val wantsRefraction = enableGlassRefraction &&
-        isRuntimeShaderRefractionSupported() &&
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-        refractionRegions.isNotEmpty() &&
-        viewportWidthPx > 1f &&
-        viewportHeightPx > 1f
-
-    if (blurRadiusPx <= 0.5f) {
-        if (!wantsRefraction) return null
-        val refractionOnly = createLiquidGlassRefractionRuntimeEffect(
-            regions = refractionRegions,
-            viewportWidthPx = viewportWidthPx,
-            viewportHeightPx = viewportHeightPx,
-            density = density,
-            sensitivity = glassRefractionSensitivity,
-            isDark = isDark
-        ) ?: return null
-        return try {
-            refractionOnly.asComposeRenderEffect()
-        } catch (_: Throwable) {
-            null
-        }
-    }
-
+    transparency: Float = 0.40f
+): AndroidRenderEffect? {
+    if (blurRadiusPx <= 0.5f || blurRadiusDp <= 0.25f) return null
     val baseBlur = try {
         AndroidRenderEffect.createBlurEffect(
             blurRadiusPx,
@@ -1133,8 +1131,7 @@ fun createFrostedBackdropRenderEffect(
     } catch (_: Throwable) {
         return null
     }
-
-    var platformEffect = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
         val frostedFilter = createAndroid16FrostedBackdropColorFilter(
             isDark = isDark,
             blurRadiusDp = blurRadiusDp,
@@ -1152,6 +1149,68 @@ fun createFrostedBackdropRenderEffect(
     } else {
         baseBlur
     }
+}
+
+/**
+ * Builds the GPU RenderEffect pipeline for frosted glass backdrops:
+ * - Chains [AndroidRenderEffect.createBlurEffect] with Android 16's AGSL [RuntimeColorFilter]
+ *   on API 36+.
+ * - When [enableGlassRefraction] is true on API 33+ and [refractionRegions] has active glass cards
+ *   with valid viewport size, chains [AndroidRenderEffect.createRuntimeShaderEffect] so underlying
+ *   content is optically refracted and chromatically dispersed along every card boundary.
+ * - Skips blur passes completely when blur intensity is 0 / negligible; in [performanceMode],
+ *   uses faster 3-tap refraction dispersion and skips negligible sub-threshold blur.
+ */
+fun createFrostedBackdropRenderEffect(
+    blurRadiusPx: Float,
+    isDark: Boolean,
+    blurRadiusDp: Float = DEFAULT_FROSTED_BLUR_RADIUS_DP,
+    transparency: Float = 0.40f,
+    enableGlassRefraction: Boolean = false,
+    glassRefractionSensitivity: Float = 0.50f,
+    refractionRegions: List<QsCardBlurBounds> = emptyList(),
+    viewportWidthPx: Float = 0f,
+    viewportHeightPx: Float = 0f,
+    density: Float = 2.625f,
+    performanceMode: Boolean = false
+): ComposeRenderEffect? {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
+
+    val wantsRefraction = enableGlassRefraction &&
+        isRuntimeShaderRefractionSupported() &&
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        refractionRegions.isNotEmpty() &&
+        viewportWidthPx > 1f &&
+        viewportHeightPx > 1f
+
+    val skipBlur = blurRadiusPx <= 0.5f ||
+        blurRadiusDp <= 0.25f ||
+        (performanceMode && blurRadiusDp < 0.75f)
+
+    if (skipBlur) {
+        if (!wantsRefraction) return null
+        val refractionOnly = createLiquidGlassRefractionRuntimeEffect(
+            regions = refractionRegions,
+            viewportWidthPx = viewportWidthPx,
+            viewportHeightPx = viewportHeightPx,
+            density = density,
+            sensitivity = glassRefractionSensitivity,
+            isDark = isDark,
+            performanceMode = performanceMode
+        ) ?: return null
+        return try {
+            refractionOnly.asComposeRenderEffect()
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    var platformEffect = createFrostedBlurOnlyPlatformRenderEffect(
+        blurRadiusPx = blurRadiusPx,
+        isDark = isDark,
+        blurRadiusDp = blurRadiusDp,
+        transparency = transparency
+    ) ?: return null
 
     if (wantsRefraction) {
         val refractionEffect = createLiquidGlassRefractionRuntimeEffect(
@@ -1160,7 +1219,8 @@ fun createFrostedBackdropRenderEffect(
             viewportHeightPx = viewportHeightPx,
             density = density,
             sensitivity = glassRefractionSensitivity,
-            isDark = isDark
+            isDark = isDark,
+            performanceMode = performanceMode
         )
         if (refractionEffect != null) {
             platformEffect = try {
@@ -1228,6 +1288,7 @@ fun Modifier.frostedGlassSurface(
     }
 
     val glassMode by PanelPreferences.glassBackdropMode.collectAsState()
+    val performanceMode by PanelPreferences.glassPerformanceMode.collectAsState()
     val enableRefraction = (enableRefractionOverride ?: (glassMode == GlassBackdropMode.LIQUID)) &&
         isRuntimeShaderRefractionSupported()
     val refractionSensitivity by PanelPreferences.glassRefractionSensitivity.collectAsState()
@@ -1235,6 +1296,15 @@ fun Modifier.frostedGlassSurface(
     val topCornerPx = with(density) { topCornerRadiusDp.coerceAtLeast(0f).dp.toPx() }
     val bottomCornerPx = with(density) { bottomCornerRadiusDp.coerceAtLeast(0f).dp.toPx() }
     val densityPx = density.density
+
+    var cachedWidthPx by remember { mutableStateOf(-1f) }
+    var cachedHeightPx by remember { mutableStateOf(-1f) }
+    var cachedTopR by remember { mutableStateOf(-1f) }
+    var cachedBotR by remember { mutableStateOf(-1f) }
+    var cachedSens by remember { mutableStateOf(-1f) }
+    var cachedIsDark by remember { mutableStateOf(isDark) }
+    var cachedShader by remember { mutableStateOf<RuntimeShader?>(null) }
+    var cachedBevelNode by remember { mutableStateOf<Any?>(null) }
 
     this
         .background(effectiveColor)
@@ -1253,19 +1323,75 @@ fun Modifier.frostedGlassSurface(
                 } else {
                     bottomCornerPx
                 }
-                val bevelShader = createFrostedGlassCardBevelShader(
-                    widthPx = size.width,
-                    heightPx = size.height,
-                    topRadiusPx = resolvedTopRadiusPx,
-                    bottomRadiusPx = resolvedBottomRadiusPx,
-                    density = densityPx,
-                    sensitivity = refractionSensitivity,
-                    isDark = isDark
-                )
+                val paramsChanged = cachedShader == null ||
+                    kotlin.math.abs(cachedWidthPx - size.width) > 0.5f ||
+                    kotlin.math.abs(cachedHeightPx - size.height) > 0.5f ||
+                    kotlin.math.abs(cachedTopR - resolvedTopRadiusPx) > 0.5f ||
+                    kotlin.math.abs(cachedBotR - resolvedBottomRadiusPx) > 0.5f ||
+                    kotlin.math.abs(cachedSens - refractionSensitivity) > 0.005f ||
+                    cachedIsDark != isDark
+
+                if (paramsChanged) {
+                    cachedShader = createFrostedGlassCardBevelShader(
+                        widthPx = size.width,
+                        heightPx = size.height,
+                        topRadiusPx = resolvedTopRadiusPx,
+                        bottomRadiusPx = resolvedBottomRadiusPx,
+                        density = densityPx,
+                        sensitivity = refractionSensitivity,
+                        isDark = isDark
+                    )
+                    cachedWidthPx = size.width
+                    cachedHeightPx = size.height
+                    cachedTopR = resolvedTopRadiusPx
+                    cachedBotR = resolvedBottomRadiusPx
+                    cachedSens = refractionSensitivity
+                    cachedIsDark = isDark
+                    if (performanceMode && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        val shader = cachedShader
+                        if (shader != null) {
+                            val node = (cachedBevelNode as? android.graphics.RenderNode)
+                                ?: android.graphics.RenderNode("GlassBevelCache").also { cachedBevelNode = it }
+                            val w = size.width.roundToInt().coerceAtLeast(1)
+                            val h = size.height.roundToInt().coerceAtLeast(1)
+                            node.setPosition(0, 0, w, h)
+                            bevelPaint.shader = shader
+                            val rec = node.beginRecording(w, h)
+                            rec.drawRect(0f, 0f, size.width, size.height, bevelPaint)
+                            node.endRecording()
+                        } else {
+                            cachedBevelNode = null
+                        }
+                    } else {
+                        cachedBevelNode = null
+                    }
+                } else if (performanceMode && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && cachedBevelNode == null) {
+                    val shader = cachedShader
+                    if (shader != null) {
+                        val node = android.graphics.RenderNode("GlassBevelCache").also { cachedBevelNode = it }
+                        val w = size.width.roundToInt().coerceAtLeast(1)
+                        val h = size.height.roundToInt().coerceAtLeast(1)
+                        node.setPosition(0, 0, w, h)
+                        bevelPaint.shader = shader
+                        val rec = node.beginRecording(w, h)
+                        rec.drawRect(0f, 0f, size.width, size.height, bevelPaint)
+                        node.endRecording()
+                    }
+                }
+
+                val bevelShader = cachedShader
                 if (bevelShader != null) {
-                    bevelPaint.shader = bevelShader
                     drawIntoCanvas { canvas ->
-                        canvas.nativeCanvas.drawRect(0f, 0f, size.width, size.height, bevelPaint)
+                        val nc = canvas.nativeCanvas
+                        val node = if (performanceMode && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && nc.isHardwareAccelerated) {
+                            cachedBevelNode as? android.graphics.RenderNode
+                        } else null
+                        if (node != null && node.hasDisplayList()) {
+                            nc.drawRenderNode(node)
+                        } else {
+                            bevelPaint.shader = bevelShader
+                            nc.drawRect(0f, 0f, size.width, size.height, bevelPaint)
+                        }
                     }
                 }
             }
@@ -1337,7 +1463,8 @@ fun LiveScreenRefractionBackdrop(
         screenBitmap == null ||
         screenBitmap.isRecycled
     ) return
-    val activeRegions = remember(qsCardBounds, extraBlurRegions) {
+    val performanceMode by PanelPreferences.glassPerformanceMode.collectAsState()
+    val rawActiveRegions = remember(qsCardBounds, extraBlurRegions) {
         buildList {
             if (qsCardBounds != null && qsCardBounds.isValid) add(qsCardBounds)
             extraBlurRegions.forEach { region ->
@@ -1345,13 +1472,75 @@ fun LiveScreenRefractionBackdrop(
             }
         }
     }
+    val activeRegions = remember(rawActiveRegions, performanceMode) {
+        if (performanceMode) quantizeBlurRegionsForPerformance(rawActiveRegions, stepPx = 2f)
+        else rawActiveRegions
+    }
     if (activeRegions.isEmpty() || revealAlpha <= 0.01f) return
 
     val density = LocalDensity.current
     val effectiveBlurDp = blurRadiusDp.coerceIn(0f, 80f)
     val effectiveBlurPx = with(density) { effectiveBlurDp.dp.toPx() }
+    val skipBlurPass = effectiveBlurPx <= 0.5f || effectiveBlurDp <= 0.25f || (performanceMode && effectiveBlurDp < 0.75f)
     var viewportWidthPx by remember { mutableStateOf(screenBitmap.width.toFloat()) }
     var viewportHeightPx by remember { mutableStateOf(screenBitmap.height.toFloat()) }
+
+    val drawPaint = remember { Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG) }
+    val hostView = LocalView.current
+    val locBuffer = remember { IntArray(2) }
+    var measuredOffsetX by remember { mutableStateOf(0f) }
+    var measuredOffsetY by remember { mutableStateOf(0f) }
+    val resolvedOffsetX = if (hostOffsetX != 0f) hostOffsetX else measuredOffsetX
+    val resolvedOffsetY = if (hostOffsetY != 0f) hostOffsetY else measuredOffsetY
+
+    // When Performance Mode is enabled with non-zero blur, downsample blur pass to 0.5x inside a
+    // cached GPU RenderNode (75% fewer blur pixels + skips re-blurring across static frames),
+    // while keeping Liquid Glass edge refraction & inner corner rounding at crisp 1x resolution.
+    val useDownscaledBlurNode = performanceMode && !skipBlurPass && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+
+    val cachedDownscaledBlurNode = remember(
+        useDownscaledBlurNode,
+        screenBitmap,
+        effectiveBlurPx,
+        effectiveBlurDp,
+        isDark,
+        transparency,
+        viewportWidthPx,
+        viewportHeightPx,
+        resolvedOffsetX,
+        resolvedOffsetY
+    ) {
+        if (!useDownscaledBlurNode || viewportWidthPx <= 1f || viewportHeightPx <= 1f) {
+            null
+        } else {
+            try {
+                val halfW = (viewportWidthPx * 0.5f).roundToInt().coerceAtLeast(1)
+                val halfH = (viewportHeightPx * 0.5f).roundToInt().coerceAtLeast(1)
+                val halfBlurEffect = createFrostedBlurOnlyPlatformRenderEffect(
+                    blurRadiusPx = (effectiveBlurPx * 0.5f).coerceAtLeast(0.6f),
+                    isDark = isDark,
+                    blurRadiusDp = effectiveBlurDp,
+                    transparency = transparency
+                )
+                android.graphics.RenderNode("LiveBackdropDownscaleBlur").apply {
+                    setPosition(0, 0, halfW, halfH)
+                    setRenderEffect(halfBlurEffect)
+                    val rec = beginRecording(halfW, halfH)
+                    rec.scale(0.5f, 0.5f)
+                    val dstRect = RectF(
+                        -resolvedOffsetX,
+                        -resolvedOffsetY,
+                        -resolvedOffsetX + screenBitmap.width.toFloat(),
+                        -resolvedOffsetY + screenBitmap.height.toFloat()
+                    )
+                    rec.drawBitmap(screenBitmap, null, dstRect, drawPaint)
+                    endRecording()
+                }
+            } catch (_: Throwable) {
+                null
+            }
+        }
+    }
 
     val frostedRefractionEffect = remember(
         effectiveBlurPx,
@@ -1362,9 +1551,57 @@ fun LiveScreenRefractionBackdrop(
         activeRegions,
         viewportWidthPx,
         viewportHeightPx,
-        density.density
+        density.density,
+        performanceMode,
+        useDownscaledBlurNode
     ) {
-        createFrostedBackdropRenderEffect(
+        if (useDownscaledBlurNode) {
+            // Blur is handled by the 0.5x cached RenderNode; keep 1x RenderEffect for crisp refraction only
+            createFrostedBackdropRenderEffect(
+                blurRadiusPx = 0f,
+                isDark = isDark,
+                blurRadiusDp = 0f,
+                transparency = transparency,
+                enableGlassRefraction = true,
+                glassRefractionSensitivity = refractionSensitivity,
+                refractionRegions = activeRegions,
+                viewportWidthPx = viewportWidthPx,
+                viewportHeightPx = viewportHeightPx,
+                density = density.density,
+                performanceMode = true
+            )
+        } else {
+            createFrostedBackdropRenderEffect(
+                blurRadiusPx = effectiveBlurPx,
+                isDark = isDark,
+                blurRadiusDp = effectiveBlurDp,
+                transparency = transparency,
+                enableGlassRefraction = true,
+                glassRefractionSensitivity = refractionSensitivity,
+                refractionRegions = activeRegions,
+                viewportWidthPx = viewportWidthPx,
+                viewportHeightPx = viewportHeightPx,
+                density = density.density,
+                performanceMode = performanceMode
+            )
+        }
+    }
+
+    val fullResFallbackEffect = remember(
+        effectiveBlurPx,
+        isDark,
+        effectiveBlurDp,
+        transparency,
+        refractionSensitivity,
+        activeRegions,
+        viewportWidthPx,
+        viewportHeightPx,
+        density.density,
+        performanceMode,
+        useDownscaledBlurNode
+    ) {
+        if (!useDownscaledBlurNode) null
+        else createFrostedBackdropRenderEffect(
             blurRadiusPx = effectiveBlurPx,
             isDark = isDark,
             blurRadiusDp = effectiveBlurDp,
@@ -1374,17 +1611,10 @@ fun LiveScreenRefractionBackdrop(
             refractionRegions = activeRegions,
             viewportWidthPx = viewportWidthPx,
             viewportHeightPx = viewportHeightPx,
-            density = density.density
+            density = density.density,
+            performanceMode = true
         )
     }
-
-    val drawPaint = remember { Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG) }
-    val hostView = LocalView.current
-    val locBuffer = remember { IntArray(2) }
-    var measuredOffsetX by remember { mutableStateOf(0f) }
-    var measuredOffsetY by remember { mutableStateOf(0f) }
-    val resolvedOffsetX = if (hostOffsetX != 0f) hostOffsetX else measuredOffsetX
-    val resolvedOffsetY = if (hostOffsetY != 0f) hostOffsetY else measuredOffsetY
 
     Box(
         modifier = modifier
@@ -1402,21 +1632,37 @@ fun LiveScreenRefractionBackdrop(
             .graphicsLayer {
                 alpha = revealAlpha.coerceIn(0f, 1f)
                 clip = true
-                if (frostedRefractionEffect != null) {
-                    renderEffect = frostedRefractionEffect
+                val chosenEffect = if (cachedDownscaledBlurNode != null && hostView.isHardwareAccelerated) {
+                    frostedRefractionEffect
+                } else {
+                    fullResFallbackEffect ?: frostedRefractionEffect
+                }
+                if (chosenEffect != null) {
+                    renderEffect = chosenEffect
                 }
             }
             .testTag("live_screen_refraction_backdrop")
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawIntoCanvas { canvas ->
-                val dstRect = RectF(
-                    -resolvedOffsetX,
-                    -resolvedOffsetY,
-                    -resolvedOffsetX + screenBitmap.width.toFloat(),
-                    -resolvedOffsetY + screenBitmap.height.toFloat()
-                )
-                canvas.nativeCanvas.drawBitmap(screenBitmap, null, dstRect, drawPaint)
+                val nc = canvas.nativeCanvas
+                if (cachedDownscaledBlurNode != null &&
+                    nc.isHardwareAccelerated &&
+                    cachedDownscaledBlurNode.hasDisplayList()
+                ) {
+                    nc.save()
+                    nc.scale(2f, 2f)
+                    nc.drawRenderNode(cachedDownscaledBlurNode)
+                    nc.restore()
+                } else {
+                    val dstRect = RectF(
+                        -resolvedOffsetX,
+                        -resolvedOffsetY,
+                        -resolvedOffsetX + screenBitmap.width.toFloat(),
+                        -resolvedOffsetY + screenBitmap.height.toFloat()
+                    )
+                    nc.drawBitmap(screenBitmap, null, dstRect, drawPaint)
+                }
             }
         }
     }
@@ -1444,12 +1690,13 @@ fun FrostedPreviewBackdrop(
 ) {
     val glassMode by PanelPreferences.glassBackdropMode.collectAsState()
     val prefRefractionSens by PanelPreferences.glassRefractionSensitivity.collectAsState()
+    val performanceMode by PanelPreferences.glassPerformanceMode.collectAsState()
     val effectiveBlur = enableBlur && isAndroid16FrostedGlassSupported()
     val resolvedRefraction = (enableGlassRefraction ?: (glassMode == GlassBackdropMode.LIQUID)) &&
         isRuntimeShaderRefractionSupported()
     val resolvedRefractionSens = glassRefractionSensitivity ?: prefRefractionSens
 
-    val activeRegions = remember(qsCardBounds, extraBlurRegions) {
+    val rawActiveRegions = remember(qsCardBounds, extraBlurRegions) {
         buildList {
             if (qsCardBounds != null && qsCardBounds.isValid) add(qsCardBounds)
             extraBlurRegions.forEach { region ->
@@ -1457,11 +1704,16 @@ fun FrostedPreviewBackdrop(
             }
         }
     }
+    val activeRegions = remember(rawActiveRegions, performanceMode) {
+        if (performanceMode) quantizeBlurRegionsForPerformance(rawActiveRegions, stepPx = 2f)
+        else rawActiveRegions
+    }
     val shouldBlurFullScreen = effectiveBlur && !blurOnlyBehindQsCard
     val shouldBlurQsOnly = effectiveBlur && blurOnlyBehindQsCard && activeRegions.isNotEmpty()
     val effectiveBlurDp = blurRadiusDp.coerceIn(0f, 80f)
     val density = LocalDensity.current
     val effectiveBlurPx = with(density) { effectiveBlurDp.dp.toPx() }
+    val skipBlurPass = effectiveBlurPx <= 0.5f || effectiveBlurDp <= 0.25f || (performanceMode && effectiveBlurDp < 0.75f)
     val isDark = MaterialTheme.colorScheme.surface.let {
         (0.2126f * it.red + 0.7152f * it.green + 0.0722f * it.blue) < 0.5f
     }
@@ -1479,7 +1731,8 @@ fun FrostedPreviewBackdrop(
         activeRegions,
         viewportWidthPx,
         viewportHeightPx,
-        density.density
+        density.density,
+        performanceMode
     ) {
         if (!effectiveBlur) null
         else createFrostedBackdropRenderEffect(
@@ -1492,7 +1745,8 @@ fun FrostedPreviewBackdrop(
             refractionRegions = activeRegions,
             viewportWidthPx = viewportWidthPx,
             viewportHeightPx = viewportHeightPx,
-            density = density.density
+            density = density.density,
+            performanceMode = performanceMode
         )
     }
 
@@ -1501,7 +1755,7 @@ fun FrostedPreviewBackdrop(
             clip = true
             renderEffect = frostedRenderEffect
         }
-        effectiveBlurDp > 0.5f -> Modifier.blur(
+        !skipBlurPass -> Modifier.blur(
             radius = effectiveBlurDp.dp,
             edgeTreatment = BlurredEdgeTreatment.Rectangle
         )

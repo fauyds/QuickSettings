@@ -1531,4 +1531,196 @@ class FrostedGlassBlurTest {
             )
         )
     }
+
+    @Test
+    fun `glassPerformanceMode defaults false, persists, and syncs with ThemeManager`() {
+        assertFalse(PanelPreferences.glassPerformanceMode.value)
+
+        PanelPreferences.setGlassPerformanceMode(context, true)
+        assertTrue(PanelPreferences.glassPerformanceMode.value)
+
+        PanelPreferences.init(context)
+        assertTrue(PanelPreferences.glassPerformanceMode.value)
+
+        val savedTheme = com.example.data.ThemeManager.saveCurrentSettingsAsTheme(context, "Perf Mode On")
+        PanelPreferences.setGlassPerformanceMode(context, false)
+        assertFalse(PanelPreferences.glassPerformanceMode.value)
+
+        assertTrue(com.example.data.ThemeManager.applyTheme(context, savedTheme))
+        assertTrue(PanelPreferences.glassPerformanceMode.value)
+    }
+
+    @Test
+    fun `Optimize Glass and Blur toggle follows glass mode visibility and toggles performance mode`() {
+        PanelPreferences.setGlassBackdropMode(context, GlassBackdropMode.OFF)
+        PanelPreferences.setGlassPerformanceMode(context, false)
+
+        composeTestRule.setContent {
+            QuickPanelTheme(darkTheme = true) {
+                androidx.compose.foundation.layout.Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
+                    com.example.ui.customizer.QsDesignSection()
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // Hidden when Glass Backdrop is Off
+        composeTestRule.onNodeWithTag("glass_performance_mode_toggle").assertDoesNotExist()
+
+        // Visible in Frosted mode and toggles preference
+        composeTestRule.onNodeWithTag("glass_mode_frosted").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("glass_performance_mode_toggle")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .performClick()
+        composeTestRule.waitForIdle()
+        assertTrue(PanelPreferences.glassPerformanceMode.value)
+
+        // Remains visible in Liquid Glass mode and toggles back off
+        composeTestRule.onNodeWithTag("glass_mode_liquid").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("glass_performance_mode_toggle")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .performClick()
+        composeTestRule.waitForIdle()
+        assertFalse(PanelPreferences.glassPerformanceMode.value)
+
+        // Collapses when set back to Off
+        composeTestRule.onNodeWithTag("glass_mode_off").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("glass_performance_mode_toggle").assertDoesNotExist()
+    }
+
+    @Test
+    fun `computeWindowBlurBehindRadiusPx skips negligible blur and quantizes 8px steps in performance mode`() {
+        // Negligible blur (< 0.75 dp) skipped in performance mode
+        assertEquals(
+            0,
+            computeWindowBlurBehindRadiusPx(
+                enabled = true,
+                density = 3f,
+                fraction = 1f,
+                maxBlurDp = 0.5f,
+                performanceMode = true
+            )
+        )
+        assertEquals(
+            0,
+            computeWindowBlurBehindRadiusPx(
+                enabled = true,
+                density = 3f,
+                fraction = 1f,
+                maxBlurDp = 0f,
+                performanceMode = true
+            )
+        )
+
+        // Non-negligible blur quantizes mid-reveal steps into 8px increments
+        val midPerfPx = computeWindowBlurBehindRadiusPx(
+            enabled = true,
+            density = 3f,
+            fraction = 0.5f,
+            maxBlurDp = 24f,
+            performanceMode = true
+        )
+        assertTrue(midPerfPx in 8..72)
+        assertEquals(0, midPerfPx % 8)
+
+        // Full reveal hits exact max target radius
+        assertEquals(
+            72,
+            computeWindowBlurBehindRadiusPx(
+                enabled = true,
+                density = 3f,
+                fraction = 1f,
+                maxBlurDp = 24f,
+                performanceMode = true
+            )
+        )
+    }
+
+    @Test
+    fun `quantizeBlurRegionsForPerformance snaps sub-pixel layout jitter cleanly`() {
+        val frame1 = listOf(
+            com.example.ui.overlay.QsCardBlurBounds(
+                left = 20.1f, top = 40.3f, right = 380.4f, bottom = 300.2f,
+                topCornerRadiusPx = 32f, bottomCornerRadiusPx = 16f
+            )
+        )
+        val frame2 = listOf(
+            com.example.ui.overlay.QsCardBlurBounds(
+                left = 20.4f, top = 39.8f, right = 379.7f, bottom = 299.9f,
+                topCornerRadiusPx = 32f, bottomCornerRadiusPx = 16f
+            )
+        )
+
+        val q1 = com.example.ui.overlay.quantizeBlurRegionsForPerformance(frame1, stepPx = 2f)
+        val q2 = com.example.ui.overlay.quantizeBlurRegionsForPerformance(frame2, stepPx = 2f)
+
+        assertEquals(q1, q2)
+        assertEquals(20f, q1.first().left, 0.001f)
+        assertEquals(40f, q1.first().top, 0.001f)
+        assertEquals(380f, q1.first().right, 0.001f)
+        assertEquals(300f, q1.first().bottom, 0.001f)
+    }
+
+    @Test
+    fun `createFrostedBackdropRenderEffect skips negligible blur while keeping liquid refraction in performance mode`() {
+        val qsBounds = listOf(
+            com.example.ui.overlay.QsCardBlurBounds(
+                left = 24f, top = 48f, right = 388f, bottom = 320f,
+                topCornerRadiusPx = 0f, bottomCornerRadiusPx = 0f
+            )
+        )
+
+        // Without refraction, negligible blur (< 0.75 dp) skips blur pass completely in performance mode
+        assertNull(
+            com.example.ui.overlay.createFrostedBackdropRenderEffect(
+                blurRadiusPx = 1.5f,
+                isDark = true,
+                blurRadiusDp = 0.5f,
+                transparency = 0.40f,
+                enableGlassRefraction = false,
+                performanceMode = true
+            )
+        )
+
+        // With Liquid Glass enabled at 0% / negligible blur, refraction still builds cleanly
+        assertNotNull(
+            com.example.ui.overlay.createFrostedBackdropRenderEffect(
+                blurRadiusPx = 0f,
+                isDark = true,
+                blurRadiusDp = 0f,
+                transparency = 0.40f,
+                enableGlassRefraction = true,
+                glassRefractionSensitivity = 0.65f,
+                refractionRegions = qsBounds,
+                viewportWidthPx = 1080f,
+                viewportHeightPx = 2400f,
+                density = 3f,
+                performanceMode = true
+            )
+        )
+
+        // With full blur + Liquid Glass in performance mode, chained RenderEffect builds cleanly
+        assertNotNull(
+            com.example.ui.overlay.createFrostedBackdropRenderEffect(
+                blurRadiusPx = 72f,
+                isDark = true,
+                blurRadiusDp = 24f,
+                transparency = 0.40f,
+                enableGlassRefraction = true,
+                glassRefractionSensitivity = 0.65f,
+                refractionRegions = qsBounds,
+                viewportWidthPx = 1080f,
+                viewportHeightPx = 2400f,
+                density = 3f,
+                performanceMode = true
+            )
+        )
+    }
 }
