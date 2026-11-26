@@ -65,7 +65,7 @@ class ScreenRecordPromptActivity : ComponentActivity() {
         }
 
         // Silent MediaProjection auto-grant under Root / Shizuku mode
-        val privilegeEngine = PrivilegeEngine(this)
+        val privilegeEngine = PrivilegeEngine.getShared(this)
         val mode = privilegeEngine.currentMode.value
         if (mode == PrivilegeMode.ROOT || mode == PrivilegeMode.SHIZUKU) {
             activityScope.launch(Dispatchers.IO) {

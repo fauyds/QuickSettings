@@ -328,4 +328,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         _isOverlayServiceRunning.value = true
     }
+
+    override fun onCleared() {
+        super.onCleared()
+        nativeTileManager.destroy()
+        externalTileScanner.destroy()
+        privilegeEngine.destroy()
+    }
 }

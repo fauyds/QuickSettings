@@ -2096,7 +2096,7 @@ internal fun RenderThemesAndMiscAndAboutActions(feature: FavoriteFeature, modifi
             var hasRoot by remember { mutableStateOf(false) }
             LaunchedEffect(Unit) {
                 hasRoot = withContext(Dispatchers.IO) {
-                    val engine = NativeTileManager.instance?.privilegeEngine ?: PrivilegeEngine(context)
+                    val engine = NativeTileManager.instance?.privilegeEngine ?: PrivilegeEngine.getShared(context)
                     engine.isRootGranted()
                 }
             }
@@ -2106,7 +2106,7 @@ internal fun RenderThemesAndMiscAndAboutActions(feature: FavoriteFeature, modifi
                 checked = usePrime,
                 onCheckedChange = { enabled ->
                     coroutineScope.launch(Dispatchers.IO) {
-                        val engine = NativeTileManager.instance?.privilegeEngine ?: PrivilegeEngine(context)
+                        val engine = NativeTileManager.instance?.privilegeEngine ?: PrivilegeEngine.getShared(context)
                         if (enabled) {
                             if (engine.isRootGranted()) {
                                 engine.applyPrimeCoreAffinity(true)
@@ -2281,7 +2281,7 @@ internal fun RenderThemesAndMiscAndAboutActions(feature: FavoriteFeature, modifi
         // --- ABOUT ---
         FavoriteFeature.ABOUT_INFO -> {
             Text(
-                text = "QuickSettings v2.0.1 — Material 3 Expressive Quick Settings & Heads-Up customization suite.",
+                text = "QuickSettings v${com.example.BuildConfig.VERSION_NAME} — Material 3 Expressive Quick Settings & Heads-Up customization suite.",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

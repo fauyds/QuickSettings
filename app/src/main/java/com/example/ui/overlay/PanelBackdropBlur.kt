@@ -507,6 +507,9 @@ class QsCardBlurWindowHost(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 d.window?.setBackgroundBlurRadius(0)
             }
+            d.window?.setBackgroundDrawable(null)
+            d.window?.decorView?.outlineProvider = null
+            d.window?.decorView?.tag = null
             if (d.isShowing) {
                 d.dismiss()
             }
@@ -1601,6 +1604,18 @@ fun Modifier.frostedGlassSurface(
     var cachedShader by remember { mutableStateOf<RuntimeShader?>(null) }
     var cachedBevelNode by remember { mutableStateOf<Any?>(null) }
 
+    DisposableEffect(cachedBevelNode) {
+        val currentNode = cachedBevelNode
+        onDispose {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                try {
+                    (currentNode as? android.graphics.RenderNode)?.discardDisplayList()
+                } catch (_: Throwable) {}
+            }
+            bevelPaint.shader = null
+        }
+    }
+
     this
         .background(effectiveColor)
         .drawBehind {
@@ -1857,6 +1872,17 @@ fun LiveScreenRefractionBackdrop(
                 }
             } catch (_: Throwable) {
                 null
+            }
+        }
+    }
+
+    DisposableEffect(cachedDownscaledBlurNode) {
+        val node = cachedDownscaledBlurNode
+        onDispose {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                try {
+                    node?.discardDisplayList()
+                } catch (_: Throwable) {}
             }
         }
     }

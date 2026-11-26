@@ -306,7 +306,14 @@ object ComplicationDataHub {
     private var luxSensorMaxRange: Float = 10_000f
     private var luxMaxScale: Float = 10_000f
     private var sensorManager: SensorManager? = null
+    private var lightSensor: Sensor? = null
     private var lightSensorListener: SensorEventListener? = null
+    @Volatile
+    private var isLightSensorRegistered: Boolean = false
+    @Volatile
+    private var isOverlayActive: Boolean = false
+    @Volatile
+    private var isAppForegroundActive: Boolean = false
 
     fun init(context: Context) {
         val ctx = context.applicationContext
@@ -317,8 +324,61 @@ object ComplicationDataHub {
             initialized = true
             loadPreferences(ctx)
             initLuxSensor(ctx)
+            syncLuxSensorRegistration()
             startPolling()
         }
+    }
+
+    fun setOverlayActive(active: Boolean) {
+        val changed = isOverlayActive != active
+        isOverlayActive = active
+        if (!initialized) return
+        syncLuxSensorRegistration()
+        if (active && changed) {
+            scope.launch { refreshTelemetryNow() }
+        }
+    }
+
+    fun setAppForegroundActive(active: Boolean) {
+        val changed = isAppForegroundActive != active
+        isAppForegroundActive = active
+        if (!initialized) return
+        syncLuxSensorRegistration()
+        if (active && changed) {
+            scope.launch { refreshTelemetryNow() }
+        }
+    }
+
+    fun isIdlePollingPaused(): Boolean {
+        val hasActiveUi = isOverlayActive ||
+            isAppForegroundActive ||
+            _activeMicroWindow.value != null ||
+            QuickPanelAccessibilityService.instance?.isPanelShowing == true ||
+            QuickSettingsOverlayService.instance?.isPanelShowing == true
+        if (hasActiveUi) return false
+        return !localTimerRunning &&
+            !localSwRunning &&
+            externalTimerTicker?.isRunning != true &&
+            externalStopwatchTicker?.isRunning != true
+    }
+
+    private fun isDeviceInteractive(): Boolean {
+        val ctx = appContext ?: return true
+        return try {
+            val pm = ctx.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+            pm?.isInteractive != false
+        } catch (_: Throwable) {
+            true
+        }
+    }
+
+    private fun shouldSampleFullTelemetry(): Boolean {
+        val hasActiveUi = isOverlayActive ||
+            isAppForegroundActive ||
+            _activeMicroWindow.value != null ||
+            QuickPanelAccessibilityService.instance?.isPanelShowing == true ||
+            QuickSettingsOverlayService.instance?.isPanelShowing == true
+        return hasActiveUi && isDeviceInteractive()
     }
 
     private fun loadPreferences(ctx: Context) {
@@ -358,13 +418,15 @@ object ComplicationDataHub {
         try {
             val sm = ctx.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
             sensorManager = sm
-            val lightSensor = sm?.getDefaultSensor(Sensor.TYPE_LIGHT)
-            if (lightSensor != null) {
+            val sensor = sm?.getDefaultSensor(Sensor.TYPE_LIGHT)
+            lightSensor = sensor
+            if (sensor != null) {
                 luxSensorAvailable = true
-                luxSensorName = lightSensor.name ?: "Ambient Light Sensor"
-                luxSensorMaxRange = lightSensor.maximumRange.coerceAtLeast(100f)
-                val listener = object : SensorEventListener {
+                luxSensorName = sensor.name ?: "Ambient Light Sensor"
+                luxSensorMaxRange = sensor.maximumRange.coerceAtLeast(100f)
+                lightSensorListener = object : SensorEventListener {
                     override fun onSensorChanged(event: SensorEvent?) {
+                        if (!shouldSampleFullTelemetry()) return
                         val value = event?.values?.firstOrNull() ?: return
                         if (!value.isNaN() && value >= 0f) {
                             currentLux = value
@@ -376,8 +438,6 @@ object ComplicationDataHub {
 
                     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
                 }
-                lightSensorListener = listener
-                sm.registerListener(listener, lightSensor, SensorManager.SENSOR_DELAY_UI)
             } else {
                 luxSensorAvailable = false
             }
@@ -386,19 +446,49 @@ object ComplicationDataHub {
         }
     }
 
+    private fun syncLuxSensorRegistration() {
+        val sm = sensorManager ?: return
+        val sensor = lightSensor ?: return
+        val listener = lightSensorListener ?: return
+        val wantsSensor = shouldSampleFullTelemetry()
+        try {
+            if (wantsSensor && !isLightSensorRegistered) {
+                sm.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_UI)
+                isLightSensorRegistered = true
+            } else if (!wantsSensor && isLightSensorRegistered) {
+                sm.unregisterListener(listener)
+                isLightSensorRegistered = false
+            }
+        } catch (_: Throwable) {}
+    }
+
     private fun startPolling() {
         if (pollingJob?.isActive == true) return
         pollingJob = scope.launch {
             while (isActive) {
-                refreshTelemetryNow()
-                val intervalMs = when {
-                    _activeMicroWindow.value != null -> 500L
-                    localTimerRunning || localSwRunning ||
-                        externalTimerTicker?.isRunning == true ||
-                        externalStopwatchTicker?.isRunning == true -> 500L
-                    else -> 1200L
+                syncLuxSensorRegistration()
+                if (shouldSampleFullTelemetry()) {
+                    refreshTelemetryNow()
+                    val intervalMs = when {
+                        _activeMicroWindow.value != null -> 500L
+                        localTimerRunning || localSwRunning ||
+                            externalTimerTicker?.isRunning == true ||
+                            externalStopwatchTicker?.isRunning == true -> 500L
+                        else -> 1200L
+                    }
+                    delay(intervalMs)
+                } else if (localTimerRunning) {
+                    // Lightweight timer-only check so finished timer alerts still fire on time without sampling /proc or DownloadManager
+                    val timer = buildTimerState()
+                    val cur = _snapshot.value
+                    if (cur.timer != timer) {
+                        _snapshot.value = cur.copy(timer = timer)
+                    }
+                    delay(500L)
+                } else {
+                    // QS & App UI are idle/closed: avoid polling /proc/stat, DownloadManager, TrafficStats, or WifiManager
+                    delay(2000L)
                 }
-                delay(intervalMs)
             }
         }
     }

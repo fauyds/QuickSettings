@@ -121,6 +121,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        com.example.system.ComplicationDataHub.setAppForegroundActive(true)
+        NativeTileManager.setAppForegroundActive(true)
         com.example.data.ComplicationCommandRepository.init(this)
         viewModel.privilegeEngine.syncWithPreferences()
         viewModel.refreshServiceState()
@@ -138,6 +140,12 @@ class MainActivity : ComponentActivity() {
             }
             viewModel.refreshServiceState()
         }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        com.example.system.ComplicationDataHub.setAppForegroundActive(false)
+        NativeTileManager.setAppForegroundActive(false)
     }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {

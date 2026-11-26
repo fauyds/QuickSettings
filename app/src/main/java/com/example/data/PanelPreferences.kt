@@ -3459,7 +3459,7 @@ object PanelPreferences {
         prefs.edit().putBoolean(KEY_ENDLESS_ROOT_MODE, enabled).apply()
         try {
             val engine = com.example.system.NativeTileManager.instance?.privilegeEngine
-                ?: com.example.system.PrivilegeEngine(context)
+                ?: com.example.system.PrivilegeEngine.getShared(context)
             engine.setEndlessRootMode(enabled)
         } catch (_: Exception) {}
     }
@@ -4470,7 +4470,8 @@ object PanelPreferences {
                 Settings.Global.putInt(context.contentResolver, "heads_up_notifications_enabled", valInt)
             } catch (_: Exception) {}
 
-            val engine = com.example.system.PrivilegeEngine(context)
+            val engine = com.example.system.NativeTileManager.instance?.privilegeEngine
+                ?: com.example.system.PrivilegeEngine.getShared(context)
             if (engine.currentMode.value != com.example.model.PrivilegeMode.STANDARD) {
                 val cmd = "settings put global heads_up_notifications_enabled $valInt"
                 CoroutineScope(Dispatchers.IO).launch {

@@ -116,7 +116,7 @@ fun ComplicationCommandsScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val privilegeEngine = remember(context) { PrivilegeEngine(context.applicationContext) }
+    val privilegeEngine = remember(context) { PrivilegeEngine.getShared(context.applicationContext) }
     val activeMode by privilegeEngine.currentMode.collectAsStateWithLifecycle()
     val configs by ComplicationCommandRepository.configs.collectAsStateWithLifecycle()
     val complications = ComplicationCommandRepository.knownComplications

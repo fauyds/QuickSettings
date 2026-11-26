@@ -243,7 +243,7 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                         checked = usePrimeCoreAffinity,
                         onCheckedChange = { enabled ->
                             coroutineScope.launch(Dispatchers.IO) {
-                                val engine = NativeTileManager.instance?.privilegeEngine ?: PrivilegeEngine(context)
+                                val engine = NativeTileManager.instance?.privilegeEngine ?: PrivilegeEngine.getShared(context)
                                 if (enabled) {
                                     if (engine.isRootGranted()) {
                                         val ok = engine.applyPrimeCoreAffinity(true)

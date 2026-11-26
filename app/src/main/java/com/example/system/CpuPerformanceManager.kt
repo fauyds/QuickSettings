@@ -30,7 +30,7 @@ class CpuPerformanceManager private constructor(private val context: Context) {
     init {
         acquireUrgentPriority()
         initPerformanceHintSession()
-        val engine = com.example.system.NativeTileManager.instance?.privilegeEngine ?: PrivilegeEngine(context)
+        val engine = PrivilegeEngine.getShared(context)
         checkAndApplyAffinityIfEnabled(engine)
     }
 

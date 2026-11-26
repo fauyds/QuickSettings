@@ -61,12 +61,13 @@ import kotlinx.coroutines.launch
  * 4. Custom ROM & System-Specific Tiles Support (crDroid, LineageOS, PixelExperience, etc.).
  */
 class NativeTileManager(
-    private val context: Context,
+    context: Context,
     val privilegeEngine: PrivilegeEngine,
     private val scope: CoroutineScope
 ) {
+    private val context: Context = context.applicationContext
     private val handler = Handler(Looper.getMainLooper())
-    private val contentResolver = context.contentResolver
+    private val contentResolver = this.context.contentResolver
 
     // Native State Flows
     private val _isWifiEnabled = MutableStateFlow(false)
@@ -185,6 +186,19 @@ class NativeTileManager(
     private var torchCameraId: String? = null
     private val bluetoothProfiles = ConcurrentHashMap<Int, BluetoothProfile>()
     private val requestedBluetoothProfiles = ConcurrentHashMap.newKeySet<Int>()
+    private val registeredObservers = mutableListOf<ContentObserver>()
+    @Volatile
+    private var stateBroadcastReceiver: BroadcastReceiver? = null
+    @Volatile
+    private var cellNetworkCallback: ConnectivityManager.NetworkCallback? = null
+    @Volatile
+    private var torchCallback: CameraManager.TorchCallback? = null
+    @Volatile
+    private var audioDeviceCallback: AudioDeviceCallback? = null
+    private var themeCollectorJob: kotlinx.coroutines.Job? = null
+    @Volatile
+    var isDestroyed: Boolean = false
+        private set
     @Volatile
     private var cachedCallbackWifiSsid: String? = null
     @Volatile
@@ -213,6 +227,81 @@ class NativeTileManager(
         registerObservers()
     }
 
+    fun destroy() {
+        if (isDestroyed) return
+        isDestroyed = true
+        handler.removeCallbacksAndMessages(null)
+        themeCollectorJob?.cancel()
+        themeCollectorJob = null
+
+        synchronized(registeredObservers) {
+            for (observer in registeredObservers) {
+                try {
+                    contentResolver.unregisterContentObserver(observer)
+                } catch (_: Throwable) {}
+            }
+            registeredObservers.clear()
+        }
+
+        stateBroadcastReceiver?.let { receiver ->
+            try {
+                context.unregisterReceiver(receiver)
+            } catch (_: Throwable) {}
+            stateBroadcastReceiver = null
+        }
+
+        connectivityManager?.let { cm ->
+            wifiNetworkCallback?.let { cb ->
+                try {
+                    cm.unregisterNetworkCallback(cb)
+                } catch (_: Throwable) {}
+                wifiNetworkCallback = null
+            }
+            cellNetworkCallback?.let { cb ->
+                try {
+                    cm.unregisterNetworkCallback(cb)
+                } catch (_: Throwable) {}
+                cellNetworkCallback = null
+            }
+        }
+
+        torchCallback?.let { cb ->
+            try {
+                cameraManager?.unregisterTorchCallback(cb)
+            } catch (_: Throwable) {}
+            torchCallback = null
+        }
+
+        audioDeviceCallback?.let { cb ->
+            try {
+                audioManager?.unregisterAudioDeviceCallback(cb)
+            } catch (_: Throwable) {}
+            audioDeviceCallback = null
+        }
+
+        val adapter = try { bluetoothManager?.adapter } catch (_: Throwable) { null }
+        if (adapter != null) {
+            for ((profileId, proxy) in bluetoothProfiles) {
+                try {
+                    adapter.closeProfileProxy(profileId, proxy)
+                } catch (_: Throwable) {}
+            }
+        }
+        bluetoothProfiles.clear()
+        requestedBluetoothProfiles.clear()
+
+        activeInstances.removeAll { ref ->
+            val target = ref.get()
+            target == null || target === this || target.isDestroyed
+        }
+        if (instance === this) {
+            instance = activeInstances.firstOrNull {
+                val target = it.get()
+                target != null && !target.isDestroyed
+            }?.get()
+        }
+    }
+
     companion object {
         var instance: NativeTileManager? = null
             private set
@@ -231,13 +320,27 @@ class NativeTileManager(
         private var cachedShellBtDeviceName: String? = null
         private val shellQueryLock = Any()
 
+        @Volatile
+        var isAppForegroundActive: Boolean = false
+            private set
+
+        fun setAppForegroundActive(active: Boolean) {
+            isAppForegroundActive = active
+        }
+
+        internal fun isAnyUiActive(): Boolean {
+            return QuickPanelAccessibilityService.instance?.isPanelShowing == true ||
+                com.example.service.QuickSettingsOverlayService.instance?.isPanelShowing == true ||
+                isAppForegroundActive
+        }
+
         fun notifyAllInstancesPrivilegeOrPermissionsUpdated() {
             permissionsAutoGrantAttempted = false
             lastShellWifiLookupMs = 0L
             lastShellBtLookupMs = 0L
-            activeInstances.removeAll { it.get() == null }
+            activeInstances.removeAll { it.get() == null || it.get()?.isDestroyed == true }
             for (ref in activeInstances) {
-                ref.get()?.onPrivilegeOrPermissionsUpdatedInternal()
+                ref.get()?.takeIf { !it.isDestroyed }?.onPrivilegeOrPermissionsUpdatedInternal()
             }
         }
 
@@ -385,6 +488,7 @@ class NativeTileManager(
     }
 
     private fun initBluetoothProfileProxies() {
+        if (isDestroyed) return
         val adapter = try { bluetoothManager?.adapter } catch (_: Throwable) { null } ?: return
         val profileIds = listOf(
             BluetoothProfile.A2DP,
@@ -400,6 +504,10 @@ class NativeTileManager(
                     context.applicationContext,
                     object : BluetoothProfile.ServiceListener {
                         override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
+                            if (isDestroyed) {
+                                runCatching { adapter.closeProfileProxy(profile, proxy) }
+                                return
+                            }
                             bluetoothProfiles[profile] = proxy
                             scope.launch(Dispatchers.IO) {
                                 val btOn = try { bluetoothManager?.adapter?.isEnabled == true } catch (_: Throwable) { false }
@@ -433,13 +541,15 @@ class NativeTileManager(
                         break
                     }
                 }
-                cm.registerTorchCallback(object : CameraManager.TorchCallback() {
+                val cb = object : CameraManager.TorchCallback() {
                     override fun onTorchModeChanged(cameraId: String, enabled: Boolean) {
                         if (cameraId == torchCameraId) {
                             _isTorchEnabled.value = enabled
                         }
                     }
-                }, handler)
+                }
+                torchCallback = cb
+                cm.registerTorchCallback(cb, handler)
             } catch (e: Exception) {
                 Log.w("NativeTileManager", "Torch setup failed: ${e.message}")
             }
@@ -549,10 +659,10 @@ class NativeTileManager(
             cleanSsid(extra)?.let { return it }
         } catch (_: Throwable) {}
 
-        // Tier 3: Privileged shell fallback (works even when device GPS/Location toggle is OFF), throttled across instances
+        // Tier 3: Privileged shell fallback (works even when device GPS/Location toggle is OFF), throttled & skipped when UI is closed
         val canUseShellForWifi = privilegeEngine.isShizukuGranted() ||
             (privilegeEngine.isRootGranted() && privilegeEngine.currentMode.value == PrivilegeMode.ROOT)
-        if (isOffMainThread && canUseShellForWifi) {
+        if (isOffMainThread && canUseShellForWifi && isAnyUiActive()) {
             val now = System.currentTimeMillis()
             if (now - lastShellWifiLookupMs < 15_000L) {
                 return cachedShellWifiSsid
@@ -745,7 +855,7 @@ class NativeTileManager(
 
         val canUseShellForBt = privilegeEngine.isShizukuGranted() ||
             (privilegeEngine.isRootGranted() && privilegeEngine.currentMode.value == PrivilegeMode.ROOT)
-        if (!hasKnownZeroBondedDevices && isOffMainThread && canUseShellForBt) {
+        if (!hasKnownZeroBondedDevices && isOffMainThread && canUseShellForBt && isAnyUiActive()) {
             val now = System.currentTimeMillis()
             if (now - lastShellBtLookupMs < 15_000L) {
                 return cachedShellBtDeviceName
@@ -931,11 +1041,22 @@ class NativeTileManager(
         }
     }
 
+    private fun registerTrackedObserver(uri: android.net.Uri?, observer: ContentObserver) {
+        if (uri == null || isDestroyed) return
+        try {
+            contentResolver.registerContentObserver(uri, true, observer)
+            synchronized(registeredObservers) {
+                registeredObservers.add(observer)
+            }
+        } catch (_: Throwable) {}
+    }
+
     private fun registerObservers() {
+        if (isDestroyed) return
+
         // Observer for Auto-Rotate
-        contentResolver.registerContentObserver(
+        registerTrackedObserver(
             Settings.System.getUriFor(Settings.System.ACCELEROMETER_ROTATION),
-            true,
             object : ContentObserver(handler) {
                 override fun onChange(selfChange: Boolean) {
                     val enabled = Settings.System.getInt(contentResolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 1
@@ -945,9 +1066,8 @@ class NativeTileManager(
         )
 
         // Observer for Brightness
-        contentResolver.registerContentObserver(
+        registerTrackedObserver(
             Settings.System.getUriFor(Settings.System.SCREEN_BRIGHTNESS),
-            true,
             object : ContentObserver(handler) {
                 override fun onChange(selfChange: Boolean) {
                     val bright = Settings.System.getInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, 128)
@@ -957,9 +1077,8 @@ class NativeTileManager(
         )
 
         // Observer for Auto-Brightness Mode
-        contentResolver.registerContentObserver(
+        registerTrackedObserver(
             Settings.System.getUriFor(Settings.System.SCREEN_BRIGHTNESS_MODE),
-            true,
             object : ContentObserver(handler) {
                 override fun onChange(selfChange: Boolean) {
                     val auto = try {
@@ -977,9 +1096,8 @@ class NativeTileManager(
         )
 
         // Observer for Airplane Mode
-        contentResolver.registerContentObserver(
+        registerTrackedObserver(
             Settings.Global.getUriFor(Settings.Global.AIRPLANE_MODE_ON),
-            true,
             object : ContentObserver(handler) {
                 override fun onChange(selfChange: Boolean) {
                     val enabled = Settings.Global.getInt(contentResolver, Settings.Global.AIRPLANE_MODE_ON, 0) == 1
@@ -990,9 +1108,8 @@ class NativeTileManager(
 
         // Observer for Mobile Data
         try {
-            contentResolver.registerContentObserver(
+            registerTrackedObserver(
                 Settings.Global.getUriFor("mobile_data"),
-                true,
                 object : ContentObserver(handler) {
                     override fun onChange(selfChange: Boolean) {
                         _isCellularEnabled.value = isMobileDataActive(context)
@@ -1005,9 +1122,8 @@ class NativeTileManager(
 
         // Observer for Wi-Fi setting
         try {
-            contentResolver.registerContentObserver(
+            registerTrackedObserver(
                 Settings.Global.getUriFor("wifi_on"),
-                true,
                 object : ContentObserver(handler) {
                     override fun onChange(selfChange: Boolean) {
                         val enabled = wifiManager?.isWifiEnabled == true
@@ -1027,13 +1143,12 @@ class NativeTileManager(
                     }
                 }
             )
-        } catch (e: Exception) {}
+        } catch (_: Exception) {}
 
         // Observer for Location Setting (turning Location ON unlocks SSID reading on Android 10+)
         try {
-            contentResolver.registerContentObserver(
+            registerTrackedObserver(
                 Settings.Secure.getUriFor("location_mode"),
-                true,
                 object : ContentObserver(handler) {
                     override fun onChange(selfChange: Boolean) {
                         val locEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -1054,13 +1169,12 @@ class NativeTileManager(
                     }
                 }
             )
-        } catch (e: Exception) {}
+        } catch (_: Exception) {}
 
         // Observer for Battery Saver
         try {
-            contentResolver.registerContentObserver(
+            registerTrackedObserver(
                 Settings.Global.getUriFor("low_power"),
-                true,
                 object : ContentObserver(handler) {
                     override fun onChange(selfChange: Boolean) {
                         _isBatterySaverEnabled.value = powerManager?.isPowerSaveMode == true ||
@@ -1068,13 +1182,14 @@ class NativeTileManager(
                     }
                 }
             )
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Ignore if setting is restricted
         }
 
         // Observer for Dark Theme / Night Mode
         SystemThemeObserver.init(context)
-        scope.launch {
+        themeCollectorJob?.cancel()
+        themeCollectorJob = scope.launch {
             SystemThemeObserver.isDarkTheme.collect { dark ->
                 if (System.currentTimeMillis() >= ignoreDarkModeObserverUntil) {
                     _isDarkThemeEnabled.value = dark
@@ -1082,9 +1197,8 @@ class NativeTileManager(
             }
         }
         try {
-            contentResolver.registerContentObserver(
+            registerTrackedObserver(
                 Settings.Secure.getUriFor("ui_night_mode"),
-                true,
                 object : ContentObserver(handler) {
                     override fun onChange(selfChange: Boolean) {
                         if (System.currentTimeMillis() < ignoreDarkModeObserverUntil) {
@@ -1100,9 +1214,8 @@ class NativeTileManager(
 
         // Observer for Always-On Display (AOD)
         try {
-            contentResolver.registerContentObserver(
+            registerTrackedObserver(
                 Settings.Secure.getUriFor("doze_always_on"),
-                true,
                 object : ContentObserver(handler) {
                     override fun onChange(selfChange: Boolean) {
                         val enabled = Settings.Secure.getInt(contentResolver, "doze_always_on", 0) == 1
@@ -1116,9 +1229,8 @@ class NativeTileManager(
 
         // Observer for Ambient Display
         try {
-            contentResolver.registerContentObserver(
+            registerTrackedObserver(
                 Settings.Secure.getUriFor("doze_enabled"),
-                true,
                 object : ContentObserver(handler) {
                     override fun onChange(selfChange: Boolean) {
                         val enabled = Settings.Secure.getInt(contentResolver, "doze_enabled", 0) == 1
@@ -1132,9 +1244,8 @@ class NativeTileManager(
 
         // Observer for Caffeine (Keep Screen Awake)
         try {
-            contentResolver.registerContentObserver(
+            registerTrackedObserver(
                 Settings.System.getUriFor("screen_off_timeout"),
-                true,
                 object : ContentObserver(handler) {
                     override fun onChange(selfChange: Boolean) {
                         val t = Settings.System.getInt(contentResolver, "screen_off_timeout", 30000)
@@ -1148,9 +1259,8 @@ class NativeTileManager(
 
         // Observer for Heads Up Notifications
         try {
-            contentResolver.registerContentObserver(
+            registerTrackedObserver(
                 Settings.Global.getUriFor("heads_up_notifications_enabled"),
-                true,
                 object : ContentObserver(handler) {
                     override fun onChange(selfChange: Boolean) {
                         val enabled = Settings.Global.getInt(contentResolver, "heads_up_notifications_enabled", 1) == 1
@@ -1158,7 +1268,7 @@ class NativeTileManager(
                     }
                 }
             )
-        } catch (e: Exception) {}
+        } catch (_: Exception) {}
 
         // Network Callbacks (Wi-Fi with location info for SSID + Cellular)
         registerWifiNetworkCallback()
@@ -1168,20 +1278,22 @@ class NativeTileManager(
                     .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
                     .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                     .build()
-                cm.registerNetworkCallback(cellRequest, object : ConnectivityManager.NetworkCallback() {
+                val cellCb = object : ConnectivityManager.NetworkCallback() {
                     override fun onAvailable(network: Network) {
                         _isCellularEnabled.value = true
                     }
                     override fun onLost(network: Network) {
                         _isCellularEnabled.value = isMobileDataActive(context)
                     }
-                })
+                }
+                cellNetworkCallback = cellCb
+                cm.registerNetworkCallback(cellRequest, cellCb)
             } catch (_: Throwable) {}
         }
 
         // Zero-permission AudioDeviceCallback for instant Bluetooth audio device name updates
         try {
-            audioManager?.registerAudioDeviceCallback(object : AudioDeviceCallback() {
+            val audioCb = object : AudioDeviceCallback() {
                 override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) {
                     scope.launch(Dispatchers.IO) {
                         val btOn = try { bluetoothManager?.adapter?.isEnabled == true } catch (_: Throwable) { false }
@@ -1201,7 +1313,9 @@ class NativeTileManager(
                         _bluetoothBatteryLevel.value = if (btOn && !name.isNullOrBlank()) resolveConnectedBluetoothBatteryLevel() else null
                     }
                 }
-            }, handler)
+            }
+            audioDeviceCallback = audioCb
+            audioManager?.registerAudioDeviceCallback(audioCb, handler)
         } catch (_: Throwable) {}
 
         // Comprehensive BroadcastReceiver for real-time system state synchronization
@@ -1231,7 +1345,7 @@ class NativeTileManager(
             addAction("android.intent.action.ANY_DATA_STATE")
             addAction(Intent.ACTION_BATTERY_CHANGED)
         }
-        context.registerReceiver(object : BroadcastReceiver() {
+        val receiver = object : BroadcastReceiver() {
             override fun onReceive(c: Context?, intent: Intent?) {
                 when (intent?.action) {
                     WifiManager.WIFI_STATE_CHANGED_ACTION -> {
@@ -1420,7 +1534,11 @@ class NativeTileManager(
                     }
                 }
             }
-        }, filter)
+        }
+        stateBroadcastReceiver = receiver
+        try {
+            context.registerReceiver(receiver, filter)
+        } catch (_: Throwable) {}
     }
 
     private fun registerWifiNetworkCallback() {

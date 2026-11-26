@@ -16,15 +16,17 @@ import com.example.model.QsTileModel
 import com.example.model.TileCategory
 import com.example.model.TileState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 
-class ExternalTileScanner(private val context: Context) {
+class ExternalTileScanner(context: Context) {
 
-    private val packageManager: PackageManager = context.packageManager
+    private val context: Context = context.applicationContext
+    private val packageManager: PackageManager = this.context.packageManager
     private val _scannedTiles = MutableStateFlow<List<QsTileModel>>(emptyList())
     val scannedTiles: StateFlow<List<QsTileModel>> = _scannedTiles.asStateFlow()
 
@@ -32,6 +34,7 @@ class ExternalTileScanner(private val context: Context) {
     val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
 
     private val scope = kotlinx.coroutines.CoroutineScope(Dispatchers.Main + kotlinx.coroutines.SupervisorJob())
+    private var packageReceiver: android.content.BroadcastReceiver? = null
 
     init {
         scope.launch {
@@ -46,13 +49,25 @@ class ExternalTileScanner(private val context: Context) {
             addAction(Intent.ACTION_PACKAGE_REMOVED)
             addDataScheme("package")
         }
-        context.registerReceiver(object : android.content.BroadcastReceiver() {
+        val receiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(c: Context?, intent: Intent?) {
                 scope.launch {
                     scanThirdPartyTiles()
                 }
             }
-        }, filter)
+        }
+        packageReceiver = receiver
+        context.registerReceiver(receiver, filter)
+    }
+
+    fun destroy() {
+        packageReceiver?.let { receiver ->
+            try {
+                context.unregisterReceiver(receiver)
+            } catch (_: Exception) {}
+        }
+        packageReceiver = null
+        scope.cancel()
     }
 
     suspend fun scanThirdPartyTiles(): List<QsTileModel> {
@@ -134,7 +149,7 @@ class ExternalTileScanner(private val context: Context) {
         engine: PrivilegeEngine? = null
     ) {
         val effectiveConfig = config ?: com.example.data.TileCommandRepository.getConfig(tile.id)
-        val privilegeEngine = engine ?: PrivilegeEngine(context)
+        val privilegeEngine = engine ?: PrivilegeEngine.getShared(context)
 
         val pkg = tile.packageName ?: if (tile.id.contains("/")) tile.id.substringBefore('/') else null ?: return
         val rawCls = tile.serviceClassName ?: if (tile.id.contains("/")) tile.id.substringAfter('/') else null

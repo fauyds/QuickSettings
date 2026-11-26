@@ -1,5 +1,6 @@
 package com.example.system
 
+import android.Manifest
 import android.accessibilityservice.AccessibilityService
 import android.app.NotificationManager
 import android.content.Context
@@ -7,22 +8,28 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Looper
 import android.provider.Settings
 import android.util.Log
+import androidx.core.content.ContextCompat
 import com.example.model.PrivilegeMode
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.withContext
-import java.io.File
-import rikka.shizuku.Shizuku
-
-import android.Manifest
-import androidx.core.content.ContextCompat
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import rikka.shizuku.Shizuku
+import java.io.File
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicLong
 
 enum class ShizukuStatusState(val label: String) {
     RUNNING_GRANTED("Shizuku Running / Permission Granted"),
@@ -30,11 +37,13 @@ enum class ShizukuStatusState(val label: String) {
     SERVICE_NOT_RUNNING("Shizuku Service Not Running")
 }
 
-class PrivilegeEngine(private val context: Context) {
+class PrivilegeEngine(context: Context) {
+
+    private val context: Context = context.applicationContext
 
     private val _currentMode = MutableStateFlow(
         try {
-            val prefs = context.getSharedPreferences("quickpanel_prefs", Context.MODE_PRIVATE)
+            val prefs = this.context.getSharedPreferences("quickpanel_prefs", Context.MODE_PRIVATE)
             val saved = prefs.getString("privilege_mode", PrivilegeMode.STANDARD.name)
             PrivilegeMode.valueOf(saved ?: PrivilegeMode.STANDARD.name)
         } catch (_: Exception) {
@@ -81,43 +90,19 @@ class PrivilegeEngine(private val context: Context) {
     private val _hasNearbyDevices = MutableStateFlow(hasNearbyDevicesPermission())
     val hasNearbyDevices: StateFlow<Boolean> = _hasNearbyDevices.asStateFlow()
 
-    private val binderReceivedListener = Shizuku.OnBinderReceivedListener {
-        _lastExecutionLog.value = "Shizuku binder received!"
-        updateShizukuStatus()
-    }
-
-    private val binderDeadListener = Shizuku.OnBinderDeadListener {
-        _isShizukuAvailable.value = false
-        _shizukuStatus.value = ShizukuStatusState.SERVICE_NOT_RUNNING
-        _lastExecutionLog.value = "Shizuku binder died."
-    }
-
-    private val shizukuPermissionListener = Shizuku.OnRequestPermissionResultListener { requestCode, grantResult ->
-        if (grantResult == PackageManager.PERMISSION_GRANTED) {
-            _isShizukuAvailable.value = true
-            _shizukuStatus.value = ShizukuStatusState.RUNNING_GRANTED
-            _lastExecutionLog.value = "Shizuku permission granted!"
-            NativeTileManager.instance?.onPrivilegeOrPermissionsUpdated()
-        } else {
-            _isShizukuAvailable.value = false
-            _shizukuStatus.value = ShizukuStatusState.PERMISSION_REQUIRED
-            _lastExecutionLog.value = "Shizuku permission denied by user."
-        }
-    }
-
     init {
-        try {
-            Shizuku.addBinderReceivedListener(binderReceivedListener)
-            Shizuku.addBinderDeadListener(binderDeadListener)
-            Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
-        } catch (e: Exception) {
-            Log.d("PrivilegeEngine", "Error registering Shizuku listeners: ${e.message}")
-        }
+        registerSharedShizukuListeners()
         synchronized(sharedRootLock) {
             activeEngines[this] = true
         }
         detectCapabilities()
         updateShizukuStatus()
+    }
+
+    fun destroy() {
+        synchronized(sharedRootLock) {
+            activeEngines.remove(this)
+        }
     }
 
     fun updateShizukuStatus(): ShizukuStatusState {
@@ -174,7 +159,6 @@ class PrivilegeEngine(private val context: Context) {
         updateShizukuStatus()
         if (isEndlessRootActive()) {
             _currentMode.value = PrivilegeMode.ROOT
-            ensurePersistentRootSession()
         }
     }
 
@@ -196,12 +180,20 @@ class PrivilegeEngine(private val context: Context) {
     }
 
     private fun checkSuInPath(): Boolean {
+        var process: java.lang.Process? = null
         return try {
-            val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", "which su"))
-            val stdout = process.inputStream.bufferedReader().readText().trim()
-            val exitCode = process.waitFor()
-            exitCode == 0 && stdout.isNotBlank()
-        } catch (e: Exception) {
+            process = ProcessBuilder(listOf("sh", "-c", "which su")).redirectErrorStream(true).start()
+            val stdout = process.inputStream.bufferedReader().use { it.readText().trim() }
+            try { process.outputStream.close() } catch (_: Exception) {}
+            val finished = process.waitFor(3, TimeUnit.SECONDS)
+            if (!finished) {
+                process.destroyForcibly()
+                false
+            } else {
+                process.exitValue() == 0 && stdout.isNotBlank()
+            }
+        } catch (_: Exception) {
+            try { process?.destroyForcibly() } catch (_: Exception) {}
             false
         }
     }
@@ -210,10 +202,10 @@ class PrivilegeEngine(private val context: Context) {
         if (isEndlessRootActive()) {
             if (ensurePersistentRootSession()) return true
         }
+        var process: java.lang.Process? = null
         return try {
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
+            process = ProcessBuilder(listOf("su", "-c", "id")).redirectErrorStream(true).start()
             val stdout = process.inputStream.bufferedReader().use { it.readText().trim() }
-            try { process.errorStream.close() } catch (_: Exception) {}
             try { process.outputStream.close() } catch (_: Exception) {}
             val finished = process.waitFor(5, TimeUnit.SECONDS)
             if (!finished) {
@@ -221,7 +213,8 @@ class PrivilegeEngine(private val context: Context) {
                 return false
             }
             process.exitValue() == 0 && (stdout.contains("uid=0") || stdout.contains("root"))
-        } catch (e: Exception) {
+        } catch (_: Exception) {
+            try { process?.destroyForcibly() } catch (_: Exception) {}
             false
         }
     }
@@ -243,8 +236,7 @@ class PrivilegeEngine(private val context: Context) {
                         if (Shizuku.shouldShowRequestPermissionRationale()) {
                             _lastExecutionLog.value = "Shizuku permission rationale suggested."
                         }
-                    } catch (e: Exception) {
-                        // ignore
+                    } catch (_: Exception) {
                     }
                     Shizuku.requestPermission(requestCode)
                     _lastExecutionLog.value = "Requested Shizuku permission (code $requestCode)..."
@@ -271,7 +263,7 @@ class PrivilegeEngine(private val context: Context) {
             prefs.edit().putBoolean("root_access_granted", granted).apply()
         } catch (_: Exception) {}
         if (granted) {
-            NativeTileManager.instance?.onPrivilegeOrPermissionsUpdated()
+            NativeTileManager.notifyAllInstancesPrivilegeOrPermissionsUpdated()
         }
         _lastExecutionLog.value = if (granted) "Root access granted!" else "Root access denied or su unavailable."
         return granted
@@ -529,10 +521,10 @@ class PrivilegeEngine(private val context: Context) {
             val (ok, _) = executeEndlessRootCommand(command)
             if (ok) return true
         }
+        var process: java.lang.Process? = null
         return try {
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", command))
+            process = ProcessBuilder(listOf("su", "-c", command)).redirectErrorStream(true).start()
             try { process.inputStream.close() } catch (_: Exception) {}
-            try { process.errorStream.close() } catch (_: Exception) {}
             try { process.outputStream.close() } catch (_: Exception) {}
             val finished = process.waitFor(5, TimeUnit.SECONDS)
             if (!finished) {
@@ -541,6 +533,7 @@ class PrivilegeEngine(private val context: Context) {
             }
             process.exitValue() == 0
         } catch (e: Exception) {
+            try { process?.destroyForcibly() } catch (_: Exception) {}
             Log.w("PrivilegeEngine", "Root command failed gracefully: ${e.message}")
             false
         }
@@ -604,6 +597,7 @@ class PrivilegeEngine(private val context: Context) {
             return Pair(false, errorMsg)
         }
 
+        var proc: java.lang.Process? = null
         return try {
             val newProcessMethod = try {
                 Shizuku::class.java.getDeclaredMethod(
@@ -617,11 +611,17 @@ class PrivilegeEngine(private val context: Context) {
                     ?: throw IllegalStateException("Shizuku newProcess method not found")
             }
             newProcessMethod.isAccessible = true
-            val proc = newProcessMethod.invoke(null, arrayOf("sh", "-c", command), null, null) as java.lang.Process
+            proc = newProcessMethod.invoke(null, arrayOf("sh", "-c", command), null, null) as java.lang.Process
 
-            val stdout = proc.inputStream.bufferedReader().readText().trim()
-            val stderr = proc.errorStream.bufferedReader().readText().trim()
-            val exitCode = proc.waitFor()
+            val stdout = proc.inputStream.bufferedReader().use { it.readText().trim().take(MAX_SHELL_OUTPUT_CHARS) }
+            val stderr = proc.errorStream.bufferedReader().use { it.readText().trim().take(4096) }
+            try { proc.outputStream.close() } catch (_: Exception) {}
+            val finished = proc.waitFor(5, TimeUnit.SECONDS)
+            if (!finished) {
+                proc.destroyForcibly()
+                return Pair(false, "Shizuku command timed out")
+            }
+            val exitCode = proc.exitValue()
 
             val combined = when {
                 stdout.isNotBlank() && stderr.isNotBlank() -> "$stdout | $stderr"
@@ -633,6 +633,7 @@ class PrivilegeEngine(private val context: Context) {
             Log.d("PrivilegeEngine", "Shizuku shell executed [exit: $exitCode]: $combined")
             Pair(exitCode == 0, combined)
         } catch (e: Exception) {
+            try { proc?.destroyForcibly() } catch (_: Exception) {}
             val error = "Shizuku process runner failed: ${e.message}"
             Log.e("PrivilegeEngine", error, e)
             _lastExecutionLog.value = error
@@ -644,11 +645,20 @@ class PrivilegeEngine(private val context: Context) {
         if (isShizukuGranted()) {
             return executeShizukuShell(command).first
         }
+        var process: java.lang.Process? = null
         return try {
-            val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", command))
-            val exit = process.waitFor()
-            exit == 0
+            process = ProcessBuilder(listOf("sh", "-c", command)).redirectErrorStream(true).start()
+            try { process.inputStream.close() } catch (_: Exception) {}
+            try { process.outputStream.close() } catch (_: Exception) {}
+            val finished = process.waitFor(4, TimeUnit.SECONDS)
+            if (!finished) {
+                process.destroyForcibly()
+                false
+            } else {
+                process.exitValue() == 0
+            }
         } catch (e: Exception) {
+            try { process?.destroyForcibly() } catch (_: Exception) {}
             Log.w("PrivilegeEngine", "Shell command failed: ${e.message}")
             false
         }
@@ -660,6 +670,7 @@ class PrivilegeEngine(private val context: Context) {
      */
     fun executeShellWithOutput(command: String): String? {
         if (isShizukuGranted()) {
+            var proc: java.lang.Process? = null
             try {
                 val newProcessMethod = try {
                     Shizuku::class.java.getDeclaredMethod(
@@ -673,8 +684,8 @@ class PrivilegeEngine(private val context: Context) {
                 }
                 if (newProcessMethod != null) {
                     newProcessMethod.isAccessible = true
-                    val proc = newProcessMethod.invoke(null, arrayOf("sh", "-c", command), null, null) as java.lang.Process
-                    val stdout = proc.inputStream.bufferedReader().use { it.readText().trim() }
+                    proc = newProcessMethod.invoke(null, arrayOf("sh", "-c", command), null, null) as java.lang.Process
+                    val stdout = proc.inputStream.bufferedReader().use { it.readText().trim().take(MAX_SHELL_OUTPUT_CHARS) }
                     try { proc.errorStream.close() } catch (_: Exception) {}
                     try { proc.outputStream.close() } catch (_: Exception) {}
                     val finished = proc.waitFor(4, TimeUnit.SECONDS)
@@ -684,7 +695,9 @@ class PrivilegeEngine(private val context: Context) {
                         return stdout
                     }
                 }
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+                try { proc?.destroyForcibly() } catch (_: Exception) {}
+            }
         }
 
         if (isEndlessRootActive()) {
@@ -695,10 +708,10 @@ class PrivilegeEngine(private val context: Context) {
         }
 
         if (isRootGranted() && _currentMode.value == PrivilegeMode.ROOT) {
+            var proc: java.lang.Process? = null
             try {
-                val proc = Runtime.getRuntime().exec(arrayOf("su", "-c", command))
-                val stdout = proc.inputStream.bufferedReader().use { it.readText().trim() }
-                try { proc.errorStream.close() } catch (_: Exception) {}
+                proc = ProcessBuilder(listOf("su", "-c", command)).redirectErrorStream(true).start()
+                val stdout = proc.inputStream.bufferedReader().use { it.readText().trim().take(MAX_SHELL_OUTPUT_CHARS) }
                 try { proc.outputStream.close() } catch (_: Exception) {}
                 val finished = proc.waitFor(4, TimeUnit.SECONDS)
                 if (!finished) {
@@ -708,7 +721,9 @@ class PrivilegeEngine(private val context: Context) {
                 if (proc.exitValue() == 0 && stdout.isNotBlank()) {
                     return stdout
                 }
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+                try { proc?.destroyForcibly() } catch (_: Exception) {}
+            }
         }
 
         return null
@@ -719,46 +734,31 @@ class PrivilegeEngine(private val context: Context) {
         synchronized(sharedRootLock) {
             val proc = sharedRootProcess
             if (proc != null) {
-                val alive = try {
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                        proc.isAlive
-                    } else {
-                        try {
-                            proc.exitValue()
-                            false
-                        } catch (_: IllegalThreadStateException) {
-                            true
-                        }
-                    }
-                } catch (_: Exception) {
-                    false
-                }
-                if (alive && sharedRootWriter != null && sharedRootReader != null) {
+                val alive = isProcessAlive(proc)
+                val needsRecycle = endlessCommandCount >= MAX_COMMANDS_BEFORE_RECYCLE
+                if (alive && !needsRecycle && sharedRootWriter != null && sharedRootReader != null) {
                     return true
                 }
             }
             closePersistentRootSessionLocked()
             return try {
-                val newProc = Runtime.getRuntime().exec(arrayOf("su"))
+                // Merge stderr -> stdout so stderr pipe never fills (64KB deadlock) or leaks
+                val newProc = ProcessBuilder(listOf("su"))
+                    .redirectErrorStream(true)
+                    .start()
                 sharedRootProcess = newProc
                 sharedRootWriter = newProc.outputStream.bufferedWriter()
                 sharedRootReader = newProc.inputStream.bufferedReader()
+                endlessCommandCount = 0
+                lastEndlessActivityMs = System.currentTimeMillis()
+                scheduleIdleRootSessionTrimLocked()
                 _isRootAvailable.value = true
                 _lastExecutionLog.value = "Endless Root daemon session established (PID active)."
                 true
-            } catch (_: Exception) {
-                try {
-                    val shProc = Runtime.getRuntime().exec(arrayOf("sh"))
-                    sharedRootProcess = shProc
-                    sharedRootWriter = shProc.outputStream.bufferedWriter()
-                    sharedRootReader = shProc.inputStream.bufferedReader()
-                    _isRootAvailable.value = true
-                    _lastExecutionLog.value = "Endless Root daemon active in shell mode."
-                    true
-                } catch (e2: Exception) {
-                    Log.w("PrivilegeEngine", "Failed to start endless root session: ${e2.message}")
-                    false
-                }
+            } catch (e: Exception) {
+                closePersistentRootSessionLocked()
+                Log.w("PrivilegeEngine", "Failed to start endless root session: ${e.message}")
+                false
             }
         }
     }
@@ -769,46 +769,57 @@ class PrivilegeEngine(private val context: Context) {
         }
     }
 
-    private fun closePersistentRootSessionLocked() {
-        try {
-            sharedRootWriter?.write("exit\n")
-            sharedRootWriter?.flush()
-        } catch (_: Exception) {}
-        try { sharedRootWriter?.close() } catch (_: Exception) {}
-        try { sharedRootReader?.close() } catch (_: Exception) {}
-        try { sharedRootProcess?.destroy() } catch (_: Exception) {}
-        sharedRootWriter = null
-        sharedRootReader = null
-        sharedRootProcess = null
-    }
-
     fun executeEndlessRootCommand(command: String): Pair<Boolean, String?> {
+        if (command.isBlank()) return Pair(false, null)
         synchronized(sharedRootLock) {
             if (!ensurePersistentRootSession()) {
                 return Pair(false, null)
             }
+            val writer = sharedRootWriter ?: return Pair(false, null)
+            val reader = sharedRootReader ?: return Pair(false, null)
+            val seq = markerSeq.incrementAndGet()
+            val marker = "__ENDLESS_ROOT_${seq}_${System.nanoTime()}__"
             return try {
-                val writer = sharedRootWriter ?: return Pair(false, null)
-                val reader = sharedRootReader ?: return Pair(false, null)
-                val marker = "__ENDLESS_ROOT_${System.currentTimeMillis()}__"
-                writer.write("$command\necho $marker $?\n")
+                val sanitized = command.trimEnd()
+                writer.write("$sanitized\necho $marker $?\n")
                 writer.flush()
 
-                val output = StringBuilder()
-                var success = false
-                while (true) {
-                    val line = reader.readLine() ?: break
-                    if (line.startsWith(marker)) {
-                        val exitCodeStr = line.substringAfter(marker).trim()
-                        val exitCode = exitCodeStr.toIntOrNull() ?: 0
-                        success = (exitCode == 0)
-                        break
-                    } else {
-                        if (output.isNotEmpty()) output.append("\n")
-                        output.append(line)
+                val future = endlessReaderExecutor.submit(Callable {
+                    val output = StringBuilder()
+                    var success = false
+                    var truncated = false
+                    while (true) {
+                        val line = reader.readLine() ?: throw java.io.EOFException("su stream closed")
+                        if (line.startsWith(marker)) {
+                            val exitCodeStr = line.substringAfter(marker).trim()
+                            val exitCode = exitCodeStr.toIntOrNull() ?: 0
+                            success = (exitCode == 0)
+                            break
+                        } else if (!truncated) {
+                            if (output.length + line.length + 1 <= MAX_SHELL_OUTPUT_CHARS) {
+                                if (output.isNotEmpty()) output.append('\n')
+                                output.append(line)
+                            } else {
+                                truncated = true
+                            }
+                        }
                     }
+                    Pair(success, output.toString())
+                })
+
+                val result = try {
+                    future.get(ENDLESS_COMMAND_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                } catch (te: TimeoutException) {
+                    future.cancel(true)
+                    Log.w("PrivilegeEngine", "Endless root command timed out (${ENDLESS_COMMAND_TIMEOUT_MS}ms); resetting su daemon.")
+                    closePersistentRootSessionLocked()
+                    return Pair(false, null)
                 }
-                Pair(success, output.toString())
+
+                endlessCommandCount++
+                lastEndlessActivityMs = System.currentTimeMillis()
+                scheduleIdleRootSessionTrimLocked()
+                result
             } catch (e: Exception) {
                 Log.w("PrivilegeEngine", "Error executing endless root command: ${e.message}")
                 closePersistentRootSessionLocked()
@@ -823,7 +834,6 @@ class PrivilegeEngine(private val context: Context) {
                 val prefs = context.getSharedPreferences("quickpanel_prefs", Context.MODE_PRIVATE)
                 prefs.edit().putBoolean("root_access_granted", true).apply()
             } catch (_: Exception) {}
-            ensurePersistentRootSession()
             synchronized(sharedRootLock) {
                 activeEngines.keys.forEach { engine ->
                     engine._isRootAvailable.value = true
@@ -831,7 +841,12 @@ class PrivilegeEngine(private val context: Context) {
                     engine._lastExecutionLog.value = "Endless Root Mode enabled: Persistent daemon active."
                 }
             }
-            NativeTileManager.instance?.onPrivilegeOrPermissionsUpdated()
+            if (Looper.myLooper() != Looper.getMainLooper()) {
+                ensurePersistentRootSession()
+            } else {
+                rootDaemonScope.launch { ensurePersistentRootSession() }
+            }
+            NativeTileManager.notifyAllInstancesPrivilegeOrPermissionsUpdated()
         } else {
             closePersistentRootSession()
             synchronized(sharedRootLock) {
@@ -843,11 +858,156 @@ class PrivilegeEngine(private val context: Context) {
     }
 
     companion object {
+        private const val MAX_SHELL_OUTPUT_CHARS = 128 * 1024
+        private const val ENDLESS_COMMAND_TIMEOUT_MS = 4000L
+        private const val MAX_COMMANDS_BEFORE_RECYCLE = 40
+        private const val IDLE_ROOT_SESSION_CLEANUP_MS = 25_000L
+
         @Volatile
         private var sharedRootProcess: java.lang.Process? = null
         private var sharedRootWriter: java.io.BufferedWriter? = null
         private var sharedRootReader: java.io.BufferedReader? = null
+        private var endlessCommandCount: Int = 0
+        @Volatile
+        private var lastEndlessActivityMs: Long = 0L
         private val sharedRootLock = Any()
         private val activeEngines = java.util.WeakHashMap<PrivilegeEngine, Boolean>()
+        private val markerSeq = AtomicLong(0L)
+        private val rootDaemonScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        private var idleTrimJob: Job? = null
+        private val endlessReaderExecutor = Executors.newSingleThreadExecutor { runnable ->
+            Thread(runnable, "EndlessRootReader").apply { isDaemon = true }
+        }
+
+        @Volatile
+        private var sharedFallbackEngine: PrivilegeEngine? = null
+
+        @Volatile
+        private var shizukuListenersRegistered = false
+
+        private val sharedBinderReceivedListener = Shizuku.OnBinderReceivedListener {
+            snapshotEngines().forEach { engine ->
+                engine._lastExecutionLog.value = "Shizuku binder received!"
+                engine.updateShizukuStatus()
+            }
+        }
+
+        private val sharedBinderDeadListener = Shizuku.OnBinderDeadListener {
+            snapshotEngines().forEach { engine ->
+                engine._isShizukuAvailable.value = false
+                engine._shizukuStatus.value = ShizukuStatusState.SERVICE_NOT_RUNNING
+                engine._lastExecutionLog.value = "Shizuku binder died."
+            }
+        }
+
+        private val sharedShizukuPermissionListener = Shizuku.OnRequestPermissionResultListener { _, grantResult ->
+            val granted = grantResult == PackageManager.PERMISSION_GRANTED
+            snapshotEngines().forEach { engine ->
+                if (granted) {
+                    engine._isShizukuAvailable.value = true
+                    engine._shizukuStatus.value = ShizukuStatusState.RUNNING_GRANTED
+                    engine._lastExecutionLog.value = "Shizuku permission granted!"
+                } else {
+                    engine._isShizukuAvailable.value = false
+                    engine._shizukuStatus.value = ShizukuStatusState.PERMISSION_REQUIRED
+                    engine._lastExecutionLog.value = "Shizuku permission denied by user."
+                }
+            }
+            if (granted) {
+                NativeTileManager.notifyAllInstancesPrivilegeOrPermissionsUpdated()
+            }
+        }
+
+        private fun snapshotEngines(): List<PrivilegeEngine> = synchronized(sharedRootLock) {
+            activeEngines.keys.toList()
+        }
+
+        private fun registerSharedShizukuListeners() {
+            if (shizukuListenersRegistered) return
+            synchronized(sharedRootLock) {
+                if (shizukuListenersRegistered) return
+                try {
+                    Shizuku.addBinderReceivedListener(sharedBinderReceivedListener)
+                    Shizuku.addBinderDeadListener(sharedBinderDeadListener)
+                    Shizuku.addRequestPermissionResultListener(sharedShizukuPermissionListener)
+                    shizukuListenersRegistered = true
+                } catch (e: Exception) {
+                    Log.d("PrivilegeEngine", "Error registering Shizuku listeners: ${e.message}")
+                }
+            }
+        }
+
+        private fun isProcessAlive(proc: java.lang.Process): Boolean {
+            return try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    proc.isAlive
+                } else {
+                    try {
+                        proc.exitValue()
+                        false
+                    } catch (_: IllegalThreadStateException) {
+                        true
+                    }
+                }
+            } catch (_: Exception) {
+                false
+            }
+        }
+
+        private fun scheduleIdleRootSessionTrimLocked() {
+            idleTrimJob?.cancel()
+            idleTrimJob = rootDaemonScope.launch {
+                delay(IDLE_ROOT_SESSION_CLEANUP_MS)
+                synchronized(sharedRootLock) {
+                    val elapsed = System.currentTimeMillis() - lastEndlessActivityMs
+                    if (sharedRootProcess != null && elapsed >= IDLE_ROOT_SESSION_CLEANUP_MS) {
+                        closePersistentRootSessionLocked()
+                    }
+                }
+            }
+        }
+
+        private fun closePersistentRootSessionLocked() {
+            idleTrimJob?.cancel()
+            idleTrimJob = null
+            val proc = sharedRootProcess
+            try {
+                sharedRootWriter?.write("exit\n")
+                sharedRootWriter?.flush()
+            } catch (_: Exception) {}
+            try { sharedRootWriter?.close() } catch (_: Exception) {}
+            try { sharedRootReader?.close() } catch (_: Exception) {}
+            if (proc != null) {
+                try {
+                    val exited = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        proc.waitFor(150, TimeUnit.MILLISECONDS)
+                    } else {
+                        false
+                    }
+                    if (!exited) {
+                        proc.destroyForcibly()
+                    }
+                } catch (_: Exception) {
+                    try { proc.destroyForcibly() } catch (_: Exception) {}
+                }
+            }
+            sharedRootWriter = null
+            sharedRootReader = null
+            sharedRootProcess = null
+            endlessCommandCount = 0
+        }
+
+        fun getShared(context: Context): PrivilegeEngine {
+            NativeTileManager.instance?.privilegeEngine?.let { return it }
+            return sharedFallbackEngine ?: synchronized(sharedRootLock) {
+                sharedFallbackEngine ?: PrivilegeEngine(context.applicationContext).also {
+                    sharedFallbackEngine = it
+                }
+            }
+        }
+
+        internal fun activeEngineCount(): Int = synchronized(sharedRootLock) {
+            activeEngines.size
+        }
     }
 }

@@ -119,6 +119,7 @@ class ImmersiveModeDetector(
     }
 
     private suspend fun evaluateImmersiveStateSafe(): Boolean {
+        if (shouldPauseMonitoring()) return _isImmersiveModeActive.value
         if (!checkMutex.tryLock()) return _isImmersiveModeActive.value
         return try {
             lastCheckTimeMs = System.currentTimeMillis()

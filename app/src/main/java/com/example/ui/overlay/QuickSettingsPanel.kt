@@ -7452,7 +7452,7 @@ fun UnifiedQsPanel(
                                                             if (!opened) {
                                                                 coroutineScope.launch(Dispatchers.IO) {
                                                                     try {
-                                                                        val engine = com.example.system.NativeTileManager.instance?.privilegeEngine ?: com.example.system.PrivilegeEngine(context)
+                                                                        val engine = com.example.system.NativeTileManager.instance?.privilegeEngine ?: com.example.system.PrivilegeEngine.getShared(context)
                                                                         engine.executeCommand("cmd statusbar power-menu || input keyevent --longpress 26")
                                                                     } catch (e: Exception) {}
                                                                 }

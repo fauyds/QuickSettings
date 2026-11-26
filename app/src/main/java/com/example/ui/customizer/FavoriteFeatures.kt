@@ -1006,9 +1006,9 @@ enum class FavoriteFeature(
         id = "about_info",
         title = "QuickSettings App Info",
         category = CustomizeCategory.ABOUT,
-        description = "Version 2.0.1 — control center architecture and overview",
+        description = "Version ${com.example.BuildConfig.VERSION_NAME} — control center architecture and overview",
         icon = Icons.Default.Info,
-        keywords = "version 2.0.1 about app info"
+        keywords = "version ${com.example.BuildConfig.VERSION_NAME} 3.0 about app info"
     ),
     ABOUT_DEVELOPER(
         id = "about_developer",

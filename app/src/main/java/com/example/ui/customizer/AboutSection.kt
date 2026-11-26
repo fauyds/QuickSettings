@@ -102,7 +102,7 @@ fun AboutSection(modifier: Modifier = Modifier) {
                             color = MaterialTheme.colorScheme.secondaryContainer
                         ) {
                             Text(
-                                text = "Version 2.0.1",
+                                text = "Version ${com.example.BuildConfig.VERSION_NAME}",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
