@@ -33,6 +33,35 @@ enum class GlassBackdropMode(val id: String, val label: String) {
     }
 }
 
+enum class RefractionStyle(
+    val id: String,
+    val label: String,
+    val shaderIndex: Int,
+    val defaultSensitivity: Float = 0.60f,
+    val defaultScale: Float = 0.50f,
+    val defaultDispersion: Float = 0.60f
+) {
+    LIQUID("liquid", "Liquid", 0, defaultSensitivity = 0.50f, defaultScale = 0.50f, defaultDispersion = 0.55f),
+    GRID("grid", "Grid", 1, defaultSensitivity = 0.60f, defaultScale = 0.45f, defaultDispersion = 0.65f),
+    RIBBED("ribbed", "Ribbed", 2, defaultSensitivity = 0.65f, defaultScale = 0.45f, defaultDispersion = 0.60f),
+    HEX("hex", "Hex", 3, defaultSensitivity = 0.60f, defaultScale = 0.50f, defaultDispersion = 0.60f),
+    HAMMER("hammer", "Hammer", 4, defaultSensitivity = 0.60f, defaultScale = 0.50f, defaultDispersion = 0.55f),
+    VORONOI("voronoi", "Voronoi", 5, defaultSensitivity = 0.65f, defaultScale = 0.55f, defaultDispersion = 0.65f),
+    CHEVRON("chevron", "Chevron", 6, defaultSensitivity = 0.60f, defaultScale = 0.45f, defaultDispersion = 0.60f),
+    WAVY("wavy", "Wavy", 7, defaultSensitivity = 0.65f, defaultScale = 0.50f, defaultDispersion = 0.70f),
+    DIAMOND("diamond", "Diamond", 8, defaultSensitivity = 0.60f, defaultScale = 0.45f, defaultDispersion = 0.60f),
+    SCALES("scales", "Scales", 9, defaultSensitivity = 0.60f, defaultScale = 0.50f, defaultDispersion = 0.60f),
+    LOUVRE("louvre", "Louvre", 10, defaultSensitivity = 0.65f, defaultScale = 0.45f, defaultDispersion = 0.60f),
+    PLASMA("plasma", "Plasma", 11, defaultSensitivity = 0.65f, defaultScale = 0.50f, defaultDispersion = 0.70f),
+    OCTAGON("octagon", "Octagon", 12, defaultSensitivity = 0.60f, defaultScale = 0.48f, defaultDispersion = 0.65f),
+    SCAN("scan", "Scan", 13, defaultSensitivity = 0.65f, defaultScale = 0.40f, defaultDispersion = 0.60f);
+
+    companion object {
+        fun fromId(id: String?): RefractionStyle =
+            entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: LIQUID
+    }
+}
+
 enum class ComplicationArcMonetMode(val id: String, val label: String) {
     DEFAULT("default", "Auto (Default)"),
     PRIMARY("primary", "Primary"),
@@ -447,6 +476,33 @@ object PanelPreferences {
     private val _glassRefractionSensitivity = MutableStateFlow(0.5f)
     val glassRefractionSensitivity: StateFlow<Float> = _glassRefractionSensitivity.asStateFlow()
 
+    private val _refractionStyle = MutableStateFlow(RefractionStyle.LIQUID)
+    val refractionStyle: StateFlow<RefractionStyle> = _refractionStyle.asStateFlow()
+
+    private val _refractionStyleSensitivities = MutableStateFlow(
+        RefractionStyle.entries.associateWith { it.defaultSensitivity }
+    )
+    val refractionStyleSensitivities: StateFlow<Map<RefractionStyle, Float>> =
+        _refractionStyleSensitivities.asStateFlow()
+
+    private val _refractionStyleScales = MutableStateFlow(
+        RefractionStyle.entries.associateWith { it.defaultScale }
+    )
+    val refractionStyleScales: StateFlow<Map<RefractionStyle, Float>> =
+        _refractionStyleScales.asStateFlow()
+
+    private val _refractionStyleDispersions = MutableStateFlow(
+        RefractionStyle.entries.associateWith { it.defaultDispersion }
+    )
+    val refractionStyleDispersions: StateFlow<Map<RefractionStyle, Float>> =
+        _refractionStyleDispersions.asStateFlow()
+
+    private val _glassRefractionScale = MutableStateFlow(RefractionStyle.LIQUID.defaultScale)
+    val glassRefractionScale: StateFlow<Float> = _glassRefractionScale.asStateFlow()
+
+    private val _glassRefractionDispersion = MutableStateFlow(RefractionStyle.LIQUID.defaultDispersion)
+    val glassRefractionDispersion: StateFlow<Float> = _glassRefractionDispersion.asStateFlow()
+
     fun isGlassBackdropSupported(): Boolean =
         android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.BAKLAVA
 
@@ -466,7 +522,12 @@ object PanelPreferences {
     private const val KEY_GLASS_BACKDROP_MODE = "glass_backdrop_mode"
     private const val KEY_ENABLE_GLASS_REFRACTION = "enable_glass_refraction"
     private const val KEY_GLASS_REFRACTION_SENSITIVITY = "glass_refraction_sensitivity"
+    private const val KEY_REFRACTION_STYLE = "glass_refraction_style"
     private const val KEY_GLASS_PERFORMANCE_MODE = "glass_performance_mode"
+
+    fun refractionSensitivityKey(style: RefractionStyle): String = "glass_refraction_sens_${style.id}"
+    fun refractionScaleKey(style: RefractionStyle): String = "glass_refraction_scale_${style.id}"
+    fun refractionDispersionKey(style: RefractionStyle): String = "glass_refraction_dispersion_${style.id}"
 
     private const val KEY_SHOW_HEADER_COMPLICATIONS = "show_header_complications"
     private const val KEY_COMPLICATION_SUBLINE_PLACEMENT = "complication_subline_placement"
@@ -2240,7 +2301,25 @@ object PanelPreferences {
         _glassBackdropMode.value = resolvedGlassMode
         _enableContainerBlur.value = resolvedGlassMode != GlassBackdropMode.OFF
         _enableGlassRefraction.value = resolvedGlassMode == GlassBackdropMode.LIQUID
-        _glassRefractionSensitivity.value = prefs.getFloat(KEY_GLASS_REFRACTION_SENSITIVITY, 0.5f).coerceIn(0.1f, 1.0f)
+        val activeRefStyle = RefractionStyle.fromId(getSafeString(prefs, KEY_REFRACTION_STYLE, RefractionStyle.LIQUID.id))
+        _refractionStyle.value = activeRefStyle
+        val legacySens = prefs.getFloat(KEY_GLASS_REFRACTION_SENSITIVITY, RefractionStyle.LIQUID.defaultSensitivity).coerceIn(0.1f, 1.0f)
+        val loadedSensitivities = RefractionStyle.entries.associateWith { st ->
+            val fallback = if (st == RefractionStyle.LIQUID) legacySens else st.defaultSensitivity
+            prefs.getFloat(refractionSensitivityKey(st), fallback).coerceIn(0.1f, 1.0f)
+        }
+        val loadedScales = RefractionStyle.entries.associateWith { st ->
+            prefs.getFloat(refractionScaleKey(st), st.defaultScale).coerceIn(0.1f, 1.0f)
+        }
+        val loadedDispersions = RefractionStyle.entries.associateWith { st ->
+            prefs.getFloat(refractionDispersionKey(st), st.defaultDispersion).coerceIn(0.0f, 1.0f)
+        }
+        _refractionStyleSensitivities.value = loadedSensitivities
+        _refractionStyleScales.value = loadedScales
+        _refractionStyleDispersions.value = loadedDispersions
+        _glassRefractionSensitivity.value = loadedSensitivities[activeRefStyle] ?: legacySens
+        _glassRefractionScale.value = loadedScales[activeRefStyle] ?: activeRefStyle.defaultScale
+        _glassRefractionDispersion.value = loadedDispersions[activeRefStyle] ?: activeRefStyle.defaultDispersion
         _showHeaderComplications.value = prefs.getBoolean(KEY_SHOW_HEADER_COMPLICATIONS, true)
         _complicationSublinePlacement.value = com.example.model.ComplicationSublinePlacement.fromId(
             prefs.getString(KEY_COMPLICATION_SUBLINE_PLACEMENT, com.example.model.ComplicationSublinePlacement.INSIDE_RING.id)
@@ -2708,6 +2787,7 @@ object PanelPreferences {
             putFloat(getStyleKey(KEY_MONET_SURFACE_TRANSPARENCY, style), _monetSurfaceTransparency.value)
             putBoolean(getStyleKey(KEY_ENABLE_GLASS_REFRACTION, style), _enableGlassRefraction.value)
             putFloat(getStyleKey(KEY_GLASS_REFRACTION_SENSITIVITY, style), _glassRefractionSensitivity.value)
+            putString(getStyleKey(KEY_REFRACTION_STYLE, style), _refractionStyle.value.id)
             putBoolean(getStyleKey(KEY_SHOW_QS_TILE_GRADIENT, style), _showQsTileGradient.value)
             putBoolean(getStyleKey(KEY_SHOW_CARRIER, style), _showCarrier.value)
             putBoolean(getStyleKey(KEY_SHOW_CARRIER_DIVIDER, style), _showCarrierDivider.value)
@@ -2905,7 +2985,8 @@ object PanelPreferences {
         val targetShowMonetSurfaceBg = if (isInitialized) readStyleBool(KEY_SHOW_MONET_SURFACE_BACKGROUND, false) else false
         val targetMonetSurfaceTransparency = if (isInitialized) readStyleFloat(KEY_MONET_SURFACE_TRANSPARENCY, 0.0f).coerceIn(0f, 0.95f) else 0.0f
         val targetEnableGlassRefraction = _glassBackdropMode.value == GlassBackdropMode.LIQUID
-        val targetGlassRefractionSensitivity = if (isInitialized) readStyleFloat(KEY_GLASS_REFRACTION_SENSITIVITY, 0.5f).coerceIn(0.1f, 1.0f) else 0.5f
+        val targetRefractionStyle = if (isInitialized) RefractionStyle.fromId(readStyleString(KEY_REFRACTION_STYLE, RefractionStyle.LIQUID.id)) else RefractionStyle.LIQUID
+        val targetGlassRefractionSensitivity = if (isInitialized) readStyleFloat(KEY_GLASS_REFRACTION_SENSITIVITY, targetRefractionStyle.defaultSensitivity).coerceIn(0.1f, 1.0f) else targetRefractionStyle.defaultSensitivity
         val targetShowQsTileGradient = if (isInitialized) readStyleBool(KEY_SHOW_QS_TILE_GRADIENT, false) else false
         val targetShowCarrier = if (isInitialized) readStyleBool(KEY_SHOW_CARRIER, true) else true
         val targetShowCarrierDivider = if (isInitialized) readStyleBool(KEY_SHOW_CARRIER_DIVIDER, true) else true
@@ -3057,7 +3138,10 @@ object PanelPreferences {
         _showMonetSurfaceBackground.value = targetShowMonetSurfaceBg
         _monetSurfaceTransparency.value = targetMonetSurfaceTransparency
         _enableGlassRefraction.value = targetEnableGlassRefraction
-        _glassRefractionSensitivity.value = targetGlassRefractionSensitivity
+        _refractionStyle.value = targetRefractionStyle
+        _glassRefractionSensitivity.value = _refractionStyleSensitivities.value[targetRefractionStyle] ?: targetGlassRefractionSensitivity
+        _glassRefractionScale.value = _refractionStyleScales.value[targetRefractionStyle] ?: targetRefractionStyle.defaultScale
+        _glassRefractionDispersion.value = _refractionStyleDispersions.value[targetRefractionStyle] ?: targetRefractionStyle.defaultDispersion
         _showQsTileGradient.value = targetShowQsTileGradient
         _showCarrier.value = targetShowCarrier
         _showCarrierDivider.value = targetShowCarrierDivider
@@ -3136,7 +3220,8 @@ object PanelPreferences {
             putBoolean(KEY_SHOW_MONET_SURFACE_BACKGROUND, targetShowMonetSurfaceBg)
             putFloat(KEY_MONET_SURFACE_TRANSPARENCY, targetMonetSurfaceTransparency)
             putBoolean(KEY_ENABLE_GLASS_REFRACTION, targetEnableGlassRefraction)
-            putFloat(KEY_GLASS_REFRACTION_SENSITIVITY, targetGlassRefractionSensitivity)
+            putFloat(KEY_GLASS_REFRACTION_SENSITIVITY, _glassRefractionSensitivity.value)
+            putString(KEY_REFRACTION_STYLE, targetRefractionStyle.id)
             putBoolean(KEY_SHOW_QS_TILE_GRADIENT, targetShowQsTileGradient)
             putBoolean(KEY_SHOW_CARRIER, targetShowCarrier)
             putBoolean(KEY_SHOW_CARRIER_DIVIDER, targetShowCarrierDivider)
@@ -4478,13 +4563,64 @@ object PanelPreferences {
     }
 
     fun setGlassRefractionSensitivity(context: Context, sensitivity: Float) {
-        val clamped = sensitivity.coerceIn(0.1f, 1.0f)
-        _glassRefractionSensitivity.value = clamped
+        setRefractionStyleSensitivity(context, _refractionStyle.value, sensitivity)
+    }
+
+    fun setRefractionStyle(context: Context, style: RefractionStyle) {
+        _refractionStyle.value = style
+        val sens = _refractionStyleSensitivities.value[style] ?: style.defaultSensitivity
+        val scale = _refractionStyleScales.value[style] ?: style.defaultScale
+        val disp = _refractionStyleDispersions.value[style] ?: style.defaultDispersion
+        _glassRefractionSensitivity.value = sens
+        _glassRefractionScale.value = scale
+        _glassRefractionDispersion.value = disp
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
-            .putFloat(KEY_GLASS_REFRACTION_SENSITIVITY, clamped)
-            .putFloat(getStyleKey(KEY_GLASS_REFRACTION_SENSITIVITY), clamped)
+            .putString(KEY_REFRACTION_STYLE, style.id)
+            .putString(getStyleKey(KEY_REFRACTION_STYLE), style.id)
+            .putFloat(KEY_GLASS_REFRACTION_SENSITIVITY, sens)
+            .putFloat(getStyleKey(KEY_GLASS_REFRACTION_SENSITIVITY), sens)
             .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+            .apply()
+    }
+
+    fun setRefractionStyleSensitivity(context: Context, style: RefractionStyle, sensitivity: Float) {
+        val clamped = sensitivity.coerceIn(0.1f, 1.0f)
+        _refractionStyleSensitivities.value = _refractionStyleSensitivities.value + (style to clamped)
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val editor = prefs.edit()
+            .putFloat(refractionSensitivityKey(style), clamped)
+        if (style == _refractionStyle.value) {
+            _glassRefractionSensitivity.value = clamped
+            editor
+                .putFloat(KEY_GLASS_REFRACTION_SENSITIVITY, clamped)
+                .putFloat(getStyleKey(KEY_GLASS_REFRACTION_SENSITIVITY), clamped)
+                .putBoolean(getStyleKey(KEY_STYLE_INITIALIZED), true)
+        }
+        editor.apply()
+    }
+
+    fun setRefractionStyleScale(context: Context, style: RefractionStyle, scale: Float) {
+        val clamped = scale.coerceIn(0.1f, 1.0f)
+        _refractionStyleScales.value = _refractionStyleScales.value + (style to clamped)
+        if (style == _refractionStyle.value) {
+            _glassRefractionScale.value = clamped
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(refractionScaleKey(style), clamped)
+            .apply()
+    }
+
+    fun setRefractionStyleDispersion(context: Context, style: RefractionStyle, dispersion: Float) {
+        val clamped = dispersion.coerceIn(0.0f, 1.0f)
+        _refractionStyleDispersions.value = _refractionStyleDispersions.value + (style to clamped)
+        if (style == _refractionStyle.value) {
+            _glassRefractionDispersion.value = clamped
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(refractionDispersionKey(style), clamped)
             .apply()
     }
 
@@ -5862,7 +5998,15 @@ object PanelPreferences {
         KEY_GLASS_BACKDROP_MODE,
         KEY_ENABLE_GLASS_REFRACTION,
         KEY_GLASS_REFRACTION_SENSITIVITY,
+        KEY_REFRACTION_STYLE,
         KEY_GLASS_PERFORMANCE_MODE,
+    ) + RefractionStyle.entries.flatMap { st ->
+        listOf(
+            "glass_refraction_sens_${st.id}",
+            "glass_refraction_scale_${st.id}",
+            "glass_refraction_dispersion_${st.id}"
+        )
+    }.toSet() + setOf(
         // Grid / QQS / Tiles / Fonts / Labels
         KEY_GRID_LAYOUT,
         KEY_QQS_TILE_SIZE,
@@ -6110,7 +6254,13 @@ object PanelPreferences {
         settingsJson.put(KEY_CONTAINER_BLUR_TRANSPARENCY, _containerBlurTransparency.value.toDouble())
         settingsJson.put(KEY_ENABLE_GLASS_REFRACTION, _enableGlassRefraction.value)
         settingsJson.put(KEY_GLASS_REFRACTION_SENSITIVITY, _glassRefractionSensitivity.value.toDouble())
+        settingsJson.put(KEY_REFRACTION_STYLE, _refractionStyle.value.id)
         settingsJson.put(KEY_GLASS_PERFORMANCE_MODE, _glassPerformanceMode.value)
+        RefractionStyle.entries.forEach { st ->
+            settingsJson.put(refractionSensitivityKey(st), (_refractionStyleSensitivities.value[st] ?: st.defaultSensitivity).toDouble())
+            settingsJson.put(refractionScaleKey(st), (_refractionStyleScales.value[st] ?: st.defaultScale).toDouble())
+            settingsJson.put(refractionDispersionKey(st), (_refractionStyleDispersions.value[st] ?: st.defaultDispersion).toDouble())
+        }
 
         // Grid / QQS / Tiles / Fonts / Labels
         settingsJson.put(KEY_GRID_LAYOUT, _gridLayout.value.id)

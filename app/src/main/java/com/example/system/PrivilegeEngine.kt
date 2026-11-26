@@ -113,6 +113,9 @@ class PrivilegeEngine(private val context: Context) {
         } catch (e: Exception) {
             Log.d("PrivilegeEngine", "Error registering Shizuku listeners: ${e.message}")
         }
+        synchronized(sharedRootLock) {
+            activeEngines[this] = true
+        }
         detectCapabilities()
         updateShizukuStatus()
     }
@@ -170,6 +173,7 @@ class PrivilegeEngine(private val context: Context) {
         _isRootAvailable.value = savedRoot
         updateShizukuStatus()
         if (isEndlessRootActive()) {
+            _currentMode.value = PrivilegeMode.ROOT
             ensurePersistentRootSession()
         }
     }
@@ -551,7 +555,12 @@ class PrivilegeEngine(private val context: Context) {
     }
 
     fun isRootGranted(): Boolean {
-        return _isRootAvailable.value || isEndlessRootActive()
+        if (isEndlessRootActive()) {
+            if (!_isRootAvailable.value) _isRootAvailable.value = true
+            if (_currentMode.value != PrivilegeMode.ROOT) _currentMode.value = PrivilegeMode.ROOT
+            return true
+        }
+        return _isRootAvailable.value
     }
 
     /**
@@ -810,18 +819,26 @@ class PrivilegeEngine(private val context: Context) {
 
     fun setEndlessRootMode(enabled: Boolean) {
         if (enabled) {
-            _isRootAvailable.value = true
-            _currentMode.value = PrivilegeMode.ROOT
             try {
                 val prefs = context.getSharedPreferences("quickpanel_prefs", Context.MODE_PRIVATE)
                 prefs.edit().putBoolean("root_access_granted", true).apply()
             } catch (_: Exception) {}
             ensurePersistentRootSession()
-            _lastExecutionLog.value = "Endless Root Mode enabled: Persistent daemon active."
+            synchronized(sharedRootLock) {
+                activeEngines.keys.forEach { engine ->
+                    engine._isRootAvailable.value = true
+                    engine._currentMode.value = PrivilegeMode.ROOT
+                    engine._lastExecutionLog.value = "Endless Root Mode enabled: Persistent daemon active."
+                }
+            }
             NativeTileManager.instance?.onPrivilegeOrPermissionsUpdated()
         } else {
             closePersistentRootSession()
-            _lastExecutionLog.value = "Endless Root Mode disabled."
+            synchronized(sharedRootLock) {
+                activeEngines.keys.forEach { engine ->
+                    engine._lastExecutionLog.value = "Endless Root Mode disabled."
+                }
+            }
         }
     }
 
@@ -831,5 +848,6 @@ class PrivilegeEngine(private val context: Context) {
         private var sharedRootWriter: java.io.BufferedWriter? = null
         private var sharedRootReader: java.io.BufferedReader? = null
         private val sharedRootLock = Any()
+        private val activeEngines = java.util.WeakHashMap<PrivilegeEngine, Boolean>()
     }
 }

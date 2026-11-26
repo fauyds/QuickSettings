@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.GlassBackdropMode
 import com.example.data.PanelPreferences
+import com.example.data.RefractionStyle
+import com.example.data.ThemeManager
 import com.example.ui.overlay.BlurredContainerCard
 import com.example.ui.overlay.FrostedPreviewBackdrop
 import com.example.ui.overlay.applyWindowBlurBehind
@@ -1722,5 +1724,173 @@ class FrostedGlassBlurTest {
                 performanceMode = true
             )
         )
+    }
+
+    @Test
+    fun `FrostedPreviewBackdrop hides center placeholder card and bottom dock icons`() {
+        composeTestRule.setContent {
+            QuickPanelTheme(darkTheme = true) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    FrostedPreviewBackdrop(
+                        enableBlur = true,
+                        dimAlpha = 0.34f,
+                        modifier = Modifier.matchParentSize()
+                    )
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("frosted_preview_backdrop_root").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("frosted_preview_backdrop_layer", useUnmergedTree = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("72° Partly Sunny").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Underlying app & wallpaper layer").assertDoesNotExist()
+    }
+
+    @Test
+    fun `All 14 refraction styles build AGSL RenderEffect and card bevel shaders cleanly`() {
+        val expectedIds = listOf(
+            "liquid", "grid", "ribbed", "hex", "hammer", "voronoi",
+            "chevron", "wavy", "diamond", "scales", "louvre", "plasma", "octagon", "scan"
+        )
+        assertEquals(expectedIds, RefractionStyle.entries.map { it.id })
+
+        val regions = listOf(
+            com.example.ui.overlay.QsCardBlurBounds(
+                left = 32f, top = 64f, right = 1048f, bottom = 1120f,
+                topCornerRadiusPx = 48f, bottomCornerRadiusPx = 48f
+            )
+        )
+
+        RefractionStyle.entries.forEach { style ->
+            val effect = com.example.ui.overlay.createFrostedBackdropRenderEffect(
+                blurRadiusPx = 36f,
+                isDark = true,
+                blurRadiusDp = 12f,
+                transparency = 0.40f,
+                enableGlassRefraction = true,
+                glassRefractionSensitivity = 0.72f,
+                refractionRegions = regions,
+                viewportWidthPx = 1080f,
+                viewportHeightPx = 2400f,
+                density = 3f,
+                performanceMode = false,
+                refractionStyle = style,
+                patternScale = 0.55f,
+                dispersion = 0.65f
+            )
+            assertNotNull("Expected backdrop RenderEffect for ${style.label}", effect)
+
+            val bevel = com.example.ui.overlay.createFrostedGlassCardBevelShader(
+                widthPx = 1000f,
+                heightPx = 800f,
+                topRadiusPx = 48f,
+                bottomRadiusPx = 48f,
+                density = 3f,
+                sensitivity = 0.72f,
+                isDark = true,
+                refractionStyle = style,
+                patternScale = 0.55f,
+                dispersion = 0.65f
+            )
+            assertNotNull("Expected bevel shader for ${style.label}", bevel)
+        }
+    }
+
+    @Test
+    fun `Per-style refraction sliders persist independently and sync active style`() {
+        ThemeManager.init(context)
+        PanelPreferences.setGlassBackdropMode(context, GlassBackdropMode.LIQUID)
+
+        PanelPreferences.setRefractionStyle(context, RefractionStyle.GRID)
+        PanelPreferences.setRefractionStyleSensitivity(context, RefractionStyle.GRID, 0.85f)
+        PanelPreferences.setRefractionStyleScale(context, RefractionStyle.GRID, 0.72f)
+        PanelPreferences.setRefractionStyleDispersion(context, RefractionStyle.GRID, 0.90f)
+
+        PanelPreferences.setRefractionStyleSensitivity(context, RefractionStyle.VORONOI, 0.35f)
+        PanelPreferences.setRefractionStyleScale(context, RefractionStyle.VORONOI, 0.25f)
+        PanelPreferences.setRefractionStyleDispersion(context, RefractionStyle.VORONOI, 0.40f)
+
+        // Active style remains GRID with GRID values
+        assertEquals(RefractionStyle.GRID, PanelPreferences.refractionStyle.value)
+        assertEquals(0.85f, PanelPreferences.glassRefractionSensitivity.value, 0.001f)
+        assertEquals(0.72f, PanelPreferences.glassRefractionScale.value, 0.001f)
+        assertEquals(0.90f, PanelPreferences.glassRefractionDispersion.value, 0.001f)
+
+        // Switching to VORONOI restores VORONOI's independent slider values
+        PanelPreferences.setRefractionStyle(context, RefractionStyle.VORONOI)
+        assertEquals(0.35f, PanelPreferences.glassRefractionSensitivity.value, 0.001f)
+        assertEquals(0.25f, PanelPreferences.glassRefractionScale.value, 0.001f)
+        assertEquals(0.40f, PanelPreferences.glassRefractionDispersion.value, 0.001f)
+
+        // Reload from SharedPreferences and verify persistence
+        PanelPreferences.init(context)
+        assertEquals(RefractionStyle.VORONOI, PanelPreferences.refractionStyle.value)
+        assertEquals(0.35f, PanelPreferences.glassRefractionSensitivity.value, 0.001f)
+        assertEquals(0.85f, PanelPreferences.refractionStyleSensitivities.value[RefractionStyle.GRID] ?: 0f, 0.001f)
+        assertEquals(0.72f, PanelPreferences.refractionStyleScales.value[RefractionStyle.GRID] ?: 0f, 0.001f)
+        assertEquals(0.90f, PanelPreferences.refractionStyleDispersions.value[RefractionStyle.GRID] ?: 0f, 0.001f)
+
+        // ThemeManager export & apply preserves refraction style and per-style sliders
+        val savedTheme = ThemeManager.saveCurrentSettingsAsTheme(context, "Refraction Styles Theme")
+        PanelPreferences.setRefractionStyle(context, RefractionStyle.SCAN)
+        PanelPreferences.setRefractionStyleSensitivity(context, RefractionStyle.GRID, 0.15f)
+        assertTrue(ThemeManager.applyTheme(context, savedTheme))
+        assertEquals(RefractionStyle.VORONOI, PanelPreferences.refractionStyle.value)
+        assertEquals(0.85f, PanelPreferences.refractionStyleSensitivities.value[RefractionStyle.GRID] ?: 0f, 0.001f)
+    }
+
+    @Test
+    fun `QsDesignSection shows all refraction style options and per-style sliders when Liquid mode is selected`() {
+        PanelPreferences.setGlassBackdropMode(context, GlassBackdropMode.LIQUID)
+        PanelPreferences.setRefractionStyle(context, RefractionStyle.LIQUID)
+
+        composeTestRule.setContent {
+            QuickPanelTheme(darkTheme = true) {
+                androidx.compose.foundation.layout.Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
+                    com.example.ui.customizer.QsDesignSection()
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // All 14 style options are present and selectable
+        RefractionStyle.entries.forEach { style ->
+            composeTestRule.onNodeWithTag("refraction_style_${style.id}")
+                .performScrollTo()
+                .assertIsDisplayed()
+        }
+
+        // Selecting Hex updates active refractionStyle
+        composeTestRule.onNodeWithTag("refraction_style_hex")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+        assertEquals(RefractionStyle.HEX, PanelPreferences.refractionStyle.value)
+
+        // Active style's Strength, Pattern Scale, and Chromatic Split sliders are visible
+        composeTestRule.onNodeWithTag("glass_refraction_sensitivity_slider")
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag("glass_refraction_scale_slider")
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag("glass_refraction_dispersion_slider")
+            .performScrollTo()
+            .assertIsDisplayed()
+
+        // Expand "Sliders for Each Refraction Type" and verify dedicated sliders for every style
+        composeTestRule.onNodeWithTag("refraction_per_style_sliders_toggle")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        RefractionStyle.entries.forEach { style ->
+            composeTestRule.onNodeWithTag("refraction_style_slider_${style.id}")
+                .performScrollTo()
+                .assertIsDisplayed()
+        }
     }
 }

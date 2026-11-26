@@ -224,6 +224,9 @@ fun MainScreen(viewModel: MainViewModel) {
                     val containerBlurRadiusDp by PanelPreferences.containerBlurRadiusDp.collectAsStateWithLifecycle()
                     val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsStateWithLifecycle()
                     val glassRefractionSensitivity by PanelPreferences.glassRefractionSensitivity.collectAsStateWithLifecycle()
+                    val refractionStyle by PanelPreferences.refractionStyle.collectAsStateWithLifecycle()
+                    val glassRefractionScale by PanelPreferences.glassRefractionScale.collectAsStateWithLifecycle()
+                    val glassRefractionDispersion by PanelPreferences.glassRefractionDispersion.collectAsStateWithLifecycle()
                     var hostPosInRoot by remember { mutableStateOf(Offset.Zero) }
                     var rawQsBlurRegions by remember { mutableStateOf<Map<String, QsCardBlurBounds>>(emptyMap()) }
                     var rawNotifBlurRegions by remember { mutableStateOf<List<QsCardBlurBounds>>(emptyList()) }
@@ -263,6 +266,9 @@ fun MainScreen(viewModel: MainViewModel) {
                             extraBlurRegions = localExtraBlurRegions,
                             enableGlassRefraction = glassSupported && glassMode == com.example.data.GlassBackdropMode.LIQUID,
                             glassRefractionSensitivity = glassRefractionSensitivity,
+                            refractionStyle = refractionStyle,
+                            glassRefractionScale = glassRefractionScale,
+                            glassRefractionDispersion = glassRefractionDispersion,
                             modifier = Modifier.matchParentSize()
                         )
                         CompositionLocalProvider(

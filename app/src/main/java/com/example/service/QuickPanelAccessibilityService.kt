@@ -1755,6 +1755,9 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                     val containerBlurRadiusDp by PanelPreferences.containerBlurRadiusDp.collectAsState()
                     val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsState()
                     val glassRefractionSensitivity by PanelPreferences.glassRefractionSensitivity.collectAsState()
+                    val refractionStyle by PanelPreferences.refractionStyle.collectAsState()
+                    val glassRefractionScale by PanelPreferences.glassRefractionScale.collectAsState()
+                    val glassRefractionDispersion by PanelPreferences.glassRefractionDispersion.collectAsState()
                     val glassPerformanceMode by PanelPreferences.glassPerformanceMode.collectAsState()
                     val capturedBackdrop by capturedBackdropBitmap.collectAsState()
                     val isDarkOverlay = LocalIsDarkTheme.current
@@ -2061,6 +2064,9 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                             enableBlur = enableContainerBlur,
                             enableRefraction = glassSupported && glassBackdropMode == GlassBackdropMode.LIQUID,
                             refractionSensitivity = glassRefractionSensitivity,
+                            refractionStyle = refractionStyle,
+                            refractionScale = glassRefractionScale,
+                            refractionDispersion = glassRefractionDispersion,
                             blurRadiusDp = containerBlurRadiusDp,
                             transparency = containerBlurTransparency,
                             isDark = isDarkOverlay,

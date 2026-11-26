@@ -213,7 +213,10 @@ object CustomShadowHelper {
         enableFrostedGlass: Boolean = false,
         frostedTransparency: Float = PanelPreferences.containerBlurTransparency.value,
         enableGlassRefraction: Boolean = PanelPreferences.enableGlassRefraction.value,
-        glassRefractionSensitivity: Float = PanelPreferences.glassRefractionSensitivity.value
+        glassRefractionSensitivity: Float = PanelPreferences.glassRefractionSensitivity.value,
+        refractionStyle: com.example.data.RefractionStyle = PanelPreferences.refractionStyle.value,
+        glassRefractionScale: Float = PanelPreferences.glassRefractionScale.value,
+        glassRefractionDispersion: Float = PanelPreferences.glassRefractionDispersion.value
     ) {
         view.elevation = 0f
         val density = view.resources.displayMetrics.density
@@ -232,7 +235,10 @@ object CustomShadowHelper {
                 transparency = frostedTransparency,
                 enableGlassRefraction = enableGlassRefraction,
                 glassRefractionSensitivity = glassRefractionSensitivity,
-                density = density
+                density = density,
+                refractionStyle = refractionStyle,
+                glassRefractionScale = glassRefractionScale,
+                glassRefractionDispersion = glassRefractionDispersion
             )
         } else null
 
@@ -572,7 +578,10 @@ class FrostedGlassSurfaceDrawable(
     private val transparency: Float = 0.40f,
     private val enableGlassRefraction: Boolean = true,
     private val glassRefractionSensitivity: Float = 0.50f,
-    private val density: Float = 2.625f
+    private val density: Float = 2.625f,
+    private val refractionStyle: com.example.data.RefractionStyle = com.example.data.RefractionStyle.LIQUID,
+    private val glassRefractionScale: Float = refractionStyle.defaultScale,
+    private val glassRefractionDispersion: Float = refractionStyle.defaultDispersion
 ) : Drawable() {
 
     private val api36ColorFilter = if (isAndroid16FrostedGlassSupported()) {
@@ -664,7 +673,10 @@ class FrostedGlassSurfaceDrawable(
                 bottomRadiusPx = botR,
                 density = density,
                 sensitivity = glassRefractionSensitivity,
-                isDark = isDark
+                isDark = isDark,
+                refractionStyle = refractionStyle,
+                patternScale = glassRefractionScale,
+                dispersion = glassRefractionDispersion
             )
         } else {
             refractionBevelPaint.shader = null

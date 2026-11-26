@@ -24,33 +24,13 @@ import android.view.WindowManager
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.ShaderBrush
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CornerBasedShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.data.GlassBackdropMode
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Photo
-import androidx.compose.material3.Icon
+import com.example.data.RefractionStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -59,7 +39,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.BlurredEdgeTreatment
@@ -89,11 +68,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import java.util.function.Consumer
 import kotlin.math.roundToInt
 
@@ -684,6 +661,9 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
     uniform float sensitivity;
     uniform float isDark;
     uniform float performanceMode;
+    uniform int refractionStyle;
+    uniform float patternScale;
+    uniform float dispersion;
     uniform float4 uRects[18];
     uniform float2 uRadii[18];
     uniform int regionCount;
@@ -697,6 +677,19 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
         float safeK = max(k, 0.0001);
         float h = max(safeK - abs(a - b), 0.0) / safeK;
         return min(a, b) - (h * h * h) * (safeK * 0.16666667);
+    }
+
+    float2 wrapMod2(float2 p, float2 period) {
+        return p - period * floor(p / max(period, float2(0.0001)));
+    }
+
+    float2 hash22(float2 p) {
+        float3 p3 = float3(p.x, p.y, p.x);
+        p3 = p3 * float3(0.1031, 0.1030, 0.0973);
+        p3 = p3 - floor(p3);
+        p3 += dot(p3, p3.yzx + 33.33);
+        float2 r = (p3.xx + p3.yz) * p3.zy;
+        return r - floor(r);
     }
 
     float resolvedRadius(float2 p, float2 halfSize, float topR, float botR, float dScale) {
@@ -757,11 +750,231 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
         return grad * inversesqrt(dot(grad, grad) + softFloor * softFloor);
     }
 
+    // Returns float4(dispX, dispY, edgeHighlight, chromaFactor) in pattern-local space
+    float4 evalPatternRefraction(
+        int style,
+        float2 local,
+        float cellPx,
+        float strengthPx
+    ) {
+        float safeCell = max(cellPx, 6.0);
+        float2 disp = float2(0.0);
+        float edgeGlow = 0.0;
+        float chromaFactor = 0.55;
+
+        if (style == 1) {
+            // GRID: Orthogonal convex square pillow cells
+            float2 u = wrapMod2(local, float2(safeCell)) / safeCell - 0.5;
+            float edgeDist = 0.5 - max(abs(u.x), abs(u.y));
+            float bevel = smootherstep(0.0, 0.16, edgeDist);
+            disp = -u * (1.85 * bevel * strengthPx);
+            edgeGlow = (1.0 - smootherstep(0.0, 0.09, edgeDist)) * 0.65;
+            chromaFactor = clamp(length(u) * 1.65, 0.25, 1.0);
+        } else if (style == 2) {
+            // RIBBED: Vertical fluted cylindrical glass ribs
+            float ribPitch = max(safeCell * 0.55, 5.0);
+            float phase = (local.x / ribPitch) * 6.2831853;
+            float sWave = sin(phase);
+            float cWave = cos(phase);
+            disp = float2(-sWave * 1.15 * strengthPx, cWave * 0.08 * strengthPx);
+            edgeGlow = pow(max(cWave, 0.0), 3.0) * 0.55;
+            chromaFactor = clamp(abs(sWave) * 0.95 + 0.15, 0.15, 1.0);
+        } else if (style == 3) {
+            // HEX: True dual-lattice honeycomb hexagon cells
+            float hexSize = max(safeCell * 0.95, 8.0);
+            float2 r = float2(1.0, 1.7320508);
+            float2 h = r * 0.5;
+            float2 pHex = local / hexSize;
+            float2 a = wrapMod2(pHex, r) - h;
+            float2 b = wrapMod2(pHex - h, r) - h;
+            float2 gv = dot(a, a) < dot(b, b) ? a : b;
+            float hexDist = max(abs(gv.x), dot(abs(gv), normalize(r)));
+            float edgeDist = 0.5 - hexDist;
+            float bevel = smootherstep(0.0, 0.14, edgeDist);
+            disp = -gv * (2.10 * bevel * strengthPx);
+            edgeGlow = (1.0 - smootherstep(0.0, 0.08, edgeDist)) * 0.70;
+            chromaFactor = clamp(hexDist * 2.1, 0.25, 1.0);
+        } else if (style == 4) {
+            // HAMMER: Smooth hammered dimpled glass
+            float hScale = max(safeCell * 0.68, 7.0);
+            float2 p = local / hScale;
+            float2 nCell = floor(p);
+            float2 fCell = p - nCell;
+            float minD = 8.0;
+            float2 bestVec = float2(0.0);
+            for (int dy = -1; dy <= 1; dy++) {
+                for (int dx = -1; dx <= 1; dx++) {
+                    float2 g = float2(float(dx), float(dy));
+                    float2 rnd = hash22(nCell + g);
+                    float2 o = 0.22 + 0.56 * rnd;
+                    float2 rVec = g + o - fCell;
+                    float d = dot(rVec, rVec);
+                    if (d < minD) {
+                        minD = d;
+                        bestVec = rVec;
+                    }
+                }
+            }
+            float dist = sqrt(max(minD, 0.0001));
+            float dimple = 1.0 - smootherstep(0.0, 0.72, dist);
+            disp = -bestVec * (1.85 * dimple * strengthPx);
+            edgeGlow = pow(clamp(dist * 1.25, 0.0, 1.0), 2.5) * 0.45;
+            chromaFactor = clamp(dist * 1.5, 0.2, 1.0);
+        } else if (style == 5) {
+            // VORONOI: Crisp faceted crystal Voronoi polygons
+            float vScale = max(safeCell * 0.85, 8.0);
+            float2 p = local / vScale;
+            float2 nCell = floor(p);
+            float2 fCell = p - nCell;
+            float d1 = 8.0;
+            float d2 = 8.0;
+            float2 bestVec = float2(0.0);
+            float2 bestId = float2(0.0);
+            for (int dy = -1; dy <= 1; dy++) {
+                for (int dx = -1; dx <= 1; dx++) {
+                    float2 g = float2(float(dx), float(dy));
+                    float2 cellCoord = nCell + g;
+                    float2 o = 0.14 + 0.72 * hash22(cellCoord);
+                    float2 rVec = g + o - fCell;
+                    float d = length(rVec);
+                    if (d < d1) {
+                        d2 = d1;
+                        d1 = d;
+                        bestVec = rVec;
+                        bestId = cellCoord;
+                    } else if (d < d2) {
+                        d2 = d;
+                    }
+                }
+            }
+            float2 facetTilt = (hash22(bestId + 19.7) - 0.5) * 1.75;
+            float seam = d2 - d1;
+            float interior = smootherstep(0.0, 0.07, seam);
+            disp = (facetTilt - bestVec * 0.45) * (0.95 * interior * strengthPx);
+            edgeGlow = (1.0 - smootherstep(0.0, 0.09, seam)) * 0.80;
+            chromaFactor = clamp(length(facetTilt) * 0.9 + 0.25, 0.3, 1.0);
+        } else if (style == 6) {
+            // CHEVRON: Zigzag V-shaped herringbone glass ribs
+            float zigW = max(safeCell * 1.25, 10.0);
+            float periodY = max(safeCell * 0.65, 6.0);
+            float tx = local.x / zigW;
+            float fZig = tx - floor(tx) - 0.5;
+            float zigH = abs(fZig) * 2.0;
+            float slopeSign = fZig * inversesqrt(fZig * fZig + 0.025);
+            float phase = (local.y / periodY + zigH * 0.85) * 6.2831853;
+            float wSin = sin(phase);
+            float wCos = cos(phase);
+            float2 chevNormal = normalize(float2(slopeSign * 0.72, 1.0));
+            disp = -chevNormal * (wSin * 1.05 * strengthPx);
+            edgeGlow = pow(max(wCos, 0.0), 3.0) * 0.55;
+            chromaFactor = clamp(abs(wSin) * 0.9 + 0.2, 0.2, 1.0);
+        } else if (style == 7) {
+            // WAVY: Flowing multi-directional 2D liquid wave ripples
+            float waveScale = max(safeCell * 0.42, 6.0);
+            float2 wp = local / waveScale;
+            float px = wp.x * 1.65 + cos(wp.y * 1.25) * 1.35;
+            float py = wp.y * 1.55 - sin(wp.x * 1.15) * 1.35;
+            float2 grad = float2(cos(px) * 1.15, -sin(py) * 1.15);
+            disp = grad * (0.95 * strengthPx);
+            edgeGlow = pow(clamp(length(grad) * 0.72, 0.0, 1.0), 2.0) * 0.50;
+            chromaFactor = clamp(length(grad) * 0.85, 0.25, 1.0);
+        } else if (style == 8) {
+            // DIAMOND: 45-degree rotated square lens grid
+            float2 rot = float2(local.x + local.y, local.y - local.x) * 0.70710678;
+            float dCell = max(safeCell * 0.92, 7.0);
+            float2 u = wrapMod2(rot, float2(dCell)) / dCell - 0.5;
+            float edgeDist = 0.5 - max(abs(u.x), abs(u.y));
+            float bevel = smootherstep(0.0, 0.14, edgeDist);
+            float2 dLocal = -u * (1.90 * bevel * strengthPx);
+            disp = float2(dLocal.x - dLocal.y, dLocal.x + dLocal.y) * 0.70710678;
+            edgeGlow = (1.0 - smootherstep(0.0, 0.08, edgeDist)) * 0.70;
+            chromaFactor = clamp(length(u) * 1.65, 0.25, 1.0);
+        } else if (style == 9) {
+            // SCALES: Overlapping arched fish-scale tiles
+            float sScale = max(safeCell * 0.82, 8.0);
+            float2 p = local / sScale;
+            float2 bestUv = float2(0.0);
+            float bestRow = -1000000.0;
+            float minEdge = 1.0;
+            float baseRow = floor(p.y);
+            for (int ry = 0; ry <= 1; ry++) {
+                float rowIdx = baseRow + float(ry);
+                float stagger = abs(rowIdx - 2.0 * floor(rowIdx * 0.5)) > 0.25 ? 0.5 : 0.0;
+                float colBase = floor(p.x - stagger);
+                for (int cx = 0; cx <= 1; cx++) {
+                    float2 center = float2(colBase + float(cx) + stagger, rowIdx);
+                    float2 diff = p - center;
+                    float r = length(diff);
+                    if (r < 0.62 && rowIdx > bestRow) {
+                        bestRow = rowIdx;
+                        bestUv = diff;
+                        minEdge = 0.62 - r;
+                    }
+                }
+            }
+            float archSmooth = smootherstep(0.0, 0.14, minEdge);
+            disp = -bestUv * (1.85 * archSmooth * strengthPx);
+            edgeGlow = (1.0 - smootherstep(0.0, 0.08, minEdge)) * 0.75;
+            chromaFactor = clamp(length(bestUv) * 1.7, 0.25, 1.0);
+        } else if (style == 10) {
+            // LOUVRE: Parallel angled diagonal venetian glass slats
+            float slatW = max(safeCell * 0.62, 6.0);
+            float2 dir = float2(0.8660254, 0.5);
+            float u = dot(local, dir) / slatW;
+            float f = u - floor(u);
+            float ramp = (f - 0.5) * 2.0;
+            float edgeSmooth = smootherstep(0.0, 0.10, f) * (1.0 - smootherstep(0.90, 1.0, f));
+            disp = -dir * (ramp * 1.10 * edgeSmooth * strengthPx);
+            edgeGlow = pow(clamp(1.0 - abs(f - 0.94) * 10.0, 0.0, 1.0), 2.0) * 0.75;
+            chromaFactor = clamp(abs(ramp) * 0.85 + 0.2, 0.2, 1.0);
+        } else if (style == 11) {
+            // PLASMA: Multi-frequency 3-axis organic interference waves
+            float plScale = max(safeCell * 0.48, 6.0);
+            float2 pp = local / plScale;
+            float w1 = sin(pp.x * 1.45 + sin(pp.y * 0.95));
+            float w2 = sin((pp.x * 0.5 + pp.y * 0.866) * 1.65 + cos(pp.x * 0.8));
+            float w3 = cos((pp.x * 0.5 - pp.y * 0.866) * 1.55 + w1 * 0.6);
+            float2 grad = float2(w1 - w3 * 0.65, w2 + w3 * 0.75);
+            disp = grad * (0.78 * strengthPx);
+            edgeGlow = pow(clamp(length(grad) * 0.58, 0.0, 1.0), 2.2) * 0.45;
+            chromaFactor = clamp(length(grad) * 0.72, 0.25, 1.0);
+        } else if (style == 12) {
+            // OCTAGON: Chamfered 8-sided octagonal lens grid
+            float oCell = max(safeCell * 0.95, 8.0);
+            float2 u = wrapMod2(local, float2(oCell)) / oCell - 0.5;
+            float2 au = abs(u);
+            float octMetric = max(max(au.x, au.y), (au.x + au.y) * 0.70710678);
+            float edgeDist = 0.48 - octMetric;
+            float bevel = smootherstep(0.0, 0.14, edgeDist);
+            float2 facetGrad = (au.x + au.y) * 0.70710678 > max(au.x, au.y)
+                ? float2(u.x >= 0.0 ? 0.7071 : -0.7071, u.y >= 0.0 ? 0.7071 : -0.7071)
+                : (au.x >= au.y ? float2(u.x * 2.0, 0.0) : float2(0.0, u.y * 2.0));
+            disp = -mix(u * 1.6, facetGrad, 0.55) * (1.25 * bevel * strengthPx);
+            edgeGlow = (1.0 - smootherstep(0.0, 0.08, abs(edgeDist))) * 0.72;
+            chromaFactor = clamp(octMetric * 2.1, 0.25, 1.0);
+        } else if (style == 13) {
+            // SCAN: Horizontal parallel scanline micro-ribs
+            float scanPitch = max(safeCell * 0.42, 4.5);
+            float phase = (local.y / scanPitch) * 6.2831853;
+            float sWave = sin(phase);
+            float cWave = cos(phase);
+            disp = float2(cWave * 0.08 * strengthPx, -sWave * 1.15 * strengthPx);
+            edgeGlow = pow(max(cWave, 0.0), 3.0) * 0.55;
+            chromaFactor = clamp(abs(sWave) * 0.95 + 0.15, 0.15, 1.0);
+        }
+
+        return float4(disp.x, disp.y, edgeGlow, chromaFactor);
+    }
+
     half4 main(float2 fragCoord) {
         half4 base = content.eval(fragCoord);
         float s = clamp(sensitivity, 0.1, 1.0);
+        float pScale = clamp(patternScale, 0.1, 1.0);
+        float pDisp = clamp(dispersion, 0.0, 1.0);
         float dScale = max(density, 1.0);
-        float bevelW = (16.0 + 26.0 * s) * dScale;
+        float bevelW = (16.0 + 26.0 * s) * mix(0.75, 1.35, pScale) * dScale;
+        float cellPx = mix(12.0, 56.0, pScale) * dScale;
+        float patternStrengthPx = (5.0 + 24.0 * s) * dScale;
 
         for (int i = 0; i < 18; i++) {
             if (i >= regionCount) break;
@@ -800,9 +1013,19 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
             float domeMag = radialWeight * (3.5 + 8.5 * s) * dScale;
 
             float2 disp = -n * (bevelMag + domeMag);
+            float patternGlow = 0.0;
+            float chromaWeight = edgeT;
+
+            if (refractionStyle > 0) {
+                float4 pat = evalPatternRefraction(refractionStyle, local, cellPx, patternStrengthPx);
+                float edgeBlend = 1.0 - 0.35 * edgeT;
+                disp = disp * 0.55 + pat.xy * edgeBlend;
+                patternGlow = pat.z * (0.045 + 0.09 * s) * (isDark > 0.5 ? 0.85 : 1.0);
+                chromaWeight = max(edgeT * 0.75, pat.w);
+            }
 
             // Chromatic dispersion across RGB wavelengths (3-tap in Performance Mode, 5-tap in full quality)
-            float chroma = (0.11 + 0.15 * s) * edgeT;
+            float chroma = (0.04 + 0.24 * pDisp) * (0.55 + 0.45 * s) * chromaWeight;
             float2 minUv = float2(0.5);
             float2 maxUv = resolution - float2(0.5);
             float2 uvR  = clamp(fragCoord + disp * (1.0 - chroma), minUv, maxUv);
@@ -827,7 +1050,7 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
                 refracted = half4(cR, cG, cB, cA);
             }
 
-            // Quintic Fresnel specular rim + organic inner caustic
+            // Quintic Fresnel specular rim + organic inner caustic + pattern optical catchlight
             float rimMask = smootherstep(0.0, 1.6 * dScale, rimDistIn) * (1.0 - smootherstep(1.2 * dScale, 6.8 * dScale, rimDistIn));
             float fresnel = edgeT * edgeT * edgeT * cornerEase;
             float keyLight = clamp(dot(n, normalize(float2(-0.55, -0.83))), 0.0, 1.0);
@@ -835,7 +1058,7 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
             float rimGlow = (0.28 + 0.72 * keyLight + 0.35 * backLight) * rimMask * (0.14 + 0.28 * s);
             float innerCaustic = fresnel * (0.035 + 0.075 * s) * (0.55 + 0.45 * keyLight) * (isDark > 0.5 ? 0.65 : 0.90);
 
-            half3 finalRgb = clamp(refracted.rgb + half3(rimGlow + innerCaustic), 0.0, 1.0);
+            half3 finalRgb = clamp(refracted.rgb + half3(rimGlow + innerCaustic + patternGlow), 0.0, 1.0);
             return half4(finalRgb, refracted.a);
         }
 
@@ -850,6 +1073,9 @@ private const val FROSTED_GLASS_CARD_SURFACE_AGSL = """
     uniform float density;
     uniform float sensitivity;
     uniform float isDark;
+    uniform int refractionStyle;
+    uniform float patternScale;
+    uniform float dispersion;
 
     float smootherstep(float e0, float e1, float x) {
         float t = clamp((x - e0) / max(e1 - e0, 0.0001), 0.0, 1.0);
@@ -860,6 +1086,19 @@ private const val FROSTED_GLASS_CARD_SURFACE_AGSL = """
         float safeK = max(k, 0.0001);
         float h = max(safeK - abs(a - b), 0.0) / safeK;
         return min(a, b) - (h * h * h) * (safeK * 0.16666667);
+    }
+
+    float2 wrapMod2(float2 p, float2 period) {
+        return p - period * floor(p / max(period, float2(0.0001)));
+    }
+
+    float2 hash22(float2 p) {
+        float3 p3 = float3(p.x, p.y, p.x);
+        p3 = p3 * float3(0.1031, 0.1030, 0.0973);
+        p3 = p3 - floor(p3);
+        p3 += dot(p3, p3.yzx + 33.33);
+        float2 r = (p3.xx + p3.yz) * p3.zy;
+        return r - floor(r);
     }
 
     float resolvedRadius(float2 p, float2 halfSize, float topR, float botR, float dScale) {
@@ -920,6 +1159,104 @@ private const val FROSTED_GLASS_CARD_SURFACE_AGSL = """
         return grad * inversesqrt(dot(grad, grad) + softFloor * softFloor);
     }
 
+    float surfacePatternGlow(int style, float2 local, float cellPx) {
+        float safeCell = max(cellPx, 6.0);
+        if (style == 1) {
+            float2 u = wrapMod2(local, float2(safeCell)) / safeCell - 0.5;
+            return (1.0 - smootherstep(0.0, 0.09, 0.5 - max(abs(u.x), abs(u.y)))) * 0.55;
+        } else if (style == 2) {
+            return pow(max(cos((local.x / max(safeCell * 0.55, 5.0)) * 6.2831853), 0.0), 3.0) * 0.50;
+        } else if (style == 3) {
+            float hexSize = max(safeCell * 0.95, 8.0);
+            float2 r = float2(1.0, 1.7320508);
+            float2 h = r * 0.5;
+            float2 pHex = local / hexSize;
+            float2 a = wrapMod2(pHex, r) - h;
+            float2 b = wrapMod2(pHex - h, r) - h;
+            float2 gv = dot(a, a) < dot(b, b) ? a : b;
+            float edgeDist = 0.5 - max(abs(gv.x), dot(abs(gv), normalize(r)));
+            return (1.0 - smootherstep(0.0, 0.08, edgeDist)) * 0.55;
+        } else if (style == 4) {
+            float hScale = max(safeCell * 0.68, 7.0);
+            float2 p = local / hScale;
+            float2 nCell = floor(p);
+            float2 fCell = p - nCell;
+            float minD = 8.0;
+            for (int dy = -1; dy <= 1; dy++) {
+                for (int dx = -1; dx <= 1; dx++) {
+                    float2 g = float2(float(dx), float(dy));
+                    float2 rVec = g + 0.22 + 0.56 * hash22(nCell + g) - fCell;
+                    minD = min(minD, dot(rVec, rVec));
+                }
+            }
+            return pow(clamp(sqrt(max(minD, 0.0001)) * 1.25, 0.0, 1.0), 2.5) * 0.40;
+        } else if (style == 5) {
+            float vScale = max(safeCell * 0.85, 8.0);
+            float2 p = local / vScale;
+            float2 nCell = floor(p);
+            float2 fCell = p - nCell;
+            float d1 = 8.0;
+            float d2 = 8.0;
+            for (int dy = -1; dy <= 1; dy++) {
+                for (int dx = -1; dx <= 1; dx++) {
+                    float2 g = float2(float(dx), float(dy));
+                    float d = length(g + 0.14 + 0.72 * hash22(nCell + g) - fCell);
+                    if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) { d2 = d; }
+                }
+            }
+            return (1.0 - smootherstep(0.0, 0.09, d2 - d1)) * 0.65;
+        } else if (style == 6) {
+            float zigW = max(safeCell * 1.25, 10.0);
+            float periodY = max(safeCell * 0.65, 6.0);
+            float tx = local.x / zigW;
+            float zigH = abs(tx - floor(tx) - 0.5) * 2.0;
+            return pow(max(cos((local.y / periodY + zigH * 0.85) * 6.2831853), 0.0), 3.0) * 0.50;
+        } else if (style == 7) {
+            float waveScale = max(safeCell * 0.42, 6.0);
+            float2 wp = local / waveScale;
+            float g = abs(cos(wp.x * 1.65 + cos(wp.y * 1.25) * 1.35)) + abs(sin(wp.y * 1.55 - sin(wp.x * 1.15) * 1.35));
+            return pow(clamp(g * 0.45, 0.0, 1.0), 2.0) * 0.42;
+        } else if (style == 8) {
+            float2 rot = float2(local.x + local.y, local.y - local.x) * 0.70710678;
+            float dCell = max(safeCell * 0.92, 7.0);
+            float2 u = wrapMod2(rot, float2(dCell)) / dCell - 0.5;
+            return (1.0 - smootherstep(0.0, 0.08, 0.5 - max(abs(u.x), abs(u.y)))) * 0.55;
+        } else if (style == 9) {
+            float sScale = max(safeCell * 0.82, 8.0);
+            float2 p = local / sScale;
+            float bestRow = -1000000.0;
+            float minEdge = 1.0;
+            float baseRow = floor(p.y);
+            for (int ry = 0; ry <= 1; ry++) {
+                float rowIdx = baseRow + float(ry);
+                float stagger = abs(rowIdx - 2.0 * floor(rowIdx * 0.5)) > 0.25 ? 0.5 : 0.0;
+                float colBase = floor(p.x - stagger);
+                for (int cx = 0; cx <= 1; cx++) {
+                    float r = length(p - float2(colBase + float(cx) + stagger, rowIdx));
+                    if (r < 0.62 && rowIdx > bestRow) { bestRow = rowIdx; minEdge = 0.62 - r; }
+                }
+            }
+            return (1.0 - smootherstep(0.0, 0.08, minEdge)) * 0.60;
+        } else if (style == 10) {
+            float u = dot(local, float2(0.8660254, 0.5)) / max(safeCell * 0.62, 6.0);
+            float f = u - floor(u);
+            return pow(clamp(1.0 - abs(f - 0.94) * 10.0, 0.0, 1.0), 2.0) * 0.60;
+        } else if (style == 11) {
+            float plScale = max(safeCell * 0.48, 6.0);
+            float2 pp = local / plScale;
+            float w = abs(sin(pp.x * 1.45 + sin(pp.y * 0.95))) * abs(cos((pp.x * 0.5 - pp.y * 0.866) * 1.55));
+            return clamp(w, 0.0, 1.0) * 0.38;
+        } else if (style == 12) {
+            float oCell = max(safeCell * 0.95, 8.0);
+            float2 au = abs(wrapMod2(local, float2(oCell)) / oCell - 0.5);
+            float octMetric = max(max(au.x, au.y), (au.x + au.y) * 0.70710678);
+            return (1.0 - smootherstep(0.0, 0.08, abs(0.48 - octMetric))) * 0.58;
+        } else if (style == 13) {
+            return pow(max(cos((local.y / max(safeCell * 0.42, 4.5)) * 6.2831853), 0.0), 3.0) * 0.50;
+        }
+        return 0.0;
+    }
+
     half4 main(float2 fragCoord) {
         float2 halfSize = cardSize * 0.5;
         if (halfSize.x <= 1.0 || halfSize.y <= 1.0) return half4(0.0);
@@ -930,7 +1267,10 @@ private const val FROSTED_GLASS_CARD_SURFACE_AGSL = """
         if (sdf > 0.0) return half4(0.0);
 
         float s = clamp(sensitivity, 0.1, 1.0);
-        float bevelW = (12.0 + 16.0 * s) * dScale;
+        float pScale = clamp(patternScale, 0.1, 1.0);
+        float pDisp = clamp(dispersion, 0.0, 1.0);
+        float bevelW = (12.0 + 16.0 * s) * mix(0.75, 1.35, pScale) * dScale;
+        float cellPx = mix(12.0, 56.0, pScale) * dScale;
 
         // Keep internal bevel curvature slightly rounded even when card corners are squared (0dp)
         float maxR = min(halfSize.x, halfSize.y);
@@ -952,14 +1292,20 @@ private const val FROSTED_GLASS_CARD_SURFACE_AGSL = """
 
         // Subtle chromatic dispersion across the bevel normal
         float spectrumPhase = n.x * 0.65 - n.y * 0.35;
+        float dispAmp = 0.06 + 0.24 * pDisp;
         half3 prismTint = half3(
-            clamp(1.0 + 0.18 * spectrumPhase, 0.82, 1.0),
+            clamp(1.0 + dispAmp * spectrumPhase, 0.72, 1.0),
             1.0,
-            clamp(1.0 - 0.18 * spectrumPhase, 0.82, 1.0)
+            clamp(1.0 - dispAmp * spectrumPhase, 0.72, 1.0)
         );
 
+        float patternSheen = 0.0;
+        if (refractionStyle > 0) {
+            patternSheen = surfacePatternGlow(refractionStyle, local, cellPx) * (0.045 + 0.085 * s);
+        }
+
         float highlightStrength = (0.14 + 0.26 * s) * (0.28 + 0.72 * keyLight) * rimBand;
-        float causticStrength = (edgeT * edgeT * edgeT) * cornerEase * (0.04 + 0.07 * s) * (0.4 + 0.6 * keyLight);
+        float causticStrength = (edgeT * edgeT * edgeT) * cornerEase * (0.04 + 0.07 * s) * (0.4 + 0.6 * keyLight) + patternSheen;
         float shadowStrength = (isDark > 0.5 ? 0.26 : 0.12) * s * counterLight * rimBand;
 
         half3 lightColor = prismTint * half(highlightStrength + causticStrength);
@@ -1045,7 +1391,10 @@ fun createFrostedGlassCardBevelShader(
     bottomRadiusPx: Float = topRadiusPx,
     density: Float = 2.625f,
     sensitivity: Float = 0.50f,
-    isDark: Boolean = true
+    isDark: Boolean = true,
+    refractionStyle: RefractionStyle = RefractionStyle.LIQUID,
+    patternScale: Float = refractionStyle.defaultScale,
+    dispersion: Float = refractionStyle.defaultDispersion
 ): RuntimeShader? {
     if (widthPx <= 1f || heightPx <= 1f) return null
     return try {
@@ -1056,6 +1405,9 @@ fun createFrostedGlassCardBevelShader(
             setFloatUniform("density", density.coerceAtLeast(1f))
             setFloatUniform("sensitivity", sensitivity.coerceIn(0.1f, 1.0f))
             setFloatUniform("isDark", if (isDark) 1f else 0f)
+            setIntUniform("refractionStyle", refractionStyle.shaderIndex)
+            setFloatUniform("patternScale", patternScale.coerceIn(0.1f, 1.0f))
+            setFloatUniform("dispersion", dispersion.coerceIn(0.0f, 1.0f))
         }
     } catch (_: Throwable) {
         null
@@ -1075,7 +1427,10 @@ fun createLiquidGlassRefractionRuntimeEffect(
     density: Float,
     sensitivity: Float,
     isDark: Boolean,
-    performanceMode: Boolean = false
+    performanceMode: Boolean = false,
+    refractionStyle: RefractionStyle = RefractionStyle.LIQUID,
+    patternScale: Float = refractionStyle.defaultScale,
+    dispersion: Float = refractionStyle.defaultDispersion
 ): AndroidRenderEffect? {
     val validRegions = regions.filter { it.isValid }.take(MAX_REFRACTION_REGIONS)
     if (validRegions.isEmpty() || viewportWidthPx <= 1f || viewportHeightPx <= 1f) return null
@@ -1100,6 +1455,9 @@ fun createLiquidGlassRefractionRuntimeEffect(
             setFloatUniform("sensitivity", sensitivity.coerceIn(0.1f, 1.0f))
             setFloatUniform("isDark", if (isDark) 1f else 0f)
             setFloatUniform("performanceMode", if (performanceMode) 1f else 0f)
+            setIntUniform("refractionStyle", refractionStyle.shaderIndex)
+            setFloatUniform("patternScale", patternScale.coerceIn(0.1f, 1.0f))
+            setFloatUniform("dispersion", dispersion.coerceIn(0.0f, 1.0f))
             setFloatUniform("uRects", rectsArray)
             setFloatUniform("uRadii", radiiArray)
             setIntUniform("regionCount", validRegions.size)
@@ -1172,7 +1530,10 @@ fun createFrostedBackdropRenderEffect(
     viewportWidthPx: Float = 0f,
     viewportHeightPx: Float = 0f,
     density: Float = 2.625f,
-    performanceMode: Boolean = false
+    performanceMode: Boolean = false,
+    refractionStyle: RefractionStyle = RefractionStyle.LIQUID,
+    patternScale: Float = refractionStyle.defaultScale,
+    dispersion: Float = refractionStyle.defaultDispersion
 ): ComposeRenderEffect? {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
 
@@ -1196,7 +1557,10 @@ fun createFrostedBackdropRenderEffect(
             density = density,
             sensitivity = glassRefractionSensitivity,
             isDark = isDark,
-            performanceMode = performanceMode
+            performanceMode = performanceMode,
+            refractionStyle = refractionStyle,
+            patternScale = patternScale,
+            dispersion = dispersion
         ) ?: return null
         return try {
             refractionOnly.asComposeRenderEffect()
@@ -1220,7 +1584,10 @@ fun createFrostedBackdropRenderEffect(
             density = density,
             sensitivity = glassRefractionSensitivity,
             isDark = isDark,
-            performanceMode = performanceMode
+            performanceMode = performanceMode,
+            refractionStyle = refractionStyle,
+            patternScale = patternScale,
+            dispersion = dispersion
         )
         if (refractionEffect != null) {
             platformEffect = try {
@@ -1289,9 +1656,12 @@ fun Modifier.frostedGlassSurface(
 
     val glassMode by PanelPreferences.glassBackdropMode.collectAsState()
     val performanceMode by PanelPreferences.glassPerformanceMode.collectAsState()
+    val refractionStyle by PanelPreferences.refractionStyle.collectAsState()
     val enableRefraction = (enableRefractionOverride ?: (glassMode == GlassBackdropMode.LIQUID)) &&
         isRuntimeShaderRefractionSupported()
     val refractionSensitivity by PanelPreferences.glassRefractionSensitivity.collectAsState()
+    val refractionScale by PanelPreferences.glassRefractionScale.collectAsState()
+    val refractionDispersion by PanelPreferences.glassRefractionDispersion.collectAsState()
     val density = LocalDensity.current
     val topCornerPx = with(density) { topCornerRadiusDp.coerceAtLeast(0f).dp.toPx() }
     val bottomCornerPx = with(density) { bottomCornerRadiusDp.coerceAtLeast(0f).dp.toPx() }
@@ -1302,6 +1672,9 @@ fun Modifier.frostedGlassSurface(
     var cachedTopR by remember { mutableStateOf(-1f) }
     var cachedBotR by remember { mutableStateOf(-1f) }
     var cachedSens by remember { mutableStateOf(-1f) }
+    var cachedStyle by remember { mutableStateOf(refractionStyle) }
+    var cachedScale by remember { mutableStateOf(-1f) }
+    var cachedDispersion by remember { mutableStateOf(-1f) }
     var cachedIsDark by remember { mutableStateOf(isDark) }
     var cachedShader by remember { mutableStateOf<RuntimeShader?>(null) }
     var cachedBevelNode by remember { mutableStateOf<Any?>(null) }
@@ -1329,6 +1702,9 @@ fun Modifier.frostedGlassSurface(
                     kotlin.math.abs(cachedTopR - resolvedTopRadiusPx) > 0.5f ||
                     kotlin.math.abs(cachedBotR - resolvedBottomRadiusPx) > 0.5f ||
                     kotlin.math.abs(cachedSens - refractionSensitivity) > 0.005f ||
+                    cachedStyle != refractionStyle ||
+                    kotlin.math.abs(cachedScale - refractionScale) > 0.005f ||
+                    kotlin.math.abs(cachedDispersion - refractionDispersion) > 0.005f ||
                     cachedIsDark != isDark
 
                 if (paramsChanged) {
@@ -1339,13 +1715,19 @@ fun Modifier.frostedGlassSurface(
                         bottomRadiusPx = resolvedBottomRadiusPx,
                         density = densityPx,
                         sensitivity = refractionSensitivity,
-                        isDark = isDark
+                        isDark = isDark,
+                        refractionStyle = refractionStyle,
+                        patternScale = refractionScale,
+                        dispersion = refractionDispersion
                     )
                     cachedWidthPx = size.width
                     cachedHeightPx = size.height
                     cachedTopR = resolvedTopRadiusPx
                     cachedBotR = resolvedBottomRadiusPx
                     cachedSens = refractionSensitivity
+                    cachedStyle = refractionStyle
+                    cachedScale = refractionScale
+                    cachedDispersion = refractionDispersion
                     cachedIsDark = isDark
                     if (performanceMode && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                         val shader = cachedShader
@@ -1454,7 +1836,10 @@ fun LiveScreenRefractionBackdrop(
     extraBlurRegions: List<QsCardBlurBounds> = emptyList(),
     hostOffsetX: Float = 0f,
     hostOffsetY: Float = 0f,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    refractionStyle: RefractionStyle? = null,
+    refractionScale: Float? = null,
+    refractionDispersion: Float? = null
 ) {
     if (!isAndroid16FrostedGlassSupported() ||
         !isRuntimeShaderRefractionSupported() ||
@@ -1464,6 +1849,12 @@ fun LiveScreenRefractionBackdrop(
         screenBitmap.isRecycled
     ) return
     val performanceMode by PanelPreferences.glassPerformanceMode.collectAsState()
+    val prefRefractionStyle by PanelPreferences.refractionStyle.collectAsState()
+    val prefRefractionScale by PanelPreferences.glassRefractionScale.collectAsState()
+    val prefRefractionDispersion by PanelPreferences.glassRefractionDispersion.collectAsState()
+    val resolvedStyle = refractionStyle ?: prefRefractionStyle
+    val resolvedScale = refractionScale ?: prefRefractionScale
+    val resolvedDispersion = refractionDispersion ?: prefRefractionDispersion
     val rawActiveRegions = remember(qsCardBounds, extraBlurRegions) {
         buildList {
             if (qsCardBounds != null && qsCardBounds.isValid) add(qsCardBounds)
@@ -1553,7 +1944,10 @@ fun LiveScreenRefractionBackdrop(
         viewportHeightPx,
         density.density,
         performanceMode,
-        useDownscaledBlurNode
+        useDownscaledBlurNode,
+        resolvedStyle,
+        resolvedScale,
+        resolvedDispersion
     ) {
         if (useDownscaledBlurNode) {
             // Blur is handled by the 0.5x cached RenderNode; keep 1x RenderEffect for crisp refraction only
@@ -1568,7 +1962,10 @@ fun LiveScreenRefractionBackdrop(
                 viewportWidthPx = viewportWidthPx,
                 viewportHeightPx = viewportHeightPx,
                 density = density.density,
-                performanceMode = true
+                performanceMode = true,
+                refractionStyle = resolvedStyle,
+                patternScale = resolvedScale,
+                dispersion = resolvedDispersion
             )
         } else {
             createFrostedBackdropRenderEffect(
@@ -1582,7 +1979,10 @@ fun LiveScreenRefractionBackdrop(
                 viewportWidthPx = viewportWidthPx,
                 viewportHeightPx = viewportHeightPx,
                 density = density.density,
-                performanceMode = performanceMode
+                performanceMode = performanceMode,
+                refractionStyle = resolvedStyle,
+                patternScale = resolvedScale,
+                dispersion = resolvedDispersion
             )
         }
     }
@@ -1598,7 +1998,10 @@ fun LiveScreenRefractionBackdrop(
         viewportHeightPx,
         density.density,
         performanceMode,
-        useDownscaledBlurNode
+        useDownscaledBlurNode,
+        resolvedStyle,
+        resolvedScale,
+        resolvedDispersion
     ) {
         if (!useDownscaledBlurNode) null
         else createFrostedBackdropRenderEffect(
@@ -1612,7 +2015,10 @@ fun LiveScreenRefractionBackdrop(
             viewportWidthPx = viewportWidthPx,
             viewportHeightPx = viewportHeightPx,
             density = density.density,
-            performanceMode = true
+            performanceMode = true,
+            refractionStyle = resolvedStyle,
+            patternScale = resolvedScale,
+            dispersion = resolvedDispersion
         )
     }
 
@@ -1686,15 +2092,24 @@ fun FrostedPreviewBackdrop(
     transparency: Float = 0.40f,
     extraBlurRegions: List<QsCardBlurBounds> = emptyList(),
     enableGlassRefraction: Boolean? = null,
-    glassRefractionSensitivity: Float? = null
+    glassRefractionSensitivity: Float? = null,
+    refractionStyle: RefractionStyle? = null,
+    glassRefractionScale: Float? = null,
+    glassRefractionDispersion: Float? = null
 ) {
     val glassMode by PanelPreferences.glassBackdropMode.collectAsState()
     val prefRefractionSens by PanelPreferences.glassRefractionSensitivity.collectAsState()
+    val prefRefractionStyle by PanelPreferences.refractionStyle.collectAsState()
+    val prefRefractionScale by PanelPreferences.glassRefractionScale.collectAsState()
+    val prefRefractionDispersion by PanelPreferences.glassRefractionDispersion.collectAsState()
     val performanceMode by PanelPreferences.glassPerformanceMode.collectAsState()
     val effectiveBlur = enableBlur && isAndroid16FrostedGlassSupported()
     val resolvedRefraction = (enableGlassRefraction ?: (glassMode == GlassBackdropMode.LIQUID)) &&
         isRuntimeShaderRefractionSupported()
     val resolvedRefractionSens = glassRefractionSensitivity ?: prefRefractionSens
+    val resolvedRefractionStyle = refractionStyle ?: prefRefractionStyle
+    val resolvedRefractionScale = glassRefractionScale ?: prefRefractionScale
+    val resolvedRefractionDispersion = glassRefractionDispersion ?: prefRefractionDispersion
 
     val rawActiveRegions = remember(qsCardBounds, extraBlurRegions) {
         buildList {
@@ -1728,6 +2143,9 @@ fun FrostedPreviewBackdrop(
         transparency,
         resolvedRefraction,
         resolvedRefractionSens,
+        resolvedRefractionStyle,
+        resolvedRefractionScale,
+        resolvedRefractionDispersion,
         activeRegions,
         viewportWidthPx,
         viewportHeightPx,
@@ -1746,7 +2164,10 @@ fun FrostedPreviewBackdrop(
             viewportWidthPx = viewportWidthPx,
             viewportHeightPx = viewportHeightPx,
             density = density.density,
-            performanceMode = performanceMode
+            performanceMode = performanceMode,
+            refractionStyle = resolvedRefractionStyle,
+            patternScale = resolvedRefractionScale,
+            dispersion = resolvedRefractionDispersion
         )
     }
 
@@ -1816,88 +2237,8 @@ private fun PreviewBackdropScene(
         (0.2126f * it.red + 0.7152f * it.green + 0.0722f * it.blue) < 0.5f
     }
     val solidWallpaperColor = if (isDark) Color(0xFF1B1D21) else Color(0xFFE2E4E9)
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val tertiaryColor = MaterialTheme.colorScheme.tertiary
-    val secondaryColor = MaterialTheme.colorScheme.secondary
 
     Box(
         modifier = modifier.background(solidWallpaperColor)
-    ) {
-        // Simulated underlying home-screen widgets & app icons beneath the shade
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp, vertical = 32.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Spacer(modifier = Modifier.height(80.dp))
-
-            // Underlying widget silhouette
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(Color.White.copy(alpha = 0.22f))
-                    .border(
-                        BorderStroke(1.dp, Color.White.copy(alpha = 0.28f)),
-                        RoundedCornerShape(24.dp)
-                    )
-                    .padding(18.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "72° Partly Sunny",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "Underlying app & wallpaper layer",
-                        color = Color.White.copy(alpha = 0.82f),
-                        fontSize = 12.sp
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(tertiaryColor.copy(alpha = 0.85f))
-                )
-            }
-
-            // Underlying app dock silhouettes
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                val dockItems = listOf(
-                    Icons.Default.CameraAlt to primaryColor,
-                    Icons.Default.MusicNote to tertiaryColor,
-                    Icons.Default.Email to secondaryColor,
-                    Icons.Default.Photo to Color(0xFF4CAF50),
-                    Icons.Default.Explore to Color(0xFFFF9800)
-                )
-                dockItems.forEach { (icon, tint) ->
-                    Box(
-                        modifier = Modifier
-                            .size(50.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(tint.copy(alpha = 0.88f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(26.dp)
-                        )
-                    }
-                }
-            }
-        }
-    }
+    )
 }
