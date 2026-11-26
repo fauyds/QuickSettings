@@ -1780,12 +1780,12 @@ fun LiveScreenRefractionBackdrop(
     refractionStyleParam: Float? = null,
     diamondCrossedCut: Boolean? = null
 ) {
+    val isDynamic = PanelPreferences.isDynamicRefractionActive()
     if (!isAndroid16FrostedGlassSupported() ||
         !isRuntimeShaderRefractionSupported() ||
         !enableBlur ||
         !enableRefraction ||
-        screenBitmap == null ||
-        screenBitmap.isRecycled
+        (!isDynamic && (screenBitmap == null || screenBitmap.isRecycled))
     ) return
     val performanceMode by PanelPreferences.glassPerformanceMode.collectAsState()
     val prefRefractionStyle by PanelPreferences.refractionStyle.collectAsState()
@@ -1816,8 +1816,8 @@ fun LiveScreenRefractionBackdrop(
     val effectiveBlurDp = blurRadiusDp.coerceIn(0f, 80f)
     val effectiveBlurPx = with(density) { effectiveBlurDp.dp.toPx() }
     val skipBlurPass = effectiveBlurPx <= 0.5f || effectiveBlurDp <= 0.25f || (performanceMode && effectiveBlurDp < 0.75f)
-    var viewportWidthPx by remember { mutableStateOf(screenBitmap.width.toFloat()) }
-    var viewportHeightPx by remember { mutableStateOf(screenBitmap.height.toFloat()) }
+    var viewportWidthPx by remember { mutableStateOf(screenBitmap?.width?.toFloat() ?: 1080f) }
+    var viewportHeightPx by remember { mutableStateOf(screenBitmap?.height?.toFloat() ?: 2400f) }
 
     val drawPaint = remember { Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG) }
     val hostView = LocalView.current
@@ -1864,10 +1864,12 @@ fun LiveScreenRefractionBackdrop(
                     val dstRect = RectF(
                         -resolvedOffsetX,
                         -resolvedOffsetY,
-                        -resolvedOffsetX + screenBitmap.width.toFloat(),
-                        -resolvedOffsetY + screenBitmap.height.toFloat()
+                        -resolvedOffsetX + (screenBitmap?.width?.toFloat() ?: viewportWidthPx),
+                        -resolvedOffsetY + (screenBitmap?.height?.toFloat() ?: viewportHeightPx)
                     )
-                    rec.drawBitmap(screenBitmap, null, dstRect, drawPaint)
+                    if (screenBitmap != null) {
+                        rec.drawBitmap(screenBitmap, null, dstRect, drawPaint)
+                    }
                     endRecording()
                 }
             } catch (_: Throwable) {
@@ -2016,22 +2018,28 @@ fun LiveScreenRefractionBackdrop(
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawIntoCanvas { canvas ->
                 val nc = canvas.nativeCanvas
-                if (cachedDownscaledBlurNode != null &&
-                    nc.isHardwareAccelerated &&
-                    cachedDownscaledBlurNode.hasDisplayList()
-                ) {
-                    nc.save()
-                    nc.scale(2f, 2f)
-                    nc.drawRenderNode(cachedDownscaledBlurNode)
-                    nc.restore()
+                if (screenBitmap != null && !screenBitmap.isRecycled) {
+                    if (cachedDownscaledBlurNode != null &&
+                        nc.isHardwareAccelerated &&
+                        cachedDownscaledBlurNode.hasDisplayList()
+                    ) {
+                        nc.save()
+                        nc.scale(2f, 2f)
+                        nc.drawRenderNode(cachedDownscaledBlurNode)
+                        nc.restore()
+                    } else {
+                        val dstRect = RectF(
+                            -resolvedOffsetX,
+                            -resolvedOffsetY,
+                            -resolvedOffsetX + screenBitmap.width.toFloat(),
+                            -resolvedOffsetY + screenBitmap.height.toFloat()
+                        )
+                        nc.drawBitmap(screenBitmap, null, dstRect, drawPaint)
+                    }
                 } else {
-                    val dstRect = RectF(
-                        -resolvedOffsetX,
-                        -resolvedOffsetY,
-                        -resolvedOffsetX + screenBitmap.width.toFloat(),
-                        -resolvedOffsetY + screenBitmap.height.toFloat()
-                    )
-                    nc.drawBitmap(screenBitmap, null, dstRect, drawPaint)
+                    val fallbackColor = if (isDark) 0xFF1B1D21.toInt() else 0xFFE2E4E9.toInt()
+                    val fallbackPaint = Paint().apply { color = fallbackColor }
+                    nc.drawRect(0f, 0f, size.width, size.height, fallbackPaint)
                 }
             }
         }

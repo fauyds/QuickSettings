@@ -5707,11 +5707,54 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                     enter = fadeIn() + expandVertically(),
                                     exit = fadeOut() + shrinkVertically()
                                 ) {
-                                    // Active Style Sliders (Strength, Scale, Chromatic Dispersion, & Style-Specific Controls)
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clip(refractionCardShape)
+                                            .background(ExpressiveTheme.colors.nestedElementSurface)
+                                            .padding(16.dp)
+                                    ) {
+                                        val dynamicRefraction by PanelPreferences.dynamicRefraction.collectAsState()
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.weight(1f),
+                                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                                            ) {
+                                                Text(
+                                                    text = "Dynamic Refraction",
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Text(
+                                                    text = "Render optical refraction in real-time instead of taking a static screen capture when opening the panel.",
+                                                    fontSize = 12.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                            Switch(
+                                                checked = dynamicRefraction,
+                                                onCheckedChange = { PanelPreferences.setDynamicRefraction(context, it) },
+                                                modifier = Modifier.testTag("dynamic_refraction_toggle")
+                                            )
+                                        }
+                                    }
+                                }
+
+                                AnimatedVisibility(
+                                    visible = hasLiquidControls,
+                                    enter = fadeIn() + expandVertically(),
+                                    exit = fadeOut() + shrinkVertically()
+                                ) {
+                                    // Active Style Sliders (Strength, Scale, Chromatic Dispersion, & Style-Specific Controls)
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(ExpressiveCardShapes.CenterCard)
                                             .background(ExpressiveTheme.colors.nestedElementSurface)
                                             .testTag("glass_refraction_controls_card")
                                     ) {

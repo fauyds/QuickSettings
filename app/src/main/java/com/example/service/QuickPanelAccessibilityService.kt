@@ -1632,7 +1632,8 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         val shouldCaptureLiveBackdrop = Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA &&
             isAndroid16FrostedGlassSupported() &&
             isRuntimeShaderRefractionSupported() &&
-            PanelPreferences.isLiquidGlassActive()
+            PanelPreferences.isLiquidGlassActive() &&
+            !PanelPreferences.isDynamicRefractionActive()
 
         if (shouldCaptureLiveBackdrop) {
             captureFreshBackdropAndLaunch(initialStage)
