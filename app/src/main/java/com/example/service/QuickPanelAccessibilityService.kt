@@ -1758,6 +1758,8 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                     val refractionStyle by PanelPreferences.refractionStyle.collectAsState()
                     val glassRefractionScale by PanelPreferences.glassRefractionScale.collectAsState()
                     val glassRefractionDispersion by PanelPreferences.glassRefractionDispersion.collectAsState()
+                    val glassRefractionStyleParam by PanelPreferences.glassRefractionCustomParam.collectAsState()
+                    val diamondCrossedCut by PanelPreferences.diamondCrossedCut.collectAsState()
                     val glassPerformanceMode by PanelPreferences.glassPerformanceMode.collectAsState()
                     val capturedBackdrop by capturedBackdropBitmap.collectAsState()
                     val isDarkOverlay = LocalIsDarkTheme.current
@@ -2067,6 +2069,8 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                             refractionStyle = refractionStyle,
                             refractionScale = glassRefractionScale,
                             refractionDispersion = glassRefractionDispersion,
+                            refractionStyleParam = glassRefractionStyleParam,
+                            diamondCrossedCut = diamondCrossedCut,
                             blurRadiusDp = containerBlurRadiusDp,
                             transparency = containerBlurTransparency,
                             isDark = isDarkOverlay,

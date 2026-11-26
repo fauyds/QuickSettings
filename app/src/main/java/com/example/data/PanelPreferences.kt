@@ -39,22 +39,115 @@ enum class RefractionStyle(
     val shaderIndex: Int,
     val defaultSensitivity: Float = 0.60f,
     val defaultScale: Float = 0.50f,
-    val defaultDispersion: Float = 0.60f
+    val defaultDispersion: Float = 0.60f,
+    val customSliderTitle: String? = null,
+    val customSliderDescription: String? = null,
+    val defaultCustomParam: Float = 0.50f
 ) {
     LIQUID("liquid", "Liquid", 0, defaultSensitivity = 0.50f, defaultScale = 0.50f, defaultDispersion = 0.55f),
-    GRID("grid", "Grid", 1, defaultSensitivity = 0.60f, defaultScale = 0.45f, defaultDispersion = 0.65f),
+    GRID(
+        id = "grid",
+        label = "Grid",
+        shaderIndex = 1,
+        defaultSensitivity = 0.60f,
+        defaultScale = 0.45f,
+        defaultDispersion = 0.65f,
+        customSliderTitle = "Tile Curvature",
+        customSliderDescription = "Convex spherical pillow dome curvature per tile (0% – 100%)",
+        defaultCustomParam = 0.50f
+    ),
     RIBBED("ribbed", "Ribbed", 2, defaultSensitivity = 0.65f, defaultScale = 0.45f, defaultDispersion = 0.60f),
     HEX("hex", "Hex", 3, defaultSensitivity = 0.60f, defaultScale = 0.50f, defaultDispersion = 0.60f),
-    HAMMER("hammer", "Hammer", 4, defaultSensitivity = 0.60f, defaultScale = 0.50f, defaultDispersion = 0.55f),
-    VORONOI("voronoi", "Voronoi", 5, defaultSensitivity = 0.65f, defaultScale = 0.55f, defaultDispersion = 0.65f),
-    CHEVRON("chevron", "Chevron", 6, defaultSensitivity = 0.60f, defaultScale = 0.45f, defaultDispersion = 0.60f),
+    HAMMER(
+        id = "hammer",
+        label = "Hammer",
+        shaderIndex = 4,
+        defaultSensitivity = 0.60f,
+        defaultScale = 0.50f,
+        defaultDispersion = 0.55f,
+        customSliderTitle = "Hammer Depth",
+        customSliderDescription = "Hammered dimple indentation depth & curvature (0% – 100%)",
+        defaultCustomParam = 0.55f
+    ),
+    VORONOI(
+        id = "voronoi",
+        label = "Voronoi",
+        shaderIndex = 5,
+        defaultSensitivity = 0.65f,
+        defaultScale = 0.55f,
+        defaultDispersion = 0.65f,
+        customSliderTitle = "Shard Tilt",
+        customSliderDescription = "Crystal shard facet prism tilt intensity (0% – 100%)",
+        defaultCustomParam = 0.60f
+    ),
+    CHEVRON(
+        id = "chevron",
+        label = "Chevron",
+        shaderIndex = 6,
+        defaultSensitivity = 0.60f,
+        defaultScale = 0.45f,
+        defaultDispersion = 0.60f,
+        customSliderTitle = "Chevron Width",
+        customSliderDescription = "Horizontal zigzag span & V-angle width (0% – 100%)",
+        defaultCustomParam = 0.50f
+    ),
     WAVY("wavy", "Wavy", 7, defaultSensitivity = 0.65f, defaultScale = 0.50f, defaultDispersion = 0.70f),
-    DIAMOND("diamond", "Diamond", 8, defaultSensitivity = 0.60f, defaultScale = 0.45f, defaultDispersion = 0.60f),
-    SCALES("scales", "Scales", 9, defaultSensitivity = 0.60f, defaultScale = 0.50f, defaultDispersion = 0.60f),
-    LOUVRE("louvre", "Louvre", 10, defaultSensitivity = 0.65f, defaultScale = 0.45f, defaultDispersion = 0.60f),
-    PLASMA("plasma", "Plasma", 11, defaultSensitivity = 0.65f, defaultScale = 0.50f, defaultDispersion = 0.70f),
+    DIAMOND(
+        id = "diamond",
+        label = "Diamond",
+        shaderIndex = 8,
+        defaultSensitivity = 0.60f,
+        defaultScale = 0.45f,
+        defaultDispersion = 0.60f,
+        customSliderTitle = "Facet Depth",
+        customSliderDescription = "Diamond bevel depth & pyramidal slope (0% – 100%)",
+        defaultCustomParam = 0.55f
+    ),
+    SCALES(
+        id = "scales",
+        label = "Scales",
+        shaderIndex = 9,
+        defaultSensitivity = 0.60f,
+        defaultScale = 0.50f,
+        defaultDispersion = 0.60f,
+        customSliderTitle = "Scallop Curve",
+        customSliderDescription = "Arch curvature & dome profile of overlapping scales (0% – 100%)",
+        defaultCustomParam = 0.55f
+    ),
+    LOUVRE(
+        id = "louvre",
+        label = "Louvre",
+        shaderIndex = 10,
+        defaultSensitivity = 0.65f,
+        defaultScale = 0.45f,
+        defaultDispersion = 0.60f,
+        customSliderTitle = "Prism Ramp",
+        customSliderDescription = "Slat wedge tilt & asymmetric prism slope steepness (0% – 100%)",
+        defaultCustomParam = 0.55f
+    ),
+    PLASMA(
+        id = "plasma",
+        label = "Plasma",
+        shaderIndex = 11,
+        defaultSensitivity = 0.65f,
+        defaultScale = 0.50f,
+        defaultDispersion = 0.70f,
+        customSliderTitle = "Molten Warp",
+        customSliderDescription = "Fluid wave phase coupling & turbulence warp (0% – 100%)",
+        defaultCustomParam = 0.60f
+    ),
     OCTAGON("octagon", "Octagon", 12, defaultSensitivity = 0.60f, defaultScale = 0.48f, defaultDispersion = 0.65f),
-    SCAN("scan", "Scan", 13, defaultSensitivity = 0.65f, defaultScale = 0.40f, defaultDispersion = 0.60f);
+    SCAN(
+        id = "scan",
+        label = "Scan",
+        shaderIndex = 13,
+        defaultSensitivity = 0.65f,
+        defaultScale = 0.40f,
+        defaultDispersion = 0.60f,
+        customSliderTitle = "Raster Shift",
+        customSliderDescription = "Horizontal scanline phase stagger & raster shear (0% – 100%)",
+        defaultCustomParam = 0.55f
+    );
 
     companion object {
         fun fromId(id: String?): RefractionStyle =
@@ -503,6 +596,18 @@ object PanelPreferences {
     private val _glassRefractionDispersion = MutableStateFlow(RefractionStyle.LIQUID.defaultDispersion)
     val glassRefractionDispersion: StateFlow<Float> = _glassRefractionDispersion.asStateFlow()
 
+    private val _refractionStyleCustomParams = MutableStateFlow(
+        RefractionStyle.entries.associateWith { it.defaultCustomParam }
+    )
+    val refractionStyleCustomParams: StateFlow<Map<RefractionStyle, Float>> =
+        _refractionStyleCustomParams.asStateFlow()
+
+    private val _glassRefractionCustomParam = MutableStateFlow(RefractionStyle.LIQUID.defaultCustomParam)
+    val glassRefractionCustomParam: StateFlow<Float> = _glassRefractionCustomParam.asStateFlow()
+
+    private val _diamondCrossedCut = MutableStateFlow(false)
+    val diamondCrossedCut: StateFlow<Boolean> = _diamondCrossedCut.asStateFlow()
+
     fun isGlassBackdropSupported(): Boolean =
         android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.BAKLAVA
 
@@ -524,10 +629,12 @@ object PanelPreferences {
     private const val KEY_GLASS_REFRACTION_SENSITIVITY = "glass_refraction_sensitivity"
     private const val KEY_REFRACTION_STYLE = "glass_refraction_style"
     private const val KEY_GLASS_PERFORMANCE_MODE = "glass_performance_mode"
+    private const val KEY_DIAMOND_CROSSED_CUT = "glass_refraction_diamond_crossed_cut"
 
     fun refractionSensitivityKey(style: RefractionStyle): String = "glass_refraction_sens_${style.id}"
     fun refractionScaleKey(style: RefractionStyle): String = "glass_refraction_scale_${style.id}"
     fun refractionDispersionKey(style: RefractionStyle): String = "glass_refraction_dispersion_${style.id}"
+    fun refractionCustomParamKey(style: RefractionStyle): String = "glass_refraction_param_${style.id}"
 
     private const val KEY_SHOW_HEADER_COMPLICATIONS = "show_header_complications"
     private const val KEY_COMPLICATION_SUBLINE_PLACEMENT = "complication_subline_placement"
@@ -2314,12 +2421,18 @@ object PanelPreferences {
         val loadedDispersions = RefractionStyle.entries.associateWith { st ->
             prefs.getFloat(refractionDispersionKey(st), st.defaultDispersion).coerceIn(0.0f, 1.0f)
         }
+        val loadedCustomParams = RefractionStyle.entries.associateWith { st ->
+            prefs.getFloat(refractionCustomParamKey(st), st.defaultCustomParam).coerceIn(0.0f, 1.0f)
+        }
         _refractionStyleSensitivities.value = loadedSensitivities
         _refractionStyleScales.value = loadedScales
         _refractionStyleDispersions.value = loadedDispersions
+        _refractionStyleCustomParams.value = loadedCustomParams
         _glassRefractionSensitivity.value = loadedSensitivities[activeRefStyle] ?: legacySens
         _glassRefractionScale.value = loadedScales[activeRefStyle] ?: activeRefStyle.defaultScale
         _glassRefractionDispersion.value = loadedDispersions[activeRefStyle] ?: activeRefStyle.defaultDispersion
+        _glassRefractionCustomParam.value = loadedCustomParams[activeRefStyle] ?: activeRefStyle.defaultCustomParam
+        _diamondCrossedCut.value = prefs.getBoolean(KEY_DIAMOND_CROSSED_CUT, false)
         _showHeaderComplications.value = prefs.getBoolean(KEY_SHOW_HEADER_COMPLICATIONS, true)
         _complicationSublinePlacement.value = com.example.model.ComplicationSublinePlacement.fromId(
             prefs.getString(KEY_COMPLICATION_SUBLINE_PLACEMENT, com.example.model.ComplicationSublinePlacement.INSIDE_RING.id)
@@ -3142,6 +3255,7 @@ object PanelPreferences {
         _glassRefractionSensitivity.value = _refractionStyleSensitivities.value[targetRefractionStyle] ?: targetGlassRefractionSensitivity
         _glassRefractionScale.value = _refractionStyleScales.value[targetRefractionStyle] ?: targetRefractionStyle.defaultScale
         _glassRefractionDispersion.value = _refractionStyleDispersions.value[targetRefractionStyle] ?: targetRefractionStyle.defaultDispersion
+        _glassRefractionCustomParam.value = _refractionStyleCustomParams.value[targetRefractionStyle] ?: targetRefractionStyle.defaultCustomParam
         _showQsTileGradient.value = targetShowQsTileGradient
         _showCarrier.value = targetShowCarrier
         _showCarrierDivider.value = targetShowCarrierDivider
@@ -4571,9 +4685,11 @@ object PanelPreferences {
         val sens = _refractionStyleSensitivities.value[style] ?: style.defaultSensitivity
         val scale = _refractionStyleScales.value[style] ?: style.defaultScale
         val disp = _refractionStyleDispersions.value[style] ?: style.defaultDispersion
+        val customParam = _refractionStyleCustomParams.value[style] ?: style.defaultCustomParam
         _glassRefractionSensitivity.value = sens
         _glassRefractionScale.value = scale
         _glassRefractionDispersion.value = disp
+        _glassRefractionCustomParam.value = customParam
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
             .putString(KEY_REFRACTION_STYLE, style.id)
@@ -4621,6 +4737,26 @@ object PanelPreferences {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
             .putFloat(refractionDispersionKey(style), clamped)
+            .apply()
+    }
+
+    fun setRefractionStyleCustomParam(context: Context, style: RefractionStyle, value: Float) {
+        val clamped = value.coerceIn(0.0f, 1.0f)
+        _refractionStyleCustomParams.value = _refractionStyleCustomParams.value + (style to clamped)
+        if (style == _refractionStyle.value) {
+            _glassRefractionCustomParam.value = clamped
+        }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(refractionCustomParamKey(style), clamped)
+            .apply()
+    }
+
+    fun setDiamondCrossedCut(context: Context, enabled: Boolean) {
+        _diamondCrossedCut.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean(KEY_DIAMOND_CROSSED_CUT, enabled)
             .apply()
     }
 
@@ -6000,11 +6136,13 @@ object PanelPreferences {
         KEY_GLASS_REFRACTION_SENSITIVITY,
         KEY_REFRACTION_STYLE,
         KEY_GLASS_PERFORMANCE_MODE,
+        KEY_DIAMOND_CROSSED_CUT,
     ) + RefractionStyle.entries.flatMap { st ->
         listOf(
             "glass_refraction_sens_${st.id}",
             "glass_refraction_scale_${st.id}",
-            "glass_refraction_dispersion_${st.id}"
+            "glass_refraction_dispersion_${st.id}",
+            "glass_refraction_param_${st.id}"
         )
     }.toSet() + setOf(
         // Grid / QQS / Tiles / Fonts / Labels
@@ -6256,10 +6394,12 @@ object PanelPreferences {
         settingsJson.put(KEY_GLASS_REFRACTION_SENSITIVITY, _glassRefractionSensitivity.value.toDouble())
         settingsJson.put(KEY_REFRACTION_STYLE, _refractionStyle.value.id)
         settingsJson.put(KEY_GLASS_PERFORMANCE_MODE, _glassPerformanceMode.value)
+        settingsJson.put(KEY_DIAMOND_CROSSED_CUT, _diamondCrossedCut.value)
         RefractionStyle.entries.forEach { st ->
             settingsJson.put(refractionSensitivityKey(st), (_refractionStyleSensitivities.value[st] ?: st.defaultSensitivity).toDouble())
             settingsJson.put(refractionScaleKey(st), (_refractionStyleScales.value[st] ?: st.defaultScale).toDouble())
             settingsJson.put(refractionDispersionKey(st), (_refractionStyleDispersions.value[st] ?: st.defaultDispersion).toDouble())
+            settingsJson.put(refractionCustomParamKey(st), (_refractionStyleCustomParams.value[st] ?: st.defaultCustomParam).toDouble())
         }
 
         // Grid / QQS / Tiles / Fonts / Labels

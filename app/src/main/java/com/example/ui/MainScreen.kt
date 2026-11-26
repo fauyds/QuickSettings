@@ -227,6 +227,8 @@ fun MainScreen(viewModel: MainViewModel) {
                     val refractionStyle by PanelPreferences.refractionStyle.collectAsStateWithLifecycle()
                     val glassRefractionScale by PanelPreferences.glassRefractionScale.collectAsStateWithLifecycle()
                     val glassRefractionDispersion by PanelPreferences.glassRefractionDispersion.collectAsStateWithLifecycle()
+                    val glassRefractionStyleParam by PanelPreferences.glassRefractionCustomParam.collectAsStateWithLifecycle()
+                    val diamondCrossedCut by PanelPreferences.diamondCrossedCut.collectAsStateWithLifecycle()
                     var hostPosInRoot by remember { mutableStateOf(Offset.Zero) }
                     var rawQsBlurRegions by remember { mutableStateOf<Map<String, QsCardBlurBounds>>(emptyMap()) }
                     var rawNotifBlurRegions by remember { mutableStateOf<List<QsCardBlurBounds>>(emptyList()) }
@@ -269,6 +271,8 @@ fun MainScreen(viewModel: MainViewModel) {
                             refractionStyle = refractionStyle,
                             glassRefractionScale = glassRefractionScale,
                             glassRefractionDispersion = glassRefractionDispersion,
+                            glassRefractionStyleParam = glassRefractionStyleParam,
+                            diamondCrossedCut = diamondCrossedCut,
                             modifier = Modifier.matchParentSize()
                         )
                         CompositionLocalProvider(

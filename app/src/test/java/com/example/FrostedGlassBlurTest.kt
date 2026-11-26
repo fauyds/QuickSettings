@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -1881,16 +1882,223 @@ class FrostedGlassBlurTest {
             .performScrollTo()
             .assertIsDisplayed()
 
-        // Expand "Sliders for Each Refraction Type" and verify dedicated sliders for every style
-        composeTestRule.onNodeWithTag("refraction_per_style_sliders_toggle")
+        // Redundant expandable "Sliders for Each Refraction Type" card is hidden
+        composeTestRule.onNodeWithTag("refraction_per_style_sliders_toggle").assertDoesNotExist()
+    }
+
+    @Test
+    fun `Style-specific refraction sliders and Diamond crossed cut toggle persist and update UI and AGSL shaders`() {
+        ThemeManager.init(context)
+        PanelPreferences.setGlassBackdropMode(context, GlassBackdropMode.LIQUID)
+
+        val expectedTitles = mapOf(
+            RefractionStyle.GRID to "Tile Curvature",
+            RefractionStyle.HAMMER to "Hammer Depth",
+            RefractionStyle.VORONOI to "Shard Tilt",
+            RefractionStyle.CHEVRON to "Chevron Width",
+            RefractionStyle.DIAMOND to "Facet Depth",
+            RefractionStyle.SCALES to "Scallop Curve",
+            RefractionStyle.LOUVRE to "Prism Ramp",
+            RefractionStyle.PLASMA to "Molten Warp",
+            RefractionStyle.SCAN to "Raster Shift"
+        )
+        expectedTitles.forEach { (style, title) ->
+            assertEquals(title, style.customSliderTitle)
+        }
+        assertNull(RefractionStyle.LIQUID.customSliderTitle)
+        assertNull(RefractionStyle.RIBBED.customSliderTitle)
+        assertNull(RefractionStyle.HEX.customSliderTitle)
+        assertNull(RefractionStyle.WAVY.customSliderTitle)
+        assertNull(RefractionStyle.OCTAGON.customSliderTitle)
+
+        // Persist independent custom params per style & Diamond crossed cut
+        PanelPreferences.setRefractionStyle(context, RefractionStyle.GRID)
+        PanelPreferences.setRefractionStyleCustomParam(context, RefractionStyle.GRID, 0.92f)
+        PanelPreferences.setRefractionStyleCustomParam(context, RefractionStyle.VORONOI, 0.22f)
+        PanelPreferences.setDiamondCrossedCut(context, true)
+
+        assertEquals(0.92f, PanelPreferences.glassRefractionCustomParam.value, 0.001f)
+        assertTrue(PanelPreferences.diamondCrossedCut.value)
+
+        PanelPreferences.init(context)
+        assertEquals(0.92f, PanelPreferences.glassRefractionCustomParam.value, 0.001f)
+        assertEquals(0.22f, PanelPreferences.refractionStyleCustomParams.value[RefractionStyle.VORONOI] ?: 0f, 0.001f)
+        assertTrue(PanelPreferences.diamondCrossedCut.value)
+
+        // ThemeManager round-trips custom params & diamondCrossedCut
+        val saved = ThemeManager.saveCurrentSettingsAsTheme(context, "Custom Refraction Params")
+        PanelPreferences.setRefractionStyleCustomParam(context, RefractionStyle.GRID, 0.10f)
+        PanelPreferences.setDiamondCrossedCut(context, false)
+        assertTrue(ThemeManager.applyTheme(context, saved))
+        assertEquals(0.92f, PanelPreferences.glassRefractionCustomParam.value, 0.001f)
+        assertTrue(PanelPreferences.diamondCrossedCut.value)
+
+        // AGSL shaders build cleanly across extremes including Diamond crossed = true/false
+        val regions = listOf(
+            com.example.ui.overlay.QsCardBlurBounds(
+                left = 32f, top = 64f, right = 1048f, bottom = 1120f,
+                topCornerRadiusPx = 48f, bottomCornerRadiusPx = 48f
+            )
+        )
+        expectedTitles.keys.forEach { style ->
+            listOf(0f, 0.5f, 1f).forEach { paramVal ->
+                val effect = com.example.ui.overlay.createFrostedBackdropRenderEffect(
+                    blurRadiusPx = 24f,
+                    isDark = true,
+                    blurRadiusDp = 8f,
+                    transparency = 0.40f,
+                    enableGlassRefraction = true,
+                    glassRefractionSensitivity = 0.70f,
+                    refractionRegions = regions,
+                    viewportWidthPx = 1080f,
+                    viewportHeightPx = 2400f,
+                    density = 3f,
+                    refractionStyle = style,
+                    patternScale = 0.50f,
+                    dispersion = 0.60f,
+                    styleParam = paramVal,
+                    diamondCrossed = (style == RefractionStyle.DIAMOND && paramVal > 0.4f)
+                )
+                assertNotNull("Expected RenderEffect for ${style.label} param=$paramVal", effect)
+            }
+        }
+
+        // Compose UI verifies per-style sliders appear for target styles & toggle works for Diamond
+        PanelPreferences.setRefractionStyle(context, RefractionStyle.HEX)
+        PanelPreferences.setDiamondCrossedCut(context, false)
+        composeTestRule.setContent {
+            QuickPanelTheme(darkTheme = true) {
+                androidx.compose.foundation.layout.Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
+                    com.example.ui.customizer.QsDesignSection()
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // HEX has no extra custom slider or Diamond toggle
+        composeTestRule.onNodeWithTag("glass_refraction_custom_param_slider").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("glass_refraction_diamond_crossed_toggle").assertDoesNotExist()
+
+        // Check each of the 9 styles shows its exact custom slider title
+        expectedTitles.forEach { (style, title) ->
+            composeTestRule.onNodeWithTag("refraction_style_${style.id}")
+                .performScrollTo()
+                .performClick()
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNodeWithText(title)
+                .performScrollTo()
+                .assertIsDisplayed()
+            composeTestRule.onNodeWithTag("glass_refraction_custom_param_slider")
+                .performScrollTo()
+                .assertIsDisplayed()
+
+            if (style == RefractionStyle.DIAMOND) {
+                composeTestRule.onNodeWithTag("glass_refraction_diamond_crossed_toggle")
+                    .performScrollTo()
+                    .assertIsDisplayed()
+                    .performClick()
+                composeTestRule.waitForIdle()
+                assertTrue(PanelPreferences.diamondCrossedCut.value)
+            } else {
+                composeTestRule.onNodeWithTag("glass_refraction_diamond_crossed_toggle").assertDoesNotExist()
+            }
+        }
+    }
+
+    @Test
+    fun `Glass backdrop nested control cards have 4dp spacing and expand or collapse cleanly`() {
+        PanelPreferences.setGlassBackdropMode(context, GlassBackdropMode.LIQUID)
+
+        composeTestRule.setContent {
+            QuickPanelTheme(darkTheme = true) {
+                androidx.compose.foundation.layout.Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
+                    com.example.ui.customizer.QsDesignSection()
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        // Scroll to the grouped stack once, then compare unclipped bounds without scrolling between reads
+        composeTestRule.onNodeWithTag("glass_controls_grouped_stack", useUnmergedTree = true).performScrollTo()
+        composeTestRule.waitForIdle()
+
+        val refractionBounds = composeTestRule.onNodeWithTag("glass_refraction_controls_card", useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+        val blurBounds = composeTestRule.onNodeWithTag("frosted_glass_blur_sensitivity_card", useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+        val transparencyBounds = composeTestRule.onNodeWithTag("frosted_glass_transparency_card", useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+
+        val gap1 = (blurBounds.top - refractionBounds.bottom).value
+        val gap2 = (transparencyBounds.top - blurBounds.bottom).value
+        assertEquals(4f, gap1, 1f)
+        assertEquals(4f, gap2, 1f)
+
+        // Collapse & expand Refraction Controls card
+        composeTestRule.onNodeWithTag("glass_refraction_sensitivity_slider")
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag("glass_refraction_controls_header")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("glass_refraction_sensitivity_slider").assertDoesNotExist()
+
+        composeTestRule.onNodeWithTag("glass_refraction_controls_header")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("glass_refraction_sensitivity_slider")
+            .performScrollTo()
+            .assertIsDisplayed()
+
+        // Collapse & expand Blur Sensitivity card
+        composeTestRule.onNodeWithTag("frosted_glass_blur_sensitivity_header")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("frosted_glass_blur_sensitivity_slider").assertDoesNotExist()
+
+        composeTestRule.onNodeWithTag("frosted_glass_blur_sensitivity_header")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("frosted_glass_blur_sensitivity_slider")
+            .performScrollTo()
+            .assertIsDisplayed()
+
+        // Collapse & expand Transparency card
+        composeTestRule.onNodeWithTag("frosted_glass_transparency_header")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("frosted_glass_transparency_slider").assertDoesNotExist()
+
+        composeTestRule.onNodeWithTag("frosted_glass_transparency_header")
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("frosted_glass_transparency_slider")
+            .performScrollTo()
+            .assertIsDisplayed()
+
+        // Switch to Frosted Glass mode -> verify 4dp spacing between Blur Sensitivity and Transparency
+        composeTestRule.onNodeWithTag("glass_mode_frosted")
             .performScrollTo()
             .performClick()
         composeTestRule.waitForIdle()
 
-        RefractionStyle.entries.forEach { style ->
-            composeTestRule.onNodeWithTag("refraction_style_slider_${style.id}")
-                .performScrollTo()
-                .assertIsDisplayed()
-        }
+        composeTestRule.onNodeWithTag("glass_controls_grouped_stack", useUnmergedTree = true).performScrollTo()
+        composeTestRule.waitForIdle()
+        val frostedBlurBounds = composeTestRule.onNodeWithTag("frosted_glass_blur_sensitivity_card", useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+        val frostedTransparencyBounds = composeTestRule.onNodeWithTag("frosted_glass_transparency_card", useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+        assertEquals(4f, (frostedTransparencyBounds.top - frostedBlurBounds.bottom).value, 1f)
     }
 }

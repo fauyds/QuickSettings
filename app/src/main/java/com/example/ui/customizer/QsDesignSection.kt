@@ -5506,13 +5506,14 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     val refractionStyle by PanelPreferences.refractionStyle.collectAsState()
                     val refractionScale by PanelPreferences.glassRefractionScale.collectAsState()
                     val refractionDispersion by PanelPreferences.glassRefractionDispersion.collectAsState()
-                    val styleSensitivities by PanelPreferences.refractionStyleSensitivities.collectAsState()
-                    var showPerStyleSliders by rememberSaveable { mutableStateOf(false) }
+                    val refractionCustomParam by PanelPreferences.glassRefractionCustomParam.collectAsState()
+                    val diamondCrossedCut by PanelPreferences.diamondCrossedCut.collectAsState()
                     val transparencyPercent = kotlin.math.round(containerBlurTransparency * 100f).toInt().coerceIn(0, 95)
                     val blurPercent = kotlin.math.round((containerBlurRadiusDp / 60f) * 100f).toInt().coerceIn(0, 100)
                     val refractionPercent = kotlin.math.round(refractionSensitivity * 100f).toInt().coerceIn(10, 100)
                     val scalePercent = kotlin.math.round(refractionScale * 100f).toInt().coerceIn(10, 100)
                     val dispersionPercent = kotlin.math.round(refractionDispersion * 100f).toInt().coerceIn(0, 100)
+                    val customParamPercent = kotlin.math.round(refractionCustomParam * 100f).toInt().coerceIn(0, 100)
 
                     val modes = GlassBackdropMode.entries
                     Row(
@@ -5568,6 +5569,10 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         }
                     }
 
+                    var refractionControlsExpanded by rememberSaveable { mutableStateOf(true) }
+                    var blurSensitivityExpanded by rememberSaveable { mutableStateOf(true) }
+                    var transparencyExpanded by rememberSaveable { mutableStateOf(true) }
+
                     AnimatedVisibility(
                         visible = glassMode != GlassBackdropMode.OFF,
                         enter = fadeIn() + expandVertically(),
@@ -5582,396 +5587,225 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 enter = fadeIn() + expandVertically(),
                                 exit = fadeOut() + shrinkVertically()
                             ) {
+                                // Refraction Style Selector Grid (Liquid + 13 patterned optical styles)
                                 Column(
                                     modifier = Modifier.fillMaxWidth(),
-                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    // Refraction Style Selector Grid (Liquid + 13 patterned optical styles)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Refraction Style",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = refractionStyle.label,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.testTag("selected_refraction_style_label")
+                                        )
+                                    }
+
+                                    val styleRows = RefractionStyle.entries.chunked(4)
                                     Column(
                                         modifier = Modifier.fillMaxWidth(),
-                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                text = "Refraction Style",
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Text(
-                                                text = refractionStyle.label,
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.testTag("selected_refraction_style_label")
-                                            )
-                                        }
-
-                                        val styleRows = RefractionStyle.entries.chunked(4)
-                                        Column(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            styleRows.forEachIndexed { rowIndex, rowStyles ->
-                                                val isFirstRow = rowIndex == 0
-                                                val isLastRow = rowIndex == styleRows.lastIndex
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    rowStyles.forEachIndexed { colIndex, style ->
-                                                        val isSelected = refractionStyle == style
-                                                        val isFirstCol = colIndex == 0
-                                                        val isLastCol = colIndex == rowStyles.lastIndex
-                                                        val chipShape = if (isSelected) {
-                                                            CircleShape
+                                        styleRows.forEachIndexed { rowIndex, rowStyles ->
+                                            val isFirstRow = rowIndex == 0
+                                            val isLastRow = rowIndex == styleRows.lastIndex
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                rowStyles.forEachIndexed { colIndex, style ->
+                                                    val isSelected = refractionStyle == style
+                                                    val isFirstCol = colIndex == 0
+                                                    val isLastCol = colIndex == rowStyles.lastIndex
+                                                    val chipShape = if (isSelected) {
+                                                        CircleShape
+                                                    } else {
+                                                        RoundedCornerShape(
+                                                            topStart = if (isFirstRow && isFirstCol) 16.dp else 4.dp,
+                                                            topEnd = if (isFirstRow && isLastCol) 16.dp else 4.dp,
+                                                            bottomStart = if (isLastRow && isFirstCol) 16.dp else 4.dp,
+                                                            bottomEnd = if (isLastRow && isLastCol) 16.dp else 4.dp
+                                                        )
+                                                    }
+                                                    Surface(
+                                                        onClick = { PanelPreferences.setRefractionStyle(context, style) },
+                                                        shape = chipShape,
+                                                        color = if (isSelected) {
+                                                            ExpressiveTheme.colors.selectorSelected
                                                         } else {
-                                                            RoundedCornerShape(
-                                                                topStart = if (isFirstRow && isFirstCol) 16.dp else 4.dp,
-                                                                topEnd = if (isFirstRow && isLastCol) 16.dp else 4.dp,
-                                                                bottomStart = if (isLastRow && isFirstCol) 16.dp else 4.dp,
-                                                                bottomEnd = if (isLastRow && isLastCol) 16.dp else 4.dp
-                                                            )
-                                                        }
-                                                        Surface(
-                                                            onClick = { PanelPreferences.setRefractionStyle(context, style) },
-                                                            shape = chipShape,
-                                                            color = if (isSelected) {
-                                                                ExpressiveTheme.colors.selectorSelected
-                                                            } else {
-                                                                ExpressiveTheme.colors.nestedElementSurface
-                                                            },
+                                                            ExpressiveTheme.colors.nestedElementSurface
+                                                        },
+                                                        modifier = Modifier
+                                                            .weight(1f)
+                                                            .heightIn(min = 48.dp)
+                                                            .testTag("refraction_style_${style.id}")
+                                                    ) {
+                                                        Box(
                                                             modifier = Modifier
-                                                                .weight(1f)
-                                                                .heightIn(min = 48.dp)
-                                                                .testTag("refraction_style_${style.id}")
+                                                                .fillMaxWidth()
+                                                                .padding(horizontal = 6.dp, vertical = 12.dp),
+                                                            contentAlignment = Alignment.Center
                                                         ) {
-                                                            Box(
-                                                                modifier = Modifier
-                                                                    .fillMaxWidth()
-                                                                    .padding(horizontal = 6.dp, vertical = 12.dp),
-                                                                contentAlignment = Alignment.Center
-                                                            ) {
-                                                                Text(
-                                                                    text = style.label,
-                                                                    fontSize = 11.5.sp,
-                                                                    maxLines = 1,
-                                                                    overflow = TextOverflow.Ellipsis,
-                                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                                    color = if (isSelected) {
-                                                                        MaterialTheme.colorScheme.onPrimary
-                                                                    } else {
-                                                                        MaterialTheme.colorScheme.onSurface
-                                                                    },
-                                                                    style = TextStyle(
-                                                                        platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                                                        lineHeightStyle = LineHeightStyle(
-                                                                            alignment = LineHeightStyle.Alignment.Center,
-                                                                            trim = LineHeightStyle.Trim.Both
-                                                                        )
+                                                            Text(
+                                                                text = style.label,
+                                                                fontSize = 11.5.sp,
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis,
+                                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                                color = if (isSelected) {
+                                                                    MaterialTheme.colorScheme.onPrimary
+                                                                } else {
+                                                                    MaterialTheme.colorScheme.onSurface
+                                                                },
+                                                                style = TextStyle(
+                                                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                                                    lineHeightStyle = LineHeightStyle(
+                                                                        alignment = LineHeightStyle.Alignment.Center,
+                                                                        trim = LineHeightStyle.Trim.Both
                                                                     )
                                                                 )
-                                                            }
+                                                            )
                                                         }
                                                     }
                                                 }
                                             }
                                         }
                                     }
+                                }
+                            }
 
-                                    // Active Style Sliders (Strength, Scale, Chromatic Dispersion)
+                            val hasLiquidControls = glassMode == GlassBackdropMode.LIQUID
+                            val refractionCardShape = ExpressiveCardShapes.TopCard
+                            val blurCardShape = if (hasLiquidControls) {
+                                ExpressiveCardShapes.CenterCard
+                            } else {
+                                ExpressiveCardShapes.TopCard
+                            }
+                            val transparencyCardShape = ExpressiveCardShapes.BottomCard
+
+                            // Grouped expandable/collapsible slider cards (4dp spacing, 16dp outer / 4dp inner corners)
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("glass_controls_grouped_stack"),
+                                verticalArrangement = Arrangement.spacedBy(ExpressiveCardShapes.CardSpacing)
+                            ) {
+                                AnimatedVisibility(
+                                    visible = hasLiquidControls,
+                                    enter = fadeIn() + expandVertically(),
+                                    exit = fadeOut() + shrinkVertically()
+                                ) {
+                                    // Active Style Sliders (Strength, Scale, Chromatic Dispersion, & Style-Specific Controls)
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clip(RoundedCornerShape(16.dp))
+                                            .clip(refractionCardShape)
                                             .background(ExpressiveTheme.colors.nestedElementSurface)
-                                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Column(modifier = Modifier.weight(1f)) {
-                                                    Text(
-                                                        text = "Refraction Sensitivity (${refractionStyle.label})",
-                                                        fontSize = 13.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = MaterialTheme.colorScheme.onSurface
-                                                    )
-                                                    Text(
-                                                        text = "Optical lens warp & edge distortion strength (10% – 100%)",
-                                                        fontSize = 11.sp,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    )
-                                                }
-                                                Text(
-                                                    text = "$refractionPercent%",
-                                                    fontSize = 13.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.testTag("glass_refraction_sensitivity_value")
-                                                )
-                                            }
-                                            Slider(
-                                                value = refractionPercent.toFloat(),
-                                                onValueChange = {
-                                                    PanelPreferences.setGlassRefractionSensitivity(
-                                                        context,
-                                                        kotlin.math.round(it).coerceIn(10f, 100f) / 100f
-                                                    )
-                                                },
-                                                valueRange = 10f..100f,
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .testTag("glass_refraction_sensitivity_slider"),
-                                                colors = SliderDefaults.colors(
-                                                    thumbColor = MaterialTheme.colorScheme.primary,
-                                                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
-                                                )
-                                            )
-                                        }
-
-                                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
-                                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Column(modifier = Modifier.weight(1f)) {
-                                                    Text(
-                                                        text = "Pattern Scale (${refractionStyle.label})",
-                                                        fontSize = 13.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = MaterialTheme.colorScheme.onSurface
-                                                    )
-                                                    Text(
-                                                        text = if (refractionStyle == RefractionStyle.LIQUID) {
-                                                            "Peripheral bezel & dome curvature size (10% – 100%)"
-                                                        } else {
-                                                            "Cell, rib, or wave size for ${refractionStyle.label} refraction (10% – 100%)"
-                                                        },
-                                                        fontSize = 11.sp,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    )
-                                                }
-                                                Text(
-                                                    text = "$scalePercent%",
-                                                    fontSize = 13.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.testTag("glass_refraction_scale_value")
-                                                )
-                                            }
-                                            Slider(
-                                                value = scalePercent.toFloat(),
-                                                onValueChange = {
-                                                    PanelPreferences.setRefractionStyleScale(
-                                                        context,
-                                                        refractionStyle,
-                                                        kotlin.math.round(it).coerceIn(10f, 100f) / 100f
-                                                    )
-                                                },
-                                                valueRange = 10f..100f,
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .testTag("glass_refraction_scale_slider"),
-                                                colors = SliderDefaults.colors(
-                                                    thumbColor = MaterialTheme.colorScheme.primary,
-                                                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
-                                                )
-                                            )
-                                        }
-
-                                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
-                                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Column(modifier = Modifier.weight(1f)) {
-                                                    Text(
-                                                        text = "Chromatic Split (${refractionStyle.label})",
-                                                        fontSize = 13.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = MaterialTheme.colorScheme.onSurface
-                                                    )
-                                                    Text(
-                                                        text = "RGB prism color separation intensity (0% – 100%)",
-                                                        fontSize = 11.sp,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    )
-                                                }
-                                                Text(
-                                                    text = "$dispersionPercent%",
-                                                    fontSize = 13.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.testTag("glass_refraction_dispersion_value")
-                                                )
-                                            }
-                                            Slider(
-                                                value = dispersionPercent.toFloat(),
-                                                onValueChange = {
-                                                    PanelPreferences.setRefractionStyleDispersion(
-                                                        context,
-                                                        refractionStyle,
-                                                        kotlin.math.round(it).coerceIn(0f, 100f) / 100f
-                                                    )
-                                                },
-                                                valueRange = 0f..100f,
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .testTag("glass_refraction_dispersion_slider"),
-                                                colors = SliderDefaults.colors(
-                                                    thumbColor = MaterialTheme.colorScheme.primary,
-                                                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
-                                                )
-                                            )
-                                        }
-                                    }
-
-                                    // Expandable Sliders for Each Refraction Type
-                                    Surface(
-                                        onClick = { showPerStyleSliders = !showPerStyleSliders },
-                                        shape = RoundedCornerShape(16.dp),
-                                        color = ExpressiveTheme.colors.nestedElementSurface,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .heightIn(min = 48.dp)
-                                            .testTag("refraction_per_style_sliders_toggle")
+                                            .testTag("glass_refraction_controls_card")
                                     ) {
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                                                .heightIn(min = 48.dp)
+                                                .clickable { refractionControlsExpanded = !refractionControlsExpanded }
+                                                .padding(horizontal = 14.dp, vertical = 10.dp)
+                                                .testTag("glass_refraction_controls_header"),
                                             horizontalArrangement = Arrangement.SpaceBetween,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Column(modifier = Modifier.weight(1f)) {
+                                            Column(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .padding(end = 8.dp),
+                                                verticalArrangement = Arrangement.spacedBy(1.dp)
+                                            ) {
                                                 Text(
-                                                    text = "Sliders for Each Refraction Type",
+                                                    text = "Refraction Controls (${refractionStyle.label})",
                                                     fontSize = 13.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     color = MaterialTheme.colorScheme.onSurface
                                                 )
                                                 Text(
-                                                    text = "Tune independent intensity for all ${RefractionStyle.entries.size} refraction styles",
+                                                    text = "Strength $refractionPercent% • Scale $scalePercent% • Prism $dispersionPercent%",
                                                     fontSize = 11.sp,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
                                             }
-                                            androidx.compose.material3.Icon(
-                                                imageVector = if (showPerStyleSliders) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                                contentDescription = if (showPerStyleSliders) "Collapse per-style sliders" else "Expand per-style sliders",
-                                                tint = MaterialTheme.colorScheme.primary
+                                            Icon(
+                                                imageVector = if (refractionControlsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                                contentDescription = if (refractionControlsExpanded) {
+                                                    "Collapse refraction controls"
+                                                } else {
+                                                    "Expand refraction controls"
+                                                },
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
-                                    }
 
-                                    AnimatedVisibility(
-                                        visible = showPerStyleSliders,
-                                        enter = fadeIn() + expandVertically(),
-                                        exit = fadeOut() + shrinkVertically()
-                                    ) {
-                                        Column(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        AnimatedVisibility(
+                                            visible = refractionControlsExpanded,
+                                            enter = fadeIn() + expandVertically(),
+                                            exit = fadeOut() + shrinkVertically()
                                         ) {
-                                            val allStyles = RefractionStyle.entries
-                                            allStyles.forEachIndexed { idx, style ->
-                                                val itemSens = styleSensitivities[style] ?: style.defaultSensitivity
-                                                val itemPct = kotlin.math.round(itemSens * 100f).toInt().coerceIn(10, 100)
-                                                val isActiveStyle = refractionStyle == style
-                                                val itemShape = when {
-                                                    allStyles.size <= 1 -> ExpressiveCardShapes.SingleCard
-                                                    idx == 0 -> ExpressiveCardShapes.TopCard
-                                                    idx == allStyles.lastIndex -> ExpressiveCardShapes.BottomCard
-                                                    else -> ExpressiveCardShapes.CenterCard
-                                                }
-                                                Column(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .clip(itemShape)
-                                                        .background(ExpressiveTheme.colors.nestedElementSurface)
-                                                        .padding(horizontal = 14.dp, vertical = 10.dp)
-                                                        .testTag("refraction_style_slider_row_${style.id}"),
-                                                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                                                ) {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(start = 14.dp, end = 14.dp, bottom = 12.dp),
+                                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                                     Row(
                                                         modifier = Modifier.fillMaxWidth(),
                                                         horizontalArrangement = Arrangement.SpaceBetween,
                                                         verticalAlignment = Alignment.CenterVertically
                                                     ) {
-                                                        Row(
-                                                            verticalAlignment = Alignment.CenterVertically,
-                                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                                            modifier = Modifier
-                                                                .clip(CircleShape)
-                                                                .clickable { PanelPreferences.setRefractionStyle(context, style) }
-                                                                .padding(vertical = 2.dp, horizontal = 2.dp)
-                                                        ) {
+                                                        Column(modifier = Modifier.weight(1f)) {
                                                             Text(
-                                                                text = style.label,
-                                                                fontSize = 12.5.sp,
-                                                                fontWeight = if (isActiveStyle) FontWeight.Bold else FontWeight.SemiBold,
-                                                                color = if (isActiveStyle) {
-                                                                    MaterialTheme.colorScheme.primary
-                                                                } else {
-                                                                    MaterialTheme.colorScheme.onSurface
-                                                                }
+                                                                text = "Refraction Sensitivity (${refractionStyle.label})",
+                                                                fontSize = 13.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = MaterialTheme.colorScheme.onSurface
                                                             )
-                                                            if (isActiveStyle) {
-                                                                Box(
-                                                                    modifier = Modifier
-                                                                        .clip(CircleShape)
-                                                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
-                                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                                                ) {
-                                                                    Text(
-                                                                        text = "Active",
-                                                                        fontSize = 10.sp,
-                                                                        fontWeight = FontWeight.Bold,
-                                                                        color = MaterialTheme.colorScheme.primary
-                                                                    )
-                                                                }
-                                                            }
+                                                            Text(
+                                                                text = "Optical lens warp & edge distortion strength (10% – 100%)",
+                                                                fontSize = 11.sp,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                            )
                                                         }
                                                         Text(
-                                                            text = "$itemPct%",
-                                                            fontSize = 12.sp,
+                                                            text = "$refractionPercent%",
+                                                            fontSize = 13.sp,
                                                             fontWeight = FontWeight.Bold,
                                                             color = MaterialTheme.colorScheme.primary,
-                                                            modifier = Modifier.testTag("refraction_style_slider_value_${style.id}")
+                                                            modifier = Modifier.testTag("glass_refraction_sensitivity_value")
                                                         )
                                                     }
                                                     Slider(
-                                                        value = itemPct.toFloat(),
+                                                        value = refractionPercent.toFloat(),
                                                         onValueChange = {
-                                                            PanelPreferences.setRefractionStyleSensitivity(
+                                                            PanelPreferences.setGlassRefractionSensitivity(
                                                                 context,
-                                                                style,
                                                                 kotlin.math.round(it).coerceIn(10f, 100f) / 100f
                                                             )
                                                         },
                                                         valueRange = 10f..100f,
                                                         modifier = Modifier
                                                             .fillMaxWidth()
-                                                            .testTag("refraction_style_slider_${style.id}"),
+                                                            .testTag("glass_refraction_sensitivity_slider"),
                                                         colors = SliderDefaults.colors(
                                                             thumbColor = MaterialTheme.colorScheme.primary,
                                                             activeTrackColor = MaterialTheme.colorScheme.primary,
@@ -5979,118 +5813,391 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                                         )
                                                     )
                                                 }
+
+                                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Column(modifier = Modifier.weight(1f)) {
+                                                            Text(
+                                                                text = "Pattern Scale (${refractionStyle.label})",
+                                                                fontSize = 13.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = MaterialTheme.colorScheme.onSurface
+                                                            )
+                                                            Text(
+                                                                text = if (refractionStyle == RefractionStyle.LIQUID) {
+                                                                    "Peripheral bezel & dome curvature size (10% – 100%)"
+                                                                } else {
+                                                                    "Cell, rib, or wave size for ${refractionStyle.label} refraction (10% – 100%)"
+                                                                },
+                                                                fontSize = 11.sp,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                            )
+                                                        }
+                                                        Text(
+                                                            text = "$scalePercent%",
+                                                            fontSize = 13.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = MaterialTheme.colorScheme.primary,
+                                                            modifier = Modifier.testTag("glass_refraction_scale_value")
+                                                        )
+                                                    }
+                                                    Slider(
+                                                        value = scalePercent.toFloat(),
+                                                        onValueChange = {
+                                                            PanelPreferences.setRefractionStyleScale(
+                                                                context,
+                                                                refractionStyle,
+                                                                kotlin.math.round(it).coerceIn(10f, 100f) / 100f
+                                                            )
+                                                        },
+                                                        valueRange = 10f..100f,
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .testTag("glass_refraction_scale_slider"),
+                                                        colors = SliderDefaults.colors(
+                                                            thumbColor = MaterialTheme.colorScheme.primary,
+                                                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                                                            inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                                        )
+                                                    )
+                                                }
+
+                                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Column(modifier = Modifier.weight(1f)) {
+                                                            Text(
+                                                                text = "Chromatic Split (${refractionStyle.label})",
+                                                                fontSize = 13.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = MaterialTheme.colorScheme.onSurface
+                                                            )
+                                                            Text(
+                                                                text = "RGB prism color separation intensity (0% – 100%)",
+                                                                fontSize = 11.sp,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                            )
+                                                        }
+                                                        Text(
+                                                            text = "$dispersionPercent%",
+                                                            fontSize = 13.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = MaterialTheme.colorScheme.primary,
+                                                            modifier = Modifier.testTag("glass_refraction_dispersion_value")
+                                                        )
+                                                    }
+                                                    Slider(
+                                                        value = dispersionPercent.toFloat(),
+                                                        onValueChange = {
+                                                            PanelPreferences.setRefractionStyleDispersion(
+                                                                context,
+                                                                refractionStyle,
+                                                                kotlin.math.round(it).coerceIn(0f, 100f) / 100f
+                                                            )
+                                                        },
+                                                        valueRange = 0f..100f,
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .testTag("glass_refraction_dispersion_slider"),
+                                                        colors = SliderDefaults.colors(
+                                                            thumbColor = MaterialTheme.colorScheme.primary,
+                                                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                                                            inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                                        )
+                                                    )
+                                                }
+
+                                                val styleCustomTitle = refractionStyle.customSliderTitle
+                                                if (styleCustomTitle != null) {
+                                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                        Row(
+                                                            modifier = Modifier.fillMaxWidth(),
+                                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            Column(modifier = Modifier.weight(1f)) {
+                                                                Text(
+                                                                    text = styleCustomTitle,
+                                                                    fontSize = 13.sp,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    color = MaterialTheme.colorScheme.onSurface
+                                                                )
+                                                                Text(
+                                                                    text = refractionStyle.customSliderDescription.orEmpty(),
+                                                                    fontSize = 11.sp,
+                                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                                )
+                                                            }
+                                                            Text(
+                                                                text = "$customParamPercent%",
+                                                                fontSize = 13.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = MaterialTheme.colorScheme.primary,
+                                                                modifier = Modifier.testTag("glass_refraction_custom_param_value")
+                                                            )
+                                                        }
+                                                        Slider(
+                                                            value = customParamPercent.toFloat(),
+                                                            onValueChange = {
+                                                                PanelPreferences.setRefractionStyleCustomParam(
+                                                                    context,
+                                                                    refractionStyle,
+                                                                    kotlin.math.round(it).coerceIn(0f, 100f) / 100f
+                                                                )
+                                                            },
+                                                            valueRange = 0f..100f,
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .testTag("glass_refraction_custom_param_slider"),
+                                                            colors = SliderDefaults.colors(
+                                                                thumbColor = MaterialTheme.colorScheme.primary,
+                                                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                                                                inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                                            )
+                                                        )
+                                                    }
+                                                }
+
+                                                if (refractionStyle == RefractionStyle.DIAMOND) {
+                                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                                                    Row(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .heightIn(min = 48.dp)
+                                                            .clip(RoundedCornerShape(12.dp))
+                                                            .clickable {
+                                                                PanelPreferences.setDiamondCrossedCut(context, !diamondCrossedCut)
+                                                            }
+                                                            .padding(vertical = 4.dp),
+                                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Column(
+                                                            modifier = Modifier
+                                                                .weight(1f)
+                                                                .padding(end = 12.dp)
+                                                        ) {
+                                                            Text(
+                                                                text = "Crossed (+) Cut Inside",
+                                                                fontSize = 13.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = MaterialTheme.colorScheme.onSurface
+                                                            )
+                                                            Text(
+                                                                text = "Add internal \"+\" prism cut refraction inside each diamond",
+                                                                fontSize = 11.sp,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                            )
+                                                        }
+                                                        androidx.compose.material3.Switch(
+                                                            checked = diamondCrossedCut,
+                                                            onCheckedChange = {
+                                                                PanelPreferences.setDiamondCrossedCut(context, it)
+                                                            },
+                                                            modifier = Modifier.testTag("glass_refraction_diamond_crossed_toggle")
+                                                        )
+                                                    }
+                                                }
                                             }
                                         }
                                     }
                                 }
-                            }
 
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(ExpressiveTheme.colors.nestedElementSurface)
-                                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = "Blur Sensitivity",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "Backdrop blur intensity (0% – 100%)",
-                                            fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Text(
-                                        text = "$blurPercent%",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.testTag("frosted_glass_blur_sensitivity_value")
-                                    )
-                                }
-                                Slider(
-                                    value = blurPercent.toFloat(),
-                                    onValueChange = {
-                                        PanelPreferences.setContainerBlurRadiusDp(
-                                            context,
-                                            (kotlin.math.round(it).coerceIn(0f, 100f) / 100f) * 60f
-                                        )
-                                    },
-                                    valueRange = 0f..100f,
+                                // Blur Sensitivity Card
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .testTag("frosted_glass_blur_sensitivity_slider"),
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = MaterialTheme.colorScheme.primary,
-                                        activeTrackColor = MaterialTheme.colorScheme.primary,
-                                        inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
-                                    )
-                                )
-                            }
-
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(ExpressiveTheme.colors.nestedElementSurface)
-                                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .clip(blurCardShape)
+                                        .background(ExpressiveTheme.colors.nestedElementSurface)
+                                        .testTag("frosted_glass_blur_sensitivity_card")
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = "Transparency",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "Container glass see-through amount (0% – 95%)",
-                                            fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .heightIn(min = 48.dp)
+                                            .clickable { blurSensitivityExpanded = !blurSensitivityExpanded }
+                                            .padding(horizontal = 14.dp, vertical = 10.dp)
+                                            .testTag("frosted_glass_blur_sensitivity_header"),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .padding(end = 8.dp),
+                                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                                        ) {
+                                            Text(
+                                                text = "Blur Sensitivity",
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(
+                                                text = "Backdrop blur intensity (0% – 100%)",
+                                                fontSize = 11.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "$blurPercent%",
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.testTag("frosted_glass_blur_sensitivity_value")
+                                            )
+                                            Icon(
+                                                imageVector = if (blurSensitivityExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                                contentDescription = if (blurSensitivityExpanded) {
+                                                    "Collapse blur sensitivity"
+                                                } else {
+                                                    "Expand blur sensitivity"
+                                                },
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
                                     }
-                                    Text(
-                                        text = "$transparencyPercent%",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.testTag("frosted_glass_transparency_value")
-                                    )
+
+                                    AnimatedVisibility(
+                                        visible = blurSensitivityExpanded,
+                                        enter = fadeIn() + expandVertically(),
+                                        exit = fadeOut() + shrinkVertically()
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(start = 14.dp, end = 14.dp, bottom = 12.dp)
+                                        ) {
+                                            Slider(
+                                                value = blurPercent.toFloat(),
+                                                onValueChange = {
+                                                    PanelPreferences.setContainerBlurRadiusDp(
+                                                        context,
+                                                        (kotlin.math.round(it).coerceIn(0f, 100f) / 100f) * 60f
+                                                    )
+                                                },
+                                                valueRange = 0f..100f,
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .testTag("frosted_glass_blur_sensitivity_slider"),
+                                                colors = SliderDefaults.colors(
+                                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                                )
+                                            )
+                                        }
+                                    }
                                 }
-                                Slider(
-                                    value = transparencyPercent.toFloat(),
-                                    onValueChange = {
-                                        PanelPreferences.setContainerBlurTransparency(
-                                            context,
-                                            kotlin.math.round(it).coerceIn(0f, 95f) / 100f
-                                        )
-                                    },
-                                    valueRange = 0f..95f,
+
+                                // Transparency Card
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .testTag("frosted_glass_transparency_slider"),
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = MaterialTheme.colorScheme.primary,
-                                        activeTrackColor = MaterialTheme.colorScheme.primary,
-                                        inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
-                                    )
-                                )
+                                        .clip(transparencyCardShape)
+                                        .background(ExpressiveTheme.colors.nestedElementSurface)
+                                        .testTag("frosted_glass_transparency_card")
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .heightIn(min = 48.dp)
+                                            .clickable { transparencyExpanded = !transparencyExpanded }
+                                            .padding(horizontal = 14.dp, vertical = 10.dp)
+                                            .testTag("frosted_glass_transparency_header"),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .padding(end = 8.dp),
+                                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                                        ) {
+                                            Text(
+                                                text = "Transparency",
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(
+                                                text = "Container glass see-through amount (0% – 95%)",
+                                                fontSize = 11.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "$transparencyPercent%",
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.testTag("frosted_glass_transparency_value")
+                                            )
+                                            Icon(
+                                                imageVector = if (transparencyExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                                contentDescription = if (transparencyExpanded) {
+                                                    "Collapse transparency"
+                                                } else {
+                                                    "Expand transparency"
+                                                },
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+
+                                    AnimatedVisibility(
+                                        visible = transparencyExpanded,
+                                        enter = fadeIn() + expandVertically(),
+                                        exit = fadeOut() + shrinkVertically()
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(start = 14.dp, end = 14.dp, bottom = 12.dp)
+                                        ) {
+                                            Slider(
+                                                value = transparencyPercent.toFloat(),
+                                                onValueChange = {
+                                                    PanelPreferences.setContainerBlurTransparency(
+                                                        context,
+                                                        kotlin.math.round(it).coerceIn(0f, 95f) / 100f
+                                                    )
+                                                },
+                                                valueRange = 0f..95f,
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .testTag("frosted_glass_transparency_slider"),
+                                                colors = SliderDefaults.colors(
+                                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                                    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
                             }
 
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))

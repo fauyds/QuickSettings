@@ -664,6 +664,8 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
     uniform int refractionStyle;
     uniform float patternScale;
     uniform float dispersion;
+    uniform float styleParam;
+    uniform float diamondCrossed;
     uniform float4 uRects[18];
     uniform float2 uRadii[18];
     uniform int regionCount;
@@ -755,21 +757,27 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
         int style,
         float2 local,
         float cellPx,
-        float strengthPx
+        float strengthPx,
+        float pParam,
+        float pDiamondCross
     ) {
         float safeCell = max(cellPx, 6.0);
+        float param = clamp(pParam, 0.0, 1.0);
         float2 disp = float2(0.0);
         float edgeGlow = 0.0;
         float chromaFactor = 0.55;
 
         if (style == 1) {
-            // GRID: Orthogonal convex square pillow cells
+            // GRID: Orthogonal convex pillow cells with tunable Tile Curvature (param)
             float2 u = wrapMod2(local, float2(safeCell)) / safeCell - 0.5;
             float edgeDist = 0.5 - max(abs(u.x), abs(u.y));
             float bevel = smootherstep(0.0, 0.16, edgeDist);
-            disp = -u * (1.85 * bevel * strengthPx);
-            edgeGlow = (1.0 - smootherstep(0.0, 0.09, edgeDist)) * 0.65;
-            chromaFactor = clamp(length(u) * 1.65, 0.25, 1.0);
+            float r2 = clamp(dot(u, u) * 4.0, 0.0, 1.0);
+            float flatBevelMag = (1.0 - smootherstep(0.06, 0.24, edgeDist)) * 1.35 + 0.35;
+            float domeCurveMag = 0.75 + 1.35 * (1.0 - r2 * 0.45);
+            float2 curvedU = u * (1.0 + 0.55 * r2 * param);
+            disp = -curvedU * (mix(flatBevelMag, domeCurveMag, param) * bevel * (1.15 + 0.95 * param) * strengthPx);
+            chromaFactor = clamp(length(u) * mix(1.35, 2.05, param), 0.25, 1.0);
         } else if (style == 2) {
             // RIBBED: Vertical fluted cylindrical glass ribs
             float ribPitch = max(safeCell * 0.55, 5.0);
@@ -777,7 +785,6 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
             float sWave = sin(phase);
             float cWave = cos(phase);
             disp = float2(-sWave * 1.15 * strengthPx, cWave * 0.08 * strengthPx);
-            edgeGlow = pow(max(cWave, 0.0), 3.0) * 0.55;
             chromaFactor = clamp(abs(sWave) * 0.95 + 0.15, 0.15, 1.0);
         } else if (style == 3) {
             // HEX: True dual-lattice honeycomb hexagon cells
@@ -792,10 +799,9 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
             float edgeDist = 0.5 - hexDist;
             float bevel = smootherstep(0.0, 0.14, edgeDist);
             disp = -gv * (2.10 * bevel * strengthPx);
-            edgeGlow = (1.0 - smootherstep(0.0, 0.08, edgeDist)) * 0.70;
             chromaFactor = clamp(hexDist * 2.1, 0.25, 1.0);
         } else if (style == 4) {
-            // HAMMER: Smooth hammered dimpled glass
+            // HAMMER: Smooth hammered dimpled glass with tunable Hammer Depth (param)
             float hScale = max(safeCell * 0.68, 7.0);
             float2 p = local / hScale;
             float2 nCell = floor(p);
@@ -816,12 +822,12 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
                 }
             }
             float dist = sqrt(max(minD, 0.0001));
-            float dimple = 1.0 - smootherstep(0.0, 0.72, dist);
-            disp = -bestVec * (1.85 * dimple * strengthPx);
-            edgeGlow = pow(clamp(dist * 1.25, 0.0, 1.0), 2.5) * 0.45;
-            chromaFactor = clamp(dist * 1.5, 0.2, 1.0);
+            float dimpleBase = clamp(1.0 - smootherstep(0.0, mix(0.62, 0.85, param), dist), 0.0, 1.0);
+            float dimple = pow(dimpleBase, mix(1.45, 0.65, param));
+            disp = -bestVec * (mix(0.45, 2.85, param) * dimple * strengthPx);
+            chromaFactor = clamp(dist * mix(1.0, 1.85, param), 0.2, 1.0);
         } else if (style == 5) {
-            // VORONOI: Crisp faceted crystal Voronoi polygons
+            // VORONOI: Crisp faceted crystal polygons with tunable Shard Tilt (param)
             float vScale = max(safeCell * 0.85, 8.0);
             float2 p = local / vScale;
             float2 nCell = floor(p);
@@ -847,15 +853,14 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
                     }
                 }
             }
-            float2 facetTilt = (hash22(bestId + 19.7) - 0.5) * 1.75;
+            float2 facetTilt = (hash22(bestId + 19.7) - 0.5) * mix(0.0, 2.85, param);
             float seam = d2 - d1;
             float interior = smootherstep(0.0, 0.07, seam);
-            disp = (facetTilt - bestVec * 0.45) * (0.95 * interior * strengthPx);
-            edgeGlow = (1.0 - smootherstep(0.0, 0.09, seam)) * 0.80;
-            chromaFactor = clamp(length(facetTilt) * 0.9 + 0.25, 0.3, 1.0);
+            disp = (facetTilt - bestVec * mix(0.85, 0.30, param)) * (0.95 * interior * strengthPx);
+            chromaFactor = clamp(length(facetTilt) * 0.75 + 0.25, 0.25, 1.0);
         } else if (style == 6) {
-            // CHEVRON: Zigzag V-shaped herringbone glass ribs
-            float zigW = max(safeCell * 1.25, 10.0);
+            // CHEVRON: Zigzag V-shaped herringbone ribs with tunable Chevron Width (param)
+            float zigW = max(safeCell * mix(0.55, 2.35, param), 6.0);
             float periodY = max(safeCell * 0.65, 6.0);
             float tx = local.x / zigW;
             float fZig = tx - floor(tx) - 0.5;
@@ -863,10 +868,8 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
             float slopeSign = fZig * inversesqrt(fZig * fZig + 0.025);
             float phase = (local.y / periodY + zigH * 0.85) * 6.2831853;
             float wSin = sin(phase);
-            float wCos = cos(phase);
-            float2 chevNormal = normalize(float2(slopeSign * 0.72, 1.0));
+            float2 chevNormal = normalize(float2(slopeSign * mix(0.95, 0.52, param), 1.0));
             disp = -chevNormal * (wSin * 1.05 * strengthPx);
-            edgeGlow = pow(max(wCos, 0.0), 3.0) * 0.55;
             chromaFactor = clamp(abs(wSin) * 0.9 + 0.2, 0.2, 1.0);
         } else if (style == 7) {
             // WAVY: Flowing multi-directional 2D liquid wave ripples
@@ -876,27 +879,41 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
             float py = wp.y * 1.55 - sin(wp.x * 1.15) * 1.35;
             float2 grad = float2(cos(px) * 1.15, -sin(py) * 1.15);
             disp = grad * (0.95 * strengthPx);
-            edgeGlow = pow(clamp(length(grad) * 0.72, 0.0, 1.0), 2.0) * 0.50;
             chromaFactor = clamp(length(grad) * 0.85, 0.25, 1.0);
         } else if (style == 8) {
-            // DIAMOND: 45-degree rotated square lens grid
+            // DIAMOND: 45-degree rotated prism lens grid with Facet Depth (param) and optional Crossed ("+") cut
             float2 rot = float2(local.x + local.y, local.y - local.x) * 0.70710678;
             float dCell = max(safeCell * 0.92, 7.0);
             float2 u = wrapMod2(rot, float2(dCell)) / dCell - 0.5;
             float edgeDist = 0.5 - max(abs(u.x), abs(u.y));
-            float bevel = smootherstep(0.0, 0.14, edgeDist);
-            float2 dLocal = -u * (1.90 * bevel * strengthPx);
+            float bevel = smootherstep(0.0, mix(0.06, 0.34, param), edgeDist);
+            float2 pyrNorm = abs(u.x) >= abs(u.y)
+                ? float2(u.x >= 0.0 ? 0.55 : -0.55, 0.0)
+                : float2(0.0, u.y >= 0.0 ? 0.55 : -0.55);
+            float2 bevelVec = mix(u, pyrNorm, 0.45 * param);
+            float2 dLocal = -bevelVec * (mix(0.75, 2.75, param) * bevel * strengthPx);
             disp = float2(dLocal.x - dLocal.y, dLocal.x + dLocal.y) * 0.70710678;
-            edgeGlow = (1.0 - smootherstep(0.0, 0.08, edgeDist)) * 0.70;
-            chromaFactor = clamp(length(u) * 1.65, 0.25, 1.0);
+            chromaFactor = clamp(length(u) * mix(1.35, 1.95, param), 0.25, 1.0);
+            if (pDiamondCross > 0.5) {
+                float crossX = u.x - u.y;
+                float crossY = u.x + u.y;
+                float crossSX = crossX * inversesqrt(crossX * crossX + 0.008);
+                float crossSY = crossY * inversesqrt(crossY * crossY + 0.008);
+                float armX = 1.0 - smootherstep(0.0, 0.24, abs(crossX));
+                float armY = 1.0 - smootherstep(0.0, 0.24, abs(crossY));
+                disp += float2(-crossSX * armX, -crossSY * armY) * (0.95 * bevel * (0.65 + 0.65 * param) * strengthPx);
+                chromaFactor = max(chromaFactor, max(armX, armY) * 0.90);
+            }
         } else if (style == 9) {
-            // SCALES: Overlapping arched fish-scale tiles
+            // SCALES: Overlapping arched fish-scale tiles with tunable Scallop Curve (param)
             float sScale = max(safeCell * 0.82, 8.0);
             float2 p = local / sScale;
             float2 bestUv = float2(0.0);
             float bestRow = -1000000.0;
             float minEdge = 1.0;
             float baseRow = floor(p.y);
+            float ySquash = mix(1.32, 0.76, param);
+            float archRadius = mix(0.52, 0.72, param);
             for (int ry = 0; ry <= 1; ry++) {
                 float rowIdx = baseRow + float(ry);
                 float stagger = abs(rowIdx - 2.0 * floor(rowIdx * 0.5)) > 0.25 ? 0.5 : 0.0;
@@ -904,40 +921,40 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
                 for (int cx = 0; cx <= 1; cx++) {
                     float2 center = float2(colBase + float(cx) + stagger, rowIdx);
                     float2 diff = p - center;
-                    float r = length(diff);
-                    if (r < 0.62 && rowIdx > bestRow) {
+                    float2 scaledDiff = float2(diff.x, diff.y * ySquash);
+                    float r = length(scaledDiff);
+                    if (r < archRadius && rowIdx > bestRow) {
                         bestRow = rowIdx;
-                        bestUv = diff;
-                        minEdge = 0.62 - r;
+                        bestUv = scaledDiff;
+                        minEdge = archRadius - r;
                     }
                 }
             }
-            float archSmooth = smootherstep(0.0, 0.14, minEdge);
-            disp = -bestUv * (1.85 * archSmooth * strengthPx);
-            edgeGlow = (1.0 - smootherstep(0.0, 0.08, minEdge)) * 0.75;
-            chromaFactor = clamp(length(bestUv) * 1.7, 0.25, 1.0);
+            float archSmooth = smootherstep(0.0, mix(0.07, 0.22, param), minEdge);
+            disp = -bestUv * (mix(1.05, 2.45, param) * archSmooth * strengthPx);
+            chromaFactor = clamp(length(bestUv) * mix(1.4, 2.0, param), 0.25, 1.0);
         } else if (style == 10) {
-            // LOUVRE: Parallel angled diagonal venetian glass slats
+            // LOUVRE: Parallel angled diagonal slats with tunable Prism Ramp (param)
             float slatW = max(safeCell * 0.62, 6.0);
             float2 dir = float2(0.8660254, 0.5);
             float u = dot(local, dir) / slatW;
             float f = u - floor(u);
-            float ramp = (f - 0.5) * 2.0;
+            float fCurved = mix(f, f * f, param * 0.75);
+            float ramp = (fCurved - 0.5) * mix(1.2, 3.0, param);
             float edgeSmooth = smootherstep(0.0, 0.10, f) * (1.0 - smootherstep(0.90, 1.0, f));
-            disp = -dir * (ramp * 1.10 * edgeSmooth * strengthPx);
-            edgeGlow = pow(clamp(1.0 - abs(f - 0.94) * 10.0, 0.0, 1.0), 2.0) * 0.75;
-            chromaFactor = clamp(abs(ramp) * 0.85 + 0.2, 0.2, 1.0);
+            disp = -dir * (ramp * edgeSmooth * strengthPx);
+            chromaFactor = clamp(abs(ramp) * (0.45 + 0.35 * param) + 0.2, 0.2, 1.0);
         } else if (style == 11) {
-            // PLASMA: Multi-frequency 3-axis organic interference waves
+            // PLASMA: Multi-frequency 3-axis waves with tunable Molten Warp (param)
             float plScale = max(safeCell * 0.48, 6.0);
             float2 pp = local / plScale;
-            float w1 = sin(pp.x * 1.45 + sin(pp.y * 0.95));
-            float w2 = sin((pp.x * 0.5 + pp.y * 0.866) * 1.65 + cos(pp.x * 0.8));
-            float w3 = cos((pp.x * 0.5 - pp.y * 0.866) * 1.55 + w1 * 0.6);
+            float warpAmt = mix(0.25, 1.65, param);
+            float w1 = sin(pp.x * 1.45 + sin(pp.y * 0.95) * warpAmt);
+            float w2 = sin((pp.x * 0.5 + pp.y * 0.866) * 1.65 + cos(pp.x * 0.8 + w1 * 0.45 * param) * warpAmt);
+            float w3 = cos((pp.x * 0.5 - pp.y * 0.866) * 1.55 + w1 * (0.35 + 0.85 * param));
             float2 grad = float2(w1 - w3 * 0.65, w2 + w3 * 0.75);
-            disp = grad * (0.78 * strengthPx);
-            edgeGlow = pow(clamp(length(grad) * 0.58, 0.0, 1.0), 2.2) * 0.45;
-            chromaFactor = clamp(length(grad) * 0.72, 0.25, 1.0);
+            disp = grad * (mix(0.45, 1.25, param) * strengthPx);
+            chromaFactor = clamp(length(grad) * mix(0.45, 0.95, param), 0.25, 1.0);
         } else if (style == 12) {
             // OCTAGON: Chamfered 8-sided octagonal lens grid
             float oCell = max(safeCell * 0.95, 8.0);
@@ -950,17 +967,18 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
                 ? float2(u.x >= 0.0 ? 0.7071 : -0.7071, u.y >= 0.0 ? 0.7071 : -0.7071)
                 : (au.x >= au.y ? float2(u.x * 2.0, 0.0) : float2(0.0, u.y * 2.0));
             disp = -mix(u * 1.6, facetGrad, 0.55) * (1.25 * bevel * strengthPx);
-            edgeGlow = (1.0 - smootherstep(0.0, 0.08, abs(edgeDist))) * 0.72;
             chromaFactor = clamp(octMetric * 2.1, 0.25, 1.0);
         } else if (style == 13) {
-            // SCAN: Horizontal parallel scanline micro-ribs
+            // SCAN: Horizontal scanline micro-ribs with tunable Raster Shift (param)
             float scanPitch = max(safeCell * 0.42, 4.5);
             float phase = (local.y / scanPitch) * 6.2831853;
             float sWave = sin(phase);
             float cWave = cos(phase);
-            disp = float2(cWave * 0.08 * strengthPx, -sWave * 1.15 * strengthPx);
-            edgeGlow = pow(max(cWave, 0.0), 3.0) * 0.55;
-            chromaFactor = clamp(abs(sWave) * 0.95 + 0.15, 0.15, 1.0);
+            float rowStep = floor(local.y / scanPitch);
+            float rowAlt = abs(rowStep - 2.0 * floor(rowStep * 0.5)) > 0.25 ? 1.0 : -1.0;
+            float horizShift = (rowAlt * (0.35 + 0.65 * abs(sWave)) + cWave * 0.45) * (1.85 * param * strengthPx);
+            disp = float2(horizShift + cWave * 0.08 * strengthPx, -sWave * 1.15 * strengthPx);
+            chromaFactor = clamp(abs(sWave) * 0.85 + param * 0.35 + 0.15, 0.15, 1.0);
         }
 
         return float4(disp.x, disp.y, edgeGlow, chromaFactor);
@@ -1013,14 +1031,12 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
             float domeMag = radialWeight * (3.5 + 8.5 * s) * dScale;
 
             float2 disp = -n * (bevelMag + domeMag);
-            float patternGlow = 0.0;
             float chromaWeight = edgeT;
 
             if (refractionStyle > 0) {
-                float4 pat = evalPatternRefraction(refractionStyle, local, cellPx, patternStrengthPx);
+                float4 pat = evalPatternRefraction(refractionStyle, local, cellPx, patternStrengthPx, styleParam, diamondCrossed);
                 float edgeBlend = 1.0 - 0.35 * edgeT;
                 disp = disp * 0.55 + pat.xy * edgeBlend;
-                patternGlow = pat.z * (0.045 + 0.09 * s) * (isDark > 0.5 ? 0.85 : 1.0);
                 chromaWeight = max(edgeT * 0.75, pat.w);
             }
 
@@ -1050,7 +1066,7 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
                 refracted = half4(cR, cG, cB, cA);
             }
 
-            // Quintic Fresnel specular rim + organic inner caustic + pattern optical catchlight
+            // Quintic Fresnel specular rim + organic inner bevel caustic (no interior pattern lines)
             float rimMask = smootherstep(0.0, 1.6 * dScale, rimDistIn) * (1.0 - smootherstep(1.2 * dScale, 6.8 * dScale, rimDistIn));
             float fresnel = edgeT * edgeT * edgeT * cornerEase;
             float keyLight = clamp(dot(n, normalize(float2(-0.55, -0.83))), 0.0, 1.0);
@@ -1058,7 +1074,7 @@ private const val LIQUID_GLASS_BACKDROP_REFRACTION_AGSL = """
             float rimGlow = (0.28 + 0.72 * keyLight + 0.35 * backLight) * rimMask * (0.14 + 0.28 * s);
             float innerCaustic = fresnel * (0.035 + 0.075 * s) * (0.55 + 0.45 * keyLight) * (isDark > 0.5 ? 0.65 : 0.90);
 
-            half3 finalRgb = clamp(refracted.rgb + half3(rimGlow + innerCaustic + patternGlow), 0.0, 1.0);
+            half3 finalRgb = clamp(refracted.rgb + half3(rimGlow + innerCaustic), 0.0, 1.0);
             return half4(finalRgb, refracted.a);
         }
 
@@ -1159,104 +1175,6 @@ private const val FROSTED_GLASS_CARD_SURFACE_AGSL = """
         return grad * inversesqrt(dot(grad, grad) + softFloor * softFloor);
     }
 
-    float surfacePatternGlow(int style, float2 local, float cellPx) {
-        float safeCell = max(cellPx, 6.0);
-        if (style == 1) {
-            float2 u = wrapMod2(local, float2(safeCell)) / safeCell - 0.5;
-            return (1.0 - smootherstep(0.0, 0.09, 0.5 - max(abs(u.x), abs(u.y)))) * 0.55;
-        } else if (style == 2) {
-            return pow(max(cos((local.x / max(safeCell * 0.55, 5.0)) * 6.2831853), 0.0), 3.0) * 0.50;
-        } else if (style == 3) {
-            float hexSize = max(safeCell * 0.95, 8.0);
-            float2 r = float2(1.0, 1.7320508);
-            float2 h = r * 0.5;
-            float2 pHex = local / hexSize;
-            float2 a = wrapMod2(pHex, r) - h;
-            float2 b = wrapMod2(pHex - h, r) - h;
-            float2 gv = dot(a, a) < dot(b, b) ? a : b;
-            float edgeDist = 0.5 - max(abs(gv.x), dot(abs(gv), normalize(r)));
-            return (1.0 - smootherstep(0.0, 0.08, edgeDist)) * 0.55;
-        } else if (style == 4) {
-            float hScale = max(safeCell * 0.68, 7.0);
-            float2 p = local / hScale;
-            float2 nCell = floor(p);
-            float2 fCell = p - nCell;
-            float minD = 8.0;
-            for (int dy = -1; dy <= 1; dy++) {
-                for (int dx = -1; dx <= 1; dx++) {
-                    float2 g = float2(float(dx), float(dy));
-                    float2 rVec = g + 0.22 + 0.56 * hash22(nCell + g) - fCell;
-                    minD = min(minD, dot(rVec, rVec));
-                }
-            }
-            return pow(clamp(sqrt(max(minD, 0.0001)) * 1.25, 0.0, 1.0), 2.5) * 0.40;
-        } else if (style == 5) {
-            float vScale = max(safeCell * 0.85, 8.0);
-            float2 p = local / vScale;
-            float2 nCell = floor(p);
-            float2 fCell = p - nCell;
-            float d1 = 8.0;
-            float d2 = 8.0;
-            for (int dy = -1; dy <= 1; dy++) {
-                for (int dx = -1; dx <= 1; dx++) {
-                    float2 g = float2(float(dx), float(dy));
-                    float d = length(g + 0.14 + 0.72 * hash22(nCell + g) - fCell);
-                    if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) { d2 = d; }
-                }
-            }
-            return (1.0 - smootherstep(0.0, 0.09, d2 - d1)) * 0.65;
-        } else if (style == 6) {
-            float zigW = max(safeCell * 1.25, 10.0);
-            float periodY = max(safeCell * 0.65, 6.0);
-            float tx = local.x / zigW;
-            float zigH = abs(tx - floor(tx) - 0.5) * 2.0;
-            return pow(max(cos((local.y / periodY + zigH * 0.85) * 6.2831853), 0.0), 3.0) * 0.50;
-        } else if (style == 7) {
-            float waveScale = max(safeCell * 0.42, 6.0);
-            float2 wp = local / waveScale;
-            float g = abs(cos(wp.x * 1.65 + cos(wp.y * 1.25) * 1.35)) + abs(sin(wp.y * 1.55 - sin(wp.x * 1.15) * 1.35));
-            return pow(clamp(g * 0.45, 0.0, 1.0), 2.0) * 0.42;
-        } else if (style == 8) {
-            float2 rot = float2(local.x + local.y, local.y - local.x) * 0.70710678;
-            float dCell = max(safeCell * 0.92, 7.0);
-            float2 u = wrapMod2(rot, float2(dCell)) / dCell - 0.5;
-            return (1.0 - smootherstep(0.0, 0.08, 0.5 - max(abs(u.x), abs(u.y)))) * 0.55;
-        } else if (style == 9) {
-            float sScale = max(safeCell * 0.82, 8.0);
-            float2 p = local / sScale;
-            float bestRow = -1000000.0;
-            float minEdge = 1.0;
-            float baseRow = floor(p.y);
-            for (int ry = 0; ry <= 1; ry++) {
-                float rowIdx = baseRow + float(ry);
-                float stagger = abs(rowIdx - 2.0 * floor(rowIdx * 0.5)) > 0.25 ? 0.5 : 0.0;
-                float colBase = floor(p.x - stagger);
-                for (int cx = 0; cx <= 1; cx++) {
-                    float r = length(p - float2(colBase + float(cx) + stagger, rowIdx));
-                    if (r < 0.62 && rowIdx > bestRow) { bestRow = rowIdx; minEdge = 0.62 - r; }
-                }
-            }
-            return (1.0 - smootherstep(0.0, 0.08, minEdge)) * 0.60;
-        } else if (style == 10) {
-            float u = dot(local, float2(0.8660254, 0.5)) / max(safeCell * 0.62, 6.0);
-            float f = u - floor(u);
-            return pow(clamp(1.0 - abs(f - 0.94) * 10.0, 0.0, 1.0), 2.0) * 0.60;
-        } else if (style == 11) {
-            float plScale = max(safeCell * 0.48, 6.0);
-            float2 pp = local / plScale;
-            float w = abs(sin(pp.x * 1.45 + sin(pp.y * 0.95))) * abs(cos((pp.x * 0.5 - pp.y * 0.866) * 1.55));
-            return clamp(w, 0.0, 1.0) * 0.38;
-        } else if (style == 12) {
-            float oCell = max(safeCell * 0.95, 8.0);
-            float2 au = abs(wrapMod2(local, float2(oCell)) / oCell - 0.5);
-            float octMetric = max(max(au.x, au.y), (au.x + au.y) * 0.70710678);
-            return (1.0 - smootherstep(0.0, 0.08, abs(0.48 - octMetric))) * 0.58;
-        } else if (style == 13) {
-            return pow(max(cos((local.y / max(safeCell * 0.42, 4.5)) * 6.2831853), 0.0), 3.0) * 0.50;
-        }
-        return 0.0;
-    }
-
     half4 main(float2 fragCoord) {
         float2 halfSize = cardSize * 0.5;
         if (halfSize.x <= 1.0 || halfSize.y <= 1.0) return half4(0.0);
@@ -1270,7 +1188,6 @@ private const val FROSTED_GLASS_CARD_SURFACE_AGSL = """
         float pScale = clamp(patternScale, 0.1, 1.0);
         float pDisp = clamp(dispersion, 0.0, 1.0);
         float bevelW = (12.0 + 16.0 * s) * mix(0.75, 1.35, pScale) * dScale;
-        float cellPx = mix(12.0, 56.0, pScale) * dScale;
 
         // Keep internal bevel curvature slightly rounded even when card corners are squared (0dp)
         float maxR = min(halfSize.x, halfSize.y);
@@ -1299,13 +1216,8 @@ private const val FROSTED_GLASS_CARD_SURFACE_AGSL = """
             clamp(1.0 - dispAmp * spectrumPhase, 0.72, 1.0)
         );
 
-        float patternSheen = 0.0;
-        if (refractionStyle > 0) {
-            patternSheen = surfacePatternGlow(refractionStyle, local, cellPx) * (0.045 + 0.085 * s);
-        }
-
         float highlightStrength = (0.14 + 0.26 * s) * (0.28 + 0.72 * keyLight) * rimBand;
-        float causticStrength = (edgeT * edgeT * edgeT) * cornerEase * (0.04 + 0.07 * s) * (0.4 + 0.6 * keyLight) + patternSheen;
+        float causticStrength = (edgeT * edgeT * edgeT) * cornerEase * (0.04 + 0.07 * s) * (0.4 + 0.6 * keyLight);
         float shadowStrength = (isDark > 0.5 ? 0.26 : 0.12) * s * counterLight * rimBand;
 
         half3 lightColor = prismTint * half(highlightStrength + causticStrength);
@@ -1430,7 +1342,9 @@ fun createLiquidGlassRefractionRuntimeEffect(
     performanceMode: Boolean = false,
     refractionStyle: RefractionStyle = RefractionStyle.LIQUID,
     patternScale: Float = refractionStyle.defaultScale,
-    dispersion: Float = refractionStyle.defaultDispersion
+    dispersion: Float = refractionStyle.defaultDispersion,
+    styleParam: Float = refractionStyle.defaultCustomParam,
+    diamondCrossed: Boolean = false
 ): AndroidRenderEffect? {
     val validRegions = regions.filter { it.isValid }.take(MAX_REFRACTION_REGIONS)
     if (validRegions.isEmpty() || viewportWidthPx <= 1f || viewportHeightPx <= 1f) return null
@@ -1458,6 +1372,8 @@ fun createLiquidGlassRefractionRuntimeEffect(
             setIntUniform("refractionStyle", refractionStyle.shaderIndex)
             setFloatUniform("patternScale", patternScale.coerceIn(0.1f, 1.0f))
             setFloatUniform("dispersion", dispersion.coerceIn(0.0f, 1.0f))
+            setFloatUniform("styleParam", styleParam.coerceIn(0.0f, 1.0f))
+            setFloatUniform("diamondCrossed", if (diamondCrossed) 1f else 0f)
             setFloatUniform("uRects", rectsArray)
             setFloatUniform("uRadii", radiiArray)
             setIntUniform("regionCount", validRegions.size)
@@ -1533,7 +1449,9 @@ fun createFrostedBackdropRenderEffect(
     performanceMode: Boolean = false,
     refractionStyle: RefractionStyle = RefractionStyle.LIQUID,
     patternScale: Float = refractionStyle.defaultScale,
-    dispersion: Float = refractionStyle.defaultDispersion
+    dispersion: Float = refractionStyle.defaultDispersion,
+    styleParam: Float = refractionStyle.defaultCustomParam,
+    diamondCrossed: Boolean = false
 ): ComposeRenderEffect? {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
 
@@ -1560,7 +1478,9 @@ fun createFrostedBackdropRenderEffect(
             performanceMode = performanceMode,
             refractionStyle = refractionStyle,
             patternScale = patternScale,
-            dispersion = dispersion
+            dispersion = dispersion,
+            styleParam = styleParam,
+            diamondCrossed = diamondCrossed
         ) ?: return null
         return try {
             refractionOnly.asComposeRenderEffect()
@@ -1587,7 +1507,9 @@ fun createFrostedBackdropRenderEffect(
             performanceMode = performanceMode,
             refractionStyle = refractionStyle,
             patternScale = patternScale,
-            dispersion = dispersion
+            dispersion = dispersion,
+            styleParam = styleParam,
+            diamondCrossed = diamondCrossed
         )
         if (refractionEffect != null) {
             platformEffect = try {
@@ -1839,7 +1761,9 @@ fun LiveScreenRefractionBackdrop(
     modifier: Modifier = Modifier,
     refractionStyle: RefractionStyle? = null,
     refractionScale: Float? = null,
-    refractionDispersion: Float? = null
+    refractionDispersion: Float? = null,
+    refractionStyleParam: Float? = null,
+    diamondCrossedCut: Boolean? = null
 ) {
     if (!isAndroid16FrostedGlassSupported() ||
         !isRuntimeShaderRefractionSupported() ||
@@ -1852,9 +1776,13 @@ fun LiveScreenRefractionBackdrop(
     val prefRefractionStyle by PanelPreferences.refractionStyle.collectAsState()
     val prefRefractionScale by PanelPreferences.glassRefractionScale.collectAsState()
     val prefRefractionDispersion by PanelPreferences.glassRefractionDispersion.collectAsState()
+    val prefRefractionStyleParam by PanelPreferences.glassRefractionCustomParam.collectAsState()
+    val prefDiamondCrossedCut by PanelPreferences.diamondCrossedCut.collectAsState()
     val resolvedStyle = refractionStyle ?: prefRefractionStyle
     val resolvedScale = refractionScale ?: prefRefractionScale
     val resolvedDispersion = refractionDispersion ?: prefRefractionDispersion
+    val resolvedStyleParam = refractionStyleParam ?: prefRefractionStyleParam
+    val resolvedDiamondCrossed = diamondCrossedCut ?: prefDiamondCrossedCut
     val rawActiveRegions = remember(qsCardBounds, extraBlurRegions) {
         buildList {
             if (qsCardBounds != null && qsCardBounds.isValid) add(qsCardBounds)
@@ -1947,7 +1875,9 @@ fun LiveScreenRefractionBackdrop(
         useDownscaledBlurNode,
         resolvedStyle,
         resolvedScale,
-        resolvedDispersion
+        resolvedDispersion,
+        resolvedStyleParam,
+        resolvedDiamondCrossed
     ) {
         if (useDownscaledBlurNode) {
             // Blur is handled by the 0.5x cached RenderNode; keep 1x RenderEffect for crisp refraction only
@@ -1965,7 +1895,9 @@ fun LiveScreenRefractionBackdrop(
                 performanceMode = true,
                 refractionStyle = resolvedStyle,
                 patternScale = resolvedScale,
-                dispersion = resolvedDispersion
+                dispersion = resolvedDispersion,
+                styleParam = resolvedStyleParam,
+                diamondCrossed = resolvedDiamondCrossed
             )
         } else {
             createFrostedBackdropRenderEffect(
@@ -1982,7 +1914,9 @@ fun LiveScreenRefractionBackdrop(
                 performanceMode = performanceMode,
                 refractionStyle = resolvedStyle,
                 patternScale = resolvedScale,
-                dispersion = resolvedDispersion
+                dispersion = resolvedDispersion,
+                styleParam = resolvedStyleParam,
+                diamondCrossed = resolvedDiamondCrossed
             )
         }
     }
@@ -2001,7 +1935,9 @@ fun LiveScreenRefractionBackdrop(
         useDownscaledBlurNode,
         resolvedStyle,
         resolvedScale,
-        resolvedDispersion
+        resolvedDispersion,
+        resolvedStyleParam,
+        resolvedDiamondCrossed
     ) {
         if (!useDownscaledBlurNode) null
         else createFrostedBackdropRenderEffect(
@@ -2018,7 +1954,9 @@ fun LiveScreenRefractionBackdrop(
             performanceMode = true,
             refractionStyle = resolvedStyle,
             patternScale = resolvedScale,
-            dispersion = resolvedDispersion
+            dispersion = resolvedDispersion,
+            styleParam = resolvedStyleParam,
+            diamondCrossed = resolvedDiamondCrossed
         )
     }
 
@@ -2095,13 +2033,17 @@ fun FrostedPreviewBackdrop(
     glassRefractionSensitivity: Float? = null,
     refractionStyle: RefractionStyle? = null,
     glassRefractionScale: Float? = null,
-    glassRefractionDispersion: Float? = null
+    glassRefractionDispersion: Float? = null,
+    glassRefractionStyleParam: Float? = null,
+    diamondCrossedCut: Boolean? = null
 ) {
     val glassMode by PanelPreferences.glassBackdropMode.collectAsState()
     val prefRefractionSens by PanelPreferences.glassRefractionSensitivity.collectAsState()
     val prefRefractionStyle by PanelPreferences.refractionStyle.collectAsState()
     val prefRefractionScale by PanelPreferences.glassRefractionScale.collectAsState()
     val prefRefractionDispersion by PanelPreferences.glassRefractionDispersion.collectAsState()
+    val prefRefractionStyleParam by PanelPreferences.glassRefractionCustomParam.collectAsState()
+    val prefDiamondCrossedCut by PanelPreferences.diamondCrossedCut.collectAsState()
     val performanceMode by PanelPreferences.glassPerformanceMode.collectAsState()
     val effectiveBlur = enableBlur && isAndroid16FrostedGlassSupported()
     val resolvedRefraction = (enableGlassRefraction ?: (glassMode == GlassBackdropMode.LIQUID)) &&
@@ -2110,6 +2052,8 @@ fun FrostedPreviewBackdrop(
     val resolvedRefractionStyle = refractionStyle ?: prefRefractionStyle
     val resolvedRefractionScale = glassRefractionScale ?: prefRefractionScale
     val resolvedRefractionDispersion = glassRefractionDispersion ?: prefRefractionDispersion
+    val resolvedRefractionStyleParam = glassRefractionStyleParam ?: prefRefractionStyleParam
+    val resolvedDiamondCrossed = diamondCrossedCut ?: prefDiamondCrossedCut
 
     val rawActiveRegions = remember(qsCardBounds, extraBlurRegions) {
         buildList {
@@ -2146,6 +2090,8 @@ fun FrostedPreviewBackdrop(
         resolvedRefractionStyle,
         resolvedRefractionScale,
         resolvedRefractionDispersion,
+        resolvedRefractionStyleParam,
+        resolvedDiamondCrossed,
         activeRegions,
         viewportWidthPx,
         viewportHeightPx,
@@ -2167,7 +2113,9 @@ fun FrostedPreviewBackdrop(
             performanceMode = performanceMode,
             refractionStyle = resolvedRefractionStyle,
             patternScale = resolvedRefractionScale,
-            dispersion = resolvedRefractionDispersion
+            dispersion = resolvedRefractionDispersion,
+            styleParam = resolvedRefractionStyleParam,
+            diamondCrossed = resolvedDiamondCrossed
         )
     }
 

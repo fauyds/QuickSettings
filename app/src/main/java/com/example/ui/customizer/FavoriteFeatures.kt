@@ -602,7 +602,7 @@ enum class FavoriteFeature(
         category = CustomizeCategory.QS_DESIGN,
         description = "Choose between Frosted Glass blur or optical Liquid Glass refraction for QS panels, notifications, and surface cards",
         icon = Icons.Default.AutoAwesome,
-        keywords = "frosted liquid glass blur refraction edge dispersion container backdrop translucent transparency sensitivity radius qs qqs only grid ribbed hex hammer voronoi chevron wavy diamond scales louvre plasma octagon scan style"
+        keywords = "frosted liquid glass blur refraction edge dispersion container backdrop translucent transparency sensitivity radius qs qqs only grid ribbed hex hammer voronoi chevron wavy diamond scales louvre plasma octagon scan tile curvature hammer depth shard tilt chevron width facet depth crossed cut scallop curve prism ramp molten warp raster shift style"
     ),
     DESIGN_BRIGHTNESS_BOTTOM(
         id = "design_brightness_bottom",
