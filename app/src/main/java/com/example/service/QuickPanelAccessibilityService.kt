@@ -307,6 +307,7 @@ class QuickPanelAccessibilityService : AccessibilityService() {
     var isPanelShowing = false
         private set
     private var isPendingShowOverlay = false
+    private var dynamicRefreshJob: Job? = null
 
     private val _capturedBackdropBitmap = MutableStateFlow<android.graphics.Bitmap?>(null)
     val capturedBackdropBitmap: StateFlow<android.graphics.Bitmap?> = _capturedBackdropBitmap.asStateFlow()
@@ -1632,8 +1633,7 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         val shouldCaptureLiveBackdrop = Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA &&
             isAndroid16FrostedGlassSupported() &&
             isRuntimeShaderRefractionSupported() &&
-            PanelPreferences.isLiquidGlassActive() &&
-            !PanelPreferences.isDynamicRefractionActive()
+            PanelPreferences.isLiquidGlassActive()
 
         if (shouldCaptureLiveBackdrop) {
             captureFreshBackdropAndLaunch(initialStage)
@@ -2202,6 +2202,20 @@ class QuickPanelAccessibilityService : AccessibilityService() {
             windowManager?.addView(composeView, panelParams)
             overlayComposeView = composeView
             isPanelShowing = true
+            dynamicRefreshJob?.cancel()
+            dynamicRefreshJob = if (PanelPreferences.isDynamicRefractionActive()) {
+                serviceScope.launch {
+                    while (isPanelShowing && PanelPreferences.isDynamicRefractionActive()) {
+                        delay(200L)
+                        if (!isPanelShowing || !PanelPreferences.isDynamicRefractionActive()) break
+                        if (!isBackdropCaptureInFlight) {
+                            takeBackdropScreenshotForGeneration(captureGeneration)
+                        }
+                    }
+                }
+            } else {
+                null
+            }
             if (VolumePanelOverlay.isShowing) {
                 VolumePanelOverlay.bringToFront(this)
             }
@@ -2231,6 +2245,8 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         lifecycleOwner?.onDestroy()
         lifecycleOwner = null
         isPanelShowing = false
+        dynamicRefreshJob?.cancel()
+        dynamicRefreshJob = null
         isPendingShowOverlay = false
         captureGeneration++
         isBackdropCaptureInFlight = false

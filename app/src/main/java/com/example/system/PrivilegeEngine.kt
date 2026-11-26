@@ -956,6 +956,10 @@ class PrivilegeEngine(context: Context) {
 
         private fun scheduleIdleRootSessionTrimLocked() {
             idleTrimJob?.cancel()
+            idleTrimJob = null
+            if (com.example.data.PanelPreferences.endlessRootMode.value) {
+                return
+            }
             idleTrimJob = rootDaemonScope.launch {
                 delay(IDLE_ROOT_SESSION_CLEANUP_MS)
                 synchronized(sharedRootLock) {
