@@ -122,6 +122,7 @@ class MainActivity : ComponentActivity() {
         com.example.system.ComplicationDataHub.setAppForegroundActive(true)
         NativeTileManager.setAppForegroundActive(true)
         com.example.service.MediaSessionManagerHelper.ensureListening(this, CLIENT_TAG_MAIN)
+        com.example.service.MediaSessionManagerHelper.updateMediaState(force = true)
         com.example.service.QuickPanelNotificationListenerService.instance?.refreshActiveNotifications()
         viewModel.privilegeEngine.syncWithPreferences()
         viewModel.refreshServiceState()

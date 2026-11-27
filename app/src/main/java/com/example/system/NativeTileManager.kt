@@ -1532,6 +1532,9 @@ class NativeTileManager(
                         // 13 = WIFI_AP_STATE_ENABLED, 12 = WIFI_AP_STATE_ENABLING
                         _isHotspotEnabled.value = (apState == 13 || apState == 12)
                     }
+                    "android.net.conn.TETHER_STATE_CHANGED" -> {
+                        _isHotspotEnabled.value = isHotspotActive(context)
+                    }
                     "android.intent.action.ANY_DATA_STATE" -> {
                         _isCellularEnabled.value = isMobileDataActive(context)
                     }
@@ -2175,13 +2178,26 @@ class NativeTileManager(
                     val buildMethod = requestClass.getDeclaredMethod("build")
                     val request = buildMethod.invoke(builder)
 
-                    val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
-                    
+                    val executor = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+                        Thread(r, "HotspotTetheringCallback").apply { isDaemon = true }
+                    }
+                    val executorShutdown = java.util.concurrent.atomic.AtomicBoolean(false)
+                    fun shutdownExecutor() {
+                        if (executorShutdown.compareAndSet(false, true)) {
+                            try {
+                                executor.shutdown()
+                            } catch (_: Throwable) {}
+                        }
+                    }
+
                     val callbackClass = Class.forName("android.net.TetheringManager\$StartTetheringCallback")
                     val proxyCallback = java.lang.reflect.Proxy.newProxyInstance(
                         callbackClass.classLoader,
                         arrayOf(callbackClass)
-                    ) { _, _, _ -> null }
+                    ) { _, _, _ ->
+                        shutdownExecutor()
+                        null
+                    }
 
                     val startTetheringMethod = tetheringManager.javaClass.getDeclaredMethod(
                         "startTethering",
@@ -2189,7 +2205,16 @@ class NativeTileManager(
                         java.util.concurrent.Executor::class.java,
                         callbackClass
                     )
-                    startTetheringMethod.invoke(tetheringManager, request, executor, proxyCallback)
+                    try {
+                        startTetheringMethod.invoke(tetheringManager, request, executor, proxyCallback)
+                        scope.launch {
+                            kotlinx.coroutines.delay(5_000L)
+                            shutdownExecutor()
+                        }
+                    } catch (t: Throwable) {
+                        shutdownExecutor()
+                        throw t
+                    }
                 } else {
                     val stopTetheringMethod = tetheringManager.javaClass.getDeclaredMethod("stopTethering", Int::class.javaPrimitiveType)
                     stopTetheringMethod.invoke(tetheringManager, 0) // TETHERING_WIFI = 0

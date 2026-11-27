@@ -157,6 +157,7 @@ class KitKatShadeHostView @JvmOverloads constructor(
     // State
     private var isShowingQuickSettings: Boolean = false
     private var isFlipping: Boolean = false
+    private var lastLoadedHeaderImageUri: String? = null
     private var currentNotifications: List<NotificationItem> = emptyList()
     private var isDark: Boolean = true
     private var isTouchOnBrightnessBar: Boolean = false
@@ -791,15 +792,19 @@ class KitKatShadeHostView @JvmOverloads constructor(
             }
             ivCustomHeaderImage.alpha = PanelPreferences.customHeaderImageOpacity.value
             val imageUri = PanelPreferences.customHeaderImageUri.value
-            if (imageUri.isNotBlank()) {
+            if (imageUri.isNotBlank() && imageUri != lastLoadedHeaderImageUri) {
+                lastLoadedHeaderImageUri = imageUri
                 try {
-                    coil.ImageLoader(context).enqueue(
+                    coil.Coil.imageLoader(context).enqueue(
                         coil.request.ImageRequest.Builder(context)
                             .data(imageUri)
                             .target(ivCustomHeaderImage)
                             .build()
                     )
                 } catch (_: Exception) {}
+            } else if (imageUri.isBlank()) {
+                lastLoadedHeaderImageUri = null
+                ivCustomHeaderImage.setImageDrawable(null)
             }
         } else {
             ivCustomHeaderImage.visibility = View.GONE

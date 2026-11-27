@@ -52,6 +52,10 @@ class QuickQuickSettingsView @JvmOverloads constructor(
 
     private var currentTiles: List<QsTileModel> = emptyList()
     private var isDark: Boolean = true
+    private var lastBrightnessStyleKey: String? = null
+    private var lastTilesLayoutKey: String? = null
+    private var lastHandleStyleKey: String? = null
+    private var lastOreoContainerBgKey: String? = null
 
     init {
         val isOreo = com.example.data.PanelPreferences.isAndroidOreoStyle(context)
@@ -141,41 +145,53 @@ class QuickQuickSettingsView @JvmOverloads constructor(
         // 2. Classic Brightness Slider Setup
         if (showBrightnessInQqs) {
             llBrightnessRow.visibility = View.VISIBLE
-            llContainer.removeView(llBrightnessRow)
-            if (brightnessAtBottom) {
+            val desiredIndex = if (brightnessAtBottom) {
                 val tilesIndex = llContainer.indexOfChild(llTilesRow)
-                if (tilesIndex >= 0) {
-                    llContainer.addView(llBrightnessRow, tilesIndex + 1)
-                } else {
-                    llContainer.addView(llBrightnessRow)
-                }
+                if (tilesIndex >= 0) tilesIndex + 1 else llContainer.childCount
             } else {
-                llContainer.addView(llBrightnessRow, 1)
+                1
+            }
+            val currentIndex = llContainer.indexOfChild(llBrightnessRow)
+            if (currentIndex != desiredIndex) {
+                llContainer.removeView(llBrightnessRow)
+                val targetIdx = if (brightnessAtBottom) {
+                    val tilesIndex = llContainer.indexOfChild(llTilesRow)
+                    if (tilesIndex >= 0) tilesIndex + 1 else llContainer.childCount
+                } else {
+                    1.coerceAtMost(llContainer.childCount)
+                }
+                llContainer.addView(llBrightnessRow, targetIdx)
             }
             val clamped = brightness.coerceIn(5, 255)
-            sbBrightness.progress = clamped
-            val pct = ((clamped / 255f) * 100).toInt()
-            tvBrightnessPercentage.visibility = if (com.example.data.PanelPreferences.hideBrightnessPercentage.value) View.GONE else View.VISIBLE
-            flBrightnessIconPill.visibility = if (com.example.data.PanelPreferences.hideBrightnessIcon.value) View.GONE else View.VISIBLE
+            if (sbBrightness.progress != clamped) {
+                sbBrightness.progress = clamped
+            }
+            val hidePct = com.example.data.PanelPreferences.hideBrightnessPercentage.value
+            val hideIcon = com.example.data.PanelPreferences.hideBrightnessIcon.value
+            val bStyleKey = "$primaryAccent|$cardOutline|$hidePct|$hideIcon"
+            if (bStyleKey != lastBrightnessStyleKey) {
+                lastBrightnessStyleKey = bStyleKey
+                tvBrightnessPercentage.visibility = if (hidePct) View.GONE else View.VISIBLE
+                flBrightnessIconPill.visibility = if (hideIcon) View.GONE else View.VISIBLE
 
-            flBrightnessIconPill.background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                val pillColor = Color.argb(
-                    (0.15f * 255).toInt(),
-                    Color.red(primaryAccent),
-                    Color.green(primaryAccent),
-                    Color.blue(primaryAccent)
-                )
-                setColor(pillColor)
+                flBrightnessIconPill.background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    val pillColor = Color.argb(
+                        (0.15f * 255).toInt(),
+                        Color.red(primaryAccent),
+                        Color.green(primaryAccent),
+                        Color.blue(primaryAccent)
+                    )
+                    setColor(pillColor)
+                }
+                ivBrightnessIcon.setColorFilter(primaryAccent)
+                sbBrightness.thumbTintList = ColorStateList.valueOf(primaryAccent)
+                sbBrightness.progressTintList = ColorStateList.valueOf(primaryAccent)
+                sbBrightness.progressBackgroundTintList = ColorStateList.valueOf(cardOutline)
             }
             ivBrightnessIcon.setImageResource(
                 if (clamped > 128) R.drawable.ic_qs_brightness_high else R.drawable.ic_qs_brightness_low
             )
-            ivBrightnessIcon.setColorFilter(primaryAccent)
-
-            sbBrightness.thumbTintList = ColorStateList.valueOf(primaryAccent)
-            sbBrightness.progressTintList = ColorStateList.valueOf(primaryAccent)
-            sbBrightness.progressBackgroundTintList = ColorStateList.valueOf(cardOutline)
         } else {
             llBrightnessRow.visibility = View.GONE
         }
@@ -188,93 +204,111 @@ class QuickQuickSettingsView @JvmOverloads constructor(
         } else {
             tiles.filter { it.isVisible }.take(displayCount)
         }
+        val surfaceBgColor = if (enableQqsHorizontalScroll) MonetThemeHelper.getSurfaceBackground(context, isDark) else 0
+        val tilesKey = buildString {
+            append(enableQqsHorizontalScroll).append('|')
+            append(qqsTileSizeDp).append('|')
+            append(isDark).append('|')
+            append(activeSquareShape).append('|')
+            append(surfaceBgColor)
+            for (t in activeTiles) {
+                append(';').append(t.id).append(':').append(t.state).append(':').append(t.label).append(':').append(t.subtitle)
+            }
+        }
+        val tilesChanged = tilesKey != lastTilesLayoutKey || llTilesRow.childCount != activeTiles.size
         this.currentTiles = activeTiles
 
-        val hsvScroll = llContainer.findViewById<HorizontalScrollView>(R.id.hsv_qqs_tiles_scroll)
-        hsvScroll?.isFillViewport = !enableQqsHorizontalScroll
+        if (tilesChanged) {
+            lastTilesLayoutKey = tilesKey
+            val hsvScroll = llContainer.findViewById<HorizontalScrollView>(R.id.hsv_qqs_tiles_scroll)
+            hsvScroll?.isFillViewport = !enableQqsHorizontalScroll
 
-        llTilesRow.removeAllViews()
-        val circleSizePx = (qqsTileSizeDp * density).toInt()
-        val iconSizePx = (circleSizePx * 0.46f).toInt()
+            llTilesRow.removeAllViews()
+            val circleSizePx = (qqsTileSizeDp * density).toInt()
+            val iconSizePx = (circleSizePx * 0.46f).toInt()
 
-        activeTiles.forEachIndexed { index, tile ->
-            val tileView = LayoutInflater.from(context).inflate(R.layout.item_qs_tile, llTilesRow, false)
-            val lp = if (enableQqsHorizontalScroll) {
-                val marginEndPx = (16 * density).toInt()
-                LinearLayout.LayoutParams(circleSizePx, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    gravity = android.view.Gravity.CENTER
-                    if (index < activeTiles.size - 1) {
-                        marginEnd = marginEndPx
+            activeTiles.forEachIndexed { index, tile ->
+                val tileView = LayoutInflater.from(context).inflate(R.layout.item_qs_tile, llTilesRow, false)
+                val lp = if (enableQqsHorizontalScroll) {
+                    val marginEndPx = (16 * density).toInt()
+                    LinearLayout.LayoutParams(circleSizePx, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        gravity = android.view.Gravity.CENTER
+                        if (index < activeTiles.size - 1) {
+                            marginEnd = marginEndPx
+                        }
+                    }
+                } else {
+                    LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                        gravity = android.view.Gravity.CENTER
                     }
                 }
-            } else {
-                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    gravity = android.view.Gravity.CENTER
+                tileView.layoutParams = lp
+
+                QsTileViewHelper.bindTile(
+                    view = tileView,
+                    tile = tile,
+                    isDark = isDark,
+                    activeSquareShape = activeSquareShape,
+                    circleSizePx = circleSizePx,
+                    iconSizePx = iconSizePx,
+                    showSubtitle = false,
+                    tileIndex = index,
+                    onClick = { onTileClick?.invoke(it) },
+                    onLongClick = { onTileLongClick?.invoke(it) }
+                )
+
+                llTilesRow.addView(tileView)
+            }
+
+            val vFadeLeft = llContainer.findViewById<View>(R.id.v_qqs_fade_left)
+            val vFadeRight = llContainer.findViewById<View>(R.id.v_qqs_fade_right)
+
+            if (enableQqsHorizontalScroll && hsvScroll != null) {
+                val transparentBgColor = Color.TRANSPARENT
+
+                vFadeLeft?.background = GradientDrawable(
+                    GradientDrawable.Orientation.LEFT_RIGHT,
+                    intArrayOf(surfaceBgColor, transparentBgColor)
+                )
+                vFadeRight?.background = GradientDrawable(
+                    GradientDrawable.Orientation.LEFT_RIGHT,
+                    intArrayOf(transparentBgColor, surfaceBgColor)
+                )
+
+                fun updateFades() {
+                    val canScrollLeft = hsvScroll.canScrollHorizontally(-1)
+                    val canScrollRight = hsvScroll.canScrollHorizontally(1)
+                    vFadeLeft?.visibility = if (canScrollLeft) View.VISIBLE else View.GONE
+                    vFadeRight?.visibility = if (canScrollRight) View.VISIBLE else View.GONE
                 }
+
+                hsvScroll.setOnScrollChangeListener { _, _, _, _, _ ->
+                    updateFades()
+                }
+                hsvScroll.post {
+                    updateFades()
+                }
+            } else {
+                vFadeLeft?.visibility = View.GONE
+                vFadeRight?.visibility = View.GONE
             }
-            tileView.layoutParams = lp
-
-            QsTileViewHelper.bindTile(
-                view = tileView,
-                tile = tile,
-                isDark = isDark,
-                activeSquareShape = activeSquareShape,
-                circleSizePx = circleSizePx,
-                iconSizePx = iconSizePx,
-                showSubtitle = false,
-                tileIndex = index,
-                onClick = { onTileClick?.invoke(it) },
-                onLongClick = { onTileLongClick?.invoke(it) }
-            )
-
-            llTilesRow.addView(tileView)
-        }
-
-        val vFadeLeft = llContainer.findViewById<View>(R.id.v_qqs_fade_left)
-        val vFadeRight = llContainer.findViewById<View>(R.id.v_qqs_fade_right)
-
-        if (enableQqsHorizontalScroll && hsvScroll != null) {
-            val surfaceBgColor = MonetThemeHelper.getSurfaceBackground(context, isDark)
-            val transparentBgColor = Color.TRANSPARENT
-
-            vFadeLeft?.background = GradientDrawable(
-                GradientDrawable.Orientation.LEFT_RIGHT,
-                intArrayOf(surfaceBgColor, transparentBgColor)
-            )
-            vFadeRight?.background = GradientDrawable(
-                GradientDrawable.Orientation.LEFT_RIGHT,
-                intArrayOf(transparentBgColor, surfaceBgColor)
-            )
-
-            fun updateFades() {
-                val canScrollLeft = hsvScroll.canScrollHorizontally(-1)
-                val canScrollRight = hsvScroll.canScrollHorizontally(1)
-                vFadeLeft?.visibility = if (canScrollLeft) View.VISIBLE else View.GONE
-                vFadeRight?.visibility = if (canScrollRight) View.VISIBLE else View.GONE
-            }
-
-            hsvScroll.setOnScrollChangeListener { _, _, _, _, _ ->
-                updateFades()
-            }
-            hsvScroll.post {
-                updateFades()
-            }
-        } else {
-            vFadeLeft?.visibility = View.GONE
-            vFadeRight?.visibility = View.GONE
         }
 
         // 4. Drag Handle Pill Styling
-        val handleWidthPx = (dragHandleLengthDp * density).toInt()
-        val handleColor = if (isDark) Color.parseColor("#44FFFFFF") else Color.parseColor("#44000000")
-        vDragHandle.layoutParams = (vDragHandle.layoutParams ?: FrameLayout.LayoutParams(handleWidthPx, (3.5f * density).toInt())).apply {
-            width = handleWidthPx
-            height = (3.5f * density).toInt()
-        }
-        vDragHandle.background = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = 4f * density
-            setColor(handleColor)
+        val handleKey = "$dragHandleLengthDp|$isDark"
+        if (handleKey != lastHandleStyleKey) {
+            lastHandleStyleKey = handleKey
+            val handleWidthPx = (dragHandleLengthDp * density).toInt()
+            val handleColor = if (isDark) Color.parseColor("#44FFFFFF") else Color.parseColor("#44000000")
+            vDragHandle.layoutParams = (vDragHandle.layoutParams ?: FrameLayout.LayoutParams(handleWidthPx, (3.5f * density).toInt())).apply {
+                width = handleWidthPx
+                height = (3.5f * density).toInt()
+            }
+            vDragHandle.background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 4f * density
+                setColor(handleColor)
+            }
         }
 
         // 5. Style Specific Formatting
@@ -293,10 +327,14 @@ class QuickQuickSettingsView @JvmOverloads constructor(
             tvOreoDate?.setTextColor(textSecondary)
             val panelOuterCorner = com.example.data.PanelPreferences.panelOuterCorner.value
             val outerPx = panelOuterCorner * density
-            llContainer.background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, outerPx, outerPx, outerPx, outerPx)
-                setColor(headerBg)
+            val bgKey = "marshmallow|$headerBg|$outerPx"
+            if (bgKey != lastOreoContainerBgKey) {
+                lastOreoContainerBgKey = bgKey
+                llContainer.background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, outerPx, outerPx, outerPx, outerPx)
+                    setColor(headerBg)
+                }
             }
         } else if (isOreo) {
             val now = java.util.Date()
@@ -317,7 +355,11 @@ class QuickQuickSettingsView @JvmOverloads constructor(
             findViewById<View>(R.id.v_qqs_oreo_tiles_divider)?.setBackgroundColor(if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#33000000"))
 
             val solidBg = MonetThemeHelper.getSurfaceBackground(context, isDark)
-            llContainer.setBackgroundColor(solidBg)
+            val bgKey = "oreo|$solidBg"
+            if (bgKey != lastOreoContainerBgKey) {
+                lastOreoContainerBgKey = bgKey
+                llContainer.setBackgroundColor(solidBg)
+            }
         }
     }
 }

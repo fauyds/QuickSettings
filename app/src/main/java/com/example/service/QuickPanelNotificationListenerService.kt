@@ -20,6 +20,7 @@ import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import android.util.LruCache
 import com.example.data.NotificationBlacklistManager
 import com.example.data.PanelPreferences
 import com.example.model.NotificationActionModel
@@ -30,8 +31,10 @@ import androidx.core.app.Person as CorePerson
 import androidx.core.graphics.drawable.IconCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -317,6 +320,11 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var refreshJob: Job? = null
+    private val refreshLock = Any()
+    private val appNameCache = LruCache<String, String>(64)
+    private val appIconCache = LruCache<String, Drawable>(48)
 
     override fun onCreate() {
         super.onCreate()
@@ -360,7 +368,7 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
 
     override fun onNotificationRankingUpdate(rankingMap: RankingMap?) {
         super.onNotificationRankingUpdate(rankingMap)
-        refreshActiveNotifications()
+        refreshActiveNotifications(debounceMs = 200L)
     }
 
     data class CallAlarmDetection(
@@ -549,7 +557,7 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
             return
         }
 
-        refreshActiveNotifications()
+        refreshActiveNotifications(debounceMs = 35L)
         val detection = detectCallOrAlarm(sbn, n)
         handleIncomingCallOrAlarmWake(sbn, n, detection)
         triggerHeadsUpIfNeeded(sbn, rankingMap, detection)
@@ -565,7 +573,7 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
             return
         }
 
-        refreshActiveNotifications()
+        refreshActiveNotifications(debounceMs = 35L)
         val detection = detectCallOrAlarm(sbn, n)
         handleIncomingCallOrAlarmWake(sbn, n, detection)
         triggerHeadsUpIfNeeded(sbn, currentRanking, detection)
@@ -798,7 +806,7 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
             isCall = isCall
         )
 
-        Handler(Looper.getMainLooper()).post {
+        mainHandler.post {
             HeadsUpOverlayManager.showHeadsUp(
                 context = this,
                 data = headsUpData,
@@ -822,7 +830,7 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         super.onNotificationRemoved(sbn)
-        refreshActiveNotifications()
+        refreshActiveNotifications(debounceMs = 35L)
         if (sbn != null) {
             if (sbn.key == lastFiredFullScreenIntentKey) {
                 lastFiredFullScreenIntentKey = null
@@ -836,16 +844,28 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
         }
     }
 
-    fun refreshActiveNotifications() {
-        scope.launch(Dispatchers.IO) {
-            try {
-                NotificationBlacklistManager.init(this@QuickPanelNotificationListenerService)
-                val sbns = activeNotifications ?: return@launch
-                val pm = packageManager
-                val list = mutableListOf<NotificationItem>()
-                extractComplicationSignalsFromNotifications(sbns, pm)
+    fun refreshActiveNotifications(debounceMs: Long = 0L) {
+        synchronized(refreshLock) {
+            refreshJob?.cancel()
+            refreshJob = scope.launch(Dispatchers.IO) {
+                if (debounceMs > 0L) {
+                    delay(debounceMs)
+                }
+                refreshActiveNotificationsInternal()
+            }
+        }
+    }
 
-                for (sbn in sbns) {
+    private fun refreshActiveNotificationsInternal() {
+        try {
+            NotificationBlacklistManager.init(this@QuickPanelNotificationListenerService)
+            val sbns = activeNotifications ?: return
+            val pm = packageManager
+            val existingByKey = _notifications.value.associateBy { it.key }
+            val list = mutableListOf<NotificationItem>()
+            extractComplicationSignalsFromNotifications(sbns, pm)
+
+            for (sbn in sbns) {
                     val n = sbn.notification ?: continue
 
                     // Skip media playback notifications from duplicating in the standard notification list
@@ -903,8 +923,8 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                         continue
                     }
 
-                    // 3. Resolve Human-Readable Application Name (prevent raw package names)
-                    val appName = try {
+                    // 3. Resolve Human-Readable Application Name (cached per package)
+                    val appName = appNameCache.get(sbn.packageName) ?: try {
                         val appInfo = pm.getApplicationInfo(sbn.packageName, 0)
                         val label = pm.getApplicationLabel(appInfo).toString()
                         if (label.isNotBlank()) label else sbn.packageName
@@ -921,11 +941,15 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                         } catch (e2: Exception) {
                             sbn.packageName
                         }
+                    }.also { resolved ->
+                        appNameCache.put(sbn.packageName, resolved)
                     }
 
-                    // 4. Load App Icon with fallback to smallIcon
-                    val appIcon = try {
-                        pm.getApplicationIcon(sbn.packageName)
+                    // 4. Load App Icon with fallback to smallIcon (cached per package)
+                    val appIcon = appIconCache.get(sbn.packageName) ?: try {
+                        pm.getApplicationIcon(sbn.packageName)?.also { loaded ->
+                            appIconCache.put(sbn.packageName, loaded)
+                        }
                     } catch (e: Exception) {
                         try {
                             n.smallIcon?.loadDrawable(this@QuickPanelNotificationListenerService)
@@ -933,10 +957,6 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                             null
                         }
                     }
-
-                    val avatarBitmap = messagingDetails.avatarBitmap
-                        ?: extractLargeIconOrAvatar(n, extras)
-                    val bigPictureBitmap = extractBigPicture(extras)
 
                     val resolvedTitle = when {
                         messagingDetails.isMessaging && messagingDetails.title.isNotBlank() -> messagingDetails.title
@@ -981,6 +1001,29 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                         }
                     }
 
+                    val prevItem = existingByKey[sbn.key]
+                    val canReuseBitmaps = prevItem != null &&
+                        prevItem.postTime == effectiveTime &&
+                        prevItem.title == resolvedTitle &&
+                        prevItem.text == resolvedText &&
+                        prevItem.subText == subText &&
+                        prevItem.progress == progress &&
+                        prevItem.progressMax == progressMax &&
+                        prevItem.isIndeterminateProgress == isIndeterminateProgress &&
+                        prevItem.isOngoing == isOngoing &&
+                        prevItem.actions.size == actionsList.size
+
+                    val avatarBitmap = if (canReuseBitmaps && prevItem?.avatarBitmap?.isRecycled == false) {
+                        prevItem.avatarBitmap
+                    } else {
+                        messagingDetails.avatarBitmap ?: extractLargeIconOrAvatar(n, extras)
+                    }
+                    val bigPictureBitmap = if (canReuseBitmaps && prevItem?.bigPictureBitmap?.isRecycled == false) {
+                        prevItem.bigPictureBitmap
+                    } else {
+                        extractBigPicture(extras)
+                    }
+
                     list.add(
                         NotificationItem(
                             key = sbn.key,
@@ -1021,9 +1064,8 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
                 if (!areNotificationListsEqual(_notifications.value, sortedList)) {
                     _notifications.value = sortedList
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error parsing active notifications: ${e.message}")
-            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing active notifications: ${e.message}")
         }
     }
 
@@ -1642,6 +1684,9 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
             instance = null
         }
         runCatching { MediaSessionManagerHelper.unregisterClient(CLIENT_TAG) }
+        runCatching { refreshJob?.cancel() }
+        runCatching { appNameCache.evictAll() }
+        runCatching { appIconCache.evictAll() }
         runCatching { scope.cancel() }
         super.onDestroy()
     }

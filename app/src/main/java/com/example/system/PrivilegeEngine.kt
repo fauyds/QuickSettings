@@ -183,8 +183,8 @@ class PrivilegeEngine(context: Context) {
         var process: java.lang.Process? = null
         return try {
             process = ProcessBuilder(listOf("sh", "-c", "which su")).redirectErrorStream(true).start()
-            val stdout = process.inputStream.bufferedReader().use { it.readText().trim() }
             try { process.outputStream.close() } catch (_: Exception) {}
+            val stdout = process.inputStream.bufferedReader().use { it.readText().trim() }
             val finished = process.waitFor(3, TimeUnit.SECONDS)
             if (!finished) {
                 process.destroyForcibly()
@@ -193,8 +193,16 @@ class PrivilegeEngine(context: Context) {
                 process.exitValue() == 0 && stdout.isNotBlank()
             }
         } catch (_: Exception) {
-            try { process?.destroyForcibly() } catch (_: Exception) {}
             false
+        } finally {
+            process?.let { p ->
+                try { p.inputStream.close() } catch (_: Exception) {}
+                try { p.errorStream.close() } catch (_: Exception) {}
+                try { p.outputStream.close() } catch (_: Exception) {}
+                if (isProcessAlive(p)) {
+                    try { p.destroyForcibly() } catch (_: Exception) {}
+                }
+            }
         }
     }
 
@@ -205,8 +213,8 @@ class PrivilegeEngine(context: Context) {
         var process: java.lang.Process? = null
         return try {
             process = ProcessBuilder(listOf("su", "-c", "id")).redirectErrorStream(true).start()
-            val stdout = process.inputStream.bufferedReader().use { it.readText().trim() }
             try { process.outputStream.close() } catch (_: Exception) {}
+            val stdout = process.inputStream.bufferedReader().use { it.readText().trim() }
             val finished = process.waitFor(5, TimeUnit.SECONDS)
             if (!finished) {
                 process.destroyForcibly()
@@ -214,8 +222,16 @@ class PrivilegeEngine(context: Context) {
             }
             process.exitValue() == 0 && (stdout.contains("uid=0") || stdout.contains("root"))
         } catch (_: Exception) {
-            try { process?.destroyForcibly() } catch (_: Exception) {}
             false
+        } finally {
+            process?.let { p ->
+                try { p.inputStream.close() } catch (_: Exception) {}
+                try { p.errorStream.close() } catch (_: Exception) {}
+                try { p.outputStream.close() } catch (_: Exception) {}
+                if (isProcessAlive(p)) {
+                    try { p.destroyForcibly() } catch (_: Exception) {}
+                }
+            }
         }
     }
 
@@ -518,14 +534,30 @@ class PrivilegeEngine(context: Context) {
 
     private fun runRootCommand(command: String): Boolean {
         if (isEndlessRootActive()) {
-            val (ok, _) = executeEndlessRootCommand(command)
-            if (ok) return true
+            return when (executeEndlessRootCommandInternal(command).status) {
+                EndlessExecStatus.RAN_SUCCESS -> true
+                EndlessExecStatus.RAN_NON_ZERO -> false
+                EndlessExecStatus.SESSION_UNAVAILABLE -> runStandaloneSuCommand(command)
+            }
         }
+        return runStandaloneSuCommand(command)
+    }
+
+    private fun runStandaloneSuCommand(command: String): Boolean {
         var process: java.lang.Process? = null
         return try {
             process = ProcessBuilder(listOf("su", "-c", command)).redirectErrorStream(true).start()
-            try { process.inputStream.close() } catch (_: Exception) {}
             try { process.outputStream.close() } catch (_: Exception) {}
+            // Drain stdout briefly so the child process cannot block on a full pipe before exiting
+            try { process.inputStream.bufferedReader().use { reader ->
+                val buf = CharArray(1024)
+                var readTotal = 0
+                while (readTotal < 16_384) {
+                    val n = reader.read(buf)
+                    if (n <= 0) break
+                    readTotal += n
+                }
+            } } catch (_: Exception) {}
             val finished = process.waitFor(5, TimeUnit.SECONDS)
             if (!finished) {
                 process.destroyForcibly()
@@ -533,9 +565,17 @@ class PrivilegeEngine(context: Context) {
             }
             process.exitValue() == 0
         } catch (e: Exception) {
-            try { process?.destroyForcibly() } catch (_: Exception) {}
             Log.w("PrivilegeEngine", "Root command failed gracefully: ${e.message}")
             false
+        } finally {
+            process?.let { p ->
+                try { p.inputStream.close() } catch (_: Exception) {}
+                try { p.errorStream.close() } catch (_: Exception) {}
+                try { p.outputStream.close() } catch (_: Exception) {}
+                if (isProcessAlive(p)) {
+                    try { p.destroyForcibly() } catch (_: Exception) {}
+                }
+            }
         }
     }
 
@@ -613,9 +653,9 @@ class PrivilegeEngine(context: Context) {
             newProcessMethod.isAccessible = true
             proc = newProcessMethod.invoke(null, arrayOf("sh", "-c", command), null, null) as java.lang.Process
 
+            try { proc.outputStream.close() } catch (_: Exception) {}
             val stdout = proc.inputStream.bufferedReader().use { it.readText().trim().take(MAX_SHELL_OUTPUT_CHARS) }
             val stderr = proc.errorStream.bufferedReader().use { it.readText().trim().take(4096) }
-            try { proc.outputStream.close() } catch (_: Exception) {}
             val finished = proc.waitFor(5, TimeUnit.SECONDS)
             if (!finished) {
                 proc.destroyForcibly()
@@ -633,11 +673,19 @@ class PrivilegeEngine(context: Context) {
             Log.d("PrivilegeEngine", "Shizuku shell executed [exit: $exitCode]: $combined")
             Pair(exitCode == 0, combined)
         } catch (e: Exception) {
-            try { proc?.destroyForcibly() } catch (_: Exception) {}
             val error = "Shizuku process runner failed: ${e.message}"
             Log.e("PrivilegeEngine", error, e)
             _lastExecutionLog.value = error
             Pair(false, error)
+        } finally {
+            proc?.let { p ->
+                try { p.inputStream.close() } catch (_: Exception) {}
+                try { p.errorStream.close() } catch (_: Exception) {}
+                try { p.outputStream.close() } catch (_: Exception) {}
+                if (isProcessAlive(p)) {
+                    try { p.destroyForcibly() } catch (_: Exception) {}
+                }
+            }
         }
     }
 
@@ -648,8 +696,16 @@ class PrivilegeEngine(context: Context) {
         var process: java.lang.Process? = null
         return try {
             process = ProcessBuilder(listOf("sh", "-c", command)).redirectErrorStream(true).start()
-            try { process.inputStream.close() } catch (_: Exception) {}
             try { process.outputStream.close() } catch (_: Exception) {}
+            try { process.inputStream.bufferedReader().use { reader ->
+                val buf = CharArray(1024)
+                var readTotal = 0
+                while (readTotal < 16_384) {
+                    val n = reader.read(buf)
+                    if (n <= 0) break
+                    readTotal += n
+                }
+            } } catch (_: Exception) {}
             val finished = process.waitFor(4, TimeUnit.SECONDS)
             if (!finished) {
                 process.destroyForcibly()
@@ -658,9 +714,17 @@ class PrivilegeEngine(context: Context) {
                 process.exitValue() == 0
             }
         } catch (e: Exception) {
-            try { process?.destroyForcibly() } catch (_: Exception) {}
             Log.w("PrivilegeEngine", "Shell command failed: ${e.message}")
             false
+        } finally {
+            process?.let { p ->
+                try { p.inputStream.close() } catch (_: Exception) {}
+                try { p.errorStream.close() } catch (_: Exception) {}
+                try { p.outputStream.close() } catch (_: Exception) {}
+                if (isProcessAlive(p)) {
+                    try { p.destroyForcibly() } catch (_: Exception) {}
+                }
+            }
         }
     }
 
@@ -685,9 +749,8 @@ class PrivilegeEngine(context: Context) {
                 if (newProcessMethod != null) {
                     newProcessMethod.isAccessible = true
                     proc = newProcessMethod.invoke(null, arrayOf("sh", "-c", command), null, null) as java.lang.Process
-                    val stdout = proc.inputStream.bufferedReader().use { it.readText().trim().take(MAX_SHELL_OUTPUT_CHARS) }
-                    try { proc.errorStream.close() } catch (_: Exception) {}
                     try { proc.outputStream.close() } catch (_: Exception) {}
+                    val stdout = proc.inputStream.bufferedReader().use { it.readText().trim().take(MAX_SHELL_OUTPUT_CHARS) }
                     val finished = proc.waitFor(4, TimeUnit.SECONDS)
                     if (!finished) {
                         proc.destroyForcibly()
@@ -696,14 +759,26 @@ class PrivilegeEngine(context: Context) {
                     }
                 }
             } catch (_: Exception) {
-                try { proc?.destroyForcibly() } catch (_: Exception) {}
+            } finally {
+                proc?.let { p ->
+                    try { p.inputStream.close() } catch (_: Exception) {}
+                    try { p.errorStream.close() } catch (_: Exception) {}
+                    try { p.outputStream.close() } catch (_: Exception) {}
+                    if (isProcessAlive(p)) {
+                        try { p.destroyForcibly() } catch (_: Exception) {}
+                    }
+                }
             }
         }
 
         if (isEndlessRootActive()) {
-            val (ok, out) = executeEndlessRootCommand(command)
-            if (ok && !out.isNullOrBlank()) {
-                return out
+            val outcome = executeEndlessRootCommandInternal(command)
+            when (outcome.status) {
+                EndlessExecStatus.RAN_SUCCESS -> return outcome.output?.takeIf { it.isNotBlank() }
+                EndlessExecStatus.RAN_NON_ZERO -> return null
+                EndlessExecStatus.SESSION_UNAVAILABLE -> {
+                    // Fall through only if persistent session failed to launch
+                }
             }
         }
 
@@ -711,8 +786,8 @@ class PrivilegeEngine(context: Context) {
             var proc: java.lang.Process? = null
             try {
                 proc = ProcessBuilder(listOf("su", "-c", command)).redirectErrorStream(true).start()
-                val stdout = proc.inputStream.bufferedReader().use { it.readText().trim().take(MAX_SHELL_OUTPUT_CHARS) }
                 try { proc.outputStream.close() } catch (_: Exception) {}
+                val stdout = proc.inputStream.bufferedReader().use { it.readText().trim().take(MAX_SHELL_OUTPUT_CHARS) }
                 val finished = proc.waitFor(4, TimeUnit.SECONDS)
                 if (!finished) {
                     proc.destroyForcibly()
@@ -722,7 +797,15 @@ class PrivilegeEngine(context: Context) {
                     return stdout
                 }
             } catch (_: Exception) {
-                try { proc?.destroyForcibly() } catch (_: Exception) {}
+            } finally {
+                proc?.let { p ->
+                    try { p.inputStream.close() } catch (_: Exception) {}
+                    try { p.errorStream.close() } catch (_: Exception) {}
+                    try { p.outputStream.close() } catch (_: Exception) {}
+                    if (isProcessAlive(p)) {
+                        try { p.destroyForcibly() } catch (_: Exception) {}
+                    }
+                }
             }
         }
 
@@ -740,7 +823,7 @@ class PrivilegeEngine(context: Context) {
                     return true
                 }
             }
-            closePersistentRootSessionLocked()
+            closePersistentRootSessionLocked(gracefulExit = true)
             return try {
                 // Merge stderr -> stdout so stderr pipe never fills (64KB deadlock) or leaks
                 val newProc = ProcessBuilder(listOf("su"))
@@ -756,7 +839,7 @@ class PrivilegeEngine(context: Context) {
                 _lastExecutionLog.value = "Endless Root daemon session established (PID active)."
                 true
             } catch (e: Exception) {
-                closePersistentRootSessionLocked()
+                closePersistentRootSessionLocked(gracefulExit = false)
                 Log.w("PrivilegeEngine", "Failed to start endless root session: ${e.message}")
                 false
             }
@@ -765,18 +848,34 @@ class PrivilegeEngine(context: Context) {
 
     fun closePersistentRootSession() {
         synchronized(sharedRootLock) {
-            closePersistentRootSessionLocked()
+            closePersistentRootSessionLocked(gracefulExit = true)
         }
     }
 
+    private enum class EndlessExecStatus {
+        RAN_SUCCESS,
+        RAN_NON_ZERO,
+        SESSION_UNAVAILABLE
+    }
+
+    private data class EndlessExecOutcome(
+        val status: EndlessExecStatus,
+        val output: String?
+    )
+
     fun executeEndlessRootCommand(command: String): Pair<Boolean, String?> {
-        if (command.isBlank()) return Pair(false, null)
+        val outcome = executeEndlessRootCommandInternal(command)
+        return Pair(outcome.status == EndlessExecStatus.RAN_SUCCESS, outcome.output)
+    }
+
+    private fun executeEndlessRootCommandInternal(command: String): EndlessExecOutcome {
+        if (command.isBlank()) return EndlessExecOutcome(EndlessExecStatus.RAN_NON_ZERO, null)
         synchronized(sharedRootLock) {
             if (!ensurePersistentRootSession()) {
-                return Pair(false, null)
+                return EndlessExecOutcome(EndlessExecStatus.SESSION_UNAVAILABLE, null)
             }
-            val writer = sharedRootWriter ?: return Pair(false, null)
-            val reader = sharedRootReader ?: return Pair(false, null)
+            val writer = sharedRootWriter ?: return EndlessExecOutcome(EndlessExecStatus.SESSION_UNAVAILABLE, null)
+            val reader = sharedRootReader ?: return EndlessExecOutcome(EndlessExecStatus.SESSION_UNAVAILABLE, null)
             val seq = markerSeq.incrementAndGet()
             val marker = "__ENDLESS_ROOT_${seq}_${System.nanoTime()}__"
             return try {
@@ -812,18 +911,26 @@ class PrivilegeEngine(context: Context) {
                 } catch (te: TimeoutException) {
                     future.cancel(true)
                     Log.w("PrivilegeEngine", "Endless root command timed out (${ENDLESS_COMMAND_TIMEOUT_MS}ms); resetting su daemon.")
-                    closePersistentRootSessionLocked()
-                    return Pair(false, null)
+                    closePersistentRootSessionLocked(gracefulExit = false)
+                    return EndlessExecOutcome(EndlessExecStatus.SESSION_UNAVAILABLE, null)
                 }
 
                 endlessCommandCount++
                 lastEndlessActivityMs = System.currentTimeMillis()
-                scheduleIdleRootSessionTrimLocked()
-                result
+                if (endlessCommandCount >= MAX_COMMANDS_BEFORE_RECYCLE) {
+                    closePersistentRootSessionLocked(gracefulExit = true)
+                } else {
+                    scheduleIdleRootSessionTrimLocked()
+                }
+                if (result.first) {
+                    EndlessExecOutcome(EndlessExecStatus.RAN_SUCCESS, result.second)
+                } else {
+                    EndlessExecOutcome(EndlessExecStatus.RAN_NON_ZERO, result.second)
+                }
             } catch (e: Exception) {
                 Log.w("PrivilegeEngine", "Error executing endless root command: ${e.message}")
-                closePersistentRootSessionLocked()
-                Pair(false, null)
+                closePersistentRootSessionLocked(gracefulExit = false)
+                EndlessExecOutcome(EndlessExecStatus.SESSION_UNAVAILABLE, null)
             }
         }
     }
@@ -860,8 +967,9 @@ class PrivilegeEngine(context: Context) {
     companion object {
         private const val MAX_SHELL_OUTPUT_CHARS = 128 * 1024
         private const val ENDLESS_COMMAND_TIMEOUT_MS = 4000L
-        private const val MAX_COMMANDS_BEFORE_RECYCLE = 40
+        private const val MAX_COMMANDS_BEFORE_RECYCLE = 25
         private const val IDLE_ROOT_SESSION_CLEANUP_MS = 25_000L
+        private const val IDLE_ENDLESS_ROOT_SESSION_CLEANUP_MS = 45_000L
 
         @Volatile
         private var sharedRootProcess: java.lang.Process? = null
@@ -957,38 +1065,44 @@ class PrivilegeEngine(context: Context) {
         private fun scheduleIdleRootSessionTrimLocked() {
             idleTrimJob?.cancel()
             idleTrimJob = null
-            if (com.example.data.PanelPreferences.endlessRootMode.value) {
-                return
+            val timeoutMs = if (com.example.data.PanelPreferences.endlessRootMode.value) {
+                IDLE_ENDLESS_ROOT_SESSION_CLEANUP_MS
+            } else {
+                IDLE_ROOT_SESSION_CLEANUP_MS
             }
             idleTrimJob = rootDaemonScope.launch {
-                delay(IDLE_ROOT_SESSION_CLEANUP_MS)
+                delay(timeoutMs)
                 synchronized(sharedRootLock) {
                     val elapsed = System.currentTimeMillis() - lastEndlessActivityMs
-                    if (sharedRootProcess != null && elapsed >= IDLE_ROOT_SESSION_CLEANUP_MS) {
-                        closePersistentRootSessionLocked()
+                    if (sharedRootProcess != null && elapsed >= timeoutMs) {
+                        // Trim idle su child process & buffers while preserving Endless Root Mode grants
+                        // and state so the next root command seamlessly respawns su without re-prompting.
+                        closePersistentRootSessionLocked(gracefulExit = true)
                     }
                 }
             }
         }
 
-        private fun closePersistentRootSessionLocked() {
+        private fun closePersistentRootSessionLocked(gracefulExit: Boolean = true) {
             idleTrimJob?.cancel()
             idleTrimJob = null
             val proc = sharedRootProcess
-            try {
-                sharedRootWriter?.write("exit\n")
-                sharedRootWriter?.flush()
-            } catch (_: Exception) {}
+            if (gracefulExit && proc != null && isProcessAlive(proc)) {
+                try {
+                    sharedRootWriter?.write("exit\n")
+                    sharedRootWriter?.flush()
+                } catch (_: Exception) {}
+            }
             try { sharedRootWriter?.close() } catch (_: Exception) {}
             try { sharedRootReader?.close() } catch (_: Exception) {}
             if (proc != null) {
                 try {
-                    val exited = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    val exited = if (gracefulExit && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         proc.waitFor(150, TimeUnit.MILLISECONDS)
                     } else {
                         false
                     }
-                    if (!exited) {
+                    if (!exited || isProcessAlive(proc)) {
                         proc.destroyForcibly()
                     }
                 } catch (_: Exception) {

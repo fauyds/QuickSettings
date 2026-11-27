@@ -42,6 +42,8 @@ class QsPageAdapter(
 
     class PageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val recyclerView: RecyclerView = itemView as RecyclerView
+        private var gridLayoutManager: GridLayoutManager? = null
+        private var gridAdapter: SinglePageGridAdapter? = null
 
         fun bind(
             tiles: List<QsTileModel>,
@@ -51,18 +53,53 @@ class QsPageAdapter(
             onTileClick: (QsTileModel) -> Unit,
             onTileLongClick: (QsTileModel) -> Unit
         ) {
-            recyclerView.layoutManager = GridLayoutManager(itemView.context, gridLayout.columns)
-            recyclerView.adapter = SinglePageGridAdapter(tiles, isDark, activeSquareShape, onTileClick, onTileLongClick)
+            val lm = gridLayoutManager
+            if (lm == null) {
+                val created = GridLayoutManager(itemView.context, gridLayout.columns)
+                gridLayoutManager = created
+                recyclerView.layoutManager = created
+            } else if (lm.spanCount != gridLayout.columns) {
+                lm.spanCount = gridLayout.columns
+            }
+
+            val adapter = gridAdapter
+            if (adapter == null) {
+                val created = SinglePageGridAdapter(tiles, isDark, activeSquareShape, onTileClick, onTileLongClick)
+                gridAdapter = created
+                recyclerView.adapter = created
+            } else {
+                adapter.update(tiles, isDark, activeSquareShape, onTileClick, onTileLongClick)
+            }
         }
     }
 
     private class SinglePageGridAdapter(
-        private val tiles: List<QsTileModel>,
-        private val isDark: Boolean,
-        private val activeSquareShape: Boolean,
-        private val onTileClick: (QsTileModel) -> Unit,
-        private val onTileLongClick: (QsTileModel) -> Unit
+        private var tiles: List<QsTileModel>,
+        private var isDark: Boolean,
+        private var activeSquareShape: Boolean,
+        private var onTileClick: (QsTileModel) -> Unit,
+        private var onTileLongClick: (QsTileModel) -> Unit
     ) : RecyclerView.Adapter<SinglePageGridAdapter.TileViewHolder>() {
+
+        fun update(
+            tiles: List<QsTileModel>,
+            isDark: Boolean,
+            activeSquareShape: Boolean,
+            onTileClick: (QsTileModel) -> Unit,
+            onTileLongClick: (QsTileModel) -> Unit
+        ) {
+            val changed = this.tiles != tiles ||
+                this.isDark != isDark ||
+                this.activeSquareShape != activeSquareShape
+            this.tiles = tiles
+            this.isDark = isDark
+            this.activeSquareShape = activeSquareShape
+            this.onTileClick = onTileClick
+            this.onTileLongClick = onTileLongClick
+            if (changed) {
+                notifyDataSetChanged()
+            }
+        }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TileViewHolder {
             val view = LayoutInflater.from(parent.context).inflate(R.layout.item_qs_tile, parent, false)

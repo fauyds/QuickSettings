@@ -24,6 +24,7 @@ class UnifiedQsHostView @JvmOverloads constructor(
     val qqsView: QuickQuickSettingsView
     val fullQsView: QuickSettingsFullView
     val editStudioView: TileEditStudioView
+    private var lastBgSignature: String? = null
 
     var onTileClick: ((QsTileModel) -> Unit)? = null
         set(value) {
@@ -115,17 +116,21 @@ class UnifiedQsHostView @JvmOverloads constructor(
         val cardOutline = MonetThemeHelper.getCardOutline(context, isDark)
         val cornerRadius = if (isOreo) 0f else if (isMarshmallow) (panelOuterCorner * density) else (24f * density)
 
-        background = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            if (isMarshmallow) {
-                val outerPx = panelOuterCorner * density
-                cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, outerPx, outerPx, outerPx, outerPx)
-            } else {
-                this.cornerRadius = cornerRadius
-            }
-            setColor(cardBg)
-            if (!isOreo && !isMarshmallow) {
-                setStroke(1, cardOutline)
+        val bgSig = "$isOreo|$isMarshmallow|$cardBg|$cardOutline|$cornerRadius"
+        if (bgSig != lastBgSignature) {
+            lastBgSignature = bgSig
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                if (isMarshmallow) {
+                    val outerPx = panelOuterCorner * density
+                    cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, outerPx, outerPx, outerPx, outerPx)
+                } else {
+                    this.cornerRadius = cornerRadius
+                }
+                setColor(cardBg)
+                if (!isOreo && !isMarshmallow) {
+                    setStroke(1, cardOutline)
+                }
             }
         }
 

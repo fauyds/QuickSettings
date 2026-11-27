@@ -46,6 +46,21 @@ object MediaSessionManagerHelper {
     private val controllerCallbacks = java.util.concurrent.ConcurrentHashMap<String, MediaController.Callback>()
 
     private val activeClients = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    private val appNameCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private data class CachedArtworkEntry(
+        val trackSignature: String,
+        val bitmap: android.graphics.Bitmap?
+    )
+    private val cachedSessionArtwork = java.util.concurrent.ConcurrentHashMap<String, CachedArtworkEntry>()
+    @Volatile
+    private var cachedRepeatMethod: java.lang.reflect.Method? = null
+    @Volatile
+    private var cachedRepeatMethodResolved = false
+    @Volatile
+    private var cachedShuffleMethod: java.lang.reflect.Method? = null
+    @Volatile
+    private var cachedShuffleMethodResolved = false
+
     private val registrationLock = Any()
     @Volatile
     private var currentContext: Context? = null
@@ -145,7 +160,10 @@ object MediaSessionManagerHelper {
                 state != null && state != PlaybackState.STATE_NONE && state != PlaybackState.STATE_STOPPED
             }.distinctBy { it.packageName }
 
+            val activeKeys = HashSet<String>(filtered.size)
             filtered.forEach { ctrl ->
+                val key = ctrl.sessionToken.toString()
+                activeKeys.add(key)
                 activeControllers.add(ctrl)
                 val cb = object : MediaController.Callback() {
                     override fun onPlaybackStateChanged(state: PlaybackState?) {
@@ -153,20 +171,24 @@ object MediaSessionManagerHelper {
                     }
 
                     override fun onMetadataChanged(metadata: MediaMetadata?) {
-                        updateMediaState()
+                        cachedSessionArtwork.remove(key)
+                        updateMediaState(force = true)
                     }
 
                     override fun onSessionDestroyed() {
+                        cachedSessionArtwork.remove(key)
                         refreshState()
                     }
                 }
-                val key = ctrl.sessionToken.toString()
                 controllerCallbacks[key] = cb
                 try { ctrl.registerCallback(cb) } catch (e: Exception) {}
             }
+            cachedSessionArtwork.keys.retainAll(activeKeys)
+        } else {
+            cachedSessionArtwork.clear()
         }
 
-        updateMediaState()
+        updateMediaState(force = true)
     }
 
     fun selectSession(index: Int) {
@@ -184,16 +206,21 @@ object MediaSessionManagerHelper {
 
     private fun checkStartTicker(states: List<MediaState>) {
         val anyPlaying = states.any { it.isPlaying }
-        if (anyPlaying) {
+        val uiActive = com.example.system.NativeTileManager.isAnyUiActive()
+        if (anyPlaying && uiActive) {
             if (progressTickerJob == null || progressTickerJob?.isActive != true) {
                 progressTickerJob = helperScope.launch {
-                    while (this.isActive) {
+                    while (this.isActive && com.example.system.NativeTileManager.isAnyUiActive()) {
                         kotlinx.coroutines.delay(1000L)
+                        if (!com.example.system.NativeTileManager.isAnyUiActive()) {
+                            break
+                        }
                         if (activeControllers.isEmpty() && PanelPreferences.forceShowMediaPreview.value) {
                             previewPositionMs = (previewPositionMs + 1000L) % 232000L
                         }
-                        updateMediaStateInternal()
+                        updateMediaStateInternal(force = true)
                     }
+                    progressTickerJob = null
                 }
             }
         } else {
@@ -202,13 +229,13 @@ object MediaSessionManagerHelper {
         }
     }
 
-    fun updateMediaState() {
-        updateMediaStateInternal()
+    fun updateMediaState(force: Boolean = false) {
+        updateMediaStateInternal(force = force)
     }
 
-    private fun updateMediaStateInternal() {
+    private fun updateMediaStateInternal(force: Boolean = false) {
         val now = System.currentTimeMillis()
-        if (now - lastUpdateMediaTime < 100) return // Throttle rapid updates within 100ms
+        if (!force && now - lastUpdateMediaTime < 100) return // Throttle rapid updates within 100ms
         lastUpdateMediaTime = now
         val context = currentContext ?: return
         val forcePreview = PanelPreferences.forceShowMediaPreview.value
@@ -323,11 +350,13 @@ object MediaSessionManagerHelper {
         val playbackState = controller.playbackState
 
         val packageName = controller.packageName
-        val appName = try {
+        val appName = appNameCache[packageName] ?: try {
             if (context != null) {
                 val pm = context.packageManager
                 val appInfo = pm.getApplicationInfo(packageName, 0)
-                pm.getApplicationLabel(appInfo).toString()
+                pm.getApplicationLabel(appInfo).toString().also { resolved ->
+                    if (resolved.isNotBlank()) appNameCache[packageName] = resolved
+                }
             } else packageName.substringAfterLast('.')
         } catch (e: Exception) {
             packageName.substringAfterLast('.')
@@ -362,8 +391,22 @@ object MediaSessionManagerHelper {
             (currentPositionMs.toFloat() / totalDurationMs.toFloat()).coerceIn(0f, 1f)
         } else 0f
 
-        val artworkBitmap = metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
-            ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
+        val tokenKey = try { controller.sessionToken.toString() } catch (_: Throwable) { packageName }
+        val artUriStr = metadata?.getString(MediaMetadata.METADATA_KEY_ALBUM_ART_URI)
+            ?: metadata?.getString(MediaMetadata.METADATA_KEY_ART_URI)
+            ?: ""
+        val artSig = "$packageName|$title|$artist|$album|$totalDurationMs|$artUriStr"
+        val cachedArt = cachedSessionArtwork[tokenKey]
+        val artworkBitmap = if (cachedArt != null && cachedArt.trackSignature == artSig &&
+            (cachedArt.bitmap == null || !cachedArt.bitmap.isRecycled)
+        ) {
+            cachedArt.bitmap
+        } else {
+            val fresh = metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
+                ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
+            cachedSessionArtwork[tokenKey] = CachedArtworkEntry(artSig, fresh)
+            fresh
+        }
 
         val outputInfo = getActiveOutputDevice(context)
 
@@ -392,21 +435,35 @@ object MediaSessionManagerHelper {
         val actionSetShuffleMode = 1L shl 21
         val supportsRepeat = (actions and actionSetRepeatMode) != 0L ||
                 (playbackState?.customActions?.any { it.action.contains("repeat", ignoreCase = true) } == true)
-        val repeatMode = try {
-            val method = controller::class.java.getMethod("getRepeatMode")
-            (method.invoke(controller) as? Int) ?: 0
-        } catch (e: Exception) {
-            0
-        }
+        val repeatMode = if (supportsRepeat) {
+            try {
+                if (!cachedRepeatMethodResolved) {
+                    cachedRepeatMethod = try {
+                        MediaController::class.java.getMethod("getRepeatMode")
+                    } catch (_: Throwable) { null }
+                    cachedRepeatMethodResolved = true
+                }
+                (cachedRepeatMethod?.invoke(controller) as? Int) ?: 0
+            } catch (_: Exception) {
+                0
+            }
+        } else 0
 
         val supportsShuffle = (actions and actionSetShuffleMode) != 0L ||
                 (playbackState?.customActions?.any { it.action.contains("shuffle", ignoreCase = true) } == true)
-        val shuffleMode = try {
-            val method = controller::class.java.getMethod("getShuffleMode")
-            (method.invoke(controller) as? Int) ?: 0
-        } catch (e: Exception) {
-            0
-        }
+        val shuffleMode = if (supportsShuffle) {
+            try {
+                if (!cachedShuffleMethodResolved) {
+                    cachedShuffleMethod = try {
+                        MediaController::class.java.getMethod("getShuffleMode")
+                    } catch (_: Throwable) { null }
+                    cachedShuffleMethodResolved = true
+                }
+                (cachedShuffleMethod?.invoke(controller) as? Int) ?: 0
+            } catch (_: Exception) {
+                0
+            }
+        } else 0
 
         val supportsFavorite = (actions and PlaybackState.ACTION_SET_RATING) != 0L ||
                 metadata?.getRating(MediaMetadata.METADATA_KEY_USER_RATING) != null ||
@@ -839,6 +896,8 @@ object MediaSessionManagerHelper {
 
     fun unregisterAll() {
         synchronized(registrationLock) {
+            progressTickerJob?.cancel()
+            progressTickerJob = null
             activeClients.clear()
             activeControllers.forEach { ctrl ->
                 val key = try { ctrl.sessionToken.toString() } catch (_: Throwable) { null }
@@ -850,6 +909,7 @@ object MediaSessionManagerHelper {
             }
             activeControllers.clear()
             controllerCallbacks.clear()
+            cachedSessionArtwork.clear()
             val appContext = currentContext
             val listener = sessionListener
             sessionListener = null

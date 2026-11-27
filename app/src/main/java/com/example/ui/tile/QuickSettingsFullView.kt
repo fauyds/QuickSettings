@@ -73,6 +73,9 @@ class QuickSettingsFullView @JvmOverloads constructor(
 
     private var isDark: Boolean = true
     private var currentPageIndex: Int = 0
+    private var lastPagesSignature: String? = null
+    private var lastBrightnessStyleSignature: String? = null
+    private var lastPageIndicatorSignature: String? = null
 
     init {
         val isOreo = com.example.data.PanelPreferences.isAndroidOreoStyle(context)
@@ -225,33 +228,45 @@ class QuickSettingsFullView @JvmOverloads constructor(
         if (brightnessAtBottom) {
             llTopBrightnessRow.visibility = View.GONE
             llBottomBrightnessRow.visibility = View.VISIBLE
-            sbBottomBrightness.progress = clampedBrightness
+            if (sbBottomBrightness.progress != clampedBrightness) {
+                sbBottomBrightness.progress = clampedBrightness
+            }
             tvBottomBrightnessPercentage.text = "$pct%"
-            tvBottomBrightnessPercentage.setTextColor(textPrimary)
-            flBottomBrightnessIconPill.background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(pillColor)
+            val bKey = "bottom|$primaryAccent|$textPrimary|$cardOutline"
+            if (bKey != lastBrightnessStyleSignature) {
+                lastBrightnessStyleSignature = bKey
+                tvBottomBrightnessPercentage.setTextColor(textPrimary)
+                flBottomBrightnessIconPill.background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(pillColor)
+                }
+                ivBottomBrightnessIcon.setColorFilter(primaryAccent)
+                sbBottomBrightness.thumbTintList = ColorStateList.valueOf(primaryAccent)
+                sbBottomBrightness.progressTintList = ColorStateList.valueOf(primaryAccent)
+                sbBottomBrightness.progressBackgroundTintList = ColorStateList.valueOf(cardOutline)
             }
             ivBottomBrightnessIcon.setImageResource(iconRes)
-            ivBottomBrightnessIcon.setColorFilter(primaryAccent)
-            sbBottomBrightness.thumbTintList = ColorStateList.valueOf(primaryAccent)
-            sbBottomBrightness.progressTintList = ColorStateList.valueOf(primaryAccent)
-            sbBottomBrightness.progressBackgroundTintList = ColorStateList.valueOf(cardOutline)
         } else {
             llTopBrightnessRow.visibility = View.VISIBLE
             llBottomBrightnessRow.visibility = View.GONE
-            sbTopBrightness.progress = clampedBrightness
+            if (sbTopBrightness.progress != clampedBrightness) {
+                sbTopBrightness.progress = clampedBrightness
+            }
             tvTopBrightnessPercentage.text = "$pct%"
-            tvTopBrightnessPercentage.setTextColor(textPrimary)
-            flTopBrightnessIconPill.background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(pillColor)
+            val bKey = "top|$primaryAccent|$textPrimary|$cardOutline"
+            if (bKey != lastBrightnessStyleSignature) {
+                lastBrightnessStyleSignature = bKey
+                tvTopBrightnessPercentage.setTextColor(textPrimary)
+                flTopBrightnessIconPill.background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(pillColor)
+                }
+                ivTopBrightnessIcon.setColorFilter(primaryAccent)
+                sbTopBrightness.thumbTintList = ColorStateList.valueOf(primaryAccent)
+                sbTopBrightness.progressTintList = ColorStateList.valueOf(primaryAccent)
+                sbTopBrightness.progressBackgroundTintList = ColorStateList.valueOf(cardOutline)
             }
             ivTopBrightnessIcon.setImageResource(iconRes)
-            ivTopBrightnessIcon.setColorFilter(primaryAccent)
-            sbTopBrightness.thumbTintList = ColorStateList.valueOf(primaryAccent)
-            sbTopBrightness.progressTintList = ColorStateList.valueOf(primaryAccent)
-            sbTopBrightness.progressBackgroundTintList = ColorStateList.valueOf(cardOutline)
         }
 
         // 3. Tile Pages Chunking
@@ -260,11 +275,21 @@ class QuickSettingsFullView @JvmOverloads constructor(
         val pages = activeTiles.chunked(tilesPerPage)
         val finalPages = if (pages.isEmpty()) listOf(emptyList()) else pages
 
-        pageAdapter.pages = finalPages
-        pageAdapter.gridLayout = gridLayout
-        pageAdapter.isDark = isDark
-        pageAdapter.activeSquareShape = activeSquareShape
-        pageAdapter.notifyDataSetChanged()
+        val pagesSig = buildString {
+            append(gridLayout.columns).append('x').append(gridLayout.rows)
+            append('|').append(isDark).append('|').append(activeSquareShape)
+            for (t in activeTiles) {
+                append(';').append(t.id).append(':').append(t.state).append(':').append(t.label).append(':').append(t.subtitle)
+            }
+        }
+        if (pagesSig != lastPagesSignature) {
+            lastPagesSignature = pagesSig
+            pageAdapter.pages = finalPages
+            pageAdapter.gridLayout = gridLayout
+            pageAdapter.isDark = isDark
+            pageAdapter.activeSquareShape = activeSquareShape
+            pageAdapter.notifyDataSetChanged()
+        }
 
         // 4. Page Indicators Setup
         if (currentPageIndex >= finalPages.size) {
@@ -324,14 +349,15 @@ class QuickSettingsFullView @JvmOverloads constructor(
 
     private fun updatePageIndicators(selectedIndex: Int, totalPages: Int) {
         val density = context.resources.displayMetrics.density
-        llPageIndicators.removeAllViews()
-
         if (totalPages <= 1) {
-            llPageIndicators.visibility = View.GONE
+            if (lastPageIndicatorSignature != "hidden") {
+                lastPageIndicatorSignature = "hidden"
+                llPageIndicators.removeAllViews()
+                llPageIndicators.visibility = View.GONE
+            }
             return
         }
 
-        llPageIndicators.visibility = View.VISIBLE
         val primaryAccent = MonetThemeHelper.getPrimaryAccent(context, isDark)
         val inactiveDotColor = if (isDark) Color.parseColor("#44FFFFFF") else Color.parseColor("#44000000")
         val style = com.example.data.PanelPreferences.qsPageIndicatorStyle.value
@@ -343,6 +369,15 @@ class QuickSettingsFullView @JvmOverloads constructor(
         val inactiveDotR = com.example.data.PanelPreferences.piInactiveDotRadius.value
         val activeSlideT = com.example.data.PanelPreferences.piActiveSlidingThickness.value
         val inactiveSlideT = com.example.data.PanelPreferences.piInactiveSlidingThickness.value
+
+        val sig = "$selectedIndex|$totalPages|$primaryAccent|$isDark|$style|$activeLineT|$inactiveLineT|$activeLineW|$inactiveLineW|$activeDotR|$inactiveDotR|$activeSlideT|$inactiveSlideT"
+        if (sig == lastPageIndicatorSignature) {
+            return
+        }
+        lastPageIndicatorSignature = sig
+
+        llPageIndicators.removeAllViews()
+        llPageIndicators.visibility = View.VISIBLE
 
         if (style == com.example.data.QsPageIndicatorStyle.SLIDING_TRACK) {
             val segWidthPx = ((if (totalPages <= 4) 22 else (88 / totalPages).coerceAtLeast(12)) * density).toInt()

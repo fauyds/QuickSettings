@@ -844,18 +844,34 @@ class NotificationAdapter(
         private val tvTotalTime: TextView = itemView.findViewById(R.id.tv_media_total_time)
 
         private var isSeekBarVisible = true
+        private var lastRawArtwork: Bitmap? = null
+        private var lastTrimmedArtwork: Bitmap? = null
+        private var lastColorsArtwork: Bitmap? = null
+        private var lastExtractedColors: com.example.ui.overlay.MediaNotificationColors? = null
+        private var lastBgSignature: String? = null
+        private var lastArtworkVisualSignature: String? = null
+        private var lastMediaPkg: String? = null
+        private var cachedAppLabel: String? = null
+        private var cachedAppIconDrawable: android.graphics.drawable.Drawable? = null
 
         fun bind(mediaState: MediaState, isFirstInGroup: Boolean, isLastInGroup: Boolean) {
             val context = itemView.context
             val density = context.resources.displayMetrics.density
 
-            val artwork = mediaState.artworkBitmap
-            val palette = artwork?.let {
-                Palette.from(it)
-                    .maximumColorCount(32)
-                    .clearFilters()
-                    .generate()
+            val artwork = mediaState.artworkBitmap?.takeIf { !it.isRecycled }
+            if (artwork != null) {
+                if (artwork !== lastRawArtwork || lastTrimmedArtwork?.isRecycled == true) {
+                    lastRawArtwork = artwork
+                    lastTrimmedArtwork = trimTopBottomBlackLines(artwork)
+                }
+            } else {
+                lastRawArtwork = null
+                lastTrimmedArtwork = null
+                lastColorsArtwork = null
+                lastExtractedColors = null
             }
+            val displayBitmap = lastTrimmedArtwork?.takeIf { !it.isRecycled } ?: artwork
+
             val useMediaArtworkColors = PanelPreferences.useMediaArtworkColors.value
             val isPanelCustomized = PanelPreferences.qsPanelBackgroundColor.value != null ||
                 PanelPreferences.getPanelContainerColorTertiary(isDark).value ||
@@ -874,8 +890,19 @@ class NotificationAdapter(
 
             val rawCardBgColorInt: Int
             val accentColorInt: Int
-            if (useMediaArtworkColors && artwork != null && !isPanelCustomized) {
-                val extractedColors = extractAndroidQNotificationColors(artwork, palette)
+            if (useMediaArtworkColors && displayBitmap != null && !isPanelCustomized) {
+                val extractedColors = if (displayBitmap === lastColorsArtwork && lastExtractedColors != null) {
+                    lastExtractedColors!!
+                } else {
+                    val palette = Palette.from(displayBitmap)
+                        .maximumColorCount(32)
+                        .clearFilters()
+                        .generate()
+                    extractAndroidQNotificationColors(displayBitmap, palette).also {
+                        lastColorsArtwork = displayBitmap
+                        lastExtractedColors = it
+                    }
+                }
                 rawCardBgColorInt = extractedColors.backgroundColor.toArgb()
                 accentColorInt = extractedColors.accentColor.toArgb()
             } else {
@@ -889,7 +916,6 @@ class NotificationAdapter(
             }
             val subTextColorInt = ColorUtils.setAlphaComponent(accentColorInt, (255 * 0.80f).toInt())
             val dimAccentColorInt = ColorUtils.setAlphaComponent(accentColorInt, (255 * 0.45f).toInt())
-            val inactiveAccentColorInt = ColorUtils.setAlphaComponent(accentColorInt, (255 * 0.25f).toInt())
 
             // 1. Dynamic Shape & Corner Radii following panel preferences
             val panelGlobalCornerEnabled = PanelPreferences.panelGlobalCornerEnabled.value
@@ -897,8 +923,6 @@ class NotificationAdapter(
             val panelInnerCorner = PanelPreferences.panelInnerCorner.value
 
             val isOreoStyle = PanelPreferences.isAndroidOreoStyle(context)
-            val isMarshmallowStyle = PanelPreferences.isAndroidMarshmallowStyle(context)
-            val isKitKatStyle = PanelPreferences.isAndroidKitKatStyle(context)
             val outerCornerPx = panelOuterCorner * density
             val innerCornerPx = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner) * density
 
@@ -916,59 +940,66 @@ class NotificationAdapter(
                 )
             }
 
-            val contentDrawable = if (isOreoStyle && !enableContainerBlur) {
-                val strokeColor = if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#33000000")
-                val strokePx = (1 * density).toInt().coerceAtLeast(1)
-                val baseDrawable = GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    setColor(cardBgColorInt)
-                }
-                val strokeDrawable = GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    setStroke(strokePx, strokeColor)
-                    setColor(Color.TRANSPARENT)
-                }
-                android.graphics.drawable.LayerDrawable(arrayOf(baseDrawable, strokeDrawable)).apply {
-                    setLayerInset(1, -strokePx, 0, -strokePx, 0)
-                }
-            } else {
-                GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    cornerRadii = radii
-                    setColor(cardBgColorInt)
-                }
-            }
-
             val enablePanelShadows = PanelPreferences.enablePanelShadows.value
             val shadowElevation = PanelPreferences.panelShadowElevation.value
             val panelShadowAlpha = PanelPreferences.panelShadowAlpha.value
             val panelShadowOffsetY = PanelPreferences.panelShadowOffsetY.value
+            val enableTopRim = PanelPreferences.enablePanelTopRim.value
+            val liquidActive = PanelPreferences.isLiquidGlassActive()
+            val refractionSensitivity = PanelPreferences.glassRefractionSensitivity.value
 
-            CustomShadowHelper.applyCustomShadowBackground(
-                view = flRoot,
-                contentDrawable = contentDrawable,
-                radii = radii,
-                elevation = if (enablePanelShadows && !isOreoStyle) shadowElevation else 0f,
-                isDark = isDark,
-                customAlpha = panelShadowAlpha,
-                customOffsetY = panelShadowOffsetY,
-                enableTopRimBackground = PanelPreferences.enablePanelTopRim.value,
-                enableFrostedGlass = enableContainerBlur && enableNotificationBlur,
-                frostedTransparency = containerBlurTransparency,
-                enableGlassRefraction = PanelPreferences.isLiquidGlassActive(),
-                glassRefractionSensitivity = PanelPreferences.glassRefractionSensitivity.value
-            )
-            CustomShadowHelper.applyPanelTopRimForeground(
-                view = flRoot,
-                enabled = PanelPreferences.enablePanelTopRim.value,
-                radii = radii
-            )
-            flRoot.elevation = 0f
-            flRoot.translationY = 0f
-            flRoot.clipChildren = false
-            flRoot.clipToPadding = false
-            flRoot.clipToOutline = false
-            flRoot.outlineProvider = null
+            val bgSig = "$isOreoStyle|$isDark|$cardBgColorInt|$topRadius|$bottomRadius|$enableContainerBlur|$enableNotificationBlur|$containerBlurTransparency|$enablePanelShadows|$shadowElevation|$panelShadowAlpha|$panelShadowOffsetY|$enableTopRim|$liquidActive|$refractionSensitivity"
+            if (bgSig != lastBgSignature) {
+                lastBgSignature = bgSig
+                val contentDrawable = if (isOreoStyle && !enableContainerBlur) {
+                    val strokeColor = if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#33000000")
+                    val strokePx = (1 * density).toInt().coerceAtLeast(1)
+                    val baseDrawable = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        setColor(cardBgColorInt)
+                    }
+                    val strokeDrawable = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        setStroke(strokePx, strokeColor)
+                        setColor(Color.TRANSPARENT)
+                    }
+                    android.graphics.drawable.LayerDrawable(arrayOf(baseDrawable, strokeDrawable)).apply {
+                        setLayerInset(1, -strokePx, 0, -strokePx, 0)
+                    }
+                } else {
+                    GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadii = radii
+                        setColor(cardBgColorInt)
+                    }
+                }
+
+                CustomShadowHelper.applyCustomShadowBackground(
+                    view = flRoot,
+                    contentDrawable = contentDrawable,
+                    radii = radii,
+                    elevation = if (enablePanelShadows && !isOreoStyle) shadowElevation else 0f,
+                    isDark = isDark,
+                    customAlpha = panelShadowAlpha,
+                    customOffsetY = panelShadowOffsetY,
+                    enableTopRimBackground = enableTopRim,
+                    enableFrostedGlass = enableContainerBlur && enableNotificationBlur,
+                    frostedTransparency = containerBlurTransparency,
+                    enableGlassRefraction = liquidActive,
+                    glassRefractionSensitivity = refractionSensitivity
+                )
+                CustomShadowHelper.applyPanelTopRimForeground(
+                    view = flRoot,
+                    enabled = enableTopRim,
+                    radii = radii
+                )
+                flRoot.elevation = 0f
+                flRoot.translationY = 0f
+                flRoot.clipChildren = false
+                flRoot.clipToPadding = false
+                flRoot.clipToOutline = false
+                flRoot.outlineProvider = null
+            }
 
             // Distance between notification & media items: 4dp (0dp in Oreo style)
             val lp = flRoot.layoutParams as? ViewGroup.MarginLayoutParams
@@ -983,90 +1014,102 @@ class NotificationAdapter(
             }
 
             // 2. Right-side Artwork & Gradient
-            if (artwork != null) {
-                val displayBitmap = trimTopBottomBlackLines(artwork)
-                ivArtwork.visibility = View.VISIBLE
-                ivArtwork.setImageBitmap(displayBitmap)
-                flArtworkFallback.visibility = View.GONE
+            val artSig = "${System.identityHashCode(displayBitmap)}|$cardBgColorInt|$accentColorInt|$topRadius|$bottomRadius|$isDark"
+            if (artSig != lastArtworkVisualSignature) {
+                lastArtworkVisualSignature = artSig
+                if (displayBitmap != null) {
+                    ivArtwork.visibility = View.VISIBLE
+                    ivArtwork.setImageBitmap(displayBitmap)
+                    flArtworkFallback.visibility = View.GONE
 
-                val gradient = GradientDrawable(
-                    GradientDrawable.Orientation.LEFT_RIGHT,
-                    intArrayOf(
-                        cardBgColorInt,
-                        ColorUtils.setAlphaComponent(cardBgColorInt, (255 * 0.92f).toInt()),
-                        ColorUtils.setAlphaComponent(cardBgColorInt, (255 * 0.50f).toInt()),
-                        Color.TRANSPARENT
+                    val gradient = GradientDrawable(
+                        GradientDrawable.Orientation.LEFT_RIGHT,
+                        intArrayOf(
+                            cardBgColorInt,
+                            ColorUtils.setAlphaComponent(cardBgColorInt, (255 * 0.92f).toInt()),
+                            ColorUtils.setAlphaComponent(cardBgColorInt, (255 * 0.50f).toInt()),
+                            Color.TRANSPARENT
+                        )
                     )
-                )
-                vArtworkGradient.background = gradient
-                vArtworkGradient.visibility = View.VISIBLE
+                    vArtworkGradient.background = gradient
+                    vArtworkGradient.visibility = View.VISIBLE
 
-                val artworkOutlineProvider = object : ViewOutlineProvider() {
-                    override fun getOutline(view: View, outline: Outline) {
-                        val path = Path().apply {
-                            addRoundRect(
-                                0f, 0f, view.width.toFloat(), view.height.toFloat(),
-                                radii,
-                                Path.Direction.CW
-                            )
-                        }
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                            outline.setPath(path)
-                        } else {
-                            @Suppress("DEPRECATION")
-                            outline.setConvexPath(path)
+                    val artworkOutlineProvider = object : ViewOutlineProvider() {
+                        override fun getOutline(view: View, outline: Outline) {
+                            val path = Path().apply {
+                                addRoundRect(
+                                    0f, 0f, view.width.toFloat(), view.height.toFloat(),
+                                    radii,
+                                    Path.Direction.CW
+                                )
+                            }
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                outline.setPath(path)
+                            } else {
+                                @Suppress("DEPRECATION")
+                                outline.setConvexPath(path)
+                            }
                         }
                     }
-                }
-                ivArtwork.outlineProvider = artworkOutlineProvider
-                ivArtwork.clipToOutline = true
-                vArtworkGradient.outlineProvider = artworkOutlineProvider
-                vArtworkGradient.clipToOutline = true
-            } else {
-                ivArtwork.visibility = View.GONE
-                vArtworkGradient.visibility = View.GONE
-                flArtworkFallback.visibility = View.VISIBLE
+                    ivArtwork.outlineProvider = artworkOutlineProvider
+                    ivArtwork.clipToOutline = true
+                    vArtworkGradient.outlineProvider = artworkOutlineProvider
+                    vArtworkGradient.clipToOutline = true
+                } else {
+                    ivArtwork.setImageDrawable(null)
+                    ivArtwork.visibility = View.GONE
+                    vArtworkGradient.visibility = View.GONE
+                    flArtworkFallback.visibility = View.VISIBLE
 
-                val neutralBadgeColor = if (isDark) Color.parseColor("#34363C") else Color.parseColor("#DCDFE6")
-                val badgeDrawable = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(neutralBadgeColor)
+                    val neutralBadgeColor = if (isDark) Color.parseColor("#34363C") else Color.parseColor("#DCDFE6")
+                    val badgeDrawable = GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        setColor(neutralBadgeColor)
+                    }
+                    ivArtworkFallback.background = badgeDrawable
+                    val pad = (10 * density).toInt()
+                    ivArtworkFallback.setPadding(pad, pad, pad, pad)
+                    ivArtworkFallback.setColorFilter(accentColorInt)
                 }
-                ivArtworkFallback.background = badgeDrawable
-                val pad = (10 * density).toInt()
-                ivArtworkFallback.setPadding(pad, pad, pad, pad)
-                ivArtworkFallback.setColorFilter(accentColorInt)
             }
 
-            // 3. App Title & Icon
-            val displayAppName = if (mediaState.appName.isNotBlank() && mediaState.appName != "MUSER") {
-                mediaState.appName
-            } else if (mediaState.packageName.isNotBlank()) {
-                try {
-                    val pm = context.packageManager
-                    val info = pm.getApplicationInfo(mediaState.packageName, 0)
-                    pm.getApplicationLabel(info).toString()
-                } catch (e: Exception) {
+            // 3. App Title & Icon (cached by packageName)
+            if (mediaState.packageName != lastMediaPkg) {
+                lastMediaPkg = mediaState.packageName
+                cachedAppLabel = if (mediaState.packageName.isNotBlank()) {
+                    try {
+                        val pm = context.packageManager
+                        val info = pm.getApplicationInfo(mediaState.packageName, 0)
+                        pm.getApplicationLabel(info).toString()
+                    } catch (_: Exception) {
+                        "Music Player"
+                    }
+                } else {
                     "Music Player"
                 }
+                cachedAppIconDrawable = if (mediaState.packageName.isNotBlank()) {
+                    try {
+                        context.packageManager.getApplicationIcon(mediaState.packageName)
+                    } catch (_: Exception) {
+                        null
+                    }
+                } else {
+                    null
+                }
+            }
+            val displayAppName = if (mediaState.appName.isNotBlank() && mediaState.appName != "MUSER") {
+                mediaState.appName
             } else {
-                "Music Player"
+                cachedAppLabel ?: "Music Player"
             }
             tvAppName.text = displayAppName
             tvAppName.setTextColor(accentColorInt)
 
-            if (mediaState.packageName.isNotBlank()) {
-                try {
-                    val pm = context.packageManager
-                    val icon = pm.getApplicationIcon(mediaState.packageName)
-                    ivAppIcon.setImageDrawable(icon)
-                    ivAppIcon.colorFilter = null
-                    ivAppIcon.visibility = View.VISIBLE
-                } catch (e: Exception) {
-                    ivAppIcon.setImageResource(R.drawable.ic_media_play)
-                    ivAppIcon.setColorFilter(accentColorInt)
-                    ivAppIcon.visibility = View.VISIBLE
-                }
+            val resolvedIcon = cachedAppIconDrawable
+            if (resolvedIcon != null) {
+                ivAppIcon.setImageDrawable(resolvedIcon)
+                ivAppIcon.colorFilter = null
+                ivAppIcon.visibility = View.VISIBLE
             } else {
                 ivAppIcon.setImageResource(R.drawable.ic_media_play)
                 ivAppIcon.setColorFilter(accentColorInt)
@@ -1208,6 +1251,8 @@ class NotificationAdapter(
         private val btnPlayPause: ImageButton = itemView.findViewById(R.id.btn_compact_media_play_pause)
         private val btnNext: ImageButton = itemView.findViewById(R.id.btn_compact_media_next)
         private var lastBlurRadiiPx: Pair<Float, Float> = 0f to 0f
+        private var lastCompactArtworkSig: String? = null
+        private var lastCompactBgSig: String? = null
 
         override fun blurTargetView(): View = flRoot
         override fun blurCornerRadiiPx(): Pair<Float, Float> = lastBlurRadiiPx
@@ -1251,30 +1296,34 @@ class NotificationAdapter(
             val outerCornerPx = panelOuterCorner * density
             val innerCornerPx = (if (panelGlobalCornerEnabled) panelOuterCorner else panelInnerCorner) * density
 
-            ivArtwork.outlineProvider = object : ViewOutlineProvider() {
-                override fun getOutline(view: View, outline: Outline) {
-                    outline.setRoundRect(0, 0, view.width, view.height, outerCornerPx)
+            val artwork = mediaState.artworkBitmap?.takeIf { !it.isRecycled }
+            val compactArtSig = "${System.identityHashCode(artwork)}|$outerCornerPx|$isDarkTheme"
+            if (compactArtSig != lastCompactArtworkSig) {
+                lastCompactArtworkSig = compactArtSig
+                ivArtwork.outlineProvider = object : ViewOutlineProvider() {
+                    override fun getOutline(view: View, outline: Outline) {
+                        outline.setRoundRect(0, 0, view.width, view.height, outerCornerPx)
+                    }
                 }
-            }
-            ivArtwork.clipToOutline = true
+                ivArtwork.clipToOutline = true
 
-            val artwork = mediaState.artworkBitmap
-            if (artwork != null) {
-                ivArtwork.setImageBitmap(artwork)
-                ivArtwork.background = null
-                ivArtwork.clearColorFilter()
-                ivArtwork.setPadding(0, 0, 0, 0)
-            } else {
-                ivArtwork.setImageResource(R.drawable.ic_media_music_note)
-                val fallbackBg = GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    cornerRadius = outerCornerPx
-                    setColor(if (isDarkTheme) Color.parseColor("#424242") else Color.parseColor("#E0E0E0"))
+                if (artwork != null) {
+                    ivArtwork.setImageBitmap(artwork)
+                    ivArtwork.background = null
+                    ivArtwork.clearColorFilter()
+                    ivArtwork.setPadding(0, 0, 0, 0)
+                } else {
+                    ivArtwork.setImageResource(R.drawable.ic_media_music_note)
+                    val fallbackBg = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = outerCornerPx
+                        setColor(if (isDarkTheme) Color.parseColor("#424242") else Color.parseColor("#E0E0E0"))
+                    }
+                    ivArtwork.background = fallbackBg
+                    ivArtwork.setColorFilter(primaryTextColor)
+                    val pad = (8 * density).toInt()
+                    ivArtwork.setPadding(pad, pad, pad, pad)
                 }
-                ivArtwork.background = fallbackBg
-                ivArtwork.setColorFilter(primaryTextColor)
-                val pad = (8 * density).toInt()
-                ivArtwork.setPadding(pad, pad, pad, pad)
             }
 
             // 4. Click Actions
@@ -1292,7 +1341,6 @@ class NotificationAdapter(
             }
 
             // 5. Card Background & Dynamic Corner Radii (Corner Radius Slider)
-
             val topRadius = if (isFirstInGroup) outerCornerPx else innerCornerPx
             val bottomRadius = if (isLastInGroup) outerCornerPx else innerCornerPx
             lastBlurRadiiPx = if (isOreoStyle) (0f to 0f) else (topRadius to bottomRadius)
@@ -1323,60 +1371,66 @@ class NotificationAdapter(
                 rawCardBg
             }
 
-            val contentDrawable = if (isOreoStyle && !enableContainerBlur) {
-                val strokeColor = if (isDarkTheme) Color.parseColor("#33FFFFFF") else Color.parseColor("#33000000")
-                val strokePx = (1 * density).toInt().coerceAtLeast(1)
-                val solidOreoBg = if (isDarkTheme) Color.parseColor("#212121") else Color.parseColor("#FFFFFF")
-                val baseDrawable = GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    setColor(cardBg)
-                }
-                val strokeDrawable = GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    setStroke(strokePx, strokeColor)
-                    setColor(Color.TRANSPARENT)
-                }
-                android.graphics.drawable.LayerDrawable(arrayOf(baseDrawable, strokeDrawable)).apply {
-                    setLayerInset(1, -strokePx, 0, -strokePx, 0)
-                }
-            } else {
-                GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    cornerRadii = radii
-                    setColor(cardBg)
-                }
-            }
-
             val enablePanelShadows = PanelPreferences.enablePanelShadows.value
             val shadowElevation = PanelPreferences.panelShadowElevation.value
             val panelShadowAlpha = PanelPreferences.panelShadowAlpha.value
             val panelShadowOffsetY = PanelPreferences.panelShadowOffsetY.value
+            val enableTopRim = PanelPreferences.enablePanelTopRim.value
+            val liquidActive = PanelPreferences.isLiquidGlassActive()
+            val refractionSensitivity = PanelPreferences.glassRefractionSensitivity.value
 
-            CustomShadowHelper.applyCustomShadowBackground(
-                view = flRoot,
-                contentDrawable = contentDrawable,
-                radii = radii,
-                elevation = if (enablePanelShadows && !isOreoStyle) shadowElevation else 0f,
-                isDark = isDarkTheme,
-                customAlpha = panelShadowAlpha,
-                customOffsetY = panelShadowOffsetY,
-                enableTopRimBackground = PanelPreferences.enablePanelTopRim.value,
-                enableFrostedGlass = enableContainerBlur && enableNotificationBlur,
-                frostedTransparency = containerBlurTransparency,
-                enableGlassRefraction = PanelPreferences.isLiquidGlassActive(),
-                glassRefractionSensitivity = PanelPreferences.glassRefractionSensitivity.value
-            )
-            CustomShadowHelper.applyPanelTopRimForeground(
-                view = flRoot,
-                enabled = PanelPreferences.enablePanelTopRim.value,
-                radii = radii
-            )
-            flRoot.elevation = 0f
-            flRoot.translationY = 0f
-            flRoot.clipChildren = false
-            flRoot.clipToPadding = false
-            flRoot.clipToOutline = false
-            flRoot.outlineProvider = null
+            val compactBgSig = "$isOreoStyle|$isDarkTheme|$cardBg|$topRadius|$bottomRadius|$enableContainerBlur|$enableNotificationBlur|$containerBlurTransparency|$enablePanelShadows|$shadowElevation|$panelShadowAlpha|$panelShadowOffsetY|$enableTopRim|$liquidActive|$refractionSensitivity"
+            if (compactBgSig != lastCompactBgSig) {
+                lastCompactBgSig = compactBgSig
+                val contentDrawable = if (isOreoStyle && !enableContainerBlur) {
+                    val strokeColor = if (isDarkTheme) Color.parseColor("#33FFFFFF") else Color.parseColor("#33000000")
+                    val strokePx = (1 * density).toInt().coerceAtLeast(1)
+                    val baseDrawable = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        setColor(cardBg)
+                    }
+                    val strokeDrawable = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        setStroke(strokePx, strokeColor)
+                        setColor(Color.TRANSPARENT)
+                    }
+                    android.graphics.drawable.LayerDrawable(arrayOf(baseDrawable, strokeDrawable)).apply {
+                        setLayerInset(1, -strokePx, 0, -strokePx, 0)
+                    }
+                } else {
+                    GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadii = radii
+                        setColor(cardBg)
+                    }
+                }
+
+                CustomShadowHelper.applyCustomShadowBackground(
+                    view = flRoot,
+                    contentDrawable = contentDrawable,
+                    radii = radii,
+                    elevation = if (enablePanelShadows && !isOreoStyle) shadowElevation else 0f,
+                    isDark = isDarkTheme,
+                    customAlpha = panelShadowAlpha,
+                    customOffsetY = panelShadowOffsetY,
+                    enableTopRimBackground = enableTopRim,
+                    enableFrostedGlass = enableContainerBlur && enableNotificationBlur,
+                    frostedTransparency = containerBlurTransparency,
+                    enableGlassRefraction = liquidActive,
+                    glassRefractionSensitivity = refractionSensitivity
+                )
+                CustomShadowHelper.applyPanelTopRimForeground(
+                    view = flRoot,
+                    enabled = enableTopRim,
+                    radii = radii
+                )
+                flRoot.elevation = 0f
+                flRoot.translationY = 0f
+                flRoot.clipChildren = false
+                flRoot.clipToPadding = false
+                flRoot.clipToOutline = false
+                flRoot.outlineProvider = null
+            }
 
             val lp = flRoot.layoutParams as? ViewGroup.MarginLayoutParams
             if (lp != null) {

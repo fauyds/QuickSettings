@@ -416,9 +416,13 @@ class QuickSettingsOverlayService : Service() {
         QuickPanelAccessibilityService.collapseStockNotificationShade()
         serviceScope.launch {
             delay(60)
-            QuickPanelAccessibilityService.collapseStockNotificationShade()
+            if (QuickPanelAccessibilityService.instance?.isSystemUiShadeVisible() != false) {
+                QuickPanelAccessibilityService.collapseStockNotificationShade()
+            }
             delay(100)
-            QuickPanelAccessibilityService.collapseStockNotificationShade()
+            if (QuickPanelAccessibilityService.instance?.isSystemUiShadeVisible() != false) {
+                QuickPanelAccessibilityService.collapseStockNotificationShade()
+            }
         }
         val resolvedInitialStage = if (com.example.data.PanelPreferences.isAndroidKitKatStyle(this)) {
             QsExpansionStage.FULL_QS
@@ -935,6 +939,7 @@ class QuickSettingsOverlayService : Service() {
             windowManager?.addView(composeView, panelParams)
             overlayComposeView = composeView
             isPanelShowing = true
+            MediaSessionManagerHelper.updateMediaState(force = true)
             if (VolumePanelOverlay.isShowing) {
                 VolumePanelOverlay.bringToFront(this)
             }

@@ -346,10 +346,19 @@ class QuickPanelAccessibilityService : AccessibilityService() {
             currentWindows.any { win ->
                 val bounds = Rect()
                 win.getBoundsInScreen(bounds)
-                val pkg = try {
-                    win.root?.packageName?.toString()
+                val root = try {
+                    win.root
                 } catch (_: Throwable) {
                     null
+                }
+                val pkg = try {
+                    root?.packageName?.toString()
+                } catch (_: Throwable) {
+                    null
+                } finally {
+                    if (root != null) {
+                        runCatching { root.recycle() }
+                    }
                 }
                 isSystemUiShadeWindow(
                     packageName = pkg,
@@ -515,6 +524,16 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         internal set
     private var lastHunEventTime = 0L
     private var lastDetectorCheckTime = 0L
+    private var lastWindowsImmersiveCheckTime = 0L
+    @Volatile
+    private var lastDispatchedTriggerImmersive: Boolean? = null
+
+    private val powerManager: PowerManager? by lazy {
+        getSystemService(Context.POWER_SERVICE) as? PowerManager
+    }
+    private val keyguardManager: KeyguardManager? by lazy {
+        getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+    }
 
     private var wasKeyguardLocked: Boolean = true
     private var ignoreFirstPostUnlockEvent: Boolean = false
@@ -583,11 +602,16 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                 val activeWins = windows
                 for (window in activeWins) {
                     val root = window.root ?: continue
-                    val wPkg = root.packageName?.toString() ?: ""
-                    if (wPkg.isNotBlank() && !wPkg.contains("systemui", ignoreCase = true)) {
-                        if (launcherPackages.contains(wPkg)) {
-                            return true
-                        }
+                    val isMatch = try {
+                        val wPkg = root.packageName?.toString() ?: ""
+                        wPkg.isNotBlank() &&
+                            !wPkg.contains("systemui", ignoreCase = true) &&
+                            launcherPackages.contains(wPkg)
+                    } finally {
+                        runCatching { root.recycle() }
+                    }
+                    if (isMatch) {
+                        return true
                     }
                 }
             } catch (e: Exception) {
@@ -619,8 +643,18 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                     var isAppFullscreen = false
 
                     for (win in winList) {
-                        val root = win.root
-                        val pkg = root?.packageName?.toString() ?: ""
+                        val root = try {
+                            win.root
+                        } catch (_: Throwable) {
+                            null
+                        }
+                        val pkg = try {
+                            root?.packageName?.toString() ?: ""
+                        } finally {
+                            if (root != null) {
+                                runCatching { root.recycle() }
+                            }
+                        }
                         if (pkg == packageName || pkg.contains("com.aistudio") || pkg.contains("com.example")) {
                             continue
                         }
@@ -726,7 +760,11 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         tileRegistry = TileRegistry(this, repo, nativeTileManager, externalTileScanner, serviceScope)
 
         // Initialize Immersive Mode Detector via Shizuku / Root shell listeners
-        immersiveModeDetector = com.example.system.ImmersiveModeDetector(privilegeEngine, serviceScope)
+        immersiveModeDetector = com.example.system.ImmersiveModeDetector(
+            privilegeEngine = privilegeEngine,
+            scope = serviceScope,
+            shouldPauseMonitoring = { isPanelShowing || powerManager?.isInteractive == false }
+        )
         immersiveModeDetector?.startMonitoring { isImmersive ->
             updateTriggerVisibility(isImmersive)
         }
@@ -799,6 +837,21 @@ class QuickPanelAccessibilityService : AccessibilityService() {
 
     private val interceptionInProgress = java.util.concurrent.atomic.AtomicBoolean(false)
 
+    private fun isCandidateShadeOrKeyguardPackage(pkg: String): Boolean {
+        if (pkg.isEmpty()) return true
+        if (pkg == "com.android.systemui" ||
+            pkg.endsWith(".systemui", ignoreCase = true) ||
+            pkg.contains("systemui", ignoreCase = true) ||
+            pkg.contains("keyguard", ignoreCase = true)
+        ) {
+            return true
+        }
+        val whitelistPkgs = PanelPreferences.stockShadeWhitelist.value
+        return whitelistPkgs.any { allowedPkg ->
+            allowedPkg.isNotBlank() && (pkg.equals(allowedPkg, ignoreCase = true) || pkg.contains(allowedPkg, ignoreCase = true))
+        }
+    }
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (!PanelPreferences.overrideSystemQs.value) return
         if (isPanelShowing) return // Pause detector when our panel is active
@@ -812,31 +865,56 @@ class QuickPanelAccessibilityService : AccessibilityService() {
             return
         }
 
-        if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
-            val nowCheck = System.currentTimeMillis()
-            if (nowCheck - lastDetectorCheckTime >= 400L) {
-                lastDetectorCheckTime = nowCheck
-                immersiveModeDetector?.checkNow()
-            }
-            val immersive = isImmersiveModeActive()
-            updateTriggerVisibility(immersive)
+        val pkg = event.packageName?.toString() ?: ""
+        val isCandidateShadePkg = isCandidateShadeOrKeyguardPackage(pkg)
+
+        if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+            pkg.isNotBlank() &&
+            pkg != packageName &&
+            !isCandidateShadePkg
+        ) {
+            lastForegroundAppPackage = pkg
         }
 
-        val pkg = event.packageName?.toString() ?: ""
+        val now = System.currentTimeMillis()
+        if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
+            if (powerManager?.isInteractive != false) {
+                val immersiveDebounceMs = if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) 0L else 200L
+                if (immersiveDebounceMs == 0L || (now - lastWindowsImmersiveCheckTime) >= immersiveDebounceMs) {
+                    lastWindowsImmersiveCheckTime = now
+                    if (now - lastDetectorCheckTime >= 400L) {
+                        lastDetectorCheckTime = now
+                        immersiveModeDetector?.checkNow()
+                    }
+                    val immersive = isImmersiveModeActive()
+                    updateTriggerVisibility(immersive)
+                }
+            }
+        }
+
+        // Ignore high-frequency TYPE_WINDOW_CONTENT_CHANGED / third-party window churn (e.g. YouTube playback HUD, captions, scroll)
+        // before doing any Binder IPC (event.source), string allocation, or background coroutine dispatch.
+        if (!isCandidateShadePkg) {
+            return
+        }
+
         val cls = event.className?.toString() ?: ""
         val text = try { event.text.joinToString(" ") } catch (e: Exception) { "" }
         val desc = event.contentDescription?.toString() ?: ""
         val bounds = Rect()
         val viewId = try {
             val src = event.source
-            val id = src?.viewIdResourceName ?: ""
-            try {
-                src?.getBoundsInScreen(bounds)
-            } catch (e: Exception) {}
-            src?.recycle()
-            id
+            if (src != null) {
+                try {
+                    src.getBoundsInScreen(bounds)
+                    src.viewIdResourceName ?: ""
+                } finally {
+                    runCatching { src.recycle() }
+                }
+            } else {
+                ""
+            }
         } catch (e: Exception) { "" }
-        val now = System.currentTimeMillis()
 
         serviceScope.launch(Dispatchers.Default) {
             processEventOptimized(now, pkg, cls, text, desc, viewId, bounds)
@@ -1268,32 +1346,36 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         try {
             val rootNode = rootInActiveWindow
             if (rootNode != null) {
-                val rPkg = rootNode.packageName?.toString() ?: ""
-                val rCls = rootNode.className?.toString() ?: ""
-                if (rPkg == "com.android.keyguard" ||
-                    rPkg.contains("biometric", ignoreCase = true) ||
-                    rCls.contains("KeyguardBouncer", ignoreCase = true) ||
-                    rCls.contains("Bouncer", ignoreCase = true) ||
-                    rCls.contains("Biometric", ignoreCase = true)
-                ) {
-                    return true
+                val isBouncer = try {
+                    val rPkg = rootNode.packageName?.toString() ?: ""
+                    val rCls = rootNode.className?.toString() ?: ""
+                    rPkg == "com.android.keyguard" ||
+                        rPkg.contains("biometric", ignoreCase = true) ||
+                        rCls.contains("KeyguardBouncer", ignoreCase = true) ||
+                        rCls.contains("Bouncer", ignoreCase = true) ||
+                        rCls.contains("Biometric", ignoreCase = true)
+                } finally {
+                    runCatching { rootNode.recycle() }
                 }
+                if (isBouncer) return true
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 val activeWins = windows
                 for (window in activeWins) {
                     val wRoot = window.root ?: continue
-                    val wPkg = wRoot.packageName?.toString() ?: ""
-                    val wCls = wRoot.className?.toString() ?: ""
-                    if (wPkg == "com.android.keyguard" ||
-                        wPkg.contains("biometric", ignoreCase = true) ||
-                        wCls.contains("KeyguardBouncer", ignoreCase = true) ||
-                        wCls.contains("Bouncer", ignoreCase = true) ||
-                        wCls.contains("Biometric", ignoreCase = true)
-                    ) {
-                        return true
+                    val isBouncer = try {
+                        val wPkg = wRoot.packageName?.toString() ?: ""
+                        val wCls = wRoot.className?.toString() ?: ""
+                        wPkg == "com.android.keyguard" ||
+                            wPkg.contains("biometric", ignoreCase = true) ||
+                            wCls.contains("KeyguardBouncer", ignoreCase = true) ||
+                            wCls.contains("Bouncer", ignoreCase = true) ||
+                            wCls.contains("Biometric", ignoreCase = true)
+                    } finally {
+                        runCatching { wRoot.recycle() }
                     }
+                    if (isBouncer) return true
                 }
             }
         } catch (e: Exception) {
@@ -1336,44 +1418,57 @@ class QuickPanelAccessibilityService : AccessibilityService() {
 
         val source = event.source
         if (source != null) {
-            if (isNodeCoveringThreshold(source)) return true
+            try {
+                if (isNodeCoveringThreshold(source)) return true
 
-            var parent = source.parent
-            var depth = 0
-            while (parent != null && depth < 4) {
-                if (isNodeCoveringThreshold(parent)) {
-                    parent.recycle()
-                    return true
+                var parent = source.parent
+                var depth = 0
+                while (parent != null && depth < 4) {
+                    if (isNodeCoveringThreshold(parent)) {
+                        runCatching { parent.recycle() }
+                        return true
+                    }
+                    val next = parent.parent
+                    runCatching { parent.recycle() }
+                    parent = next
+                    depth++
                 }
-                val next = parent.parent
-                parent.recycle()
-                parent = next
-                depth++
-            }
+                if (parent != null) {
+                    runCatching { parent.recycle() }
+                }
 
-            val childCount = source.childCount.coerceAtMost(8)
-            for (i in 0 until childCount) {
-                val child = source.getChild(i) ?: continue
-                if (isNodeCoveringThreshold(child)) {
-                    child.recycle()
-                    return true
+                val childCount = source.childCount.coerceAtMost(8)
+                for (i in 0 until childCount) {
+                    val child = source.getChild(i) ?: continue
+                    val matched = try {
+                        isNodeCoveringThreshold(child)
+                    } finally {
+                        runCatching { child.recycle() }
+                    }
+                    if (matched) return true
                 }
-                child.recycle()
+            } finally {
+                runCatching { source.recycle() }
             }
         }
 
         try {
             val root = rootInActiveWindow
             if (root != null) {
-                if (isNodeCoveringThreshold(root)) return true
-                val rootChildCount = root.childCount.coerceAtMost(10)
-                for (i in 0 until rootChildCount) {
-                    val child = root.getChild(i) ?: continue
-                    if (isNodeCoveringThreshold(child)) {
-                        child.recycle()
-                        return true
+                try {
+                    if (isNodeCoveringThreshold(root)) return true
+                    val rootChildCount = root.childCount.coerceAtMost(10)
+                    for (i in 0 until rootChildCount) {
+                        val child = root.getChild(i) ?: continue
+                        val matched = try {
+                            isNodeCoveringThreshold(child)
+                        } finally {
+                            runCatching { child.recycle() }
+                        }
+                        if (matched) return true
                     }
-                    child.recycle()
+                } finally {
+                    runCatching { root.recycle() }
                 }
             }
         } catch (e: Exception) {
@@ -1403,7 +1498,11 @@ class QuickPanelAccessibilityService : AccessibilityService() {
 
         // Node Hierarchy Scan (max 2 levels)
         val source = event.source ?: return false
-        return checkNodeTreeForShadeTargets(source)
+        return try {
+            checkNodeTreeForShadeTargets(source)
+        } finally {
+            runCatching { source.recycle() }
+        }
     }
 
     private fun checkNodeTreeForShadeTargets(node: AccessibilityNodeInfo): Boolean {
@@ -1469,7 +1568,11 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         try {
             val root = rootInActiveWindow
             if (root != null) {
-                val clicked = searchAndClickInNode(root, tileLabel, keywords, specifier)
+                val clicked = try {
+                    searchAndClickInNode(root, tileLabel, keywords, specifier)
+                } finally {
+                    runCatching { root.recycle() }
+                }
                 if (clicked) {
                     collapseStockNotificationShade()
                     return true
@@ -1480,7 +1583,11 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                 val winList = windows
                 for (window in winList) {
                     val winRoot = window.root ?: continue
-                    val clicked = searchAndClickInNode(winRoot, tileLabel, keywords, specifier)
+                    val clicked = try {
+                        searchAndClickInNode(winRoot, tileLabel, keywords, specifier)
+                    } finally {
+                        runCatching { winRoot.recycle() }
+                    }
                     if (clicked) {
                         collapseStockNotificationShade()
                         return true
@@ -1521,12 +1628,20 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         }
 
         if (isMatch) {
+            val visitedParents = mutableListOf<AccessibilityNodeInfo>()
             var clickableNode: AccessibilityNodeInfo? = node
-            while (clickableNode != null && !clickableNode.isClickable) {
-                clickableNode = clickableNode.parent
+            var parentDepth = 0
+            while (clickableNode != null && !clickableNode.isClickable && parentDepth < 8) {
+                val parent = clickableNode.parent ?: break
+                visitedParents.add(parent)
+                clickableNode = parent
+                parentDepth++
             }
-            val target = clickableNode ?: node
+            val target = if (clickableNode != null && clickableNode.isClickable) clickableNode else node
             val didClick = target.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            for (p in visitedParents) {
+                runCatching { p.recycle() }
+            }
             if (didClick) {
                 Log.d("AccessibilityService", "Successfully clicked stock tile for term '$tileLabel'")
                 return true
@@ -1535,7 +1650,12 @@ class QuickPanelAccessibilityService : AccessibilityService() {
 
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            if (searchAndClickInNode(child, tileLabel, keywords, specifier)) {
+            val clicked = try {
+                searchAndClickInNode(child, tileLabel, keywords, specifier)
+            } finally {
+                runCatching { child.recycle() }
+            }
+            if (clicked) {
                 return true
             }
         }
@@ -1613,12 +1733,21 @@ class QuickPanelAccessibilityService : AccessibilityService() {
      * INACTIVE -> View.VISIBLE
      */
     fun updateTriggerVisibility(isImmersive: Boolean) {
-        Handler(Looper.getMainLooper()).post {
+        if (lastDispatchedTriggerImmersive == isImmersive && triggerContainerView != null) {
+            return
+        }
+        lastDispatchedTriggerImmersive = isImmersive
+        if (Looper.myLooper() == Looper.getMainLooper()) {
             triggerContainerView?.updateChildVisibility(isImmersive)
+        } else {
+            mainHandler.post {
+                triggerContainerView?.updateChildVisibility(isImmersive)
+            }
         }
     }
 
     fun detachAccessibilityTriggerStrip() {
+        lastDispatchedTriggerImmersive = null
         triggerContainerView?.let {
             try {
                 windowManager?.removeView(it)
@@ -1667,9 +1796,13 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         collapseStockNotificationShade()
         serviceScope.launch {
             delay(60)
-            collapseStockNotificationShade()
+            if (isSystemUiShadeVisible()) {
+                collapseStockNotificationShade()
+            }
             delay(100)
-            collapseStockNotificationShade()
+            if (isSystemUiShadeVisible()) {
+                collapseStockNotificationShade()
+            }
         }
 
         val resolvedInitialStage = if (PanelPreferences.isAndroidKitKatStyle(this)) {
@@ -2214,6 +2347,7 @@ class QuickPanelAccessibilityService : AccessibilityService() {
             windowManager?.addView(composeView, panelParams)
             overlayComposeView = composeView
             isPanelShowing = true
+            MediaSessionManagerHelper.updateMediaState(force = true)
             if (VolumePanelOverlay.isShowing) {
                 VolumePanelOverlay.bringToFront(this)
             }
