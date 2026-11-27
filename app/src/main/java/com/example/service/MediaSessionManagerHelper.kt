@@ -45,36 +45,69 @@ object MediaSessionManagerHelper {
     private val activeControllers = CopyOnWriteArrayList<MediaController>()
     private val controllerCallbacks = java.util.concurrent.ConcurrentHashMap<String, MediaController.Callback>()
 
+    private val activeClients = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    private val registrationLock = Any()
+    @Volatile
     private var currentContext: Context? = null
+    @Volatile
     private var sessionListener: MediaSessionManager.OnActiveSessionsChangedListener? = null
 
-    fun init(context: Context) {
-        currentContext = context.applicationContext
+    fun init(context: Context, clientTag: String = "default") {
         val appContext = context.applicationContext
+        currentContext = appContext
+        activeClients.add(clientTag)
+        registerListenerInternal(appContext)
+    }
 
-        val mm = appContext.getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
-            ?: return
-
-        val notificationListenerComponent = ComponentName(appContext, QuickPanelNotificationListenerService::class.java)
-
-        sessionListener = MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
-            updateActiveControllers(controllers)
+    fun ensureListening(context: Context, clientTag: String = "default") {
+        val appContext = context.applicationContext
+        currentContext = appContext
+        activeClients.add(clientTag)
+        if (sessionListener == null) {
+            registerListenerInternal(appContext)
+        } else {
+            refreshState()
         }
+    }
 
-        try {
-            if (QuickPanelNotificationListenerService.isPermissionGranted(appContext)) {
-                mm.addOnActiveSessionsChangedListener(
-                    sessionListener!!,
-                    notificationListenerComponent
-                )
-                val initialControllers = mm.getActiveSessions(notificationListenerComponent)
-                updateActiveControllers(initialControllers)
-            } else {
+    private fun registerListenerInternal(appContext: Context) {
+        synchronized(registrationLock) {
+            val mm = try {
+                appContext.getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
+            } catch (_: Throwable) {
+                null
+            } ?: return
+
+            val notificationListenerComponent =
+                ComponentName(appContext, QuickPanelNotificationListenerService::class.java)
+
+            sessionListener?.let { prev ->
+                try {
+                    mm.removeOnActiveSessionsChangedListener(prev)
+                } catch (_: Throwable) {}
+                sessionListener = null
+            }
+
+            val listener = MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
+                updateActiveControllers(controllers)
+            }
+
+            try {
+                if (QuickPanelNotificationListenerService.isPermissionGranted(appContext)) {
+                    mm.addOnActiveSessionsChangedListener(
+                        listener,
+                        notificationListenerComponent
+                    )
+                    sessionListener = listener
+                    val initialControllers = mm.getActiveSessions(notificationListenerComponent)
+                    updateActiveControllers(initialControllers)
+                } else {
+                    updateMediaState()
+                }
+            } catch (e: Throwable) {
+                Log.e(TAG, "Error registering sessions listener: ${e.message}")
                 updateMediaState()
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error registering sessions listener: ${e.message}")
-            updateMediaState()
         }
     }
 
@@ -797,21 +830,35 @@ object MediaSessionManagerHelper {
         }
     }
 
-    fun unregisterAll() {
-        activeControllers.forEach { ctrl ->
-            val key = ctrl.sessionToken.toString()
-            controllerCallbacks.remove(key)?.let { cb ->
-                try { ctrl.unregisterCallback(cb) } catch (e: Exception) {}
-            }
+    fun unregisterClient(clientTag: String) {
+        activeClients.remove(clientTag)
+        if (activeClients.isEmpty()) {
+            unregisterAll()
         }
-        activeControllers.clear()
-        val appContext = currentContext
-        if (appContext != null && sessionListener != null) {
-            try {
-                val mm = appContext.getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
-                mm?.removeOnActiveSessionsChangedListener(sessionListener!!)
-            } catch (e: Exception) {}
+    }
+
+    fun unregisterAll() {
+        synchronized(registrationLock) {
+            activeClients.clear()
+            activeControllers.forEach { ctrl ->
+                val key = try { ctrl.sessionToken.toString() } catch (_: Throwable) { null }
+                if (key != null) {
+                    controllerCallbacks.remove(key)?.let { cb ->
+                        try { ctrl.unregisterCallback(cb) } catch (_: Throwable) {}
+                    }
+                }
+            }
+            activeControllers.clear()
+            controllerCallbacks.clear()
+            val appContext = currentContext
+            val listener = sessionListener
             sessionListener = null
+            if (appContext != null && listener != null) {
+                try {
+                    val mm = appContext.getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
+                    mm?.removeOnActiveSessionsChangedListener(listener)
+                } catch (_: Throwable) {}
+            }
         }
     }
 }

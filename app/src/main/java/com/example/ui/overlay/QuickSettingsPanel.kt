@@ -1184,8 +1184,15 @@ fun rememberQqsBatteryState(): QqsBatteryInfo {
             }
         }
         val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        var isRegistered = false
         try {
-            val sticky = context.registerReceiver(receiver, filter)
+            val sticky = androidx.core.content.ContextCompat.registerReceiver(
+                context,
+                receiver,
+                filter,
+                androidx.core.content.ContextCompat.RECEIVER_EXPORTED
+            )
+            isRegistered = true
             if (sticky != null) {
                 val level = sticky.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
                 val scale = sticky.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
@@ -1194,12 +1201,15 @@ fun rememberQqsBatteryState(): QqsBatteryInfo {
                 val pct = if (level >= 0 && scale > 0) (level * 100 / scale) else 100
                 batteryInfo = QqsBatteryInfo(percentage = pct.coerceIn(0, 100), isCharging = isCharging)
             }
-        } catch (e: Exception) {}
+        } catch (_: Throwable) {}
 
         onDispose {
-            try {
-                context.unregisterReceiver(receiver)
-            } catch (e: Exception) {}
+            if (isRegistered) {
+                isRegistered = false
+                try {
+                    context.unregisterReceiver(receiver)
+                } catch (_: Throwable) {}
+            }
         }
     }
     return batteryInfo

@@ -44,7 +44,7 @@ import com.example.model.TileState
 import com.example.service.QuickPanelAccessibilityService
 import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CopyOnWriteArraySet
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -196,9 +196,10 @@ class NativeTileManager(
     @Volatile
     private var audioDeviceCallback: AudioDeviceCallback? = null
     private var themeCollectorJob: kotlinx.coroutines.Job? = null
-    @Volatile
-    var isDestroyed: Boolean = false
-        private set
+    private val isDestroyedFlag = AtomicBoolean(false)
+    val isDestroyed: Boolean
+        get() = isDestroyedFlag.get()
+    private val isStateReceiverRegistered = AtomicBoolean(false)
     @Volatile
     private var cachedCallbackWifiSsid: String? = null
     @Volatile
@@ -216,7 +217,7 @@ class NativeTileManager(
 
     init {
         instance = this
-        activeInstances.removeAll { it.get() == null }
+        pruneActiveInstances()
         activeInstances.add(WeakReference(this))
         initTorch()
         initBluetoothProfileProxies()
@@ -228,26 +229,30 @@ class NativeTileManager(
     }
 
     fun destroy() {
-        if (isDestroyed) return
-        isDestroyed = true
-        handler.removeCallbacksAndMessages(null)
-        themeCollectorJob?.cancel()
+        if (!isDestroyedFlag.compareAndSet(false, true)) return
+        try {
+            handler.removeCallbacksAndMessages(null)
+        } catch (_: Throwable) {}
+        try {
+            themeCollectorJob?.cancel()
+        } catch (_: Throwable) {}
         themeCollectorJob = null
 
-        synchronized(registeredObservers) {
-            for (observer in registeredObservers) {
-                try {
-                    contentResolver.unregisterContentObserver(observer)
-                } catch (_: Throwable) {}
-            }
-            registeredObservers.clear()
+        val observersSnapshot = synchronized(registeredObservers) {
+            registeredObservers.toList().also { registeredObservers.clear() }
+        }
+        for (observer in observersSnapshot) {
+            try {
+                contentResolver.unregisterContentObserver(observer)
+            } catch (_: Throwable) {}
         }
 
-        stateBroadcastReceiver?.let { receiver ->
+        val receiver = stateBroadcastReceiver
+        stateBroadcastReceiver = null
+        if (receiver != null && isStateReceiverRegistered.compareAndSet(true, false)) {
             try {
                 context.unregisterReceiver(receiver)
             } catch (_: Throwable) {}
-            stateBroadcastReceiver = null
         }
 
         connectivityManager?.let { cm ->
@@ -279,21 +284,19 @@ class NativeTileManager(
             audioDeviceCallback = null
         }
 
+        val profilesSnapshot = bluetoothProfiles.toMap()
+        bluetoothProfiles.clear()
+        requestedBluetoothProfiles.clear()
         val adapter = try { bluetoothManager?.adapter } catch (_: Throwable) { null }
         if (adapter != null) {
-            for ((profileId, proxy) in bluetoothProfiles) {
+            for ((profileId, proxy) in profilesSnapshot) {
                 try {
                     adapter.closeProfileProxy(profileId, proxy)
                 } catch (_: Throwable) {}
             }
         }
-        bluetoothProfiles.clear()
-        requestedBluetoothProfiles.clear()
 
-        activeInstances.removeAll { ref ->
-            val target = ref.get()
-            target == null || target === this || target.isDestroyed
-        }
+        pruneActiveInstances(exclude = this)
         if (instance === this) {
             instance = activeInstances.firstOrNull {
                 val target = it.get()
@@ -303,10 +306,24 @@ class NativeTileManager(
     }
 
     companion object {
+        @Volatile
         var instance: NativeTileManager? = null
             private set
 
-        private val activeInstances = CopyOnWriteArraySet<WeakReference<NativeTileManager>>()
+        private val activeInstances = ConcurrentHashMap.newKeySet<WeakReference<NativeTileManager>>()
+
+        private fun pruneActiveInstances(exclude: NativeTileManager? = null) {
+            val stale = ArrayList<WeakReference<NativeTileManager>>()
+            for (ref in activeInstances) {
+                val target = ref.get()
+                if (target == null || target === exclude || target.isDestroyed) {
+                    stale.add(ref)
+                }
+            }
+            for (ref in stale) {
+                activeInstances.remove(ref)
+            }
+        }
 
         @Volatile
         private var permissionsAutoGrantAttempted: Boolean = false
@@ -338,7 +355,7 @@ class NativeTileManager(
             permissionsAutoGrantAttempted = false
             lastShellWifiLookupMs = 0L
             lastShellBtLookupMs = 0L
-            activeInstances.removeAll { it.get() == null || it.get()?.isDestroyed == true }
+            pruneActiveInstances()
             for (ref in activeInstances) {
                 ref.get()?.takeIf { !it.isDestroyed }?.onPrivilegeOrPermissionsUpdatedInternal()
             }
@@ -1536,9 +1553,14 @@ class NativeTileManager(
             }
         }
         stateBroadcastReceiver = receiver
-        try {
-            context.registerReceiver(receiver, filter)
-        } catch (_: Throwable) {}
+        if (!isDestroyed) {
+            try {
+                ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_EXPORTED)
+                isStateReceiverRegistered.set(true)
+            } catch (_: Throwable) {
+                isStateReceiverRegistered.set(false)
+            }
+        }
     }
 
     private fun registerWifiNetworkCallback() {

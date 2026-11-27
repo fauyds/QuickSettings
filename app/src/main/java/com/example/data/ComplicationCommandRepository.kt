@@ -220,15 +220,24 @@ object ComplicationCommandRepository {
         )
     }
 
-    fun init(context: Context) {
-        val appCtx = context.applicationContext
-        appContext = appCtx
-        val prefs = appCtx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val map = mutableMapOf<String, ComplicationCommandConfig>()
-        for (def in knownComplications) {
-            map[def.id] = readConfigFromPrefs(prefs, def)
+    private val initLock = Any()
+    @Volatile
+    private var isInitialized = false
+
+    fun init(context: Context, forceRefresh: Boolean = false) {
+        if (isInitialized && !forceRefresh) return
+        synchronized(initLock) {
+            if (isInitialized && !forceRefresh) return
+            val appCtx = context.applicationContext
+            appContext = appCtx
+            val prefs = appCtx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val map = mutableMapOf<String, ComplicationCommandConfig>()
+            for (def in knownComplications) {
+                map[def.id] = readConfigFromPrefs(prefs, def)
+            }
+            _configs.value = map
+            isInitialized = true
         }
-        _configs.value = map
     }
 
     fun getConfig(tileId: String, context: Context? = null): ComplicationCommandConfig {

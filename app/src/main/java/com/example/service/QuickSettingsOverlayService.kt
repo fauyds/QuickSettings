@@ -97,12 +97,15 @@ class QuickSettingsOverlayService : Service() {
         const val ACTION_STOP = "ACTION_STOP_OVERLAY"
         const val ACTION_TOGGLE_EXPAND = "ACTION_TOGGLE_EXPAND"
 
+        private const val CLIENT_TAG = "overlay_service"
         var instance: QuickSettingsOverlayService? = null
             private set
 
         var isRunning: Boolean = false
             private set
     }
+
+    private var isVolumeReceiverRegistered = false
 
     val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var windowManager: WindowManager? = null
@@ -162,15 +165,12 @@ class QuickSettingsOverlayService : Service() {
         }
         instance = this
         isRunning = true
-        PanelPreferences.init(this)
-        com.example.data.NotificationCategoryManager.init(this)
-        MediaSessionManagerHelper.init(this)
-        com.example.system.SystemThemeObserver.init(this)
+        com.example.AppRuntimeInitializer.ensureInitialized(this)
+        MediaSessionManagerHelper.init(this, CLIENT_TAG)
         windowManager = getSystemService(Context.WINDOW_SERVICE) as? WindowManager
         createNotificationChannel()
 
         // Initialize engines
-        PanelPreferences.init(this)
         val db = QuickPanelDatabase.getInstance(this)
         val repo = TileRepository(db.tileDao())
         privilegeEngine = PrivilegeEngine(this)
@@ -201,7 +201,19 @@ class QuickSettingsOverlayService : Service() {
             addAction("android.media.STREAM_DEVICES_CHANGED_ACTION")
             addAction("android.media.RINGER_MODE_CHANGED")
         }
-        registerReceiver(volumeStateReceiver, filter)
+        if (!isVolumeReceiverRegistered) {
+            try {
+                androidx.core.content.ContextCompat.registerReceiver(
+                    this,
+                    volumeStateReceiver,
+                    filter,
+                    androidx.core.content.ContextCompat.RECEIVER_EXPORTED
+                )
+                isVolumeReceiverRegistered = true
+            } catch (_: Throwable) {
+                isVolumeReceiverRegistered = false
+            }
+        }
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -213,7 +225,19 @@ class QuickSettingsOverlayService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        com.example.AppRuntimeInitializer.ensureInitialized(this)
         if (intent?.action == ACTION_STOP) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
+        val overlayEnabled = try {
+            getSharedPreferences("quickpanel_prefs", Context.MODE_PRIVATE)
+                .getBoolean("overlay_enabled", true)
+        } catch (_: Throwable) {
+            true
+        }
+        if (intent == null && (!overlayEnabled || !Settings.canDrawOverlays(this))) {
             stopSelf()
             return START_NOT_STICKY
         }
@@ -227,7 +251,13 @@ class QuickSettingsOverlayService : Service() {
             return START_STICKY
         }
 
-        startForeground(NOTIFICATION_ID, buildForegroundNotification())
+        try {
+            startForeground(NOTIFICATION_ID, buildForegroundNotification())
+        } catch (e: Throwable) {
+            Log.e("OverlayService", "Failed to promote foreground service: ${e.message}")
+            stopSelf()
+            return START_NOT_STICKY
+        }
         isRunning = true
 
         if (Settings.canDrawOverlays(this)) {
@@ -945,30 +975,32 @@ class QuickSettingsOverlayService : Service() {
     }
 
     override fun onDestroy() {
-        super.onDestroy()
-        immersiveModeDetector?.stopMonitoring()
+        runCatching { immersiveModeDetector?.stopMonitoring() }
         immersiveModeDetector = null
-        try {
-            unregisterReceiver(volumeStateReceiver)
-        } catch (e: Exception) {
-            // Ignore
+        if (isVolumeReceiverRegistered) {
+            isVolumeReceiverRegistered = false
+            try {
+                unregisterReceiver(volumeStateReceiver)
+            } catch (_: Throwable) {}
         }
-        MediaSessionManagerHelper.unregisterAll()
-        destroyOverlayWindow()
+        runCatching { MediaSessionManagerHelper.unregisterClient(CLIENT_TAG) }
+        runCatching { destroyOverlayWindow() }
         triggerContainerView?.let {
             try {
                 windowManager?.removeView(it)
-            } catch (e: Exception) {
-                // Ignore
-            }
+            } catch (_: Throwable) {}
         }
         triggerContainerView = null
         triggerStripView = null
+        if (::nativeTileManager.isInitialized) runCatching { nativeTileManager.destroy() }
+        if (::externalTileScanner.isInitialized) runCatching { externalTileScanner.destroy() }
+        if (::privilegeEngine.isInitialized) runCatching { privilegeEngine.destroy() }
         isRunning = false
-        if (instance == this) {
+        if (instance === this) {
             instance = null
         }
-        serviceScope.cancel()
+        runCatching { serviceScope.cancel() }
+        super.onDestroy()
     }
 }
 
@@ -985,7 +1017,7 @@ class StatusTriggerView(context: Context) : View(context) {
     private val sideGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val pillRect = RectF()
     private var isPressedState = false
-    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var scope: CoroutineScope? = null
 
     var onSwipeDownDetected: ((isDeepSwipe: Boolean) -> Unit)? = null
 
@@ -1006,7 +1038,14 @@ class StatusTriggerView(context: Context) : View(context) {
 
     init {
         setWillNotDraw(false)
-        scope.launch {
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        scope?.cancel()
+        val viewScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+        scope = viewScope
+        viewScope.launch {
             PanelPreferences.invisibleStatusBarTrigger.collect {
                 invalidate()
             }
@@ -1014,8 +1053,9 @@ class StatusTriggerView(context: Context) : View(context) {
     }
 
     override fun onDetachedFromWindow() {
+        scope?.cancel()
+        scope = null
         super.onDetachedFromWindow()
-        scope.cancel()
     }
 
     private fun setPressedState(pressed: Boolean) {

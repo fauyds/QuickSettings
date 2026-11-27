@@ -29,18 +29,45 @@ class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner, ViewModel
     override val viewModelStore: ViewModelStore
         get() = store
 
+    private var hasCreated = false
+    private var hasDestroyed = false
+
     fun onCreate() {
-        savedStateRegistryController.performRestore(Bundle())
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+        if (hasCreated || hasDestroyed) return
+        hasCreated = true
+        try {
+            savedStateRegistryController.performRestore(Bundle())
+        } catch (_: Throwable) {}
+        try {
+            if (lifecycleRegistry.currentState == Lifecycle.State.INITIALIZED) {
+                lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+            }
+            if (lifecycleRegistry.currentState == Lifecycle.State.CREATED) {
+                lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+            }
+            if (lifecycleRegistry.currentState == Lifecycle.State.STARTED) {
+                lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+            }
+        } catch (_: Throwable) {}
     }
 
     fun onDestroy() {
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
-        store.clear()
+        if (hasDestroyed) return
+        hasDestroyed = true
+        try {
+            if (lifecycleRegistry.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+            }
+            if (lifecycleRegistry.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+            }
+            if (lifecycleRegistry.currentState.isAtLeast(Lifecycle.State.CREATED)) {
+                lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+            }
+        } catch (_: Throwable) {}
+        try {
+            store.clear()
+        } catch (_: Throwable) {}
     }
 
     fun attachTo(composeView: ComposeView) {

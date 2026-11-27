@@ -63,11 +63,8 @@ class MainActivity : ComponentActivity() {
         bypassHiddenApiRestrictions()
         enableEdgeToEdge()
 
-        com.example.data.PanelPreferences.init(this)
-        com.example.data.TileCommandRepository.init(this)
-        com.example.data.ComplicationCommandRepository.init(this)
-        com.example.service.MediaSessionManagerHelper.init(this)
-        com.example.system.SystemThemeObserver.init(this)
+        AppRuntimeInitializer.ensureInitialized(this)
+        com.example.service.MediaSessionManagerHelper.ensureListening(this, CLIENT_TAG_MAIN)
 
         handleTriggerIntent(intent)
 
@@ -121,23 +118,30 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        AppRuntimeInitializer.ensureInitialized(this)
         com.example.system.ComplicationDataHub.setAppForegroundActive(true)
         NativeTileManager.setAppForegroundActive(true)
-        com.example.data.ComplicationCommandRepository.init(this)
+        com.example.service.MediaSessionManagerHelper.ensureListening(this, CLIENT_TAG_MAIN)
+        com.example.service.QuickPanelNotificationListenerService.instance?.refreshActiveNotifications()
         viewModel.privilegeEngine.syncWithPreferences()
         viewModel.refreshServiceState()
         NativeTileManager.notifyAllInstancesPrivilegeOrPermissionsUpdated()
 
-        // Auto-start overlay service if permission is granted
-        if (Settings.canDrawOverlays(this) && !QuickSettingsOverlayService.isRunning) {
+        // Auto-start overlay service if enabled and overlay permission is granted
+        if (viewModel.isOverlayEnabled.value &&
+            Settings.canDrawOverlays(this) &&
+            !QuickSettingsOverlayService.isRunning
+        ) {
             val startIntent = Intent(this, QuickSettingsOverlayService::class.java).apply {
                 action = QuickSettingsOverlayService.ACTION_START
             }
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                startForegroundService(startIntent)
-            } else {
-                startService(startIntent)
-            }
+            try {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    startForegroundService(startIntent)
+                } else {
+                    startService(startIntent)
+                }
+            } catch (_: Throwable) {}
             viewModel.refreshServiceState()
         }
     }
@@ -146,6 +150,19 @@ class MainActivity : ComponentActivity() {
         super.onPause()
         com.example.system.ComplicationDataHub.setAppForegroundActive(false)
         NativeTileManager.setAppForegroundActive(false)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        com.example.system.ComplicationDataHub.setAppForegroundActive(false)
+        NativeTileManager.setAppForegroundActive(false)
+    }
+
+    override fun onDestroy() {
+        runCatching { com.example.system.ComplicationDataHub.setAppForegroundActive(false) }
+        runCatching { NativeTileManager.setAppForegroundActive(false) }
+        runCatching { com.example.service.MediaSessionManagerHelper.unregisterClient(CLIENT_TAG_MAIN) }
+        super.onDestroy()
     }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
@@ -168,5 +185,9 @@ class MainActivity : ComponentActivity() {
         } else if (intent?.getStringExtra("screen") == "tile_customizer") {
             viewModel.setSelectedTab(1)
         }
+    }
+
+    companion object {
+        private const val CLIENT_TAG_MAIN = "main_activity"
     }
 }

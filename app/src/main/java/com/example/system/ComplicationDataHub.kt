@@ -238,6 +238,12 @@ object ComplicationDataHub {
     private var prevProcIdle: Long = -1L
     private var prevAppCpuMs: Long = -1L
     private var prevAppWallMs: Long = -1L
+    @Volatile
+    private var procStatUnavailable: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+    @Volatile
+    private var loadAvgUnavailable: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+    @Volatile
+    private var cpuFreqUnavailable: Boolean = false
 
     // Network sampling state
     private var prevRxBytes: Long = -1L
@@ -542,17 +548,25 @@ object ComplicationDataHub {
     private fun sampleCpuState(): CpuMonitorState {
         val cores = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
 
-        // Source A: /proc/stat delta (accurate system CPU load on pre-Oreo / permissive kernels)
-        val procStatPct = readProcStatCpuPct()
+        // Source A: /proc/stat delta (pre-Oreo or permissive kernels only)
+        val procStatPct = if (!procStatUnavailable) readProcStatCpuPct() else null
 
         // Source B: cpufreq scaling_cur_freq / cpuinfo_max_freq across online cores (works on unrooted modern Android)
-        val freqStats = readCpuFreqUtilization(cores)
+        val freqStats = if (!cpuFreqUnavailable) readCpuFreqUtilization(cores) else Triple(null, 0, 0)
 
-        // Source C: /proc/loadavg
-        val loadAvgPct = readLoadAvgPct(cores)
+        // Source C: /proc/loadavg (fallback only if both /proc/stat & cpufreq failed, and not blocked by SELinux)
+        val loadAvgPct = if (!loadAvgUnavailable && procStatPct == null && freqStats.first == null) {
+            readLoadAvgPct(cores)
+        } else {
+            null
+        }
 
-        // Source D: Process elapsed CPU time delta
-        val processPct = readProcessCpuFallbackPct(cores)
+        // Source D: Process elapsed CPU time delta (always safe fallback)
+        val processPct = if (procStatPct == null && freqStats.first == null && loadAvgPct == null) {
+            readProcessCpuFallbackPct(cores)
+        } else {
+            0
+        }
 
         val resolvedPct = when {
             procStatPct != null -> procStatPct
@@ -579,8 +593,14 @@ object ComplicationDataHub {
     }
 
     private fun readProcStatCpuPct(): Int? {
-        return try {
-            val line = File("/proc/stat").bufferedReader().use { it.readLine() } ?: return null
+        if (procStatUnavailable) return null
+        return runCatching {
+            val file = File("/proc/stat")
+            if (!file.canRead()) {
+                procStatUnavailable = true
+                return null
+            }
+            val line = file.bufferedReader().use { it.readLine() } ?: return null
             if (!line.startsWith("cpu ")) return null
             val parts = line.trim().split(Regex("\\s+")).drop(1).mapNotNull { it.toLongOrNull() }
             if (parts.size < 4) return null
@@ -594,13 +614,15 @@ object ComplicationDataHub {
             val totalDelta = (total - prevT).coerceAtLeast(1L)
             val idleDelta = (idle - prevI).coerceIn(0L, totalDelta)
             (((totalDelta - idleDelta).toDouble() / totalDelta.toDouble()) * 100.0).roundToInt().coerceIn(0, 100)
-        } catch (_: Throwable) {
+        }.getOrElse {
+            procStatUnavailable = true
             null
         }
     }
 
     private fun readCpuFreqUtilization(cores: Int): Triple<Int?, Int, Int> {
-        return try {
+        if (cpuFreqUnavailable) return Triple(null, 0, 0)
+        return runCatching {
             var sumRatio = 0.0
             var sumCurKhz = 0L
             var sumMaxKhz = 0L
@@ -626,19 +648,28 @@ object ComplicationDataHub {
                 val avgMaxMhz = ((sumMaxKhz / measuredCores) / 1000L).toInt()
                 Triple(avgPct, avgCurMhz, avgMaxMhz)
             } else {
+                cpuFreqUnavailable = true
                 Triple(null, 0, 0)
             }
-        } catch (_: Throwable) {
+        }.getOrElse {
+            cpuFreqUnavailable = true
             Triple(null, 0, 0)
         }
     }
 
     private fun readLoadAvgPct(cores: Int): Int? {
-        return try {
-            val line = File("/proc/loadavg").readText().trim()
+        if (loadAvgUnavailable) return null
+        return runCatching {
+            val file = File("/proc/loadavg")
+            if (!file.canRead()) {
+                loadAvgUnavailable = true
+                return null
+            }
+            val line = file.readText().trim()
             val oneMin = line.split(Regex("\\s+")).firstOrNull()?.toDoubleOrNull() ?: return null
             ((oneMin / cores.toDouble()) * 100.0).roundToInt().coerceIn(1, 100)
-        } catch (_: Throwable) {
+        }.getOrElse {
+            loadAvgUnavailable = true
             null
         }
     }

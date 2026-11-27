@@ -124,33 +124,43 @@ object TileCommandRepository {
         )
     }
 
-    fun init(context: Context) {
-        appContext = context.applicationContext
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val map = mutableMapOf<String, TileCommandConfig>()
+    private val initLock = Any()
+    @Volatile
+    private var isInitialized = false
 
-        for ((tileId, defaultCmds) in defaultTilesList) {
-            map[tileId] = readConfigFromPrefs(prefs, tileId, defaultCmds)
-        }
+    fun init(context: Context, forceRefresh: Boolean = false) {
+        if (isInitialized && !forceRefresh) return
+        synchronized(initLock) {
+            if (isInitialized && !forceRefresh) return
+            val appCtx = context.applicationContext
+            appContext = appCtx
+            val prefs = appCtx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val map = mutableMapOf<String, TileCommandConfig>()
 
-        // Also load all saved custom/third-party tile preferences
-        val allKeys = prefs.all.keys
-        for (key in allKeys) {
-            if (key.startsWith("override_")) {
-                val tileId = key.removePrefix("override_")
-                if (tileId !in map) {
-                    map[tileId] = readConfigFromPrefs(prefs, tileId)
+            for ((tileId, defaultCmds) in defaultTilesList) {
+                map[tileId] = readConfigFromPrefs(prefs, tileId, defaultCmds)
+            }
+
+            // Also load all saved custom/third-party tile preferences
+            val allKeys = prefs.all.keys
+            for (key in allKeys) {
+                if (key.startsWith("override_")) {
+                    val tileId = key.removePrefix("override_")
+                    if (tileId !in map) {
+                        map[tileId] = readConfigFromPrefs(prefs, tileId)
+                    }
                 }
             }
-        }
 
-        if (map.containsKey("sound_mode") && !map.containsKey("sound_profile")) {
-            map["sound_profile"] = map["sound_mode"]!!.copy(tileId = "sound_profile")
-        } else if (map.containsKey("sound_profile") && !map.containsKey("sound_mode")) {
-            map["sound_mode"] = map["sound_profile"]!!.copy(tileId = "sound_mode")
-        }
+            if (map.containsKey("sound_mode") && !map.containsKey("sound_profile")) {
+                map["sound_profile"] = map["sound_mode"]!!.copy(tileId = "sound_profile")
+            } else if (map.containsKey("sound_profile") && !map.containsKey("sound_mode")) {
+                map["sound_mode"] = map["sound_profile"]!!.copy(tileId = "sound_mode")
+            }
 
-        _tileConfigs.value = map
+            _tileConfigs.value = map
+            isInitialized = true
+        }
     }
 
     fun getConfig(tileId: String): TileCommandConfig {

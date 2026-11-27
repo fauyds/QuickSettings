@@ -40,6 +40,7 @@
     </queries>
 
     <application
+        android:name=".QuickPanelApplication"
         android:allowBackup="true"
         android:hardwareAccelerated="true"
         android:largeHeap="true"

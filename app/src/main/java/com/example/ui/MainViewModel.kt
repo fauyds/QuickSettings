@@ -5,7 +5,9 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.example.AppRuntimeInitializer
 import com.example.data.PanelPreferences
 import com.example.data.local.QuickPanelDatabase
 import com.example.data.repository.TileRepository
@@ -29,7 +31,14 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
+class MainViewModel(
+    application: Application,
+    private val savedStateHandle: SavedStateHandle
+) : AndroidViewModel(application) {
+
+    init {
+        AppRuntimeInitializer.ensureInitialized(application)
+    }
 
     private val database = QuickPanelDatabase.getInstance(application)
     private val repository = TileRepository(database.tileDao())
@@ -91,14 +100,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
     val notifications: StateFlow<List<NotificationItem>> = QuickPanelNotificationListenerService.notifications
 
-    private val _expansionStage = MutableStateFlow(QsExpansionStage.FULL_QS)
+    private val _expansionStage = MutableStateFlow(
+        savedStateHandle.get<String>(KEY_EXPANSION_STAGE)?.let { name ->
+            runCatching { QsExpansionStage.valueOf(name) }.getOrNull()
+        } ?: QsExpansionStage.FULL_QS
+    )
     val expansionStage: StateFlow<QsExpansionStage> = _expansionStage.asStateFlow()
 
-    private val _selectedTab = MutableStateFlow(0)
+    private val _selectedTab = MutableStateFlow(savedStateHandle.get<Int>(KEY_SELECTED_TAB) ?: 0)
     val selectedTab: StateFlow<Int> = _selectedTab.asStateFlow()
 
     fun setSelectedTab(tab: Int) {
         _selectedTab.value = tab
+        savedStateHandle[KEY_SELECTED_TAB] = tab
     }
 
     // Overlay ON / OFF Master Switch
@@ -115,6 +129,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val qqsTileCount: StateFlow<Int> = PanelPreferences.qqsTileCount
     val editButtonPosition: StateFlow<com.example.data.EditButtonPosition> = PanelPreferences.editButtonPosition
     val showDateInQqsHeader: StateFlow<Boolean> = PanelPreferences.showDateInQqsHeader
+
+    private val _isNotificationPermissionGranted = MutableStateFlow(
+        QuickPanelNotificationListenerService.isPermissionGranted(application)
+    )
+    val isNotificationPermissionGranted: StateFlow<Boolean> = _isNotificationPermissionGranted.asStateFlow()
 
     private val _showInitialSetup = MutableStateFlow(false)
     val showInitialSetup: StateFlow<Boolean> = _showInitialSetup.asStateFlow()
@@ -165,11 +184,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val enabled = _isOverlayEnabled.value
         val running = (QuickSettingsOverlayService.isRunning || (QuickPanelAccessibilityService.isRunning && QuickPanelAccessibilityService.instance?.isInterceptionEnabled == true))
         _isOverlayServiceRunning.value = enabled && running
+        _isNotificationPermissionGranted.value =
+            QuickPanelNotificationListenerService.isPermissionGranted(getApplication())
         privilegeEngine.refreshPermissions()
     }
 
     fun setExpansionStage(stage: QsExpansionStage) {
         _expansionStage.value = stage
+        savedStateHandle[KEY_EXPANSION_STAGE] = stage.name
     }
 
     fun handleTileClick(tile: QsTileModel) {
@@ -277,7 +299,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val stopIntent = Intent(app, QuickSettingsOverlayService::class.java).apply {
                     action = QuickSettingsOverlayService.ACTION_STOP
                 }
-                app.startService(stopIntent)
+                try {
+                    app.startService(stopIntent)
+                } catch (_: Throwable) {}
             }
         }
 
@@ -312,7 +336,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val expandIntent = Intent(app, QuickSettingsOverlayService::class.java).apply {
             action = QuickSettingsOverlayService.ACTION_TOGGLE_EXPAND
         }
-        app.startService(expandIntent)
+        try {
+            app.startService(expandIntent)
+        } catch (_: Throwable) {}
         refreshServiceState()
     }
 
@@ -321,18 +347,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val startIntent = Intent(app, QuickSettingsOverlayService::class.java).apply {
             action = QuickSettingsOverlayService.ACTION_START
         }
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            app.startForegroundService(startIntent)
-        } else {
-            app.startService(startIntent)
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                app.startForegroundService(startIntent)
+            } else {
+                app.startService(startIntent)
+            }
+            _isOverlayServiceRunning.value = true
+        } catch (_: Throwable) {
+            _isOverlayServiceRunning.value = QuickSettingsOverlayService.isRunning
         }
-        _isOverlayServiceRunning.value = true
     }
 
     override fun onCleared() {
         super.onCleared()
-        nativeTileManager.destroy()
-        externalTileScanner.destroy()
-        privilegeEngine.destroy()
+        runCatching { nativeTileManager.destroy() }
+        runCatching { externalTileScanner.destroy() }
+        runCatching { privilegeEngine.destroy() }
+    }
+
+    companion object {
+        private const val KEY_SELECTED_TAB = "selected_tab"
+        private const val KEY_EXPANSION_STAGE = "expansion_stage"
     }
 }

@@ -150,7 +150,7 @@ fun MainScreen(viewModel: MainViewModel) {
     val notifVol by viewModel.nativeTileManager.notificationVolume.collectAsStateWithLifecycle()
 
     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
-    val isNotifPermGranted = remember { viewModel.isNotificationPermissionGranted() }
+    val isNotifPermGranted by viewModel.isNotificationPermissionGranted.collectAsStateWithLifecycle()
 
     // External tiles
     val scannedTiles by viewModel.externalTileScanner.scannedTiles.collectAsStateWithLifecycle()

@@ -97,6 +97,7 @@ import com.example.ui.theme.QuickPanelTheme
 class QuickPanelAccessibilityService : AccessibilityService() {
 
     companion object {
+        private const val CLIENT_TAG = "accessibility_service"
         var instance: QuickPanelAccessibilityService? = null
             private set
 
@@ -714,9 +715,9 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         instance = this
         windowManager = getSystemService(Context.WINDOW_SERVICE) as? WindowManager
 
-        // Initialize tile & system managers
-        PanelPreferences.init(this)
-        com.example.data.NotificationCategoryManager.init(this)
+        // Initialize tile & system managers cleanly across cold-start / process restart
+        com.example.AppRuntimeInitializer.ensureInitialized(this)
+        MediaSessionManagerHelper.ensureListening(this, CLIENT_TAG)
         val db = QuickPanelDatabase.getInstance(this)
         val repo = TileRepository(db.tileDao())
         privilegeEngine = PrivilegeEngine(this)
@@ -751,7 +752,6 @@ class QuickPanelAccessibilityService : AccessibilityService() {
             }
         }
 
-        com.example.system.SystemThemeObserver.init(this)
         updateLauncherPackages()
 
         val filter = IntentFilter().apply {
@@ -762,7 +762,19 @@ class QuickPanelAccessibilityService : AccessibilityService() {
             addAction("android.media.STREAM_DEVICES_CHANGED_ACTION")
             addAction("android.media.RINGER_MODE_CHANGED")
         }
-        registerReceiver(systemStateReceiver, filter)
+        if (!isSystemReceiverRegistered) {
+            try {
+                androidx.core.content.ContextCompat.registerReceiver(
+                    this,
+                    systemStateReceiver,
+                    filter,
+                    androidx.core.content.ContextCompat.RECEIVER_EXPORTED
+                )
+                isSystemReceiverRegistered = true
+            } catch (_: Throwable) {
+                isSystemReceiverRegistered = false
+            }
+        }
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -2242,20 +2254,28 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         com.example.system.ComplicationDataHub.closeMicroWindow()
     }
 
+    private var isSystemReceiverRegistered = false
+
     override fun onDestroy() {
-        super.onDestroy()
-        immersiveModeDetector?.stopMonitoring()
+        runCatching { immersiveModeDetector?.stopMonitoring() }
         immersiveModeDetector = null
-        try {
-            unregisterReceiver(systemStateReceiver)
-        } catch (e: Exception) {
-            // Ignore
+        if (isSystemReceiverRegistered) {
+            isSystemReceiverRegistered = false
+            try {
+                unregisterReceiver(systemStateReceiver)
+            } catch (_: Throwable) {}
         }
-        MediaSessionManagerHelper.unregisterAll()
-        destroyOverlayWindow()
-        detachAccessibilityTriggerStrip()
-        instance = null
-        serviceScope.cancel()
+        runCatching { MediaSessionManagerHelper.unregisterClient(CLIENT_TAG) }
+        runCatching { destroyOverlayWindow() }
+        runCatching { detachAccessibilityTriggerStrip() }
+        if (::nativeTileManager.isInitialized) runCatching { nativeTileManager.destroy() }
+        if (::externalTileScanner.isInitialized) runCatching { externalTileScanner.destroy() }
+        if (::privilegeEngine.isInitialized) runCatching { privilegeEngine.destroy() }
+        if (instance === this) {
+            instance = null
+        }
+        runCatching { serviceScope.cancel() }
+        super.onDestroy()
     }
 }
 
@@ -2270,7 +2290,7 @@ class AccessibilityStatusTriggerView(context: Context) : View(context) {
     private val sideGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val pillRect = RectF()
     private var isPressedState = false
-    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var scope: CoroutineScope? = null
 
     var onSwipeDownDetected: ((isDeepSwipe: Boolean) -> Unit)? = null
 
@@ -2291,7 +2311,14 @@ class AccessibilityStatusTriggerView(context: Context) : View(context) {
 
     init {
         setWillNotDraw(false)
-        scope.launch {
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        scope?.cancel()
+        val viewScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+        scope = viewScope
+        viewScope.launch {
             PanelPreferences.invisibleStatusBarTrigger.collect {
                 invalidate()
             }
@@ -2299,8 +2326,9 @@ class AccessibilityStatusTriggerView(context: Context) : View(context) {
     }
 
     override fun onDetachedFromWindow() {
+        scope?.cancel()
+        scope = null
         super.onDetachedFromWindow()
-        scope.cancel()
     }
 
     private fun setPressedState(pressed: Boolean) {

@@ -34,7 +34,10 @@ class ExternalTileScanner(context: Context) {
     val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
 
     private val scope = kotlinx.coroutines.CoroutineScope(Dispatchers.Main + kotlinx.coroutines.SupervisorJob())
+    @Volatile
     private var packageReceiver: android.content.BroadcastReceiver? = null
+    private val isReceiverRegistered = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val isDestroyed = java.util.concurrent.atomic.AtomicBoolean(false)
 
     init {
         scope.launch {
@@ -44,6 +47,7 @@ class ExternalTileScanner(context: Context) {
     }
 
     private fun registerPackageReceiver() {
+        if (isDestroyed.get() || isReceiverRegistered.get()) return
         val filter = android.content.IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
             addAction(Intent.ACTION_PACKAGE_REMOVED)
@@ -51,23 +55,37 @@ class ExternalTileScanner(context: Context) {
         }
         val receiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(c: Context?, intent: Intent?) {
-                scope.launch {
-                    scanThirdPartyTiles()
+                if (!isDestroyed.get()) {
+                    scope.launch {
+                        scanThirdPartyTiles()
+                    }
                 }
             }
         }
         packageReceiver = receiver
-        context.registerReceiver(receiver, filter)
+        try {
+            androidx.core.content.ContextCompat.registerReceiver(
+                context,
+                receiver,
+                filter,
+                androidx.core.content.ContextCompat.RECEIVER_EXPORTED
+            )
+            isReceiverRegistered.set(true)
+        } catch (_: Throwable) {
+            isReceiverRegistered.set(false)
+        }
     }
 
     fun destroy() {
-        packageReceiver?.let { receiver ->
+        if (!isDestroyed.compareAndSet(false, true)) return
+        val receiver = packageReceiver
+        packageReceiver = null
+        if (receiver != null && isReceiverRegistered.compareAndSet(true, false)) {
             try {
                 context.unregisterReceiver(receiver)
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
         }
-        packageReceiver = null
-        scope.cancel()
+        runCatching { scope.cancel() }
     }
 
     suspend fun scanThirdPartyTiles(): List<QsTileModel> {

@@ -18,6 +18,8 @@ object SystemThemeObserver {
     private val _isDarkTheme = MutableStateFlow(true)
     val isDarkTheme: StateFlow<Boolean> = _isDarkTheme.asStateFlow()
 
+    private val initLock = Any()
+    @Volatile
     private var initialized = false
     private var contentObserver: ContentObserver? = null
     private var broadcastReceiver: BroadcastReceiver? = null
@@ -28,41 +30,49 @@ object SystemThemeObserver {
         _isDarkTheme.value = initialDark
 
         if (initialized) return
-        initialized = true
+        synchronized(initLock) {
+            if (initialized) return
+            initialized = true
 
-        val handler = Handler(Looper.getMainLooper())
+            val handler = Handler(Looper.getMainLooper())
 
-        // 1. ContentObserver for ui_night_mode in Settings.Secure
-        try {
-            val observer = object : ContentObserver(handler) {
-                override fun onChange(selfChange: Boolean) {
-                    val dark = detectSystemDarkMode(appContext)
-                    _isDarkTheme.value = dark
+            // 1. ContentObserver for ui_night_mode in Settings.Secure
+            try {
+                val observer = object : ContentObserver(handler) {
+                    override fun onChange(selfChange: Boolean) {
+                        val dark = detectSystemDarkMode(appContext)
+                        _isDarkTheme.value = dark
+                    }
                 }
+                appContext.contentResolver.registerContentObserver(
+                    Settings.Secure.getUriFor("ui_night_mode"),
+                    true,
+                    observer
+                )
+                contentObserver = observer
+            } catch (e: Exception) {
+                Log.w("SystemThemeObserver", "Failed to register ui_night_mode observer: ${e.message}")
             }
-            appContext.contentResolver.registerContentObserver(
-                Settings.Secure.getUriFor("ui_night_mode"),
-                true,
-                observer
-            )
-            contentObserver = observer
-        } catch (e: Exception) {
-            Log.w("SystemThemeObserver", "Failed to register ui_night_mode observer: ${e.message}")
-        }
 
-        // 2. BroadcastReceiver for ACTION_CONFIGURATION_CHANGED
-        try {
-            val receiver = object : BroadcastReceiver() {
-                override fun onReceive(ctx: Context?, intent: Intent?) {
-                    val dark = detectSystemDarkMode(appContext)
-                    _isDarkTheme.value = dark
+            // 2. BroadcastReceiver for ACTION_CONFIGURATION_CHANGED
+            try {
+                val receiver = object : BroadcastReceiver() {
+                    override fun onReceive(ctx: Context?, intent: Intent?) {
+                        val dark = detectSystemDarkMode(appContext)
+                        _isDarkTheme.value = dark
+                    }
                 }
+                val filter = IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED)
+                androidx.core.content.ContextCompat.registerReceiver(
+                    appContext,
+                    receiver,
+                    filter,
+                    androidx.core.content.ContextCompat.RECEIVER_EXPORTED
+                )
+                broadcastReceiver = receiver
+            } catch (e: Exception) {
+                Log.w("SystemThemeObserver", "Failed to register configuration receiver: ${e.message}")
             }
-            val filter = IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED)
-            appContext.registerReceiver(receiver, filter)
-            broadcastReceiver = receiver
-        } catch (e: Exception) {
-            Log.w("SystemThemeObserver", "Failed to register configuration receiver: ${e.message}")
         }
     }
 

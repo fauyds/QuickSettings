@@ -128,10 +128,15 @@ object ThemeManager {
     private val _activeThemeId = MutableStateFlow<String?>(null)
     val activeThemeId: StateFlow<String?> = _activeThemeId.asStateFlow()
 
+    private val initLock = Any()
+    @Volatile
     private var isInitialized = false
 
-    fun init(context: Context) {
-        val prefs = context.getSharedPreferences(PREFS_THEMES_STORE, Context.MODE_PRIVATE)
+    fun init(context: Context, forceRefresh: Boolean = false) {
+        if (isInitialized && !forceRefresh) return
+        synchronized(initLock) {
+            if (isInitialized && !forceRefresh) return
+            val prefs = context.applicationContext.getSharedPreferences(PREFS_THEMES_STORE, Context.MODE_PRIVATE)
         val rawJson = prefs.getString(KEY_THEMES_ARRAY, null)
         _activeThemeId.value = prefs.getString(KEY_ACTIVE_THEME_ID, null)
 
@@ -162,6 +167,7 @@ object ThemeManager {
         }
         _savedThemes.value = list
         isInitialized = true
+        }
     }
 
     private fun buildSettingsSnapshotJson(context: Context): JSONObject {
@@ -240,7 +246,7 @@ object ThemeManager {
             _activeThemeId.value = theme.id
 
             // Reload into all MutableStateFlow properties across the app
-            PanelPreferences.init(context)
+            PanelPreferences.init(context, forceRefresh = true)
             true
         } catch (e: Exception) {
             e.printStackTrace()

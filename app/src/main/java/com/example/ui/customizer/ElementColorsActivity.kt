@@ -59,7 +59,7 @@ class ElementColorsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        PanelPreferences.init(this)
+        com.example.AppRuntimeInitializer.ensureInitialized(this)
 
         setContent {
             AppSettingsTheme {

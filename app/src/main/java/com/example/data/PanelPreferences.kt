@@ -2144,9 +2144,17 @@ object PanelPreferences {
     private val _useMediaArtworkColors = MutableStateFlow(true)
     val useMediaArtworkColors: StateFlow<Boolean> = _useMediaArtworkColors.asStateFlow()
 
-    fun init(context: Context) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val themeSaved = prefs.getString(KEY_THEME_MODE, ThemeMode.SYSTEM.id)
+    private val initLock = Any()
+    @Volatile
+    private var isPrefsInitialized = false
+
+    fun init(context: Context, forceRefresh: Boolean = false) {
+        if (isPrefsInitialized && !forceRefresh) return
+        synchronized(initLock) {
+            if (isPrefsInitialized && !forceRefresh) return
+            val appContext = context.applicationContext
+            val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val themeSaved = prefs.getString(KEY_THEME_MODE, ThemeMode.SYSTEM.id)
         _themeMode.value = ThemeMode.fromId(themeSaved)
         val saved = prefs.getString(KEY_GRID_LAYOUT, QsGridLayout.DEFAULT.id)
         _gridLayout.value = QsGridLayout.fromId(saved)
@@ -2810,11 +2818,13 @@ object PanelPreferences {
             com.example.model.PrivilegeMode.STANDARD
         }
         if (!prefs.getBoolean(getStyleKey(KEY_STYLE_INITIALIZED, resolvedPanelStyle), false)) {
-            saveStylePreferences(context, resolvedPanelStyle)
+            saveStylePreferences(appContext, resolvedPanelStyle)
         } else {
-            loadStylePreferences(context, resolvedPanelStyle)
+            loadStylePreferences(appContext, resolvedPanelStyle)
         }
-        ThemeManager.init(context)
+        ThemeManager.init(appContext, forceRefresh = forceRefresh)
+        isPrefsInitialized = true
+        }
     }
 
     fun setInitialSetupCompleted(context: Context, completed: Boolean) {

@@ -41,6 +41,7 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
 
     companion object {
         private const val TAG = "NotificationListener"
+        private const val CLIENT_TAG = "notification_listener"
 
         var instance: QuickPanelNotificationListenerService? = null
             private set
@@ -319,21 +320,18 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
 
     override fun onCreate() {
         super.onCreate()
+        com.example.AppRuntimeInitializer.ensureInitialized(this)
         try {
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_DISPLAY)
-        } catch (e: Exception) {
-            // Ignore
-        }
+        } catch (_: Throwable) {}
     }
 
     override fun onListenerConnected() {
         super.onListenerConnected()
         instance = this
         Log.d(TAG, "Notification listener connected")
-        NotificationBlacklistManager.init(this)
-        com.example.data.NotificationCategoryManager.init(this)
-        MediaSessionManagerHelper.init(this)
-        com.example.system.ComplicationDataHub.init(this)
+        com.example.AppRuntimeInitializer.ensureInitialized(this)
+        MediaSessionManagerHelper.init(this, CLIENT_TAG)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
@@ -353,7 +351,10 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
 
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
-        instance = null
+        if (instance === this) {
+            instance = null
+        }
+        runCatching { MediaSessionManagerHelper.unregisterClient(CLIENT_TAG) }
         Log.d(TAG, "Notification listener disconnected")
     }
 
@@ -1637,8 +1638,11 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
     }
 
     override fun onDestroy() {
+        if (instance === this) {
+            instance = null
+        }
+        runCatching { MediaSessionManagerHelper.unregisterClient(CLIENT_TAG) }
+        runCatching { scope.cancel() }
         super.onDestroy()
-        instance = null
-        scope.cancel()
     }
 }

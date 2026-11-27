@@ -117,7 +117,7 @@ fun PrivilegeWizardScreen(
         lifecycleOwner.lifecycle.addObserver(observer)
         privilegeEngine.refreshPermissions()
         onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
+            runCatching { lifecycleOwner.lifecycle.removeObserver(observer) }
         }
     }
 

@@ -96,8 +96,7 @@ class ComplicationCommandsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        PanelPreferences.init(this)
-        ComplicationCommandRepository.init(this)
+        com.example.AppRuntimeInitializer.ensureInitialized(this)
 
         setContent {
             AppSettingsTheme {
@@ -132,7 +131,7 @@ fun ComplicationCommandsScreen(
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
+            runCatching { lifecycleOwner.lifecycle.removeObserver(observer) }
         }
     }
 
