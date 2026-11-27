@@ -384,6 +384,17 @@ class QuickPanelAccessibilityService : AccessibilityService() {
             return
         }
 
+        val recentBitmap = _capturedBackdropBitmap.value
+        val isRecentFresh = recentBitmap != null &&
+            !recentBitmap.isRecycled &&
+            (android.os.SystemClock.uptimeMillis() - lastBackdropCaptureTimeMs) < 800L
+
+        if (isRecentFresh) {
+            collapseStockNotificationShade()
+            showOverlayPanelInternal(initialStage)
+            return
+        }
+
         isPendingShowOverlay = true
         val requestGen = ++captureGeneration
         collapseStockNotificationShade()
@@ -1774,8 +1785,7 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         val shouldCaptureLiveBackdrop = Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA &&
             isAndroid16FrostedGlassSupported() &&
             isRuntimeShaderRefractionSupported() &&
-            PanelPreferences.isLiquidGlassActive() &&
-            !PanelPreferences.isDynamicRefractionActive()
+            PanelPreferences.isLiquidGlassActive()
 
         if (shouldCaptureLiveBackdrop) {
             captureFreshBackdropAndLaunch(initialStage)
@@ -2526,6 +2536,7 @@ class AccessibilityStatusTriggerView(context: Context) : View(context) {
                 startX = event.rawX
                 isDragging = true
                 QuickPanelAccessibilityService.instance?.resetBackdropCaptureForNewGesture()
+                QuickPanelAccessibilityService.instance?.preCaptureScreenBackdropIfNeeded()
                 QuickPanelAccessibilityService.instance?.notifyUserDragging(true)
                 setPressedState(true)
                 QuickPanelAccessibilityService.collapseStockNotificationShade()
