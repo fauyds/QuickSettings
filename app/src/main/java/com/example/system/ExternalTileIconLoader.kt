@@ -37,6 +37,10 @@ object ExternalTileIconLoader {
         return iconCache.get(cacheKey)
     }
 
+    fun clearCache() {
+        iconCache.evictAll()
+    }
+
     suspend fun loadIconAsync(context: Context, packageName: String, serviceClassName: String): ImageBitmap {
         val cacheKey = "$packageName/$serviceClassName"
         val cached = iconCache.get(cacheKey)

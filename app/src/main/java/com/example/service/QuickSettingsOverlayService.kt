@@ -476,7 +476,15 @@ class QuickSettingsOverlayService : Service() {
             }
         }
 
-        val qsBlurHost = QsMultiCardBlurWindowHost(this, layoutType)
+        val blurEnabled = isAndroid16FrostedGlassSupported() &&
+            PanelPreferences.enableContainerBlur.value &&
+            isCrossWindowBlurSupported(this)
+        val qsBlurHost = QsMultiCardBlurWindowHost(
+            this,
+            layoutType,
+            enabled = blurEnabled,
+            notificationSlotCount = 8
+        )
 
         val owner = OverlayLifecycleOwner()
         owner.onCreate()
@@ -972,6 +980,7 @@ class QuickSettingsOverlayService : Service() {
         expansionStage.value = QsExpansionStage.COLLAPSED
         dismissAnimatedCallback = null
         com.example.system.ComplicationDataHub.closeMicroWindow()
+        runCatching { com.example.system.MemoryTrimCoordinator.checkSoftThresholdThrottled(this, "overlay_service_closed") }
     }
 
     fun isImmersiveModeActive(): Boolean {

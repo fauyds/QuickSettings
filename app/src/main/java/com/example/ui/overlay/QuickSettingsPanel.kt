@@ -8604,7 +8604,7 @@ fun NotificationLeadingAvatar(
 }
 
 private object AppIconBitmapCache {
-    private val cache = android.util.LruCache<Int, Bitmap>(96)
+    private val cache = android.util.LruCache<Int, Bitmap>(64)
 
     fun getOrCreate(drawable: Drawable): Bitmap? {
         val key = System.identityHashCode(drawable)
@@ -8634,6 +8634,7 @@ private object AppIconBitmapCache {
                 b
             }
             if (bmp != null && !bmp.isRecycled) {
+                if (cache.size() > 48) cache.evictAll()
                 cache.put(key, bmp)
                 bmp
             } else {
@@ -8643,6 +8644,14 @@ private object AppIconBitmapCache {
             null
         }
     }
+
+    fun clear() {
+        cache.evictAll()
+    }
+}
+
+fun clearAppIconBitmapCache() {
+    AppIconBitmapCache.clear()
 }
 
 @Composable

@@ -493,7 +493,8 @@ object ComplicationDataHub {
                     delay(500L)
                 } else {
                     // QS & App UI are idle/closed: avoid polling /proc/stat, DownloadManager, TrafficStats, or WifiManager
-                    delay(2000L)
+                    appContext?.let { MemoryTrimCoordinator.checkSoftThresholdThrottled(it, "ComplicationDataHub_idle") }
+                    delay(3000L)
                 }
             }
         }
@@ -803,6 +804,7 @@ object ComplicationDataHub {
         timerTicker: ExternalClockTicker?,
         stopwatchTicker: ExternalClockTicker?
     ) {
+        if (externalTimerTicker == timerTicker && externalStopwatchTicker == stopwatchTicker) return
         if (timerTicker != null) {
             val liveRemaining = resolveTickerMillis(timerTicker)
             if (externalTimerKey != timerTicker.key || liveRemaining > externalTimerMaxDurationMs) {
@@ -815,7 +817,12 @@ object ComplicationDataHub {
         }
         externalTimerTicker = timerTicker
         externalStopwatchTicker = stopwatchTicker
-        refreshTelemetryNow()
+        if (shouldSampleFullTelemetry()) {
+            refreshTelemetryNow()
+        } else {
+            val cur = _snapshot.value
+            _snapshot.value = cur.copy(timer = buildTimerState(), stopwatch = buildStopwatchState())
+        }
     }
 
     private fun resolveTickerMillis(ticker: ExternalClockTicker): Long {
@@ -1457,6 +1464,7 @@ object ComplicationDataHub {
     // =========================================================================
 
     fun updateNotificationDownloads(entries: List<ActiveDownloadEntry>) {
+        if (notificationDownloads == entries) return
         notificationDownloads = entries
         entries.firstOrNull { it.contentIntent != null }?.let {
             lastDownloadContentIntent = it.contentIntent
@@ -1464,7 +1472,16 @@ object ComplicationDataHub {
         entries.firstOrNull { !it.packageName.isNullOrBlank() }?.let {
             lastDownloadPackageName = it.packageName
         }
-        refreshTelemetryNow()
+        if (shouldSampleFullTelemetry()) {
+            refreshTelemetryNow()
+        } else {
+            val ctx = appContext
+            if (ctx != null) {
+                val cur = _snapshot.value
+                val downloadsState = sampleDownloadProgress(ctx, 0L)
+                _snapshot.value = cur.copy(downloads = downloadsState)
+            }
+        }
     }
 
     /**

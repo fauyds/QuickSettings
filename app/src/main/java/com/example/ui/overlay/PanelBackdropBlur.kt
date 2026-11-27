@@ -532,17 +532,25 @@ class QsMultiCardBlurWindowHost(
     context: Context,
     layoutType: Int,
     regionKeys: List<String> = listOf("qs_card", "qqs_carrier_footer"),
-    private val maxNotificationSlots: Int = MAX_NOTIFICATION_BLUR_SLOTS
+    private val enabled: Boolean = true,
+    private val notificationSlotCount: Int = MAX_NOTIFICATION_BLUR_SLOTS
 ) {
-    private val hosts: Map<String, QsCardBlurWindowHost> = regionKeys.associateWith {
-        QsCardBlurWindowHost(context, layoutType)
+    private val hosts: Map<String, QsCardBlurWindowHost> = if (enabled) {
+        regionKeys.associateWith { QsCardBlurWindowHost(context, layoutType) }
+    } else {
+        emptyMap()
     }
 
-    private val notificationHosts: List<QsCardBlurWindowHost> = List(maxNotificationSlots.coerceAtLeast(0)) {
-        QsCardBlurWindowHost(context, layoutType)
+    private val notificationHosts: List<QsCardBlurWindowHost> = if (enabled) {
+        List(notificationSlotCount.coerceAtLeast(0).coerceAtMost(MAX_NOTIFICATION_BLUR_SLOTS)) {
+            QsCardBlurWindowHost(context, layoutType)
+        }
+    } else {
+        emptyList()
     }
 
     fun showBehindOverlay() {
+        if (!enabled) return
         hosts.values.forEach { it.showBehindOverlay() }
         notificationHosts.forEach { it.showBehindOverlay() }
     }
@@ -554,6 +562,7 @@ class QsMultiCardBlurWindowHost(
         offsetY: Int = 0,
         notificationRegions: List<QsCardBlurBounds> = emptyList()
     ) {
+        if (!enabled) return
         hosts.forEach { (key, host) ->
             val bounds = regions[key]
             host.update(
@@ -1820,6 +1829,7 @@ fun LiveScreenRefractionBackdrop(
     var viewportHeightPx by remember { mutableStateOf(screenBitmap?.height?.toFloat() ?: 2400f) }
 
     val drawPaint = remember { Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG) }
+    val glassPaint = remember { Paint() }
     val hostView = LocalView.current
     val locBuffer = remember { IntArray(2) }
     var measuredOffsetX by remember { mutableStateOf(0f) }
@@ -1844,7 +1854,7 @@ fun LiveScreenRefractionBackdrop(
         resolvedOffsetX,
         resolvedOffsetY
     ) {
-        if (!useDownscaledBlurNode || viewportWidthPx <= 1f || viewportHeightPx <= 1f) {
+        if (!useDownscaledBlurNode || viewportWidthPx <= 1f || viewportHeightPx <= 1f || screenBitmap == null || screenBitmap.isRecycled) {
             null
         } else {
             try {
@@ -1864,12 +1874,10 @@ fun LiveScreenRefractionBackdrop(
                     val dstRect = RectF(
                         -resolvedOffsetX,
                         -resolvedOffsetY,
-                        -resolvedOffsetX + (screenBitmap?.width?.toFloat() ?: viewportWidthPx),
-                        -resolvedOffsetY + (screenBitmap?.height?.toFloat() ?: viewportHeightPx)
+                        -resolvedOffsetX + (screenBitmap.width.toFloat()),
+                        -resolvedOffsetY + (screenBitmap.height.toFloat())
                     )
-                    if (screenBitmap != null) {
-                        rec.drawBitmap(screenBitmap, null, dstRect, drawPaint)
-                    }
+                    rec.drawBitmap(screenBitmap, null, dstRect, drawPaint)
                     endRecording()
                 }
             } catch (_: Throwable) {
@@ -2043,7 +2051,7 @@ fun LiveScreenRefractionBackdrop(
                     val tintB = if (isDark) 36 else 244
                     val alphaInt = (glassAlpha * 255f).toInt().coerceIn(1, 255)
                     val glassColor = AndroidColor.argb(alphaInt, tintR, tintG, tintB)
-                    val glassPaint = Paint().apply { color = glassColor }
+                    glassPaint.color = glassColor
                     nc.drawRect(0f, 0f, size.width, size.height, glassPaint)
                 }
             }

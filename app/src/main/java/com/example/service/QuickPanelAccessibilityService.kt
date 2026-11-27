@@ -697,6 +697,7 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                     wasKeyguardLocked = true
                     expansionStage.value = QsExpansionStage.COLLAPSED
                     destroyOverlayWindow()
+                    runCatching { com.example.system.MemoryTrimCoordinator.checkSoftThresholdThrottled(this@QuickPanelAccessibilityService, "screen_off") }
                 }
                 Intent.ACTION_SCREEN_ON -> {
                     val km = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
@@ -1850,7 +1851,15 @@ class QuickPanelAccessibilityService : AccessibilityService() {
             }
         }
 
-        val qsBlurHost = QsMultiCardBlurWindowHost(this, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY)
+        val blurEnabled = isAndroid16FrostedGlassSupported() &&
+            PanelPreferences.enableContainerBlur.value &&
+            isCrossWindowBlurSupported(this)
+        val qsBlurHost = QsMultiCardBlurWindowHost(
+            this,
+            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+            enabled = blurEnabled,
+            notificationSlotCount = 8
+        )
 
         val owner = OverlayLifecycleOwner()
         owner.onCreate()
@@ -2386,6 +2395,13 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         dismissAnimatedCallback = null
         clearCapturedBackdropBitmap()
         com.example.system.ComplicationDataHub.closeMicroWindow()
+        runCatching { com.example.system.MemoryTrimCoordinator.checkSoftThresholdThrottled(this, "accessibility_overlay_closed") }
+    }
+
+    fun clearCapturedBackdropIfInactive() {
+        if (!isPanelShowing && !isPendingShowOverlay) {
+            clearCapturedBackdropBitmap()
+        }
     }
 
     private var isSystemReceiverRegistered = false

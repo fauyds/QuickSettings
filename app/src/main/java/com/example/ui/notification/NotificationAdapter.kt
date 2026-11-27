@@ -115,6 +115,8 @@ class NotificationAdapter(
 
     fun submitNotifications(list: List<NotificationItem>, forceVisualRefresh: Boolean = false) {
         rawNotifications = list
+        val activeKeys = list.map { it.key }.toSet()
+        expandedStateMap.keys.retainAll(activeKeys)
         rebuildAndDispatchDiff(forceVisualRefresh = forceVisualRefresh)
     }
 
@@ -371,6 +373,15 @@ class NotificationAdapter(
     override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
         super.onDetachedFromRecyclerView(recyclerView)
         attachedRecyclerView = null
+    }
+
+    override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
+        super.onViewRecycled(holder)
+        try {
+            if (holder is NotificationViewHolder) {
+                // holder cleanup
+            }
+        } catch (_: Throwable) {}
     }
 
     override fun getItemCount(): Int = renderedEntries.size

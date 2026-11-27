@@ -1115,6 +1115,19 @@ class PrivilegeEngine(context: Context) {
             endlessCommandCount = 0
         }
 
+        fun trimIdleRootSessionIfNeeded(minIdleMs: Long = 15_000L) {
+            synchronized(sharedRootLock) {
+                val proc = sharedRootProcess
+                if (proc != null && lastEndlessActivityMs > 0L) {
+                    val idleTime = System.currentTimeMillis() - lastEndlessActivityMs
+                    if (idleTime >= minIdleMs) {
+                        Log.d("PrivilegeEngine", "Trimming idle root session after ${idleTime}ms idle...")
+                        closePersistentRootSessionLocked(gracefulExit = true)
+                    }
+                }
+            }
+        }
+
         fun getShared(context: Context): PrivilegeEngine {
             NativeTileManager.instance?.privilegeEngine?.let { return it }
             return sharedFallbackEngine ?: synchronized(sharedRootLock) {

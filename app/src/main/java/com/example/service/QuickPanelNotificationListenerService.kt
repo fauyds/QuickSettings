@@ -73,6 +73,15 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
         val isConnected: Boolean
             get() = instance != null
 
+        fun trimCaches() {
+            instance?.let {
+                try {
+                    it.appNameCache.evictAll()
+                    it.appIconCache.evictAll()
+                } catch (_: Throwable) {}
+            }
+        }
+
         fun isPermissionGranted(context: Context): Boolean {
             val enabledListeners = Settings.Secure.getString(
                 context.contentResolver,
@@ -1637,7 +1646,15 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
         if (obj is Uri) {
             try {
                 contentResolver.openInputStream(obj)?.use { stream ->
-                    return android.graphics.BitmapFactory.decodeStream(stream)
+                    val opts = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    val bytes = stream.readBytes()
+                    android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)
+                    var scale = 1
+                    while ((opts.outWidth / scale) > 512 || (opts.outHeight / scale) > 512) {
+                        scale *= 2
+                    }
+                    val decodeOpts = android.graphics.BitmapFactory.Options().apply { inSampleSize = scale }
+                    return android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, decodeOpts)
                 }
             } catch (e: Throwable) {}
         }
@@ -1645,7 +1662,15 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
             try {
                 val uri = Uri.parse(obj)
                 contentResolver.openInputStream(uri)?.use { stream ->
-                    return android.graphics.BitmapFactory.decodeStream(stream)
+                    val bytes = stream.readBytes()
+                    val opts = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)
+                    var scale = 1
+                    while ((opts.outWidth / scale) > 512 || (opts.outHeight / scale) > 512) {
+                        scale *= 2
+                    }
+                    val decodeOpts = android.graphics.BitmapFactory.Options().apply { inSampleSize = scale }
+                    return android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, decodeOpts)
                 }
             } catch (e: Throwable) {}
         }

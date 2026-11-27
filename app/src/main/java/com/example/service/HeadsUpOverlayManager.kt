@@ -243,6 +243,11 @@ object HeadsUpOverlayManager {
         }
     }
 
+    fun trimCaches() {
+        recentlyAlertedMap.clear()
+        displayedHeadsUpKeys.clear()
+    }
+
     fun resetAlarmStateLock() {
         resetPinnedLock()
     }

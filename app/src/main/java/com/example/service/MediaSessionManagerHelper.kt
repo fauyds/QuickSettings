@@ -391,21 +391,36 @@ object MediaSessionManagerHelper {
             (currentPositionMs.toFloat() / totalDurationMs.toFloat()).coerceIn(0f, 1f)
         } else 0f
 
+        val uiActive = com.example.system.NativeTileManager.isAnyUiActive()
         val tokenKey = try { controller.sessionToken.toString() } catch (_: Throwable) { packageName }
         val artUriStr = metadata?.getString(MediaMetadata.METADATA_KEY_ALBUM_ART_URI)
             ?: metadata?.getString(MediaMetadata.METADATA_KEY_ART_URI)
             ?: ""
         val artSig = "$packageName|$title|$artist|$album|$totalDurationMs|$artUriStr"
         val cachedArt = cachedSessionArtwork[tokenKey]
-        val artworkBitmap = if (cachedArt != null && cachedArt.trackSignature == artSig &&
+        val artworkBitmap = if (!uiActive) {
+            null
+        } else if (cachedArt != null && cachedArt.trackSignature == artSig &&
             (cachedArt.bitmap == null || !cachedArt.bitmap.isRecycled)
         ) {
             cachedArt.bitmap
         } else {
             val fresh = metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
                 ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
-            cachedSessionArtwork[tokenKey] = CachedArtworkEntry(artSig, fresh)
-            fresh
+            val downscaledFresh = fresh?.let {
+                if (it.width > 512 || it.height > 512) {
+                    try {
+                        android.graphics.Bitmap.createScaledBitmap(it, 512, 512, true).also { scaled ->
+                            if (scaled !== it && !it.isRecycled) it.recycle()
+                        }
+                    } catch (_: Throwable) {
+                        it
+                    }
+                } else it
+            }
+            if (cachedSessionArtwork.size > 16) cachedSessionArtwork.clear()
+            cachedSessionArtwork[tokenKey] = CachedArtworkEntry(artSig, downscaledFresh)
+            downscaledFresh
         }
 
         val outputInfo = getActiveOutputDevice(context)
@@ -884,6 +899,19 @@ object MediaSessionManagerHelper {
             } catch (e: Exception) {
                 // Try next fallback
             }
+        }
+    }
+
+    fun trimCaches(releaseArtwork: Boolean) {
+        synchronized(registrationLock) {
+            if (releaseArtwork) {
+                cachedSessionArtwork.clear()
+            } else {
+                val activeKeys = activeControllers.map { it.sessionToken.toString() }.toSet()
+                cachedSessionArtwork.keys.retainAll(activeKeys)
+            }
+            appNameCache.clear()
+            if (userLikedMap.size > 128) userLikedMap.clear()
         }
     }
 

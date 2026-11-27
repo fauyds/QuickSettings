@@ -40,4 +40,17 @@ class QuickPanelApplication : Application() {
         super.onCreate()
         AppRuntimeInitializer.ensureInitialized(this)
     }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= TRIM_MEMORY_BACKGROUND || level == TRIM_MEMORY_RUNNING_LOW || level == TRIM_MEMORY_UI_HIDDEN) {
+            runCatching { com.example.system.MemoryTrimCoordinator.performSafeTrim(this) }
+        }
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        runCatching { com.example.system.MemoryTrimCoordinator.performSafeTrim(this) }
+    }
 }
+

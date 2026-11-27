@@ -207,6 +207,10 @@ class NotificationListView @JvmOverloads constructor(
             viewTreeObserver.removeOnPreDrawListener(blurPreDrawListener)
         } catch (_: Throwable) {}
         clearReportedBlurRegions()
+        try {
+            rvNotifications.adapter = null
+            rvNotifications.recycledViewPool.clear()
+        } catch (_: Throwable) {}
     }
 
     private fun updatePreDrawListenerRegistration() {
