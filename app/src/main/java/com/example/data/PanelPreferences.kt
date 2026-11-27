@@ -608,8 +608,6 @@ object PanelPreferences {
     private val _diamondCrossedCut = MutableStateFlow(false)
     val diamondCrossedCut: StateFlow<Boolean> = _diamondCrossedCut.asStateFlow()
 
-    private val _dynamicRefraction = MutableStateFlow(false)
-    val dynamicRefraction: StateFlow<Boolean> = _dynamicRefraction.asStateFlow()
 
     fun isGlassBackdropSupported(): Boolean =
         android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.BAKLAVA
@@ -633,7 +631,6 @@ object PanelPreferences {
     private const val KEY_REFRACTION_STYLE = "glass_refraction_style"
     private const val KEY_GLASS_PERFORMANCE_MODE = "glass_performance_mode"
     private const val KEY_DIAMOND_CROSSED_CUT = "glass_refraction_diamond_crossed_cut"
-    private const val KEY_DYNAMIC_REFRACTION = "glass_dynamic_refraction"
 
     fun refractionSensitivityKey(style: RefractionStyle): String = "glass_refraction_sens_${style.id}"
     fun refractionScaleKey(style: RefractionStyle): String = "glass_refraction_scale_${style.id}"
@@ -2445,7 +2442,6 @@ object PanelPreferences {
         _glassRefractionDispersion.value = loadedDispersions[activeRefStyle] ?: activeRefStyle.defaultDispersion
         _glassRefractionCustomParam.value = loadedCustomParams[activeRefStyle] ?: activeRefStyle.defaultCustomParam
         _diamondCrossedCut.value = prefs.getBoolean(KEY_DIAMOND_CROSSED_CUT, false)
-        _dynamicRefraction.value = prefs.getBoolean(KEY_DYNAMIC_REFRACTION, false)
         _showHeaderComplications.value = prefs.getBoolean(KEY_SHOW_HEADER_COMPLICATIONS, true)
         _complicationSublinePlacement.value = com.example.model.ComplicationSublinePlacement.fromId(
             prefs.getString(KEY_COMPLICATION_SUBLINE_PLACEMENT, com.example.model.ComplicationSublinePlacement.INSIDE_RING.id)
@@ -4776,16 +4772,6 @@ object PanelPreferences {
             .apply()
     }
 
-    fun setDynamicRefraction(context: Context, enabled: Boolean) {
-        _dynamicRefraction.value = enabled
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit()
-            .putBoolean(KEY_DYNAMIC_REFRACTION, enabled)
-            .apply()
-    }
-
-    fun isDynamicRefractionActive(): Boolean = _dynamicRefraction.value
-
     fun setShowHeaderComplications(context: Context, enabled: Boolean) {
         _showHeaderComplications.value = enabled
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -6163,7 +6149,6 @@ object PanelPreferences {
         KEY_REFRACTION_STYLE,
         KEY_GLASS_PERFORMANCE_MODE,
         KEY_DIAMOND_CROSSED_CUT,
-        KEY_DYNAMIC_REFRACTION,
     ) + RefractionStyle.entries.flatMap { st ->
         listOf(
             "glass_refraction_sens_${st.id}",
@@ -6422,7 +6407,6 @@ object PanelPreferences {
         settingsJson.put(KEY_REFRACTION_STYLE, _refractionStyle.value.id)
         settingsJson.put(KEY_GLASS_PERFORMANCE_MODE, _glassPerformanceMode.value)
         settingsJson.put(KEY_DIAMOND_CROSSED_CUT, _diamondCrossedCut.value)
-        settingsJson.put(KEY_DYNAMIC_REFRACTION, _dynamicRefraction.value)
         RefractionStyle.entries.forEach { st ->
             settingsJson.put(refractionSensitivityKey(st), (_refractionStyleSensitivities.value[st] ?: st.defaultSensitivity).toDouble())
             settingsJson.put(refractionScaleKey(st), (_refractionStyleScales.value[st] ?: st.defaultScale).toDouble())

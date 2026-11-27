@@ -1789,12 +1789,12 @@ fun LiveScreenRefractionBackdrop(
     refractionStyleParam: Float? = null,
     diamondCrossedCut: Boolean? = null
 ) {
-    val isDynamic = PanelPreferences.isDynamicRefractionActive()
     if (!isAndroid16FrostedGlassSupported() ||
         !isRuntimeShaderRefractionSupported() ||
         !enableBlur ||
         !enableRefraction ||
-        (!isDynamic && (screenBitmap == null || screenBitmap.isRecycled))
+        screenBitmap == null ||
+        screenBitmap.isRecycled
     ) return
     val performanceMode by PanelPreferences.glassPerformanceMode.collectAsState()
     val prefRefractionStyle by PanelPreferences.refractionStyle.collectAsState()
@@ -1844,7 +1844,6 @@ fun LiveScreenRefractionBackdrop(
 
     val cachedDownscaledBlurNode = remember(
         useDownscaledBlurNode,
-        isDynamic,
         screenBitmap,
         effectiveBlurPx,
         effectiveBlurDp,
@@ -1878,12 +1877,6 @@ fun LiveScreenRefractionBackdrop(
                         -resolvedOffsetX + (screenBitmap.width.toFloat()),
                         -resolvedOffsetY + (screenBitmap.height.toFloat())
                     )
-                    val nodePaintAlpha = if (isDynamic) {
-                        ((1f - (transparency * 0.35f).coerceIn(0f, 0.40f)) * 255f).roundToInt().coerceIn(160, 255)
-                    } else {
-                        255
-                    }
-                    drawPaint.alpha = nodePaintAlpha
                     rec.drawBitmap(screenBitmap, null, dstRect, drawPaint)
                     endRecording()
                 }
@@ -2034,12 +2027,6 @@ fun LiveScreenRefractionBackdrop(
             drawIntoCanvas { canvas ->
                 val nc = canvas.nativeCanvas
                 if (screenBitmap != null && !screenBitmap.isRecycled) {
-                    val paintAlpha = if (isDynamic) {
-                        ((1f - (transparency * 0.35f).coerceIn(0f, 0.40f)) * 255f).roundToInt().coerceIn(160, 255)
-                    } else {
-                        255
-                    }
-                    drawPaint.alpha = paintAlpha
                     if (cachedDownscaledBlurNode != null &&
                         nc.isHardwareAccelerated &&
                         cachedDownscaledBlurNode.hasDisplayList()
