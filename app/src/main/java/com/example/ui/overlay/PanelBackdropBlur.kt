@@ -2037,9 +2037,14 @@ fun LiveScreenRefractionBackdrop(
                         nc.drawBitmap(screenBitmap, null, dstRect, drawPaint)
                     }
                 } else {
-                    val fallbackColor = if (isDark) 0xFF1B1D21.toInt() else 0xFFE2E4E9.toInt()
-                    val fallbackPaint = Paint().apply { color = fallbackColor }
-                    nc.drawRect(0f, 0f, size.width, size.height, fallbackPaint)
+                    val glassAlpha = ((1f - transparency.coerceIn(0f, 0.95f)) * (if (isDark) 0.35f else 0.25f)).coerceIn(0.04f, 0.40f)
+                    val tintR = if (isDark) 28 else 235
+                    val tintG = if (isDark) 30 else 238
+                    val tintB = if (isDark) 36 else 244
+                    val alphaInt = (glassAlpha * 255f).toInt().coerceIn(1, 255)
+                    val glassColor = AndroidColor.argb(alphaInt, tintR, tintG, tintB)
+                    val glassPaint = Paint().apply { color = glassColor }
+                    nc.drawRect(0f, 0f, size.width, size.height, glassPaint)
                 }
             }
         }
