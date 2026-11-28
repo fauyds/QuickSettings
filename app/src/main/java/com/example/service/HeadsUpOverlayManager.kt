@@ -70,10 +70,10 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import com.example.data.HeadsUpAction
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallEnd
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Snooze
@@ -84,6 +84,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -100,6 +101,8 @@ import kotlin.math.roundToInt
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -549,12 +552,17 @@ object HeadsUpOverlayManager {
                                     triggerDefaultQsShade(targetContext)
                                 }
                             },
-                            onActionTrigger = { action ->
+                            onActionTrigger = { action, replyText ->
                                 resetPinnedLock(dataItem.key)
-                                executeNotificationAction(targetContext, action)
-                                currentOnActionClick?.invoke(action)
+                                if (replyText != null) {
+                                    QuickPanelNotificationListenerService.executeAction(action, targetContext, replyText)
+                                } else {
+                                    executeNotificationAction(targetContext, action)
+                                    currentOnActionClick?.invoke(action)
+                                }
                                 dismissHeadsUpAnimated()
-                            }
+                            },
+                            onReplyModeChange = { enabled -> setHeadsUpImeFocus(enabled) }
                         )
                     }
                 }
@@ -814,6 +822,23 @@ object HeadsUpOverlayManager {
         ScreenWakeHelper.releaseWakeLock()
     }
 
+    private fun setHeadsUpImeFocus(enabled: Boolean) {
+        val wm = currentWindowManager ?: return
+        val view = currentComposeView ?: return
+        val lp = currentLayoutParams ?: return
+        lp.flags = if (enabled) {
+            lp.flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE.inv()
+        } else {
+            lp.flags or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+        }
+        lp.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING or
+                WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE
+        try {
+            wm.updateViewLayout(view, lp)
+        } catch (_: Exception) {
+        }
+    }
+
     /**
      * Remade realistic multi-layer shadow drawn via Canvas BlurMaskFilter.
      * Eliminates native RenderNode elevation artifacts (such as dark smudges on asymmetrical corners)
@@ -881,11 +906,15 @@ object HeadsUpOverlayManager {
         onDismiss: () -> Unit,
         onOpen: () -> Unit,
         onSwipeDownToQs: () -> Unit,
-        onActionTrigger: (NotificationActionModel) -> Unit
+        onActionTrigger: (NotificationActionModel, String?) -> Unit,
+        onReplyModeChange: (Boolean) -> Unit = {}
     ) {
         val coroutineScope = rememberCoroutineScope()
         val haptic = LocalHapticFeedback.current
         var isVisible by remember { mutableStateOf(false) }
+        var replyAction by remember { mutableStateOf<NotificationActionModel?>(null) }
+        var replyText by remember { mutableStateOf("") }
+        val replyFocusRequester = remember { FocusRequester() }
 
         // Heads-Up Design Preferences
         val edgeToEdge by PanelPreferences.headsUpEdgeToEdge.collectAsState()
@@ -1015,9 +1044,9 @@ object HeadsUpOverlayManager {
         dismissAnimatedCallback = dismissWithAnimation
 
         // Keep Alarm & Call Heads-Up Overlay PINNED until action
-        LaunchedEffect(data.id, data.isAlarm, data.isCall) {
+        LaunchedEffect(data.id, data.isAlarm, data.isCall, replyAction) {
             isVisible = true
-            if (!data.isAlarm && !data.isCall) {
+            if (!data.isAlarm && !data.isCall && replyAction == null) {
                 val autoDismissSeconds = configuredSeconds
                 delay((autoDismissSeconds * 1000).toLong())
                 if (isVisible) {
@@ -1127,7 +1156,7 @@ object HeadsUpOverlayManager {
                                     val totalDeltaX = currentPointer.position.x - startPosition.x
                                     val totalDeltaY = currentPointer.position.y - startPosition.y
 
-                                    if (!isDragging && (abs(totalDeltaX) > touchSlop || abs(totalDeltaY) > touchSlop)) {
+                                    if (!isDragging && !currentPointer.isConsumed && (abs(totalDeltaX) > touchSlop || abs(totalDeltaY) > touchSlop)) {
                                         isDragging = true
                                         longPressJob.cancel()
                                         dragAxis = if (abs(totalDeltaX) >= abs(totalDeltaY)) 1 else 2
@@ -1181,7 +1210,7 @@ object HeadsUpOverlayManager {
                                             launch { animOffsetY.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioLowBouncy)) }
                                         }
                                     }
-                                } else if (!isLongPressed) {
+                                } else if (!isLongPressed && !pointer.isConsumed) {
                                     val tapTime = System.currentTimeMillis()
                                     if (tapTime - lastTapTime < 300L) {
                                         lastTapTime = 0L
@@ -1352,26 +1381,6 @@ object HeadsUpOverlayManager {
                                     fontSize = 10.sp,
                                     color = Color.Gray
                                 )
-
-                                Box(
-                                    modifier = Modifier
-                                        .size(22.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White.copy(alpha = 0.08f))
-                                        .clickable(
-                                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                                            indication = null
-                                        ) { onDismiss() }
-                                        .testTag("dismiss_heads_up_btn"),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Dismiss",
-                                        tint = Color.LightGray,
-                                        modifier = Modifier.size(12.dp)
-                                    )
-                                }
                             }
                         }
 
@@ -1501,12 +1510,19 @@ object HeadsUpOverlayManager {
                                         isDeclineAction -> Icons.Default.CallEnd
                                         isStopAction -> Icons.Default.Stop
                                         isSnoozeAction -> Icons.Default.Snooze
-                                        else -> Icons.AutoMirrored.Filled.OpenInNew
+                                        else -> null
                                     }
 
                                     Surface(
-                                        onClick = { onActionTrigger(action) },
-                                        shape = RoundedCornerShape(12.dp),
+                                        onClick = {
+                                            if (action.isReply) {
+                                                replyAction = action
+                                                replyText = ""
+                                            } else {
+                                                onActionTrigger(action, null)
+                                            }
+                                        },
+                                        shape = RoundedCornerShape(percent = 50),
                                         color = btnBgColor,
                                         modifier = Modifier.testTag("action_btn_${action.title.filter { it.isLetterOrDigit() }}")
                                     ) {
@@ -1515,12 +1531,14 @@ object HeadsUpOverlayManager {
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                                         ) {
-                                            Icon(
-                                                imageVector = iconVector,
-                                                contentDescription = action.title,
-                                                tint = btnTextColor,
-                                                modifier = Modifier.size(15.dp)
-                                            )
+                                            if (iconVector != null) {
+                                                Icon(
+                                                    imageVector = iconVector,
+                                                    contentDescription = action.title,
+                                                    tint = btnTextColor,
+                                                    modifier = Modifier.size(15.dp)
+                                                )
+                                            }
                                             Text(
                                                 text = action.title,
                                                 fontSize = 12.sp,
@@ -1529,6 +1547,65 @@ object HeadsUpOverlayManager {
                                             )
                                         }
                                     }
+                                }
+                            }
+                        }
+
+                        val currentReplyAction = replyAction
+                        if (currentReplyAction != null) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = replyText,
+                                    onValueChange = { replyText = it },
+                                    singleLine = true,
+                                    placeholder = {
+                                        Text(
+                                            text = "Reply…",
+                                            fontSize = 12.sp,
+                                            color = monetOnSurfaceVariant
+                                        )
+                                    },
+                                    textStyle = androidx.compose.ui.text.TextStyle(
+                                        fontSize = 12.sp,
+                                        color = monetOnSurface
+                                    ),
+                                    shape = RoundedCornerShape(percent = 50),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .focusRequester(replyFocusRequester)
+                                        .testTag("heads_up_reply_field")
+                                )
+                                Surface(
+                                    onClick = {
+                                        val text = replyText.trim()
+                                        if (text.isNotEmpty()) {
+                                            onActionTrigger(currentReplyAction, text)
+                                        }
+                                    },
+                                    shape = RoundedCornerShape(percent = 50),
+                                    color = monetPrimary,
+                                    modifier = Modifier.testTag("heads_up_reply_send")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.Send,
+                                        contentDescription = "Send",
+                                        tint = MonetOnPrimary,
+                                        modifier = Modifier
+                                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                                            .size(18.dp)
+                                    )
+                                }
+                            }
+                            LaunchedEffect(currentReplyAction) {
+                                onReplyModeChange(true)
+                                delay(120)
+                                try {
+                                    replyFocusRequester.requestFocus()
+                                } catch (_: Exception) {
                                 }
                             }
                         }
@@ -1568,7 +1645,7 @@ object HeadsUpOverlayManager {
                             if (data.actions.isEmpty()) {
                                 Surface(
                                     onClick = onOpen,
-                                    shape = RoundedCornerShape(12.dp),
+                                    shape = RoundedCornerShape(percent = 50),
                                     color = monetPrimary.copy(alpha = 0.18f),
                                     modifier = Modifier.testTag("open_heads_up_action_btn")
                                 ) {

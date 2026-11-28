@@ -4,6 +4,7 @@ import android.app.ActivityOptions
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.RemoteInput
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -150,16 +151,27 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
             }
         }
 
-        fun executeAction(action: NotificationActionModel, context: Context? = null): Boolean {
+        fun executeAction(action: NotificationActionModel, context: Context? = null, replyText: String? = null): Boolean {
             return try {
                 if (action.actionIntent != null) {
+                    val remoteInput = action.remoteInput
+                    val replyIntent = if (!replyText.isNullOrEmpty() && remoteInput != null) {
+                        Intent().apply {
+                            val results = Bundle().apply {
+                                putCharSequence(remoteInput.resultKey, replyText)
+                            }
+                            RemoteInput.addResultsToIntent(arrayOf(remoteInput), this, results)
+                        }
+                    } else null
                     if (context != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                         val options = android.app.ActivityOptions.makeBasic().apply {
                             setPendingIntentBackgroundActivityStartMode(
                                 android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
                             )
                         }
-                        action.actionIntent.send(context, 0, null, null, null, null, options.toBundle())
+                        action.actionIntent.send(context, 0, replyIntent, null, null, null, options.toBundle())
+                    } else if (replyIntent != null && context != null) {
+                        action.actionIntent.send(context, 0, replyIntent)
                     } else {
                         action.actionIntent.send()
                     }
@@ -737,12 +749,15 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
 
         val actionsList = mutableListOf<NotificationActionModel>()
         n.actions?.take(4)?.forEach { action ->
-            val actionTitle = action.title?.toString() ?: ""
+            val remoteInput = action.remoteInputs?.firstOrNull()
+            val actionTitle = action.title?.toString().takeUnless { it.isNullOrBlank() }
+                ?: if (remoteInput != null) "Reply" else ""
             if (actionTitle.isNotBlank()) {
                 actionsList.add(
                     NotificationActionModel(
                         title = actionTitle,
-                        actionIntent = action.actionIntent
+                        actionIntent = action.actionIntent,
+                        remoteInput = remoteInput
                     )
                 )
             }
@@ -999,12 +1014,15 @@ class QuickPanelNotificationListenerService : NotificationListenerService() {
 
                     val actionsList = mutableListOf<NotificationActionModel>()
                     n.actions?.take(3)?.forEach { action ->
-                        val actionTitle = action.title?.toString() ?: ""
+                        val remoteInput = action.remoteInputs?.firstOrNull()
+                        val actionTitle = action.title?.toString().takeUnless { it.isNullOrBlank() }
+                            ?: if (remoteInput != null) "Reply" else ""
                         if (actionTitle.isNotBlank()) {
                             actionsList.add(
                                 NotificationActionModel(
                                     title = actionTitle,
-                                    actionIntent = action.actionIntent
+                                    actionIntent = action.actionIntent,
+                                    remoteInput = remoteInput
                                 )
                             )
                         }

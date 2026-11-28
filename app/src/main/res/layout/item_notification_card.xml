@@ -78,31 +78,15 @@
 
                 <ImageView
                     android:id="@+id/iv_notif_expand"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:layout_width="48dp"
+                    android:layout_height="30dp"
+                    android:layout_marginStart="4dp"
+                    android:background="@drawable/bg_notif_expand_pill"
                     android:contentDescription="Expand"
-                    android:padding="5dp"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="6dp"
                     android:src="@drawable/ic_notif_chevron_down"
                     android:visibility="gone" />
-
-                <ImageView
-                    android:id="@+id/iv_notif_dismiss"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:background="?android:attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Dismiss"
-                    android:padding="6dp"
-                    android:src="@drawable/ic_notif_close" />
-
-                <ImageView
-                    android:id="@+id/iv_notif_more"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:background="?android:attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Options"
-                    android:padding="5dp"
-                    android:src="@drawable/ic_notif_more" />
             </LinearLayout>
 
             <!-- Title -->
@@ -164,6 +148,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:visibility="gone" />
         </LinearLayout>

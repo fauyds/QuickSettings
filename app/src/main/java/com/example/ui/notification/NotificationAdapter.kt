@@ -9,11 +9,14 @@ import android.graphics.Outline
 import android.graphics.Path
 import android.os.Build
 import android.provider.Settings
+import android.text.InputType
 import android.text.format.DateFormat
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewOutlineProvider
+import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -112,11 +115,17 @@ class NotificationAdapter(
     private var displayRows: List<ShadeListRow> = emptyList()
     private var renderedEntries: List<AdapterEntry> = emptyList()
     private val expandedStateMap = mutableMapOf<String, Boolean>()
+    private var activeReplyKey: String? = null
+    private var activeReplyAction: NotificationActionModel? = null
 
     fun submitNotifications(list: List<NotificationItem>, forceVisualRefresh: Boolean = false) {
         rawNotifications = list
         val activeKeys = list.map { it.key }.toSet()
         expandedStateMap.keys.retainAll(activeKeys)
+        if (activeReplyKey != null && activeReplyKey !in activeKeys) {
+            activeReplyKey = null
+            activeReplyAction = null
+        }
         rebuildAndDispatchDiff(forceVisualRefresh = forceVisualRefresh)
     }
 
@@ -379,7 +388,7 @@ class NotificationAdapter(
         super.onViewRecycled(holder)
         try {
             if (holder is NotificationViewHolder) {
-                // holder cleanup
+                holder.resetHeightAnimation()
             }
         } catch (_: Throwable) {}
     }
@@ -1467,8 +1476,6 @@ class NotificationAdapter(
         private val tvAppName: TextView = itemView.findViewById(R.id.tv_notif_app_name)
         private val tvTime: TextView = itemView.findViewById(R.id.tv_notif_time)
         private val ivExpand: ImageView = itemView.findViewById(R.id.iv_notif_expand)
-        private val ivDismiss: ImageView = itemView.findViewById(R.id.iv_notif_dismiss)
-        private val ivMore: ImageView = itemView.findViewById(R.id.iv_notif_more)
         private val tvTitle: TextView = itemView.findViewById(R.id.tv_notif_title)
         private val tvText: TextView = itemView.findViewById(R.id.tv_notif_text)
         private val tvSubtext: TextView = itemView.findViewById(R.id.tv_notif_subtext)
@@ -1657,7 +1664,7 @@ class NotificationAdapter(
                 onNotificationClick(item)
             }
             flRoot.setOnLongClickListener {
-                showOptionsMenu(ivMore, item, context)
+                showOptionsMenu(flRoot, item, context)
                 true
             }
 
@@ -1713,8 +1720,6 @@ class NotificationAdapter(
             tvTime.setTextColor(textSecondaryColor)
 
             // 5. Header Icons with Monet Theme tint
-            ivDismiss.setColorFilter(textSecondaryColor)
-            ivMore.setColorFilter(textSecondaryColor)
             ivExpand.setColorFilter(textSecondaryColor)
 
             // 6. Expand / Collapse Icon
@@ -1727,25 +1732,14 @@ class NotificationAdapter(
                 ivExpand.setOnClickListener {
                     val currentlyExpanded = isItemExpanded(item)
                     expandedStateMap[item.key] = !currentlyExpanded
-                    notifyItemChanged(bindingAdapterPosition)
+                    if (currentlyExpanded && activeReplyKey == item.key) {
+                        activeReplyKey = null
+                        activeReplyAction = null
+                    }
+                    animateRebind(bindingAdapterPosition)
                 }
             } else {
                 ivExpand.visibility = View.GONE
-            }
-
-            // 7. Dismiss Icon
-            if (item.isClearable) {
-                ivDismiss.visibility = View.VISIBLE
-                ivDismiss.setOnClickListener {
-                    onNotificationDismiss(item)
-                }
-            } else {
-                ivDismiss.visibility = View.GONE
-            }
-
-            // 8. Options Menu
-            ivMore.setOnClickListener {
-                showOptionsMenu(ivMore, item, context)
             }
 
             // 9. Title & Text with Monet Typographic Colors
@@ -1814,24 +1808,97 @@ class NotificationAdapter(
             // 11. Dynamic Action Buttons (Shown when expanded, hidden when collapsed)
             llActions.removeAllViews()
             val actionsToShow = if (isExpanded) item.actions else emptyList()
-            if (actionsToShow.isNotEmpty()) {
+            val replyTarget = if (isExpanded && activeReplyKey == item.key) activeReplyAction else null
+            if (replyTarget != null) {
+                llActions.visibility = View.VISIBLE
+                val input = EditText(context).apply {
+                    hint = "Reply…"
+                    textSize = 12f
+                    setSingleLine(true)
+                    setTextColor(actionTextColor)
+                    setHintTextColor(ColorUtils.setAlphaComponent(actionTextColor, 150))
+                    inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = 1000f
+                        setColor(if (isDark) Color.parseColor("#26FFFFFF") else Color.parseColor("#14000000"))
+                        setStroke(
+                            (1 * density).toInt().coerceAtLeast(1),
+                            if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#22000000")
+                        )
+                    }
+                    setPadding(
+                        (14 * density).toInt(),
+                        (8 * density).toInt(),
+                        (14 * density).toInt(),
+                        (8 * density).toInt()
+                    )
+                }
+                val send = ImageView(context).apply {
+                    setImageResource(R.drawable.ic_notif_send)
+                    setColorFilter(actionTextColor)
+                    background = MonetThemeHelper.createMonetActionButtonDrawable(context, isDark, 1000f)
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    setPadding(
+                        (8 * density).toInt(),
+                        (8 * density).toInt(),
+                        (8 * density).toInt(),
+                        (8 * density).toInt()
+                    )
+                    isClickable = true
+                    isFocusable = true
+                    setOnClickListener {
+                        val reply = input.text.toString().trim()
+                        if (reply.isNotEmpty()) {
+                            QuickPanelNotificationListenerService.executeAction(replyTarget, context, reply)
+                            activeReplyKey = null
+                            activeReplyAction = null
+                            animateRebind(bindingAdapterPosition)
+                        }
+                    }
+                }
+                llActions.addView(
+                    input,
+                    LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                        marginEnd = (6 * density).toInt()
+                    }
+                )
+                llActions.addView(
+                    send,
+                    LinearLayout.LayoutParams(
+                        (34 * density).toInt(),
+                        (34 * density).toInt()
+                    )
+                )
+                input.post {
+                    input.requestFocus()
+                    val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                    imm?.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)
+                }
+            } else if (actionsToShow.isNotEmpty()) {
                 llActions.visibility = View.VISIBLE
                 actionsToShow.forEach { action ->
                     val btn = TextView(context).apply {
                         text = action.title
                         textSize = 11f
                         setTextColor(actionTextColor)
-                        background = MonetThemeHelper.createMonetActionButtonDrawable(context, isDark, 8f * density)
+                        background = MonetThemeHelper.createMonetActionButtonDrawable(context, isDark, 1000f)
                         setPadding(
-                            (12 * density).toInt(),
-                            (6 * density).toInt(),
-                            (12 * density).toInt(),
-                            (6 * density).toInt()
+                            (14 * density).toInt(),
+                            (7 * density).toInt(),
+                            (14 * density).toInt(),
+                            (7 * density).toInt()
                         )
                         isClickable = true
                         isFocusable = true
                         setOnClickListener {
-                            onActionClick(action)
+                            if (action.isReply) {
+                                activeReplyKey = item.key
+                                activeReplyAction = action
+                                animateRebind(bindingAdapterPosition)
+                            } else {
+                                onActionClick(action)
+                            }
                         }
                     }
                     val params = LinearLayout.LayoutParams(
@@ -1845,6 +1912,86 @@ class NotificationAdapter(
             } else {
                 llActions.visibility = View.GONE
             }
+        }
+
+        private var heightAnimator: android.animation.ValueAnimator? = null
+        private var rebindGeneration = 0
+
+        private fun animateRebind(position: Int) {
+            if (position == RecyclerView.NO_POSITION) return
+            val generation = ++rebindGeneration
+            val startHeight = itemView.height
+            heightAnimator?.let { previous ->
+                heightAnimator = null
+                previous.cancel()
+            }
+            if (startHeight > 0) {
+                val p = itemView.layoutParams
+                p.height = startHeight
+                itemView.layoutParams = p
+            }
+            onBindViewHolder(this, position, mutableListOf())
+            if (startHeight <= 0 || !itemView.isAttachedToWindow) {
+                val p = itemView.layoutParams
+                p.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                itemView.layoutParams = p
+                itemView.requestLayout()
+                return
+            }
+            itemView.post {
+                if (generation != rebindGeneration) return@post
+                val width = itemView.width
+                if (width <= 0) {
+                    itemView.requestLayout()
+                    return@post
+                }
+                val widthSpec = View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY)
+                val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+                itemView.measure(widthSpec, heightSpec)
+                val endHeight = itemView.measuredHeight
+                if (endHeight <= 0 || endHeight == startHeight) {
+                    val p = itemView.layoutParams
+                    p.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                    itemView.layoutParams = p
+                    itemView.requestLayout()
+                    return@post
+                }
+                val lp = itemView.layoutParams
+                lp.height = startHeight
+                itemView.layoutParams = lp
+                itemView.requestLayout()
+                val animator = android.animation.ValueAnimator.ofInt(startHeight, endHeight)
+                heightAnimator = animator
+                animator.duration = 220L
+                animator.interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
+                animator.addUpdateListener { anim ->
+                    val p = itemView.layoutParams
+                    p.height = anim.animatedValue as Int
+                    itemView.layoutParams = p
+                    itemView.requestLayout()
+                }
+                animator.addListener(object : android.animation.AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: android.animation.Animator) {
+                        if (heightAnimator !== animation) return
+                        heightAnimator = null
+                        val p = itemView.layoutParams
+                        p.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                        itemView.layoutParams = p
+                        itemView.requestLayout()
+                    }
+                })
+                animator.start()
+            }
+        }
+
+        fun resetHeightAnimation() {
+            heightAnimator?.let {
+                heightAnimator = null
+                it.cancel()
+            }
+            val p = itemView.layoutParams ?: return
+            p.height = ViewGroup.LayoutParams.WRAP_CONTENT
+            itemView.layoutParams = p
         }
 
         private fun showOptionsMenu(anchor: View, item: NotificationItem, context: Context) {

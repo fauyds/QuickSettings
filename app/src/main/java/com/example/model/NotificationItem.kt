@@ -1,6 +1,7 @@
 package com.example.model
 
 import android.app.PendingIntent
+import android.app.RemoteInput
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import androidx.compose.runtime.Immutable
@@ -8,8 +9,12 @@ import androidx.compose.runtime.Immutable
 @Immutable
 data class NotificationActionModel(
     val title: String,
-    val actionIntent: PendingIntent?
-)
+    val actionIntent: PendingIntent?,
+    val remoteInput: RemoteInput? = null
+) {
+    val isReply: Boolean
+        get() = remoteInput != null
+}
 
 @Immutable
 data class NotificationItem(
