@@ -8510,7 +8510,7 @@ fun NotificationItemRow(
                                 item.actions.take(3).forEach { action ->
                                     Surface(
                                         onClick = { onActionClick(action) },
-                                        shape = RoundedCornerShape(8.dp),
+                                        shape = RoundedCornerShape(percent = 50),
                                         color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                                         modifier = Modifier.testTag("notif_action_${action.title}")
                                     ) {

@@ -9,11 +9,14 @@ import android.graphics.Outline
 import android.graphics.Path
 import android.os.Build
 import android.provider.Settings
+import android.text.InputType
 import android.text.format.DateFormat
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewOutlineProvider
+import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -112,11 +115,17 @@ class NotificationAdapter(
     private var displayRows: List<ShadeListRow> = emptyList()
     private var renderedEntries: List<AdapterEntry> = emptyList()
     private val expandedStateMap = mutableMapOf<String, Boolean>()
+    private var activeReplyKey: String? = null
+    private var activeReplyAction: NotificationActionModel? = null
 
     fun submitNotifications(list: List<NotificationItem>, forceVisualRefresh: Boolean = false) {
         rawNotifications = list
         val activeKeys = list.map { it.key }.toSet()
         expandedStateMap.keys.retainAll(activeKeys)
+        if (activeReplyKey != null && activeReplyKey !in activeKeys) {
+            activeReplyKey = null
+            activeReplyAction = null
+        }
         rebuildAndDispatchDiff(forceVisualRefresh = forceVisualRefresh)
     }
 
@@ -1727,6 +1736,10 @@ class NotificationAdapter(
                 ivExpand.setOnClickListener {
                     val currentlyExpanded = isItemExpanded(item)
                     expandedStateMap[item.key] = !currentlyExpanded
+                    if (currentlyExpanded && activeReplyKey == item.key) {
+                        activeReplyKey = null
+                        activeReplyAction = null
+                    }
                     notifyItemChanged(bindingAdapterPosition)
                 }
             } else {
@@ -1814,24 +1827,97 @@ class NotificationAdapter(
             // 11. Dynamic Action Buttons (Shown when expanded, hidden when collapsed)
             llActions.removeAllViews()
             val actionsToShow = if (isExpanded) item.actions else emptyList()
-            if (actionsToShow.isNotEmpty()) {
+            val replyTarget = if (isExpanded && activeReplyKey == item.key) activeReplyAction else null
+            if (replyTarget != null) {
+                llActions.visibility = View.VISIBLE
+                val input = EditText(context).apply {
+                    hint = "Reply…"
+                    textSize = 12f
+                    setSingleLine(true)
+                    setTextColor(actionTextColor)
+                    setHintTextColor(ColorUtils.setAlphaComponent(actionTextColor, 150))
+                    inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = 1000f
+                        setColor(if (isDark) Color.parseColor("#26FFFFFF") else Color.parseColor("#14000000"))
+                        setStroke(
+                            (1 * density).toInt().coerceAtLeast(1),
+                            if (isDark) Color.parseColor("#33FFFFFF") else Color.parseColor("#22000000")
+                        )
+                    }
+                    setPadding(
+                        (14 * density).toInt(),
+                        (8 * density).toInt(),
+                        (14 * density).toInt(),
+                        (8 * density).toInt()
+                    )
+                }
+                val send = TextView(context).apply {
+                    text = "Send"
+                    textSize = 11f
+                    setTextColor(actionTextColor)
+                    background = MonetThemeHelper.createMonetActionButtonDrawable(context, isDark, 1000f)
+                    setPadding(
+                        (16 * density).toInt(),
+                        (8 * density).toInt(),
+                        (16 * density).toInt(),
+                        (8 * density).toInt()
+                    )
+                    isClickable = true
+                    isFocusable = true
+                    setOnClickListener {
+                        val reply = input.text.toString().trim()
+                        if (reply.isNotEmpty()) {
+                            QuickPanelNotificationListenerService.executeAction(replyTarget, context, reply)
+                            activeReplyKey = null
+                            activeReplyAction = null
+                            notifyItemChanged(bindingAdapterPosition)
+                        }
+                    }
+                }
+                llActions.addView(
+                    input,
+                    LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                        marginEnd = (6 * density).toInt()
+                    }
+                )
+                llActions.addView(
+                    send,
+                    LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                )
+                input.post {
+                    input.requestFocus()
+                    val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                    imm?.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)
+                }
+            } else if (actionsToShow.isNotEmpty()) {
                 llActions.visibility = View.VISIBLE
                 actionsToShow.forEach { action ->
                     val btn = TextView(context).apply {
                         text = action.title
                         textSize = 11f
                         setTextColor(actionTextColor)
-                        background = MonetThemeHelper.createMonetActionButtonDrawable(context, isDark, 8f * density)
+                        background = MonetThemeHelper.createMonetActionButtonDrawable(context, isDark, 1000f)
                         setPadding(
-                            (12 * density).toInt(),
-                            (6 * density).toInt(),
-                            (12 * density).toInt(),
-                            (6 * density).toInt()
+                            (14 * density).toInt(),
+                            (7 * density).toInt(),
+                            (14 * density).toInt(),
+                            (7 * density).toInt()
                         )
                         isClickable = true
                         isFocusable = true
                         setOnClickListener {
-                            onActionClick(action)
+                            if (action.isReply) {
+                                activeReplyKey = item.key
+                                activeReplyAction = action
+                                notifyItemChanged(bindingAdapterPosition)
+                            } else {
+                                onActionClick(action)
+                            }
                         }
                     }
                     val params = LinearLayout.LayoutParams(
