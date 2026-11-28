@@ -251,7 +251,10 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -3902,36 +3905,44 @@ fun EditModeTileStudio(
                         Text(
                             text = "Hold & drag to reorder tiles. Tap '-' to remove.",
                             fontSize = 11.sp,
+                            lineHeight = 14.sp,
+                            style = TextStyle(
+                                platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                lineHeightStyle = LineHeightStyle(
+                                    alignment = LineHeightStyle.Alignment.Center,
+                                    trim = LineHeightStyle.Trim.Both
+                                )
+                            ),
                             color = if (isDark) Color.LightGray else Color(0xFF666666)
                         )
                     }
                 }
 
+                val doneButtonBg = if (isKitKat) Color(0xFF33B5E5) else legacyAccent
+                val doneIconTint = when {
+                    isKitKat -> Color.White
+                    isMarshmallow -> com.example.ui.theme.getQsTilesOnElementColor(isDark)
+                    else -> androidx.compose.material3.MaterialTheme.colorScheme.onPrimary
+                }
                 Surface(
                     onClick = {
                         onTilesUpdated(localActive, localInactive)
                         onDone()
                     },
                     shape = RoundedCornerShape(if (isKitKat || isMarshmallow) panelOuterCorner.dp else 16.dp),
-                    color = if (isKitKat) Color(0xFF33B5E5) else if (isMarshmallow) legacyAccent else legacyAccent,
+                    color = doneButtonBg,
+                    contentColor = doneIconTint,
                     modifier = Modifier.testTag("inline_done_button")
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.padding(8.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = "Done",
-                            tint = Color.White,
+                            tint = doneIconTint,
                             modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = if (isKitKat || isMarshmallow) "DONE" else "Done",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
                         )
                     }
                 }
