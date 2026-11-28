@@ -1156,7 +1156,7 @@ object HeadsUpOverlayManager {
                                     val totalDeltaX = currentPointer.position.x - startPosition.x
                                     val totalDeltaY = currentPointer.position.y - startPosition.y
 
-                                    if (!isDragging && (abs(totalDeltaX) > touchSlop || abs(totalDeltaY) > touchSlop)) {
+                                    if (!isDragging && !currentPointer.isConsumed && (abs(totalDeltaX) > touchSlop || abs(totalDeltaY) > touchSlop)) {
                                         isDragging = true
                                         longPressJob.cancel()
                                         dragAxis = if (abs(totalDeltaX) >= abs(totalDeltaY)) 1 else 2
@@ -1210,7 +1210,7 @@ object HeadsUpOverlayManager {
                                             launch { animOffsetY.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioLowBouncy)) }
                                         }
                                     }
-                                } else if (!isLongPressed) {
+                                } else if (!isLongPressed && !pointer.isConsumed) {
                                     val tapTime = System.currentTimeMillis()
                                     if (tapTime - lastTapTime < 300L) {
                                         lastTapTime = 0L
