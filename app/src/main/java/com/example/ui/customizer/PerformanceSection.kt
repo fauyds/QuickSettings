@@ -106,25 +106,12 @@ fun PerformanceSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                        ) {
-                            Text(
-                                text = "Disable Panel Animations",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Open, close, and expand Quick Settings instantly without transition animations or slide delays.",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Disable Panel Animations",
+                            description = "Open, close, and expand Quick Settings instantly without transition animations or slide delays.",
+                            titleFontSize = 14.sp,
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     Switch(
@@ -178,25 +165,12 @@ fun PerformanceSection(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(
-                            text = "Prime Core High Smoothness Mode",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Works with Root only. Pins CPU thread affinity to the prime core to completely eliminate swipe and scrolling micro-stutters.",
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Prime Core High Smoothness Mode",
+                        description = "Works with Root only. Pins CPU thread affinity to the prime core to completely eliminate swipe and scrolling micro-stutters.",
+                        titleFontSize = 14.sp,
+                        descriptionFontSize = 12.sp
+                    )
                 }
 
                 Switch(

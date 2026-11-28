@@ -417,25 +417,16 @@ fun HiddenFeaturesDialog(
                                 modifier = Modifier.size(20.dp)
                             )
                         }
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(
-                                text = "Hidden Features",
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
-                            )
-                            Text(
-                                text = if (hiddenItems.isEmpty()) {
-                                    "No features are currently hidden"
-                                } else {
-                                    "${hiddenItems.size} hidden • Tap Show to restore"
-                                },
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Hidden Features",
+                            description = if (hiddenItems.isEmpty()) {
+                                "No features are currently hidden"
+                            } else {
+                                "${hiddenItems.size} hidden • Tap Show to restore"
+                            },
+                            titleFontSize = 17.sp,
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     IconButton(
@@ -479,20 +470,28 @@ fun HiddenFeaturesDialog(
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
-                            Text(
-                                text = "Everything is visible",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                textAlign = TextAlign.Center
-                            )
-                            Text(
-                                text = "Long-press any category or option card and tap \"Hide\" in the Pin menu to hide unwanted features.",
-                                fontSize = 12.sp,
-                                lineHeight = 16.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)
+                            ) {
+                                Text(
+                                    text = "Everything is visible",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    lineHeight = SettingsTypographyDefaults.compactLineHeight(15.sp),
+                                    style = SettingsTypographyDefaults.CompactTextStyle,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    textAlign = TextAlign.Center
+                                )
+                                Text(
+                                    text = "Long-press any category or option card and tap \"Hide\" in the Pin menu to hide unwanted features.",
+                                    fontSize = 12.sp,
+                                    lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                                    style = SettingsTypographyDefaults.CompactTextStyle,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
                     }
                 } else {
@@ -536,16 +535,17 @@ fun HiddenFeaturesDialog(
 
                                     Column(
                                         modifier = Modifier.weight(1f),
-                                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                                        verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)
                                     ) {
                                         Text(
                                             text = item.title,
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.Bold,
+                                            lineHeight = SettingsTypographyDefaults.compactLineHeight(14.sp),
                                             color = MaterialTheme.colorScheme.onSurface,
                                             maxLines = 2,
                                             overflow = TextOverflow.Ellipsis,
-                                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                            style = SettingsTypographyDefaults.CompactTextStyle
                                         )
                                         Surface(
                                             shape = CircleShape,
@@ -691,19 +691,28 @@ fun AllSectionFeaturesHiddenCard(
                     modifier = Modifier.size(24.dp)
                 )
             }
-            Text(
-                text = "All $sectionTitle features are hidden",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = "Tap the button below to view and restore hidden features.",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)
+            ) {
+                Text(
+                    text = "All $sectionTitle features are hidden",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    lineHeight = SettingsTypographyDefaults.compactLineHeight(15.sp),
+                    style = SettingsTypographyDefaults.CompactTextStyle,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = "Tap the button below to view and restore hidden features.",
+                    fontSize = 12.sp,
+                    lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                    style = SettingsTypographyDefaults.CompactTextStyle,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
             Button(
                 onClick = { showHiddenDialog = true },
                 shape = CircleShape,

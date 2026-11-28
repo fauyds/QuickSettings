@@ -76,23 +76,12 @@ fun CollapseExpandToggleCard(
                     )
                 }
 
-                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    Text(
-                        text = "Collapse Options With Sliders & Buttons",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        lineHeight = 17.sp,
-                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Allows collapsing and expanding settings options that contain secondary controls like sliders, buttons, and toggles (ignoring single toggles).",
-                        fontSize = 12.sp,
-                        lineHeight = 15.sp,
-                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                SettingsTitleDescription(
+                    title = "Collapse Options With Sliders & Buttons",
+                    description = "Allows collapsing and expanding settings options that contain secondary controls like sliders, buttons, and toggles (ignoring single toggles).",
+                    titleFontSize = 14.sp,
+                    descriptionFontSize = 12.sp
+                )
             }
 
             Switch(
@@ -150,23 +139,12 @@ fun CollapseExpandSubheadersCard(
                     )
                 }
 
-                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    Text(
-                        text = "Collapse & Expand List Subheaders",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        lineHeight = 17.sp,
-                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Allows collapsing and expanding section groups under list subheaders across settings screens.",
-                        fontSize = 12.sp,
-                        lineHeight = 15.sp,
-                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                SettingsTitleDescription(
+                    title = "Collapse & Expand List Subheaders",
+                    description = "Allows collapsing and expanding section groups under list subheaders across settings screens.",
+                    titleFontSize = 14.sp,
+                    descriptionFontSize = 12.sp
+                )
             }
 
             Switch(

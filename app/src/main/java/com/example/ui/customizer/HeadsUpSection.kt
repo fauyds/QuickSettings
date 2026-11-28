@@ -158,33 +158,12 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(
-                                text = "Custom Heads-Up Overlay",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                ),
-                                color = colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Lightweight top overlay for high-priority notifications with direct QS shade swipe trigger.",
-                                fontSize = 11.sp,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                ),
-                                color = colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Custom Heads-Up Overlay",
+                            description = "Lightweight top overlay for high-priority notifications with direct QS shade swipe trigger.",
+                            titleFontSize = 14.sp,
+                            descriptionFontSize = 11.sp
+                        )
                     }
 
                     Switch(
@@ -236,23 +215,12 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                            Text(
-                                text = "Enable System Heads-Up",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Enable default Android OS floating pop-up banners while custom overlay is turned off.",
-                                fontSize = 11.sp,
-                                lineHeight = 14.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Enable System Heads-Up",
+                            description = "Enable default Android OS floating pop-up banners while custom overlay is turned off.",
+                            titleFontSize = 14.sp,
+                            descriptionFontSize = 11.sp
+                        )
                     }
 
                     Switch(
@@ -287,42 +255,36 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
                         Column(
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.NotificationsOff,
-                                    contentDescription = null,
-                                    tint = nonGrantedRed,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Text(
-                                    text = "Notification Listener Access Required",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = nonGrantedRed,
-                                    style = TextStyle(
-                                        platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                        lineHeightStyle = LineHeightStyle(
-                                            alignment = LineHeightStyle.Alignment.Center,
-                                            trim = LineHeightStyle.Trim.Both
-                                        )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.NotificationsOff,
+                                        contentDescription = null,
+                                        tint = nonGrantedRed,
+                                        modifier = Modifier.size(18.dp)
                                     )
+                                    Text(
+                                        text = "Notification Listener Access Required",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        lineHeight = SettingsTypographyDefaults.compactLineHeight(13.sp),
+                                        color = nonGrantedRed,
+                                        style = SettingsTypographyDefaults.CompactTextStyle
+                                    )
+                                }
+                                Text(
+                                    text = "To detect incoming messages, calls, and high-priority alarms, grant Notification Listener permission to QuickPanel.",
+                                    fontSize = 11.sp,
+                                    lineHeight = SettingsTypographyDefaults.compactLineHeight(11.sp),
+                                    color = colorScheme.onSurfaceVariant,
+                                    style = SettingsTypographyDefaults.CompactTextStyle
                                 )
                             }
-                            Text(
-                                text = "To detect incoming messages, calls, and high-priority alarms, grant Notification Listener permission to QuickPanel.",
-                                fontSize = 11.sp,
-                                color = colorScheme.onSurfaceVariant,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
-                            )
                             Button(
                                 onClick = {
                                     QuickPanelNotificationListenerService.openPermissionSettings(context)
@@ -371,14 +333,9 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
                                 text = "Notification Access is Granted & Active",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
+                                lineHeight = SettingsTypographyDefaults.compactLineHeight(13.sp),
                                 color = colorScheme.primary,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
+                                style = SettingsTypographyDefaults.CompactTextStyle
                             )
                         }
                     }
@@ -398,33 +355,12 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = "Independent Preview & Test",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            style = TextStyle(
-                                platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                lineHeightStyle = LineHeightStyle(
-                                    alignment = LineHeightStyle.Alignment.Center,
-                                    trim = LineHeightStyle.Trim.Both
-                                )
-                            ),
-                            color = colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Inflates a lightweight Compose layout at the top of the screen via WindowManager with try-catch safety.",
-                            fontSize = 11.sp,
-                            style = TextStyle(
-                                platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                lineHeightStyle = LineHeightStyle(
-                                    alignment = LineHeightStyle.Alignment.Center,
-                                    trim = LineHeightStyle.Trim.Both
-                                )
-                            ),
-                            color = colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Independent Preview & Test",
+                        description = "Inflates a lightweight Compose layout at the top of the screen via WindowManager with try-catch safety.",
+                        titleFontSize = 13.sp,
+                        descriptionFontSize = 11.sp
+                    )
 
                     Column(
                         modifier = Modifier.fillMaxWidth(),
@@ -544,28 +480,18 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
                                 text = "Auto-Dismiss Timeout",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
+                                lineHeight = SettingsTypographyDefaults.compactLineHeight(13.sp),
                                 color = colorScheme.onSurface,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
+                                style = SettingsTypographyDefaults.CompactTextStyle
                             )
                         }
                         Text(
                             text = "$headsUpTimeoutSeconds seconds",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
+                            lineHeight = SettingsTypographyDefaults.compactLineHeight(13.sp),
                             color = colorScheme.primary,
-                            style = TextStyle(
-                                platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                lineHeightStyle = LineHeightStyle(
-                                    alignment = LineHeightStyle.Alignment.Center,
-                                    trim = LineHeightStyle.Trim.Both
-                                )
-                            )
+                            style = SettingsTypographyDefaults.CompactTextStyle
                         )
                     }
 
@@ -616,19 +542,12 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
                                 modifier = Modifier.size(18.dp)
                             )
                         }
-                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                            Text(
-                                text = "4-Directional Swipe Gestures",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Choose what happens when swiping the floating notification banner in each direction.",
-                                fontSize = 11.sp,
-                                color = colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "4-Directional Swipe Gestures",
+                            description = "Choose what happens when swiping the floating notification banner in each direction.",
+                            titleFontSize = 13.sp,
+                            descriptionFontSize = 11.sp
+                        )
                     }
 
                     Column(
@@ -700,19 +619,12 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
                                 modifier = Modifier.size(18.dp)
                             )
                         }
-                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                            Text(
-                                text = "Tap & Press Actions",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Control banner response for single tap, double tap, and long press (with haptics).",
-                                fontSize = 11.sp,
-                                color = colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Tap & Press Actions",
+                            description = "Control banner response for single tap, double tap, and long press (with haptics).",
+                            titleFontSize = 13.sp,
+                            descriptionFontSize = 11.sp
+                        )
                     }
 
                     Column(
@@ -782,24 +694,19 @@ fun HeadsUpSection(modifier: Modifier = Modifier) {
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
-                            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                                Text(
-                                    text = "Temporary Snooze Duration",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Mutes heads-up popups for this duration upon snooze gesture. Calls & alarms strictly bypass.",
-                                    fontSize = 11.sp,
-                                    color = colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Temporary Snooze Duration",
+                                description = "Mutes heads-up popups for this duration upon snooze gesture. Calls & alarms strictly bypass.",
+                                titleFontSize = 13.sp,
+                                descriptionFontSize = 11.sp
+                            )
                         }
                         Text(
                             text = "$snoozeDurationMinutes min",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
+                            lineHeight = SettingsTypographyDefaults.compactLineHeight(13.sp),
+                            style = SettingsTypographyDefaults.CompactTextStyle,
                             color = colorScheme.tertiary,
                             modifier = Modifier.testTag("snooze_duration_value_label")
                         )
@@ -982,6 +889,8 @@ private fun HeadsUpActionChipChooserRow(
                 text = label,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
+                lineHeight = SettingsTypographyDefaults.compactLineHeight(13.sp),
+                style = SettingsTypographyDefaults.CompactTextStyle,
                 color = colorScheme.onSurface
             )
             Spacer(modifier = Modifier.weight(1f))

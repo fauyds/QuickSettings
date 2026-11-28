@@ -252,24 +252,16 @@ fun TileCommandsScreen(
                                 modifier = Modifier.size(22.dp)
                             )
                         }
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(
-                                text = "Complication Actions",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = colorScheme.onSurface
-                            )
-                            Text(
-                                text = if (customizedComplicationCount > 0) {
-                                    "$customizedComplicationCount customized • Single tap & long press commands"
-                                } else {
-                                    "Edit single tap & long press menus or Standard/Root/Shizuku commands."
-                                },
-                                fontSize = 11.5.sp,
-                                lineHeight = 14.sp,
-                                color = colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Complication Actions",
+                            description = if (customizedComplicationCount > 0) {
+                                "$customizedComplicationCount customized • Single tap & long press commands"
+                            } else {
+                                "Edit single tap & long press menus or Standard/Root/Shizuku commands."
+                            },
+                            titleFontSize = 16.sp,
+                            descriptionFontSize = 11.5.sp
+                        )
                     }
 
                     Spacer(modifier = Modifier.width(8.dp))
@@ -331,20 +323,12 @@ fun TileCommandsScreen(
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
-                            Column {
-                                Text(
-                                    text = "Custom QS Tiles Creator",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Create custom QS tiles for apps, URLs, commands & action chains with 500+ icons.",
-                                    fontSize = 11.5.sp,
-                                    lineHeight = 14.sp,
-                                    color = colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Custom QS Tiles Creator",
+                                description = "Create custom QS tiles for apps, URLs, commands & action chains with 500+ icons.",
+                                titleFontSize = 16.sp,
+                                descriptionFontSize = 11.5.sp
+                            )
                         }
 
                         Button(
@@ -393,23 +377,17 @@ fun TileCommandsScreen(
                                         )
                                     }
 
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = cfg.labelOn.ifBlank { id },
-                                            fontSize = 13.5.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = colorScheme.onSurface,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Text(
-                                            text = "${cfg.overrideType.displayName} • ${cfg.iconName}",
-                                            fontSize = 11.sp,
-                                            color = colorScheme.onSurfaceVariant,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
+                                    SettingsTitleDescription(
+                                        title = cfg.labelOn.ifBlank { id },
+                                        description = "${cfg.overrideType.displayName} • ${cfg.iconName}",
+                                        titleFontSize = 13.5.sp,
+                                        titleMaxLines = 1,
+                                        titleOverflow = TextOverflow.Ellipsis,
+                                        descriptionFontSize = 11.sp,
+                                        descriptionMaxLines = 1,
+                                        descriptionOverflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
                                 }
 
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -474,26 +452,13 @@ fun TileCommandsScreen(
                                 modifier = Modifier.size(22.dp)
                             )
                         }
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                        ) {
-                            Text(
-                                text = "Tile Commands Customization",
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 21.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Override default system toggles and third-party tile launches with custom shell commands, media keys, or direct broadcast intents.",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Tile Commands Customization",
+                            description = "Override default system toggles and third-party tile launches with custom shell commands, media keys, or direct broadcast intents.",
+                            titleFontSize = 17.sp,
+                            descriptionFontSize = 12.sp,
+                            modifier = Modifier.weight(1f)
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(4.dp))
@@ -576,7 +541,7 @@ fun TileCommandsScreen(
                         else
                             "${activeMode.title} option shows promptless shell commands for ON and OFF execution.",
                         fontSize = 12.sp,
-                        lineHeight = 15.sp,
+                        style = SettingsTypographyDefaults.textStyle(12.sp),
                         color = colorScheme.onSurfaceVariant
                     )
 
@@ -662,20 +627,12 @@ fun TileCommandsScreen(
                             )
                         }
 
-                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                            Text(
-                                text = "Enable All Tile Overrides",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = colorScheme.onSurface
-                            )
-                            Text(
-                                text = if (areAllOverridesEnabled) "All tile overrides are active" else "Turn on custom command overrides for all tiles",
-                                fontSize = 11.5.sp,
-                                lineHeight = 15.sp,
-                                color = colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Enable All Tile Overrides",
+                            description = if (areAllOverridesEnabled) "All tile overrides are active" else "Turn on custom command overrides for all tiles",
+                            titleFontSize = 14.sp,
+                            descriptionFontSize = 11.5.sp
+                        )
                     }
 
                     Spacer(modifier = Modifier.width(8.dp))
@@ -803,26 +760,14 @@ fun TileCommandCardItem(
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(
-                            text = tile.title,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 18.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = colorScheme.onSurface
-                        )
-                        Text(
-                            text = if (config.isOverrideEnabled) "Custom command enabled" else "Standard system action",
-                            fontSize = 11.5.sp,
-                            lineHeight = 14.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = if (config.isOverrideEnabled) colorScheme.primary else colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = tile.title,
+                        description = if (config.isOverrideEnabled) "Custom command enabled" else "Standard system action",
+                        titleFontSize = 15.sp,
+                        descriptionFontSize = 11.5.sp,
+                        descriptionColor = if (config.isOverrideEnabled) colorScheme.primary else colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
 
                 Row(
@@ -885,26 +830,14 @@ fun TileCommandCardItem(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(1.dp)
-                            ) {
-                                Text(
-                                    text = "Close panel on press",
-                                    fontSize = 13.5.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    lineHeight = 16.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Dismisses the overlay after clicking this tile",
-                                    fontSize = 11.sp,
-                                    lineHeight = 13.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Close panel on press",
+                                description = "Dismisses the overlay after clicking this tile",
+                                titleFontSize = 13.5.sp,
+                                titleFontWeight = FontWeight.Medium,
+                                descriptionFontSize = 11.sp,
+                                modifier = Modifier.weight(1f)
+                            )
                             Switch(
                                 checked = config.closePanelOnPress,
                                 onCheckedChange = { isChecked ->
@@ -930,26 +863,14 @@ fun TileCommandCardItem(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(1.dp)
-                            ) {
-                                Text(
-                                    text = "Force state change anyway",
-                                    fontSize = 13.5.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    lineHeight = 16.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Instantly flips the visual state locally on tap",
-                                    fontSize = 11.sp,
-                                    lineHeight = 13.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Force state change anyway",
+                                description = "Instantly flips the visual state locally on tap",
+                                titleFontSize = 13.5.sp,
+                                titleFontWeight = FontWeight.Medium,
+                                descriptionFontSize = 11.sp,
+                                modifier = Modifier.weight(1f)
+                            )
                             Switch(
                                 checked = config.forceStateChangeAnyway,
                                 onCheckedChange = { isChecked ->
@@ -975,26 +896,14 @@ fun TileCommandCardItem(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(1.dp)
-                            ) {
-                                Text(
-                                    text = "Block state changing",
-                                    fontSize = 13.5.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    lineHeight = 16.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Freezes the current state and ignores clicks",
-                                    fontSize = 11.sp,
-                                    lineHeight = 13.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Block state changing",
+                                description = "Freezes the current state and ignores clicks",
+                                titleFontSize = 13.5.sp,
+                                titleFontWeight = FontWeight.Medium,
+                                descriptionFontSize = 11.sp,
+                                modifier = Modifier.weight(1f)
+                            )
                             Switch(
                                 checked = config.blockStateChanging,
                                 onCheckedChange = { isChecked ->
@@ -1020,26 +929,14 @@ fun TileCommandCardItem(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(1.dp)
-                            ) {
-                                Text(
-                                    text = "Always Active",
-                                    fontSize = 13.5.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    lineHeight = 16.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Locks the tile state to ACTIVE permanently",
-                                    fontSize = 11.sp,
-                                    lineHeight = 13.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Always Active",
+                                description = "Locks the tile state to ACTIVE permanently",
+                                titleFontSize = 13.5.sp,
+                                titleFontWeight = FontWeight.Medium,
+                                descriptionFontSize = 11.sp,
+                                modifier = Modifier.weight(1f)
+                            )
                             Switch(
                                 checked = config.alwaysActive,
                                 onCheckedChange = { isChecked ->

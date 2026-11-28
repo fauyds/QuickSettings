@@ -247,26 +247,13 @@ fun ComplicationCommandsScreen(
                                         modifier = Modifier.size(22.dp)
                                     )
                                 }
-                                Column(
-                                    modifier = Modifier.weight(1f),
-                                    verticalArrangement = Arrangement.spacedBy(1.dp)
-                                ) {
-                                    Text(
-                                        text = "Complication Actions Customization",
-                                        fontSize = 17.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        lineHeight = 21.sp,
-                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                        color = colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "Customize single tap and long press behavior for each complication: open complication menus, launch intents, or run Standard / Shizuku / Root commands.",
-                                        fontSize = 12.sp,
-                                        lineHeight = 15.sp,
-                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                        color = colorScheme.onSurfaceVariant
-                                    )
-                                }
+                                SettingsTitleDescription(
+                                    title = "Complication Actions Customization",
+                                    description = "Customize single tap and long press behavior for each complication: open complication menus, launch intents, or run Standard / Shizuku / Root commands.",
+                                    titleFontSize = 17.sp,
+                                    descriptionFontSize = 12.sp,
+                                    modifier = Modifier.weight(1f)
+                                )
                             }
 
                             when (activeMode) {
@@ -350,7 +337,7 @@ fun ComplicationCommandsScreen(
                             Text(
                                 text = "Choose the device privilege engine for shell execution. Each complication can independently pick Default, Menu, Standard, Shizuku, or Root for Single Tap and Long Press.",
                                 fontSize = 12.sp,
-                                lineHeight = 15.sp,
+                                style = SettingsTypographyDefaults.textStyle(12.sp),
                                 color = colorScheme.onSurfaceVariant
                             )
 
@@ -440,24 +427,16 @@ fun ComplicationCommandsScreen(
                                     )
                                 }
 
-                                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                                    Text(
-                                        text = "Configured Complications",
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = if (customizedCount > 0) {
-                                            "$customizedCount of ${complications.size} complications customized"
-                                        } else {
-                                            "All ${complications.size} complications using smart defaults"
-                                        },
-                                        fontSize = 11.5.sp,
-                                        lineHeight = 15.sp,
-                                        color = colorScheme.onSurfaceVariant
-                                    )
-                                }
+                                SettingsTitleDescription(
+                                    title = "Configured Complications",
+                                    description = if (customizedCount > 0) {
+                                        "$customizedCount of ${complications.size} complications customized"
+                                    } else {
+                                        "All ${complications.size} complications using smart defaults"
+                                    },
+                                    titleFontSize = 14.sp,
+                                    descriptionFontSize = 11.5.sp
+                                )
                             }
 
                             Spacer(modifier = Modifier.width(8.dp))
@@ -626,32 +605,20 @@ private fun ComplicationCommandCardItem(
                         )
                     }
 
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(
-                            text = definition.title,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 18.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = colorScheme.onSurface
-                        )
-                        Text(
-                            text = if (hasCustomAction) {
-                                "Tap: ${config.tapBehavior.label} • Long: ${config.longPressBehavior.label}"
-                            } else {
-                                "Default complication action"
-                            },
-                            fontSize = 11.5.sp,
-                            lineHeight = 14.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = if (hasCustomAction) colorScheme.primary else colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = definition.title,
+                        description = if (hasCustomAction) {
+                            "Tap: ${config.tapBehavior.label} • Long: ${config.longPressBehavior.label}"
+                        } else {
+                            "Default complication action"
+                        },
+                        titleFontSize = 15.sp,
+                        descriptionFontSize = 11.5.sp,
+                        descriptionColor = if (hasCustomAction) colorScheme.primary else colorScheme.onSurfaceVariant,
+                        descriptionMaxLines = 1,
+                        descriptionOverflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
 
                 Box(
@@ -845,32 +812,26 @@ private fun TriggerActionEditorBlock(
 
         when (selectedBehavior) {
             ComplicationTriggerBehavior.DEFAULT -> {
-                Text(
-                    text = "DEFAULT COMPLICATION ACTION",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp,
-                    color = colorScheme.tertiary
-                )
-                Text(
-                    text = defaultDescription,
-                    fontSize = 12.sp,
-                    color = colorScheme.onSurfaceVariant
+                SettingsTitleDescription(
+                    title = "DEFAULT COMPLICATION ACTION",
+                    description = defaultDescription,
+                    titleFontSize = 11.sp,
+                    titleFontWeight = FontWeight.Bold,
+                    titleColor = colorScheme.tertiary,
+                    descriptionFontSize = 12.sp,
+                    descriptionColor = colorScheme.onSurfaceVariant
                 )
             }
 
             ComplicationTriggerBehavior.COMPLICATION_MENU -> {
-                Text(
-                    text = "COMPLICATION MENU OVERLAY",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp,
-                    color = colorScheme.tertiary
-                )
-                Text(
-                    text = "Opens this complication's interactive menu micro-window when triggered.",
-                    fontSize = 12.sp,
-                    color = colorScheme.onSurfaceVariant
+                SettingsTitleDescription(
+                    title = "COMPLICATION MENU OVERLAY",
+                    description = "Opens this complication's interactive menu micro-window when triggered.",
+                    titleFontSize = 11.sp,
+                    titleFontWeight = FontWeight.Bold,
+                    titleColor = colorScheme.tertiary,
+                    descriptionFontSize = 12.sp,
+                    descriptionColor = colorScheme.onSurfaceVariant
                 )
             }
 

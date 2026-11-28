@@ -274,23 +274,11 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 modifier = Modifier.size(20.dp)
                             )
                         }
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(
-                                text = "Quick Settings Style",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Select layout style: Modern, Android 8.0 Oreo, Android 6.0 Marshmallow, or Android 4.4 KitKat.",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Quick Settings Style",
+                            description = "Select layout style: Modern, Android 8.0 Oreo, Android 6.0 Marshmallow, or Android 4.4 KitKat.",
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     val allStyles = com.example.data.QsPanelStyle.entries
@@ -358,7 +346,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     .padding(start = 20.dp, end = 20.dp, top = 36.dp, bottom = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -388,8 +376,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 text = "QQS Icon Size",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                lineHeight = SettingsTypographyDefaults.compactLineHeight(14.sp),
+                                style = SettingsTypographyDefaults.CompactTextStyle,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         }
@@ -397,8 +385,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             text = "$qqsTileSizeValue dp",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            lineHeight = 16.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            lineHeight = SettingsTypographyDefaults.compactLineHeight(13.sp),
+                            style = SettingsTypographyDefaults.CompactTextStyle,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -406,8 +394,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     Text(
                         text = "Adjust the size of the circular icons in the compact Quick Quick Settings (QQS) panel.",
                         fontSize = 12.sp,
-                        lineHeight = 15.sp,
-                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                        lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                        style = SettingsTypographyDefaults.CompactTextStyle,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -442,7 +430,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     .padding(start = 20.dp, end = 20.dp, top = 36.dp, bottom = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -472,8 +460,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 text = "QQS Icon Quantity",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                lineHeight = SettingsTypographyDefaults.compactLineHeight(14.sp),
+                                style = SettingsTypographyDefaults.CompactTextStyle,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         }
@@ -481,8 +469,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             text = "$qqsTileCount icons",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            lineHeight = 16.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            lineHeight = SettingsTypographyDefaults.compactLineHeight(13.sp),
+                            style = SettingsTypographyDefaults.CompactTextStyle,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -490,8 +478,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     Text(
                         text = "Set the number of quick toggle circular icons shown in the collapsed header row (from 2 to 6).",
                         fontSize = 12.sp,
-                        lineHeight = 15.sp,
-                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                        lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                        style = SettingsTypographyDefaults.CompactTextStyle,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -552,36 +540,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
-                            Column(
+                            SettingsTitleDescription(
+                                title = "2x1 Complications Row",
+                                description = "Show an additional QQS row with 2x1 live complication tiles beneath quick toggles.",
                                 modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(2.dp)
-                            ) {
-                                Text(
-                                    text = "2x1 Complications Row",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    style = TextStyle(
-                                        platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                        lineHeightStyle = LineHeightStyle(
-                                            alignment = LineHeightStyle.Alignment.Center,
-                                            trim = LineHeightStyle.Trim.Both
-                                        )
-                                    )
-                                )
-                                Text(
-                                    text = "Show an additional QQS row with 2x1 live complication tiles beneath quick toggles.",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    style = TextStyle(
-                                        platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                        lineHeightStyle = LineHeightStyle(
-                                            alignment = LineHeightStyle.Alignment.Center,
-                                            trim = LineHeightStyle.Trim.Both
-                                        )
-                                    )
-                                )
-                            }
+                                descriptionFontSize = 12.sp
+                            )
                         }
                         Switch(
                             checked = enableQqsComplicationsRow,
@@ -618,26 +582,15 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column(
+                                SettingsTitleDescription(
+                                    title = "Horizontal Progress Line",
+                                    description = "Replace the circular progress arc with a horizontal line in the 2x1 complication row.",
                                     modifier = Modifier
                                         .weight(1f)
                                         .padding(end = 12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                                ) {
-                                    Text(
-                                        text = "Horizontal Progress Line",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
-                                    )
-                                    Text(
-                                        text = "Replace the circular progress arc with a horizontal line in the 2x1 complication row.",
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
-                                    )
-                                }
+                                    titleFontSize = 13.sp,
+                                    descriptionFontSize = 11.sp
+                                )
                                 Switch(
                                     checked = qqs2x1HorizontalLine,
                                     onCheckedChange = { PanelPreferences.setQqs2x1HorizontalLine(context, it) },
@@ -660,26 +613,15 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column(
+                                SettingsTitleDescription(
+                                    title = "Progress Bar Around 2x1 Tiles",
+                                    description = "Draw a progress bar tracing the outer perimeter of each 2x1 complication card.",
                                     modifier = Modifier
                                         .weight(1f)
                                         .padding(end = 12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                                ) {
-                                    Text(
-                                        text = "Progress Bar Around 2x1 Tiles",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
-                                    )
-                                    Text(
-                                        text = "Draw a progress bar tracing the outer perimeter of each 2x1 complication card.",
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
-                                    )
-                                }
+                                    titleFontSize = 13.sp,
+                                    descriptionFontSize = 11.sp
+                                )
                                 Switch(
                                     checked = qqs2x1PerimeterProgress,
                                     onCheckedChange = { PanelPreferences.setQqs2x1PerimeterProgress(context, it) },
@@ -838,8 +780,9 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             Text(
                                 text = "Two 2x1 tiles appear side by side; selecting more scrolls horizontally in the same row.",
                                 fontSize = 11.sp,
+                                lineHeight = SettingsTypographyDefaults.compactLineHeight(11.sp),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                style = SettingsTypographyDefaults.CompactTextStyle
                             )
                             @OptIn(ExperimentalLayoutApi::class)
                             FlowRow(
@@ -936,36 +879,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 modifier = Modifier.size(20.dp)
                             )
                         }
-                        Column(
+                        SettingsTitleDescription(
+                            title = "QS Tile Background Support",
+                            description = "Enable tile shapes & backgrounds for Android 8, Android 6, and Android 4.4.4 styles.",
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = "QS Tile Background Support",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
-                            )
-                            Text(
-                                text = "Enable tile shapes & backgrounds for Android 8, Android 6, and Android 4.4.4 styles.",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
-                            )
-                        }
+                            descriptionFontSize = 12.sp
+                        )
                     }
                     Switch(
                         checked = enableLegacyTileShapes,
@@ -1025,24 +944,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = "Tile Shapes (XML Paths)",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "All QS shapes are rendered via vector XML drawable paths. You can paste path data, XML, or import files.",
-                                fontSize = 12.sp,
-                                lineHeight = 16.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Tile Shapes (XML Paths)",
+                            description = "All QS shapes are rendered via vector XML drawable paths. You can paste path data, XML, or import files.",
+                            titleFontSize = 15.sp,
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     Row(
@@ -1092,21 +999,11 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
                         // Enabled Tile Shape
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = "Enabled Tile Shape",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Choose the shape when a tile is active/ON",
-                            fontSize = 12.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Enabled Tile Shape",
+                        description = "Choose the shape when a tile is active/ON",
+                        descriptionFontSize = 12.sp
+                    )
 
                     Row(
                         modifier = Modifier
@@ -1165,21 +1062,11 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
                 // Disabled Tile Shape
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = "Disabled Tile Shape",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Choose the shape when a tile is inactive/OFF",
-                            fontSize = 12.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Disabled Tile Shape",
+                        description = "Choose the shape when a tile is inactive/OFF",
+                        descriptionFontSize = 12.sp
+                    )
 
                     Row(
                         modifier = Modifier
@@ -1240,21 +1127,11 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                 val currentComplicationShapeId by PanelPreferences.complicationTileShapeId.collectAsState()
                 val currentInactiveComplicationShapeId by PanelPreferences.inactiveComplicationTileShapeId.collectAsState()
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = "Complication Tile Shape",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Choose the shape when a complication is active/ON",
-                            fontSize = 12.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Complication Tile Shape",
+                        description = "Choose the shape when a complication is active/ON",
+                        descriptionFontSize = 12.sp
+                    )
 
                     Row(
                         modifier = Modifier
@@ -1313,21 +1190,11 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
                 // Inactive Complication Shape
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = "Inactive Complication Shape",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Choose the shape when a complication is inactive/OFF",
-                            fontSize = 12.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Inactive Complication Shape",
+                        description = "Choose the shape when a complication is inactive/OFF",
+                        descriptionFontSize = 12.sp
+                    )
 
                     Row(
                         modifier = Modifier
@@ -1421,19 +1288,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                             .clip(customComposeShape)
                                             .background(MaterialTheme.colorScheme.primary)
                                     )
-                                    Column {
-                                        Text(
-                                            text = customShape.label,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "Viewport: ${customShape.viewportWidth.toInt()}x${customShape.viewportHeight.toInt()}",
-                                            fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
+                                    SettingsTitleDescription(
+                                        title = customShape.label,
+                                        description = "Viewport: ${customShape.viewportWidth.toInt()}x${customShape.viewportHeight.toInt()}",
+                                        titleFontSize = 13.sp,
+                                        titleFontWeight = FontWeight.Medium,
+                                        descriptionFontSize = 11.sp
+                                    )
                                 }
 
                                 IconButton(
@@ -1490,7 +1351,7 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         .padding(start = 20.dp, end = 20.dp, top = 36.dp, bottom = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -1544,8 +1405,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                     text = "Complication Arc Thickness",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
-                                    lineHeight = 17.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    lineHeight = SettingsTypographyDefaults.compactLineHeight(14.sp),
+                                    style = SettingsTypographyDefaults.CompactTextStyle,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
@@ -1553,8 +1414,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 text = formattedThickness,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                lineHeight = 16.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                lineHeight = SettingsTypographyDefaults.compactLineHeight(13.sp),
+                                style = SettingsTypographyDefaults.CompactTextStyle,
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
@@ -1562,8 +1423,8 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         Text(
                             text = "Adjust the stroke width of progress rings on complication tiles.",
                             fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                            style = SettingsTypographyDefaults.CompactTextStyle,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -1628,24 +1489,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
+                        SettingsTitleDescription(
+                            title = "Tile Outline",
+                            description = "Enable a stroke outline on Quick Settings tiles with the inner background hidden.",
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = "Tile Outline",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Enable a stroke outline on Quick Settings tiles with the inner background hidden.",
-                                fontSize = 12.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     Switch(
@@ -1689,24 +1538,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
+                        SettingsTitleDescription(
+                            title = "Complication Outline",
+                            description = "Show an inside stroke outline instead of a filled background on complications.",
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = "Complication Outline",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Show an inside stroke outline instead of a filled background on complications.",
-                                fontSize = 12.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     Switch(
@@ -1959,24 +1796,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    Column(
+                    SettingsTitleDescription(
+                        title = "QS Tile Diagonal Gradient",
+                        description = "Enable a smooth diagonal gradient from Primary to Tertiary Monet accent color across active tiles.",
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = "QS Tile Diagonal Gradient",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Enable a smooth diagonal gradient from Primary to Tertiary Monet accent color across active tiles.",
-                            fontSize = 12.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                        descriptionFontSize = 12.sp
+                    )
                 }
 
                 Switch(
@@ -2035,36 +1860,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
+                        SettingsTitleDescription(
+                            title = "Custom Header Image Card",
+                            description = "Display a custom image banner card at the top of the Quick Settings panel.",
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = "Custom Header Image Card",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
-                            )
-                            Text(
-                                text = "Display a custom image banner card at the top of the Quick Settings panel.",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
-                            )
-                        }
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     Switch(
@@ -2254,36 +2055,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
+                        SettingsTitleDescription(
+                            title = "Header Monet Gradient",
+                            description = "Add a dynamic Monet color gradient background to the header.",
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = "Header Monet Gradient",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
-                            )
-                            Text(
-                                text = "Add a dynamic Monet color gradient background to the header.",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
-                            )
-                        }
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     Switch(
@@ -2378,36 +2155,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
+                        SettingsTitleDescription(
+                            title = "Solid Monet Surface",
+                            description = "Enables dynamic Monet color on the surface behind everything and removes transparency.",
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = "Solid Monet Surface",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
-                            )
-                            Text(
-                                text = "Enables dynamic Monet color on the surface behind everything and removes transparency.",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
-                            )
-                        }
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     Switch(
@@ -2444,19 +2197,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Solid Monet Transparency",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "See-through amount for Monet background surface (0% – 95%)",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Solid Monet Transparency",
+                                description = "See-through amount for Monet background surface (0% – 95%)",
+                                modifier = Modifier.weight(1f),
+                                titleFontSize = 13.sp,
+                                descriptionFontSize = 11.sp
+                            )
                             Text(
                                 text = "$monetSurfaceTransparencyPercent%",
                                 fontSize = 13.sp,
@@ -2527,36 +2274,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                    Column(
+                    SettingsTitleDescription(
+                        title = "Per-Element Accent Colors",
+                        description = "Configure Primary or Tertiary Monet accent color for each UI element individually",
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Text(
-                            text = "Per-Element Accent Colors",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            style = TextStyle(
-                                platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                lineHeightStyle = LineHeightStyle(
-                                    alignment = LineHeightStyle.Alignment.Center,
-                                    trim = LineHeightStyle.Trim.Both
-                                )
-                            )
-                        )
-                        Text(
-                            text = "Configure Primary or Tertiary Monet accent color for each UI element individually",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = TextStyle(
-                                platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                lineHeightStyle = LineHeightStyle(
-                                    alignment = LineHeightStyle.Alignment.Center,
-                                    trim = LineHeightStyle.Trim.Both
-                                )
-                            )
-                        )
-                    }
+                        titleFontSize = 15.sp,
+                        descriptionFontSize = 12.sp
+                    )
                 }
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -2615,24 +2339,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 )
                             }
 
-                            Column(
+                            SettingsTitleDescription(
+                                title = "Complication QS Tiles",
+                                description = "Live circular Wear OS progress rings movable inside the QS grid & editor",
                                 modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(2.dp)
-                            ) {
-                                Text(
-                                    text = "Complication QS Tiles",
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
-                                )
-                                Text(
-                                    text = "Live circular Wear OS progress rings movable inside the QS grid & editor",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
-                                )
-                            }
+                                titleFontSize = 15.sp,
+                                descriptionFontSize = 12.sp
+                            )
                         }
 
                         Icon(
@@ -2654,8 +2367,9 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             Text(
                                 text = "Battery, Storage, Brightness, and Volume complication tiles can be added, removed, or reordered directly in the Quick Settings Editor.",
                                 fontSize = 11.5.sp,
+                                lineHeight = SettingsTypographyDefaults.compactLineHeight(11.5.sp),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                style = SettingsTypographyDefaults.CompactTextStyle
                             )
 
                             // Subline placement selector (Inside Ring vs Below Ring)
@@ -2868,36 +2582,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    Column(
+                    SettingsTitleDescription(
+                        title = "Move Brightness to Bottom",
+                        description = "Move the brightness slider bar to the bottom of the QS panel (just above the footer).",
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Text(
-                            text = "Move Brightness to Bottom",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            style = TextStyle(
-                                platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                lineHeightStyle = LineHeightStyle(
-                                    alignment = LineHeightStyle.Alignment.Center,
-                                    trim = LineHeightStyle.Trim.Both
-                                )
-                            )
-                        )
-                        Text(
-                            text = "Move the brightness slider bar to the bottom of the QS panel (just above the footer).",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = TextStyle(
-                                platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                lineHeightStyle = LineHeightStyle(
-                                    alignment = LineHeightStyle.Alignment.Center,
-                                    trim = LineHeightStyle.Trim.Both
-                                )
-                            )
-                        )
-                    }
+                        descriptionFontSize = 12.sp
+                    )
                 }
 
                 Switch(
@@ -2949,36 +2639,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    Column(
+                    SettingsTitleDescription(
+                        title = "Show Brightness Slider in QQS",
+                        description = if (isAndroidOreoStyle) "Disabled for Android 8.0 Oreo QS panel style." else "Show the brightness slider inside the compact QQS container view (always visible).",
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Text(
-                            text = "Show Brightness Slider in QQS",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isAndroidOreoStyle) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface,
-                            style = TextStyle(
-                                platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                lineHeightStyle = LineHeightStyle(
-                                    alignment = LineHeightStyle.Alignment.Center,
-                                    trim = LineHeightStyle.Trim.Both
-                                )
-                            )
-                        )
-                        Text(
-                            text = if (isAndroidOreoStyle) "Disabled for Android 8.0 Oreo QS panel style." else "Show the brightness slider inside the compact QQS container view (always visible).",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = TextStyle(
-                                platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                lineHeightStyle = LineHeightStyle(
-                                    alignment = LineHeightStyle.Alignment.Center,
-                                    trim = LineHeightStyle.Trim.Both
-                                )
-                            )
-                        )
-                    }
+                        titleColor = if (isAndroidOreoStyle) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface,
+                        descriptionFontSize = 12.sp
+                    )
                 }
 
                 Switch(
@@ -3031,36 +2698,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    Column(
+                    SettingsTitleDescription(
+                        title = "Brightness Bar Gradient",
+                        description = "Apply a smooth horizontal Monet accent gradient across the active track of the brightness slider.",
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Text(
-                            text = "Brightness Bar Gradient",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            style = TextStyle(
-                                platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                lineHeightStyle = LineHeightStyle(
-                                    alignment = LineHeightStyle.Alignment.Center,
-                                    trim = LineHeightStyle.Trim.Both
-                                )
-                            )
-                        )
-                        Text(
-                            text = "Apply a smooth horizontal Monet accent gradient across the active track of the brightness slider.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = TextStyle(
-                                platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                lineHeightStyle = LineHeightStyle(
-                                    alignment = LineHeightStyle.Alignment.Center,
-                                    trim = LineHeightStyle.Trim.Both
-                                )
-                            )
-                        )
-                    }
+                        descriptionFontSize = 12.sp
+                    )
                 }
 
                 Switch(
@@ -3160,36 +2803,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
+                        SettingsTitleDescription(
+                            title = "Progress Bar & Slider Style",
+                            description = "Customize the progress bar and slider appearance for Brightness, Volume, and Media Player. Configure all sliders together or customize each slider separately.",
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = "Progress Bar & Slider Style",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
-                            )
-                            Text(
-                                text = "Customize the progress bar and slider appearance for Brightness, Volume, and Media Player. Configure all sliders together or customize each slider separately.",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
-                            )
-                        }
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     if (collapseExpandOptions) {
@@ -3322,14 +2941,9 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             QsSliderTarget.MEDIA -> "Customizing Media Player Progress Bar (separate style & settings)."
                         },
                         fontSize = 11.sp,
+                        lineHeight = SettingsTypographyDefaults.compactLineHeight(11.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = TextStyle(
-                            platformStyle = PlatformTextStyle(includeFontPadding = false),
-                            lineHeightStyle = LineHeightStyle(
-                                alignment = LineHeightStyle.Alignment.Center,
-                                trim = LineHeightStyle.Trim.Both
-                            )
-                        )
+                        style = SettingsTypographyDefaults.CompactTextStyle
                     )
                 }
 
@@ -3766,22 +3380,14 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column(
+                                SettingsTitleDescription(
+                                    title = "Show End Stop Indicator",
+                                    description = "Display a subtle dot at the far end of the inactive track.",
                                     modifier = Modifier.weight(1f).padding(end = 12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                                ) {
-                                    Text(
-                                        text = "Show End Stop Indicator",
-                                        fontSize = 12.5.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "Display a subtle dot at the far end of the inactive track.",
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                                    titleFontSize = 12.5.sp,
+                                    titleFontWeight = FontWeight.SemiBold,
+                                    descriptionFontSize = 11.sp
+                                )
                                 Switch(
                                     checked = m3ShowStopIndicator,
                                     onCheckedChange = { PanelPreferences.setM3ShowStopIndicator(context, it) },
@@ -4280,36 +3886,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
+                        SettingsTitleDescription(
+                            title = "QS, QQS & Notifications Panel Corners",
+                            description = "Customize inner and outer corner radii and toggle global panel corner sizing for Quick Settings, QQS and notification panels only.",
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = "QS, QQS & Notifications Panel Corners",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
-                            )
-                            Text(
-                                text = "Customize inner and outer corner radii and toggle global panel corner sizing for Quick Settings, QQS and notification panels only.",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
-                            )
-                        }
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     if (collapseExpandOptions) {
@@ -4341,36 +3923,14 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
+                    SettingsTitleDescription(
+                        title = "Global Corner Size",
+                        description = "Sync inner corner size automatically with outer corner size",
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Text(
-                            text = "Global Corner Size",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            style = TextStyle(
-                                platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                lineHeightStyle = LineHeightStyle(
-                                    alignment = LineHeightStyle.Alignment.Center,
-                                    trim = LineHeightStyle.Trim.Both
-                                )
-                            )
-                        )
-                        Text(
-                            text = "Sync inner corner size automatically with outer corner size",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = TextStyle(
-                                platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                lineHeightStyle = LineHeightStyle(
-                                    alignment = LineHeightStyle.Alignment.Center,
-                                    trim = LineHeightStyle.Trim.Both
-                                )
-                            )
-                        )
-                    }
+                        titleFontSize = 13.sp,
+                        titleFontWeight = FontWeight.SemiBold,
+                        descriptionFontSize = 11.sp
+                    )
                     Switch(
                         checked = panelGlobalCornerEnabled,
                         onCheckedChange = { PanelPreferences.setPanelGlobalCornerEnabled(context, it) },
@@ -4440,15 +4000,10 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         Text(
                             text = "Inner corner size is synced to outer corner size (${panelOuterCorner.toInt()} dp)",
                             fontSize = 11.5.sp,
+                            lineHeight = SettingsTypographyDefaults.compactLineHeight(11.5.sp),
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
-                            style = TextStyle(
-                                platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                lineHeightStyle = LineHeightStyle(
-                                    alignment = LineHeightStyle.Alignment.Center,
-                                    trim = LineHeightStyle.Trim.Both
-                                )
-                            )
+                            style = SettingsTypographyDefaults.CompactTextStyle
                         )
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -4542,25 +4097,11 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 )
                             }
 
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(2.dp)
-                            ) {
-                                Text(
-                                    text = "Panel Top Rim",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    lineHeight = 17.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Draw a rim highlight and top-to-bottom panel background gradient fading from top to bottom.",
-                                    fontSize = 12.sp,
-                                    lineHeight = 15.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Panel Top Rim",
+                                description = "Draw a rim highlight and top-to-bottom panel background gradient fading from top to bottom.",
+                                descriptionFontSize = 12.sp
+                            )
                         }
 
                         Switch(
@@ -4584,19 +4125,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column {
-                                Text(
-                                    text = "Rim Sensitivity",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Top highlight opacity (5% – 30%)",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Rim Sensitivity",
+                                description = "Top highlight opacity (5% – 30%)",
+                                titleFontSize = 13.sp,
+                                titleFontWeight = FontWeight.SemiBold,
+                                descriptionFontSize = 11.sp
+                            )
                             Text(
                                 text = "${topRimPercent}%",
                                 fontSize = 13.sp,
@@ -4663,25 +4198,11 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 )
                             }
 
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(2.dp)
-                            ) {
-                                Text(
-                                    text = "Tile & Complication Top Rim",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    lineHeight = 17.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Draw a rim highlight and top-to-bottom background gradient on QS tiles and complications.",
-                                    fontSize = 12.sp,
-                                    lineHeight = 15.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Tile & Complication Top Rim",
+                                description = "Draw a rim highlight and top-to-bottom background gradient on QS tiles and complications.",
+                                descriptionFontSize = 12.sp
+                            )
                         }
 
                         Switch(
@@ -4706,19 +4227,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Column {
-                                        Text(
-                                            text = "Rim Sensitivity",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "Top highlight opacity (5% – 30%)",
-                                            fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
+                                    SettingsTitleDescription(
+                                        title = "Rim Sensitivity",
+                                        description = "Top highlight opacity (5% – 30%)",
+                                        titleFontSize = 13.sp,
+                                        titleFontWeight = FontWeight.SemiBold,
+                                        descriptionFontSize = 11.sp
+                                    )
                                     Text(
                                         text = "${topRimPercent}%",
                                         fontSize = 13.sp,
@@ -4791,25 +4306,11 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 )
                             }
 
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(1.dp)
-                            ) {
-                                Text(
-                                    text = "Clear All FAB Button",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    lineHeight = 17.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Replace the text pill clear all button with a customizable FAB button.",
-                                    fontSize = 12.sp,
-                                    lineHeight = 15.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Clear All FAB Button",
+                                description = "Replace the text pill clear all button with a customizable FAB button.",
+                                descriptionFontSize = 12.sp
+                            )
                         }
 
                         Row(
@@ -4907,22 +4408,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Column(
-                                            verticalArrangement = Arrangement.spacedBy(2.dp),
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            Text(
-                                                text = "FAB Shape (XML Paths)",
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Text(
-                                                text = "Tile-style vector XML shapes applied to the FAB",
-                                                fontSize = 11.sp,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
+                                        SettingsTitleDescription(
+                                            title = "FAB Shape (XML Paths)",
+                                            description = "Tile-style vector XML shapes applied to the FAB",
+                                            modifier = Modifier.weight(1f),
+                                            titleFontSize = 13.sp,
+                                            descriptionFontSize = 11.sp
+                                        )
                                         OutlinedButton(
                                             onClick = { showFabImportDialog = true },
                                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
@@ -5002,16 +4494,11 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
 
                             // Single Unified Clear All Icon Selection
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(
-                                    text = "Clear All Icon",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Choose the icon displayed on the Clear All button",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                SettingsTitleDescription(
+                                    title = "Clear All Icon",
+                                    description = "Choose the icon displayed on the Clear All button",
+                                    titleFontSize = 13.sp,
+                                    descriptionFontSize = 11.sp
                                 )
                                 Row(
                                     modifier = Modifier
@@ -5093,25 +4580,11 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = "Media Player Style",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Select media player notification style",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Media Player Style",
+                            description = "Select media player notification style",
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     val currentOption = when {
@@ -5218,26 +4691,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
+                        SettingsTitleDescription(
+                            title = "Footer Icon Backgrounds",
+                            description = "Enable M3 rounded backgrounds for QS footer action buttons with 10dp outer and 3dp inner corners.",
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                        ) {
-                            Text(
-                                text = "Footer Icon Backgrounds",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Enable M3 rounded backgrounds for QS footer action buttons with 10dp outer and 3dp inner corners.",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     val footerIconBgEnabled by PanelPreferences.footerIconBackground.collectAsState()
@@ -5274,19 +4733,14 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Outer 3dp Spacing Between Buttons",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Adds 3dp spacing with 3dp inner corners. When disabled, spacing and inner corners are 0dp.",
-                                fontSize = 11.5.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Outer 3dp Spacing Between Buttons",
+                            description = "Adds 3dp spacing with 3dp inner corners. When disabled, spacing and inner corners are 0dp.",
+                            modifier = Modifier.weight(1f),
+                            titleFontSize = 13.sp,
+                            titleFontWeight = FontWeight.Medium,
+                            descriptionFontSize = 11.5.sp
+                        )
                         Switch(
                             checked = footerOuterSpacingEnabled,
                             onCheckedChange = { PanelPreferences.setFooterOuterSpacing(context, it) },
@@ -5314,19 +4768,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column {
-                                    Text(
-                                        text = "Outer Corner Radius",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "Exposed ends corner curvature",
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                                SettingsTitleDescription(
+                                    title = "Outer Corner Radius",
+                                    description = "Exposed ends corner curvature",
+                                    titleFontSize = 13.sp,
+                                    titleFontWeight = FontWeight.SemiBold,
+                                    descriptionFontSize = 11.sp
+                                )
                                 Text(
                                     text = "${footerOuterCorner.toInt()} dp",
                                     fontSize = 13.sp,
@@ -5358,19 +4806,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column {
-                                    Text(
-                                        text = "Inner Corner Radius",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "Adjacent inner edges curvature",
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                                SettingsTitleDescription(
+                                    title = "Inner Corner Radius",
+                                    description = "Adjacent inner edges curvature",
+                                    titleFontSize = 13.sp,
+                                    titleFontWeight = FontWeight.SemiBold,
+                                    descriptionFontSize = 11.sp
+                                )
                                 Text(
                                     text = "${footerInnerCorner.toInt()} dp",
                                     fontSize = 13.sp,
@@ -5402,19 +4844,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column {
-                                    Text(
-                                        text = "Button Spacing",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "Gap between footer button backgrounds",
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                                SettingsTitleDescription(
+                                    title = "Button Spacing",
+                                    description = "Gap between footer button backgrounds",
+                                    titleFontSize = 13.sp,
+                                    titleFontWeight = FontWeight.SemiBold,
+                                    descriptionFontSize = 11.sp
+                                )
                                 Text(
                                     text = "${footerSpacing.toInt()} dp",
                                     fontSize = 13.sp,
@@ -5474,26 +4910,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
+                        SettingsTitleDescription(
+                            title = "Glass Backdrop Effect",
+                            description = "Choose between Frosted Glass blur or optical Liquid Glass refraction for QS panels, notifications, and surface cards.",
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                        ) {
-                            Text(
-                                text = "Glass Backdrop Effect",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Choose between Frosted Glass blur or optical Liquid Glass refraction for QS panels, notifications, and surface cards.",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     val glassMode by PanelPreferences.glassBackdropMode.collectAsState()
@@ -5725,24 +5147,15 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                             horizontalArrangement = Arrangement.SpaceBetween,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Column(
+                                            SettingsTitleDescription(
+                                                title = "Refraction Controls (${refractionStyle.label})",
+                                                description = "Strength $refractionPercent% • Scale $scalePercent% • Prism $dispersionPercent%",
                                                 modifier = Modifier
                                                     .weight(1f)
                                                     .padding(end = 8.dp),
-                                                verticalArrangement = Arrangement.spacedBy(1.dp)
-                                            ) {
-                                                Text(
-                                                    text = "Refraction Controls (${refractionStyle.label})",
-                                                    fontSize = 13.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onSurface
-                                                )
-                                                Text(
-                                                    text = "Strength $refractionPercent% • Scale $scalePercent% • Prism $dispersionPercent%",
-                                                    fontSize = 11.sp,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
+                                                titleFontSize = 13.sp,
+                                                descriptionFontSize = 11.sp
+                                            )
                                             Icon(
                                                 imageVector = if (refractionControlsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                                                 contentDescription = if (refractionControlsExpanded) {
@@ -5773,19 +5186,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                                         horizontalArrangement = Arrangement.SpaceBetween,
                                                         verticalAlignment = Alignment.CenterVertically
                                                     ) {
-                                                        Column(modifier = Modifier.weight(1f)) {
-                                                            Text(
-                                                                text = "Refraction Sensitivity (${refractionStyle.label})",
-                                                                fontSize = 13.sp,
-                                                                fontWeight = FontWeight.Bold,
-                                                                color = MaterialTheme.colorScheme.onSurface
-                                                            )
-                                                            Text(
-                                                                text = "Optical lens warp & edge distortion strength (10% – 100%)",
-                                                                fontSize = 11.sp,
-                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                            )
-                                                        }
+                                                        SettingsTitleDescription(
+                                                            title = "Refraction Sensitivity (${refractionStyle.label})",
+                                                            description = "Optical lens warp & edge distortion strength (10% – 100%)",
+                                                            modifier = Modifier.weight(1f),
+                                                            titleFontSize = 13.sp,
+                                                            descriptionFontSize = 11.sp
+                                                        )
                                                         Text(
                                                             text = "$refractionPercent%",
                                                             fontSize = 13.sp,
@@ -5822,23 +5229,17 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                                         horizontalArrangement = Arrangement.SpaceBetween,
                                                         verticalAlignment = Alignment.CenterVertically
                                                     ) {
-                                                        Column(modifier = Modifier.weight(1f)) {
-                                                            Text(
-                                                                text = "Pattern Scale (${refractionStyle.label})",
-                                                                fontSize = 13.sp,
-                                                                fontWeight = FontWeight.Bold,
-                                                                color = MaterialTheme.colorScheme.onSurface
-                                                            )
-                                                            Text(
-                                                                text = if (refractionStyle == RefractionStyle.LIQUID) {
-                                                                    "Peripheral bezel & dome curvature size (10% – 100%)"
-                                                                } else {
-                                                                    "Cell, rib, or wave size for ${refractionStyle.label} refraction (10% – 100%)"
-                                                                },
-                                                                fontSize = 11.sp,
-                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                            )
-                                                        }
+                                                        SettingsTitleDescription(
+                                                            title = "Pattern Scale (${refractionStyle.label})",
+                                                            description = if (refractionStyle == RefractionStyle.LIQUID) {
+                                                                "Peripheral bezel & dome curvature size (10% – 100%)"
+                                                            } else {
+                                                                "Cell, rib, or wave size for ${refractionStyle.label} refraction (10% – 100%)"
+                                                            },
+                                                            modifier = Modifier.weight(1f),
+                                                            titleFontSize = 13.sp,
+                                                            descriptionFontSize = 11.sp
+                                                        )
                                                         Text(
                                                             text = "$scalePercent%",
                                                             fontSize = 13.sp,
@@ -5876,19 +5277,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                                         horizontalArrangement = Arrangement.SpaceBetween,
                                                         verticalAlignment = Alignment.CenterVertically
                                                     ) {
-                                                        Column(modifier = Modifier.weight(1f)) {
-                                                            Text(
-                                                                text = "Chromatic Split (${refractionStyle.label})",
-                                                                fontSize = 13.sp,
-                                                                fontWeight = FontWeight.Bold,
-                                                                color = MaterialTheme.colorScheme.onSurface
-                                                            )
-                                                            Text(
-                                                                text = "RGB prism color separation intensity (0% – 100%)",
-                                                                fontSize = 11.sp,
-                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                            )
-                                                        }
+                                                        SettingsTitleDescription(
+                                                            title = "Chromatic Split (${refractionStyle.label})",
+                                                            description = "RGB prism color separation intensity (0% – 100%)",
+                                                            modifier = Modifier.weight(1f),
+                                                            titleFontSize = 13.sp,
+                                                            descriptionFontSize = 11.sp
+                                                        )
                                                         Text(
                                                             text = "$dispersionPercent%",
                                                             fontSize = 13.sp,
@@ -5928,19 +5323,13 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                                             horizontalArrangement = Arrangement.SpaceBetween,
                                                             verticalAlignment = Alignment.CenterVertically
                                                         ) {
-                                                            Column(modifier = Modifier.weight(1f)) {
-                                                                Text(
-                                                                    text = styleCustomTitle,
-                                                                    fontSize = 13.sp,
-                                                                    fontWeight = FontWeight.Bold,
-                                                                    color = MaterialTheme.colorScheme.onSurface
-                                                                )
-                                                                Text(
-                                                                    text = refractionStyle.customSliderDescription.orEmpty(),
-                                                                    fontSize = 11.sp,
-                                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                                )
-                                                            }
+                                                            SettingsTitleDescription(
+                                                                title = styleCustomTitle,
+                                                                description = refractionStyle.customSliderDescription.orEmpty(),
+                                                                modifier = Modifier.weight(1f),
+                                                                titleFontSize = 13.sp,
+                                                                descriptionFontSize = 11.sp
+                                                            )
                                                             Text(
                                                                 text = "$customParamPercent%",
                                                                 fontSize = 13.sp,
@@ -5986,23 +5375,15 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                                         horizontalArrangement = Arrangement.SpaceBetween,
                                                         verticalAlignment = Alignment.CenterVertically
                                                     ) {
-                                                        Column(
+                                                        SettingsTitleDescription(
+                                                            title = "Crossed (+) Cut Inside",
+                                                            description = "Add internal \"+\" prism cut refraction inside each diamond",
                                                             modifier = Modifier
                                                                 .weight(1f)
-                                                                .padding(end = 12.dp)
-                                                        ) {
-                                                            Text(
-                                                                text = "Crossed (+) Cut Inside",
-                                                                fontSize = 13.sp,
-                                                                fontWeight = FontWeight.Bold,
-                                                                color = MaterialTheme.colorScheme.onSurface
-                                                            )
-                                                            Text(
-                                                                text = "Add internal \"+\" prism cut refraction inside each diamond",
-                                                                fontSize = 11.sp,
-                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                            )
-                                                        }
+                                                                .padding(end = 12.dp),
+                                                            titleFontSize = 13.sp,
+                                                            descriptionFontSize = 11.sp
+                                                        )
                                                         androidx.compose.material3.Switch(
                                                             checked = diamondCrossedCut,
                                                             onCheckedChange = {
@@ -6035,24 +5416,15 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Column(
+                                        SettingsTitleDescription(
+                                            title = "Blur Sensitivity",
+                                            description = "Backdrop blur intensity (0% – 100%)",
                                             modifier = Modifier
                                                 .weight(1f)
                                                 .padding(end = 8.dp),
-                                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                                        ) {
-                                            Text(
-                                                text = "Blur Sensitivity",
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Text(
-                                                text = "Backdrop blur intensity (0% – 100%)",
-                                                fontSize = 11.sp,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
+                                            titleFontSize = 13.sp,
+                                            descriptionFontSize = 11.sp
+                                        )
                                         Row(
                                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                                             verticalAlignment = Alignment.CenterVertically
@@ -6126,24 +5498,15 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Column(
+                                        SettingsTitleDescription(
+                                            title = "Transparency",
+                                            description = "Container glass see-through amount (0% – 95%)",
                                             modifier = Modifier
                                                 .weight(1f)
                                                 .padding(end = 8.dp),
-                                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                                        ) {
-                                            Text(
-                                                text = "Transparency",
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Text(
-                                                text = "Container glass see-through amount (0% – 95%)",
-                                                fontSize = 11.sp,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
+                                            titleFontSize = 13.sp,
+                                            descriptionFontSize = 11.sp
+                                        )
                                         Row(
                                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                                             verticalAlignment = Alignment.CenterVertically
@@ -6207,26 +5570,16 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column(
+                                SettingsTitleDescription(
+                                    title = "Blur Behind QS/QQS Only",
+                                    description = "Keep the rest of the screen sharp and apply blur only directly underneath the QS/QQS panel.",
                                     modifier = Modifier
                                         .weight(1f)
                                         .padding(end = 12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                                ) {
-                                    Text(
-                                        text = "Blur Behind QS/QQS Only",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "Keep the rest of the screen sharp and apply blur only directly underneath the QS/QQS panel.",
-                                        fontSize = 11.5.sp,
-                                        lineHeight = 14.sp,
-                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                                    titleFontSize = 13.sp,
+                                    titleFontWeight = FontWeight.Medium,
+                                    descriptionFontSize = 11.5.sp
+                                )
                                 Switch(
                                     checked = blurOnlyBehindQsCard,
                                     onCheckedChange = { PanelPreferences.setBlurOnlyBehindQsCard(context, it) },
@@ -6247,26 +5600,16 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column(
+                                SettingsTitleDescription(
+                                    title = "Optimize Glass & Blur",
+                                    description = "Performance mode — downscale blur passes, skip zero blur, and cache static frames to reduce GPU load.",
                                     modifier = Modifier
                                         .weight(1f)
                                         .padding(end = 12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                                ) {
-                                    Text(
-                                        text = "Optimize Glass & Blur",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "Performance mode — downscale blur passes, skip zero blur, and cache static frames to reduce GPU load.",
-                                        fontSize = 11.5.sp,
-                                        lineHeight = 14.sp,
-                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                                    titleFontSize = 13.sp,
+                                    titleFontWeight = FontWeight.Medium,
+                                    descriptionFontSize = 11.5.sp
+                                )
                                 Switch(
                                     checked = glassPerformanceMode,
                                     onCheckedChange = { PanelPreferences.setGlassPerformanceMode(context, it) },
@@ -6296,30 +5639,20 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Column(
+                                        SettingsTitleDescription(
+                                            title = "Notification Card Blur",
+                                            description = if (glassMode == GlassBackdropMode.LIQUID) {
+                                                "Apply optical liquid glass refraction and bounded blur behind individual notification cards."
+                                            } else {
+                                                "Apply frosted glass and bounded backdrop blur directly behind individual notification cards."
+                                            },
                                             modifier = Modifier
                                                 .weight(1f)
                                                 .padding(end = 12.dp),
-                                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                                        ) {
-                                            Text(
-                                                text = "Notification Card Blur",
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Medium,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Text(
-                                                text = if (glassMode == GlassBackdropMode.LIQUID) {
-                                                    "Apply optical liquid glass refraction and bounded blur behind individual notification cards."
-                                                } else {
-                                                    "Apply frosted glass and bounded backdrop blur directly behind individual notification cards."
-                                                },
-                                                fontSize = 11.5.sp,
-                                                lineHeight = 14.sp,
-                                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
+                                            titleFontSize = 13.sp,
+                                            titleFontWeight = FontWeight.Medium,
+                                            descriptionFontSize = 11.5.sp
+                                        )
                                         Switch(
                                             checked = notificationBlurEnabled,
                                             onCheckedChange = { PanelPreferences.setEnableNotificationBlur(context, it) },
@@ -6373,26 +5706,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
+                        SettingsTitleDescription(
+                            title = "Header & Status Backgrounds",
+                            description = "Toggle rounded backgrounds and corner radius separately for date, battery, clock, and carrier.",
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                        ) {
-                            Text(
-                                text = "Header & Status Backgrounds",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Toggle rounded backgrounds and corner radius separately for date, battery, clock, and carrier.",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     val dateBgEnabled by PanelPreferences.dateBackgroundEnabled.collectAsState()
@@ -6685,26 +6004,12 @@ fun QsDesignSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
+                        SettingsTitleDescription(
+                            title = "QS Page Indicator Style",
+                            description = pageIndicatorStyle.description,
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                        ) {
-                            Text(
-                                text = "QS Page Indicator Style",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = pageIndicatorStyle.description,
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     val piActiveLineThickness by PanelPreferences.piActiveLineThickness.collectAsState()
@@ -7380,19 +6685,12 @@ fun ImportXmlShapeDialog(
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
-                            Column {
-                                Text(
-                                    text = "Add Custom Tile Shape",
-                                    fontSize = 19.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Vector path & XML drawable styling",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Add Custom Tile Shape",
+                                description = "Vector path & XML drawable styling",
+                                titleFontSize = 19.sp,
+                                descriptionFontSize = 12.sp
+                            )
                         }
 
                         IconButton(
@@ -7847,19 +7145,13 @@ fun ImportXmlShapeDialog(
                                                 modifier = Modifier.size(18.dp)
                                             )
                                         }
-                                        Column {
-                                            Text(
-                                                text = shapeLabel.ifBlank { "Custom Shape" },
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Text(
-                                                text = "Valid Path • Viewport ${parsedShape.viewportWidth.toInt()}×${parsedShape.viewportHeight.toInt()}",
-                                                fontSize = 11.sp,
-                                                color = MaterialTheme.colorScheme.primary
-                                            )
-                                        }
+                                        SettingsTitleDescription(
+                                            title = shapeLabel.ifBlank { "Custom Shape" },
+                                            description = "Valid Path • Viewport ${parsedShape.viewportWidth.toInt()}×${parsedShape.viewportHeight.toInt()}",
+                                            titleFontSize = 13.sp,
+                                            descriptionFontSize = 11.sp,
+                                            descriptionColor = MaterialTheme.colorScheme.primary
+                                        )
                                     }
                                 }
                             }

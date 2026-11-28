@@ -232,24 +232,15 @@ fun ScreenRecordBottomSheet(
                                 )
                             }
 
-                            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                                Text(
-                                    text = "Screen Recorder",
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    style = NoFontPaddingTextStyle,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "$shortResolutionLabel • ${currentFps.fps} FPS • $shortAudioLabel",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    style = NoFontPaddingTextStyle,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Screen Recorder",
+                                description = "$shortResolutionLabel • ${currentFps.fps} FPS • $shortAudioLabel",
+                                titleFontSize = 18.sp,
+                                descriptionFontSize = 12.sp,
+                                descriptionFontWeight = FontWeight.Medium,
+                                descriptionMaxLines = 1,
+                                descriptionOverflow = TextOverflow.Ellipsis
+                            )
                         }
 
                         // 48dp accessible touch target with crisp 36dp circular surface
@@ -335,19 +326,19 @@ fun ScreenRecordBottomSheet(
                                                 .clip(CircleShape)
                                                 .background(MaterialTheme.colorScheme.error)
                                         )
-                                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                                        Column(verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)) {
                                             Text(
                                                 text = "Recording Active",
                                                 fontSize = 14.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                style = NoFontPaddingTextStyle,
+                                                style = SettingsTypographyDefaults.textStyle(14.sp),
                                                 color = MaterialTheme.colorScheme.onErrorContainer
                                             )
                                             Text(
                                                 text = durationFormatted,
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.SemiBold,
-                                                style = NoFontPaddingTextStyle.copy(fontFeatureSettings = "tnum"),
+                                                style = SettingsTypographyDefaults.textStyle(13.sp).copy(fontFeatureSettings = "tnum"),
                                                 color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f)
                                             )
                                         }
@@ -723,21 +714,13 @@ fun ScreenRecordBottomSheet(
                                         )
                                     }
 
-                                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                                        Text(
-                                            text = "Show Touches",
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            style = NoFontPaddingTextStyle,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "Highlight taps & swipes while recording",
-                                            fontSize = 11.5.sp,
-                                            style = NoFontPaddingTextStyle,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
+                                    SettingsTitleDescription(
+                                        title = "Show Touches",
+                                        description = "Highlight taps & swipes while recording",
+                                        titleFontSize = 14.sp,
+                                        titleFontWeight = FontWeight.SemiBold,
+                                        descriptionFontSize = 11.5.sp
+                                    )
                                 }
 
                                 Switch(

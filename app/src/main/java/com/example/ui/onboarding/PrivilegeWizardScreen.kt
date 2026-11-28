@@ -64,6 +64,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.model.PrivilegeMode
 import com.example.service.QuickPanelAccessibilityService
 import com.example.system.PrivilegeEngine
+import com.example.ui.customizer.SettingsTitleDescription
+import com.example.ui.customizer.SettingsTypographyDefaults
 import kotlinx.coroutines.launch
 
 /**
@@ -173,8 +175,8 @@ fun PrivilegeWizardScreen(
                 Text(
                     text = "Choose how QuickPanel triggers hardware toggles and executes actions. Dynamic command routing will automatically adapt.",
                     fontSize = 12.sp,
-                    lineHeight = 15.sp,
-                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                    lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                    style = SettingsTypographyDefaults.CompactTextStyle,
                     color = colorScheme.onSurfaceVariant
                 )
 
@@ -232,27 +234,19 @@ fun PrivilegeWizardScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Column(
+                            SettingsTitleDescription(
+                                title = mode.title,
+                                titleFontSize = 13.sp,
+                                titleColor = if (isSelected) colorScheme.onPrimaryContainer else colorScheme.onSurface,
+                                titleMaxLines = 1,
+                                titleOverflow = TextOverflow.Ellipsis,
+                                description = mode.description,
+                                descriptionFontSize = 11.sp,
+                                descriptionColor = if (isSelected) colorScheme.onPrimaryContainer.copy(alpha = 0.85f) else colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                descriptionMaxLines = 2,
+                                descriptionOverflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f, fill = false),
-                                verticalArrangement = Arrangement.spacedBy(1.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Text(
-                                        text = mode.title,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        lineHeight = 16.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.weight(1f, fill = false),
-                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                        color = if (isSelected) colorScheme.onPrimaryContainer else colorScheme.onSurface
-                                    )
-
+                                titleTrailingContent = {
                                     Surface(
                                         color = if (isSelected) colorScheme.primary else colorScheme.surfaceVariant,
                                         shape = CircleShape
@@ -261,24 +255,14 @@ fun PrivilegeWizardScreen(
                                             text = mode.badge,
                                             fontSize = 9.sp,
                                             fontWeight = FontWeight.SemiBold,
-                                            lineHeight = 12.sp,
-                                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                            lineHeight = SettingsTypographyDefaults.compactLineHeight(9.sp),
+                                            style = SettingsTypographyDefaults.CompactTextStyle,
                                             maxLines = 1,
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
                                         )
                                     }
                                 }
-
-                                Text(
-                                    text = mode.description,
-                                    fontSize = 11.sp,
-                                    lineHeight = 14.sp,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = if (isSelected) colorScheme.onPrimaryContainer.copy(alpha = 0.85f) else colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-                                )
-                            }
+                            )
 
                             if (isSelected) {
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -631,23 +615,15 @@ fun PermissionCheckRow(
                 )
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Text(
-                    text = title,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    lineHeight = 15.sp,
-                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                    color = colorScheme.onSurface
-                )
-                Text(
-                    text = description,
-                    fontSize = 10.sp,
-                    lineHeight = 13.sp,
-                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                    color = colorScheme.onSurfaceVariant
-                )
-            }
+            SettingsTitleDescription(
+                title = title,
+                titleFontSize = 12.sp,
+                titleFontWeight = FontWeight.SemiBold,
+                titleColor = colorScheme.onSurface,
+                description = description,
+                descriptionFontSize = 10.sp,
+                descriptionColor = colorScheme.onSurfaceVariant
+            )
         }
 
         if (isGranted) {
@@ -747,23 +723,15 @@ fun ShizukuPermissionRow(
                 )
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Text(
-                    text = "Shizuku ADB Service",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    lineHeight = 15.sp,
-                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                    color = colorScheme.onSurface
-                )
-                Text(
-                    text = statusState.label,
-                    fontSize = 10.sp,
-                    lineHeight = 13.sp,
-                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                    color = if (statusState == com.example.system.ShizukuStatusState.RUNNING_GRANTED) colorScheme.primary else nonGrantedRed
-                )
-            }
+            SettingsTitleDescription(
+                title = "Shizuku ADB Service",
+                titleFontSize = 12.sp,
+                titleFontWeight = FontWeight.SemiBold,
+                titleColor = colorScheme.onSurface,
+                description = statusState.label,
+                descriptionFontSize = 10.sp,
+                descriptionColor = if (statusState == com.example.system.ShizukuStatusState.RUNNING_GRANTED) colorScheme.primary else nonGrantedRed
+            )
         }
 
         if (statusState != com.example.system.ShizukuStatusState.RUNNING_GRANTED) {
@@ -832,23 +800,15 @@ fun RootPermissionRow(
                 )
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Text(
-                    text = "Root Access",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    lineHeight = 15.sp,
-                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                    color = colorScheme.onSurface
-                )
-                Text(
-                    text = if (isRootGranted) "Granted (/system/bin/su active)" else "Superuser access required",
-                    fontSize = 10.sp,
-                    lineHeight = 13.sp,
-                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                    color = if (isRootGranted) colorScheme.primary else nonGrantedRed
-                )
-            }
+            SettingsTitleDescription(
+                title = "Root Access",
+                titleFontSize = 12.sp,
+                titleFontWeight = FontWeight.SemiBold,
+                titleColor = colorScheme.onSurface,
+                description = if (isRootGranted) "Granted (/system/bin/su active)" else "Superuser access required",
+                descriptionFontSize = 10.sp,
+                descriptionColor = if (isRootGranted) colorScheme.primary else nonGrantedRed
+            )
         }
 
         if (!isRootGranted) {

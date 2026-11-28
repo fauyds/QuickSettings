@@ -350,7 +350,7 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
             ) {
                 Column(
                     modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -365,12 +365,14 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                             text = "Per-Element Color & Accent Customization",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
+                            style = SettingsTypographyDefaults.textStyle(16.sp),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     Text(
                         text = "Customize Monet accents with Hue, Saturation & Brightness sliders, or pick exact custom colors using the 2-tab color picker for ${if (isEditingDark) "Dark" else "Light"} mode.",
                         fontSize = 13.sp,
+                        style = SettingsTypographyDefaults.textStyle(13.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -746,22 +748,14 @@ fun ElementColorsScreen(onBackClick: () -> Unit) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = "Disable Monet for Notification Text",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Disables Monet colors for notification text and the 'Notifications' section label (black text in light mode, white text in dark mode). Main QS header labels are not affected.",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Disable Monet for Notification Text",
+                            description = "Disables Monet colors for notification text and the 'Notifications' section label (black text in light mode, white text in dark mode). Main QS header labels are not affected.",
+                            titleFontSize = 15.sp,
+                            titleFontWeight = FontWeight.SemiBold,
+                            descriptionFontSize = 12.sp,
+                            modifier = Modifier.weight(1f)
+                        )
                         Spacer(modifier = Modifier.width(12.dp))
                         Switch(
                             checked = disableMonetNotifText,
@@ -995,23 +989,18 @@ private fun ExpandableElementColorCard(
             ) {
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Text(
-                        text = title,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = subtitle,
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    SettingsTitleDescription(
+                        title = title,
+                        description = subtitle,
+                        titleFontSize = 15.sp,
+                        titleFontWeight = FontWeight.SemiBold,
+                        descriptionFontSize = 12.sp
                     )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.padding(top = 4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Box(
                             modifier = Modifier

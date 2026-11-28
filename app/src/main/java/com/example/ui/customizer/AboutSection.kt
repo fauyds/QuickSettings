@@ -115,9 +115,9 @@ fun AboutSection(modifier: Modifier = Modifier) {
                     Text(
                         text = "QuickSettings is a modern, highly customizable control center replacement for Android. Personalize tile shapes, custom status bar triggers, brightness sliders, notification overlays, and gesture controls with fluid Material 3 design.",
                         fontSize = 13.sp,
-                        lineHeight = 18.sp,
+                        lineHeight = SettingsTypographyDefaults.compactLineHeight(13.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                        style = SettingsTypographyDefaults.CompactTextStyle
                     )
                 }
             }
@@ -154,28 +154,31 @@ fun AboutSection(modifier: Modifier = Modifier) {
 
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                        verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)
                     ) {
                         Text(
                             text = "Developer",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
+                            lineHeight = SettingsTypographyDefaults.compactLineHeight(11.sp),
                             color = MaterialTheme.colorScheme.primary,
                             letterSpacing = 0.8.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                            style = SettingsTypographyDefaults.CompactTextStyle
                         )
                         Text(
                             text = "Maxim Tarna",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
+                            lineHeight = SettingsTypographyDefaults.compactLineHeight(16.sp),
                             color = MaterialTheme.colorScheme.onSurface,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                            style = SettingsTypographyDefaults.CompactTextStyle
                         )
                         Text(
                             text = "Creator & Lead Developer",
                             fontSize = 12.sp,
+                            lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                            style = SettingsTypographyDefaults.CompactTextStyle
                         )
                     }
                 }
@@ -214,32 +217,22 @@ fun AboutSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
+                        SettingsTitleDescription(
+                            title = "Telegram Channel",
+                            description = "t.me/allphonecustomization",
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = "Telegram Channel",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
-                            )
-                            Text(
-                                text = "t.me/allphonecustomization",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.primary,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
-                            )
-                        }
+                            titleFontSize = 14.sp,
+                            descriptionFontSize = 12.sp,
+                            descriptionColor = MaterialTheme.colorScheme.primary
+                        )
                     }
 
                     Text(
                         text = "Join our Telegram community for custom themes, setup guides, exclusive updates, and feedback!",
                         fontSize = 12.sp,
-                        lineHeight = 16.sp,
+                        lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                        style = SettingsTypographyDefaults.CompactTextStyle
                     )
 
                     Row(
@@ -306,8 +299,9 @@ fun AboutSection(modifier: Modifier = Modifier) {
                         text = "Key Features",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
+                        lineHeight = SettingsTypographyDefaults.compactLineHeight(14.sp),
                         color = MaterialTheme.colorScheme.onSurface,
-                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                        style = SettingsTypographyDefaults.CompactTextStyle
                     )
 
                     val features = listOf(
@@ -332,8 +326,9 @@ fun AboutSection(modifier: Modifier = Modifier) {
                             Text(
                                 text = feature,
                                 fontSize = 12.sp,
+                                lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                style = SettingsTypographyDefaults.CompactTextStyle
                             )
                         }
                     }

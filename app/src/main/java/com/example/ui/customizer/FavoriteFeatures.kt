@@ -1084,21 +1084,21 @@ fun FavoriteFeaturesSettingsCard(
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                    verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)
                 ) {
                     Text(
                         text = "Favorite Features",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        lineHeight = 18.sp,
-                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                        lineHeight = SettingsTypographyDefaults.compactLineHeight(15.sp),
+                        style = SettingsTypographyDefaults.CompactTextStyle,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "Choose favorite features to pin at the top of their respective customization sections for instant access.",
                         fontSize = 12.sp,
-                        lineHeight = 15.sp,
-                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                        lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                        style = SettingsTypographyDefaults.CompactTextStyle,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -1254,19 +1254,12 @@ fun ManageFavoriteFeaturesDialog(
                         modifier = Modifier.size(18.dp)
                     )
                 }
-                Column {
-                    Text(
-                        text = "Choose Favorite Features",
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "${pinnedIds.size} feature${if (pinnedIds.size == 1) "" else "s"} pinned to section tops",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                SettingsTitleDescription(
+                    title = "Choose Favorite Features",
+                    description = "${pinnedIds.size} feature${if (pinnedIds.size == 1) "" else "s"} pinned to section tops",
+                    titleFontSize = 17.sp,
+                    descriptionFontSize = 11.sp
+                )
             }
         },
         text = {
@@ -1402,19 +1395,17 @@ fun ManageFavoriteFeaturesDialog(
                                         )
                                     }
 
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                        ) {
-                                            Text(
-                                                text = feat.title,
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurface,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
+                                    SettingsTitleDescription(
+                                        title = feat.title,
+                                        description = feat.description,
+                                        modifier = Modifier.weight(1f),
+                                        titleFontSize = 13.sp,
+                                        titleMaxLines = 1,
+                                        titleOverflow = TextOverflow.Ellipsis,
+                                        descriptionFontSize = 11.sp,
+                                        descriptionMaxLines = 2,
+                                        descriptionOverflow = TextOverflow.Ellipsis,
+                                        titleTrailingContent = {
                                             Surface(
                                                 shape = RoundedCornerShape(4.dp),
                                                 color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
@@ -1428,15 +1419,7 @@ fun ManageFavoriteFeaturesDialog(
                                                 )
                                             }
                                         }
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(
-                                            text = feat.description,
-                                            fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
+                                    )
 
                                     IconButton(
                                         onClick = { PanelPreferences.toggleFeaturePinned(context, feat.id) },
@@ -1608,21 +1591,14 @@ fun GenericPinnedFeatureCard(
                     )
                 }
 
-                Column(
+                SettingsTitleDescription(
+                    title = feature.title,
+                    description = feature.description,
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = feature.title,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        if (showPinnedBadge) {
+                    titleFontSize = 14.sp,
+                    descriptionFontSize = 12.sp,
+                    titleTrailingContent = if (showPinnedBadge) {
+                        {
                             Surface(
                                 shape = RoundedCornerShape(4.dp),
                                 color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
@@ -1636,14 +1612,8 @@ fun GenericPinnedFeatureCard(
                                 )
                             }
                         }
-                    }
-                    Text(
-                        text = feature.description,
-                        fontSize = 12.sp,
-                        lineHeight = 15.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                    } else null
+                )
             }
 
             if (actionContent != null) {

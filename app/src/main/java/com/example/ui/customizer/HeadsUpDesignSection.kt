@@ -91,36 +91,13 @@ fun HeadsUpDesignSection(modifier: Modifier = Modifier) {
                                 modifier = Modifier.size(20.dp)
                             )
                         }
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                        SettingsTitleDescription(
+                            title = "Test Notification",
+                            description = "Trigger a floating notification banner to preview corner radius, elevation, edge-to-edge mode, and top margin settings.",
+                            titleFontSize = 14.sp,
+                            descriptionFontSize = 12.sp,
                             modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                text = "Test Notification",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = colorScheme.onSurface,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
-                            )
-                            Text(
-                                text = "Trigger a floating notification banner to preview corner radius, elevation, edge-to-edge mode, and top margin settings.",
-                                fontSize = 12.sp,
-                                color = colorScheme.onSurfaceVariant,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
-                            )
-                        }
+                        )
                     }
 
                     Button(
@@ -187,40 +164,17 @@ fun HeadsUpDesignSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = "Edge-to-Edge Mode",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = colorScheme.onSurface,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
-                            )
-                            Text(
-                                text = if (edgeToEdge) {
-                                    "Forced 0dp horizontal margins (full width). Top corners are square (0dp), Corner Radius controls bottom corners only."
-                                } else {
-                                    "Applies horizontal side margins (8dp). Corner Radius applies uniformly to all 4 corners."
-                                },
-                                fontSize = 12.sp,
-                                color = colorScheme.onSurfaceVariant,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Edge-to-Edge Mode",
+                            description = if (edgeToEdge) {
+                                "Forced 0dp horizontal margins (full width). Top corners are square (0dp), Corner Radius controls bottom corners only."
+                            } else {
+                                "Applies horizontal side margins (8dp). Corner Radius applies uniformly to all 4 corners."
+                            },
+                            titleFontSize = 14.sp,
+                            descriptionFontSize = 12.sp,
+                            modifier = Modifier.weight(1f)
+                        )
                     }
 
                     Switch(
@@ -276,33 +230,12 @@ fun HeadsUpDesignSection(modifier: Modifier = Modifier) {
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
-                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(
-                                    text = "Corner Radius",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = colorScheme.onSurface,
-                                    style = TextStyle(
-                                        platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                        lineHeightStyle = LineHeightStyle(
-                                            alignment = LineHeightStyle.Alignment.Center,
-                                            trim = LineHeightStyle.Trim.Both
-                                        )
-                                    )
-                                )
-                                Text(
-                                    text = if (edgeToEdge) "Bottom-left & bottom-right corners (top is 0dp)" else "Uniformly applied to all 4 corners",
-                                    fontSize = 12.sp,
-                                    color = colorScheme.onSurfaceVariant,
-                                    style = TextStyle(
-                                        platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                        lineHeightStyle = LineHeightStyle(
-                                            alignment = LineHeightStyle.Alignment.Center,
-                                            trim = LineHeightStyle.Trim.Both
-                                        )
-                                    )
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Corner Radius",
+                                description = if (edgeToEdge) "Bottom-left & bottom-right corners (top is 0dp)" else "Uniformly applied to all 4 corners",
+                                titleFontSize = 14.sp,
+                                descriptionFontSize = 12.sp
+                            )
                         }
 
                         Surface(
@@ -313,9 +246,10 @@ fun HeadsUpDesignSection(modifier: Modifier = Modifier) {
                                 text = "${cornerRadius} dp",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
+                                lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
                                 color = colorScheme.onPrimaryContainer,
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                style = SettingsTypographyDefaults.CompactTextStyle
                             )
                         }
                     }
@@ -376,33 +310,12 @@ fun HeadsUpDesignSection(modifier: Modifier = Modifier) {
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
-                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(
-                                    text = "Elevation / Shadow",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = colorScheme.onSurface,
-                                    style = TextStyle(
-                                        platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                        lineHeightStyle = LineHeightStyle(
-                                            alignment = LineHeightStyle.Alignment.Center,
-                                            trim = LineHeightStyle.Trim.Both
-                                        )
-                                    )
-                                )
-                                Text(
-                                    text = "Ambient card drop shadow intensity & elevation depth",
-                                    fontSize = 12.sp,
-                                    color = colorScheme.onSurfaceVariant,
-                                    style = TextStyle(
-                                        platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                        lineHeightStyle = LineHeightStyle(
-                                            alignment = LineHeightStyle.Alignment.Center,
-                                            trim = LineHeightStyle.Trim.Both
-                                        )
-                                    )
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Elevation / Shadow",
+                                description = "Ambient card drop shadow intensity & elevation depth",
+                                titleFontSize = 14.sp,
+                                descriptionFontSize = 12.sp
+                            )
                         }
 
                         Surface(
@@ -413,9 +326,10 @@ fun HeadsUpDesignSection(modifier: Modifier = Modifier) {
                                 text = "${elevation} dp",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
+                                lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
                                 color = colorScheme.onPrimaryContainer,
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                style = SettingsTypographyDefaults.CompactTextStyle
                             )
                         }
                     }
@@ -476,33 +390,12 @@ fun HeadsUpDesignSection(modifier: Modifier = Modifier) {
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
-                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(
-                                    text = "Top Margin / Offset",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = colorScheme.onSurface,
-                                    style = TextStyle(
-                                        platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                        lineHeightStyle = LineHeightStyle(
-                                            alignment = LineHeightStyle.Alignment.Center,
-                                            trim = LineHeightStyle.Trim.Both
-                                        )
-                                    )
-                                )
-                                Text(
-                                    text = "Offset banner from status bar and camera cutout",
-                                    fontSize = 12.sp,
-                                    color = colorScheme.onSurfaceVariant,
-                                    style = TextStyle(
-                                        platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                        lineHeightStyle = LineHeightStyle(
-                                            alignment = LineHeightStyle.Alignment.Center,
-                                            trim = LineHeightStyle.Trim.Both
-                                        )
-                                    )
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Top Margin / Offset",
+                                description = "Offset banner from status bar and camera cutout",
+                                titleFontSize = 14.sp,
+                                descriptionFontSize = 12.sp
+                            )
                         }
 
                         Surface(
@@ -513,9 +406,10 @@ fun HeadsUpDesignSection(modifier: Modifier = Modifier) {
                                 text = "${topMargin} dp",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
+                                lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
                                 color = colorScheme.onPrimaryContainer,
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                style = SettingsTypographyDefaults.CompactTextStyle
                             )
                         }
                     }

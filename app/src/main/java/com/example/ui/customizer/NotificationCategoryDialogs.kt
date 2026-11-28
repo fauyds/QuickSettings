@@ -242,19 +242,13 @@ fun NotificationCategoryEditorDialog(
                                             modifier = Modifier.size(22.dp)
                                         )
                                     }
-                                    Column {
-                                        Text(
-                                            text = "Category Icon",
-                                            fontSize = 13.5.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "${selectedIcon.label} • ${selectedIcon.group}",
-                                            fontSize = 11.5.sp,
-                                            color = colorScheme.onSurfaceVariant
-                                        )
-                                    }
+                                    SettingsTitleDescription(
+                                        title = "Category Icon",
+                                        description = "${selectedIcon.label} • ${selectedIcon.group}",
+                                        titleFontSize = 13.5.sp,
+                                        titleFontWeight = FontWeight.SemiBold,
+                                        descriptionFontSize = 11.5.sp
+                                    )
                                 }
 
                                 FilledTonalButton(
@@ -320,20 +314,15 @@ fun NotificationCategoryEditorDialog(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "ASSIGNED APPS (${selectedPackages.size})",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        letterSpacing = 0.8.sp,
-                                        color = colorScheme.primary
-                                    )
-                                    Text(
-                                        text = "Notifications from these apps will be grouped under this category.",
-                                        fontSize = 11.sp,
-                                        color = colorScheme.onSurfaceVariant
-                                    )
-                                }
+                                SettingsTitleDescription(
+                                    title = "ASSIGNED APPS (${selectedPackages.size})",
+                                    description = "Notifications from these apps will be grouped under this category.",
+                                    titleFontSize = 11.sp,
+                                    titleFontWeight = FontWeight.Bold,
+                                    titleColor = colorScheme.primary,
+                                    descriptionFontSize = 11.sp,
+                                    modifier = Modifier.weight(1f)
+                                )
 
                                 Spacer(modifier = Modifier.width(8.dp))
 
@@ -427,19 +416,14 @@ fun NotificationCategoryEditorDialog(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Expanded by default",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "Show notifications automatically when opening the shade",
-                                        fontSize = 11.sp,
-                                        color = colorScheme.onSurfaceVariant
-                                    )
-                                }
+                                SettingsTitleDescription(
+                                    title = "Expanded by default",
+                                    description = "Show notifications automatically when opening the shade",
+                                    titleFontSize = 13.sp,
+                                    titleFontWeight = FontWeight.SemiBold,
+                                    descriptionFontSize = 11.sp,
+                                    modifier = Modifier.weight(1f)
+                                )
                                 Switch(
                                     checked = isExpandedByDefault,
                                     onCheckedChange = { isExpandedByDefault = it },
@@ -568,19 +552,13 @@ private fun CategoryIconPickerModal(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text(
-                            text = "Google Icon Library",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = colorScheme.onSurface
-                        )
-                        Text(
-                            text = "${filteredIcons.size} of ${allIcons.size} icons",
-                            fontSize = 11.5.sp,
-                            color = colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Google Icon Library",
+                        description = "${filteredIcons.size} of ${allIcons.size} icons",
+                        titleFontSize = 18.sp,
+                        titleFontWeight = FontWeight.Bold,
+                        descriptionFontSize = 11.5.sp
+                    )
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Default.Close, contentDescription = "Close", tint = colorScheme.onSurfaceVariant)
                     }
@@ -811,19 +789,13 @@ private fun CategoryAppPickerDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text(
-                            text = "Select Apps (${selected.size})",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Active notification & launchable apps",
-                            fontSize = 11.5.sp,
-                            color = colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Select Apps (${selected.size})",
+                        description = "Active notification & launchable apps",
+                        titleFontSize = 18.sp,
+                        titleFontWeight = FontWeight.Bold,
+                        descriptionFontSize = 11.5.sp
+                    )
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Default.Close, contentDescription = "Close", tint = colorScheme.onSurfaceVariant)
                     }
@@ -904,23 +876,18 @@ private fun CategoryAppPickerDialog(
                                         }
                                     }
 
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = app.label,
-                                            fontSize = 13.5.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = colorScheme.onSurface,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Text(
-                                            text = app.packageName,
-                                            fontSize = 11.sp,
-                                            color = colorScheme.onSurfaceVariant,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
+                                    SettingsTitleDescription(
+                                        title = app.label,
+                                        description = app.packageName,
+                                        titleFontSize = 13.5.sp,
+                                        titleFontWeight = FontWeight.SemiBold,
+                                        titleMaxLines = 1,
+                                        titleOverflow = TextOverflow.Ellipsis,
+                                        descriptionFontSize = 11.sp,
+                                        descriptionMaxLines = 1,
+                                        descriptionOverflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
 
                                     Checkbox(
                                         checked = isChecked,

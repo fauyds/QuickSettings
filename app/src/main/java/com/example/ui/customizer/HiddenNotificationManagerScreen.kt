@@ -171,7 +171,7 @@ fun HiddenNotificationManagerScreen(
                     Text(
                         text = "To block active ongoing notifications, hide system notifications, or restore previously blacklisted notification rules, please grant Notification Listener access in the system settings.",
                         fontSize = 12.sp,
-                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                        style = SettingsTypographyDefaults.textStyle(12.sp),
                         color = Color.White.copy(alpha = 0.9f)
                     )
                     Button(
@@ -227,23 +227,12 @@ fun HiddenNotificationManagerScreen(
                             modifier = Modifier.size(22.dp)
                         )
                     }
-                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                        Text(
-                            text = "Notification Interceptor Active",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Ongoing & persistent notifications on this device are analyzed in real-time. Block any noisy persistent cards below.",
-                            fontSize = 11.sp,
-                            lineHeight = 14.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Notification Interceptor Active",
+                        description = "Ongoing & persistent notifications on this device are analyzed in real-time. Block any noisy persistent cards below.",
+                        titleFontSize = 14.sp,
+                        descriptionFontSize = 11.sp
+                    )
                 }
             }
 
@@ -274,6 +263,7 @@ fun HiddenNotificationManagerScreen(
                     Text(
                         text = "No active ongoing notifications found on the device. (Note: Only background services and persistent/clear-proof notification cards can be blacklisted).",
                         fontSize = 12.sp,
+                        style = SettingsTypographyDefaults.textStyle(12.sp),
                         color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                         modifier = Modifier.padding(16.dp)
                     )
@@ -333,26 +323,19 @@ fun HiddenNotificationManagerScreen(
 
                                 Column(
                                     modifier = Modifier.weight(1f, fill = false),
-                                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                                    verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)
                                 ) {
-                                    Text(
-                                        text = item.appName,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        lineHeight = 16.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                        color = if (isHidden) colorScheme.onSurface.copy(alpha = 0.5f) else colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = if (item.title.isNotBlank()) item.title else item.text,
-                                        fontSize = 12.sp,
-                                        lineHeight = 15.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                        color = colorScheme.onSurfaceVariant.copy(alpha = if (isHidden) 0.5f else 0.8f)
+                                    SettingsTitleDescription(
+                                        title = item.appName,
+                                        description = if (item.title.isNotBlank()) item.title else item.text,
+                                        titleFontSize = 13.sp,
+                                        titleColor = if (isHidden) colorScheme.onSurface.copy(alpha = 0.5f) else colorScheme.onSurface,
+                                        titleMaxLines = 1,
+                                        titleOverflow = TextOverflow.Ellipsis,
+                                        descriptionFontSize = 12.sp,
+                                        descriptionColor = colorScheme.onSurfaceVariant.copy(alpha = if (isHidden) 0.5f else 0.8f),
+                                        descriptionMaxLines = 1,
+                                        descriptionOverflow = TextOverflow.Ellipsis
                                     )
                                     if (!item.channelId.isNullOrBlank()) {
                                         Surface(
@@ -449,6 +432,7 @@ fun HiddenNotificationManagerScreen(
                     Text(
                         text = "No notifications are currently blacklisted.",
                         fontSize = 12.sp,
+                        style = SettingsTypographyDefaults.textStyle(12.sp),
                         color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                         modifier = Modifier.padding(16.dp)
                     )
@@ -500,10 +484,9 @@ fun HiddenNotificationManagerScreen(
                                 Text(
                                     text = ruleId,
                                     fontSize = 11.sp,
-                                    lineHeight = 14.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    style = SettingsTypographyDefaults.textStyle(11.sp),
                                     color = colorScheme.onSurfaceVariant
                                 )
                             }

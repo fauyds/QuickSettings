@@ -242,31 +242,20 @@ fun TileVisibilityScreen(
                         )
                     }
 
-                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                        Text(
-                            text = "Compatibility Auto-Hide",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Mode: ${privilegeMode.badge}",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            lineHeight = 14.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = colorScheme.primary
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Compatibility Auto-Hide",
+                        titleColor = colorScheme.onSurface,
+                        description = "Mode: ${privilegeMode.badge}",
+                        descriptionFontWeight = FontWeight.Medium,
+                        descriptionColor = colorScheme.primary
+                    )
                 }
 
                 Text(
                     text = "Automatically hide tiles that are unsupported in your current operational mode (${privilegeMode.badge}) to declutter your Quick Settings panel.",
                     fontSize = 12.sp,
-                    lineHeight = 15.sp,
-                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                    lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                    style = SettingsTypographyDefaults.CompactTextStyle,
                     color = colorScheme.onSurfaceVariant
                 )
 
@@ -411,7 +400,7 @@ fun TileVisibilityScreen(
                         // Label, Subtitle & Badges
                         Column(
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                            verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -422,11 +411,11 @@ fun TileVisibilityScreen(
                                     text = tile.label,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
-                                    lineHeight = 16.sp,
+                                    lineHeight = SettingsTypographyDefaults.compactLineHeight(13.sp),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.weight(1f, fill = false),
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    style = SettingsTypographyDefaults.CompactTextStyle,
                                     color = if (isHidden) {
                                         colorScheme.onSurface.copy(alpha = 0.5f)
                                     } else {
@@ -454,10 +443,10 @@ fun TileVisibilityScreen(
                             Text(
                                 text = tile.subtitle,
                                 fontSize = 11.sp,
-                                lineHeight = 14.sp,
+                                lineHeight = SettingsTypographyDefaults.compactLineHeight(11.sp),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                style = SettingsTypographyDefaults.CompactTextStyle,
                                 color = colorScheme.onSurfaceVariant.copy(alpha = if (isHidden) 0.5f else 0.75f)
                             )
 

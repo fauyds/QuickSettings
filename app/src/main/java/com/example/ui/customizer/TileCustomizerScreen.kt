@@ -198,6 +198,7 @@ fun TileCustomizerScreen(
                     Text(
                         text = "Customize Quick Settings tile grid density and arrange active and available tiles. KitKat uses a unified grid without collapsed QQS header icons.",
                         fontSize = 12.5.sp,
+                        style = SettingsTypographyDefaults.textStyle(12.5.sp),
                         color = if (isDark) Color(0xFFAAAAAA) else Color(0xFF555555)
                     )
                 } else if (isMarshmallow) {
@@ -222,6 +223,7 @@ fun TileCustomizerScreen(
                     Text(
                         text = "Rearrange tiles to reorder your Marshmallow Quick Settings panel. Top tiles appear in the collapsed Quick Settings header.",
                         fontSize = 12.5.sp,
+                        style = SettingsTypographyDefaults.textStyle(12.5.sp),
                         color = if (isDark) Color(0xFFB0BEC5) else Color(0xFF546E7A)
                     )
                 } else {
@@ -236,6 +238,7 @@ fun TileCustomizerScreen(
                     Text(
                         text = "Reorder active panel tiles, adjust QQS settings, or add/remove tiles between active and available panel pools. (To totally hide or blacklist tiles, visit the Tile Visibility tab).",
                         fontSize = 13.sp,
+                        style = SettingsTypographyDefaults.textStyle(13.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
@@ -324,19 +327,14 @@ fun TileCustomizerScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Move Date to Header Inline:",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Display date inline next to time in header",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Move Date to Header Inline:",
+                            description = "Display date inline next to time in header",
+                            titleFontSize = 12.sp,
+                            titleFontWeight = FontWeight.SemiBold,
+                            descriptionFontSize = 11.sp,
+                            modifier = Modifier.weight(1f)
+                        )
                         androidx.compose.material3.Switch(
                             checked = showDateInQqsHeader,
                             onCheckedChange = onToggleShowDateInQqsHeader,
@@ -361,19 +359,14 @@ fun TileCustomizerScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "2x1 Complications QQS Row:",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Add an extra row of 2x1 live complications below QQS tiles",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "2x1 Complications QQS Row:",
+                            description = "Add an extra row of 2x1 live complications below QQS tiles",
+                            titleFontSize = 12.sp,
+                            titleFontWeight = FontWeight.SemiBold,
+                            descriptionFontSize = 11.sp,
+                            modifier = Modifier.weight(1f)
+                        )
                         androidx.compose.material3.Switch(
                             checked = enableQqsComplicationsRow,
                             onCheckedChange = { com.example.data.PanelPreferences.setEnableQqsComplicationsRow(screenContext, it) },
@@ -391,19 +384,14 @@ fun TileCustomizerScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Horizontal Progress Line:",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Replace the circular progress arc with a horizontal line in 2x1 row",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Horizontal Progress Line:",
+                                description = "Replace the circular progress arc with a horizontal line in 2x1 row",
+                                titleFontSize = 12.sp,
+                                titleFontWeight = FontWeight.SemiBold,
+                                descriptionFontSize = 11.sp,
+                                modifier = Modifier.weight(1f)
+                            )
                             androidx.compose.material3.Switch(
                                 checked = qqs2x1HorizontalLine,
                                 onCheckedChange = { com.example.data.PanelPreferences.setQqs2x1HorizontalLine(screenContext, it) },
@@ -420,19 +408,14 @@ fun TileCustomizerScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Progress Bar Around 2x1 Tiles:",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Draw a progress bar tracing the outer perimeter of 2x1 complication cards",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Progress Bar Around 2x1 Tiles:",
+                                description = "Draw a progress bar tracing the outer perimeter of 2x1 complication cards",
+                                titleFontSize = 12.sp,
+                                titleFontWeight = FontWeight.SemiBold,
+                                descriptionFontSize = 11.sp,
+                                modifier = Modifier.weight(1f)
+                            )
                             androidx.compose.material3.Switch(
                                 checked = qqs2x1PerimeterProgress,
                                 onCheckedChange = { com.example.data.PanelPreferences.setQqs2x1PerimeterProgress(screenContext, it) },
@@ -1031,16 +1014,12 @@ fun ActiveComplication2x1ReorderItem(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
-                Text(
-                    text = "${index + 1}. ${tile.label}",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = if (subline.isNotBlank()) "2x1 Row • $subline" else "2x1 QQS Row",
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                SettingsTitleDescription(
+                    title = "${index + 1}. ${tile.label}",
+                    description = if (subline.isNotBlank()) "2x1 Row • $subline" else "2x1 QQS Row",
+                    titleFontSize = 13.sp,
+                    titleFontWeight = FontWeight.SemiBold,
+                    descriptionFontSize = 10.sp
                 )
                 if (progressDisplayMode.showHorizontalLine && compSpec != null) {
                     val progress = compSpec.progress.coerceIn(0f, 1f)
@@ -1216,19 +1195,15 @@ fun ActiveTileReorderItem(
                 }
             }
 
-            Column {
-                Text(
-                    text = if (isKitKat) "${index + 1}. ${tile.label.uppercase()}" else "${index + 1}. ${tile.label}",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = textPrimary
-                )
-                Text(
-                    text = if (isKitKat) "${tile.category.title.uppercase()} • ${tile.subtitle.uppercase()}" else "${tile.category.title} • ${tile.subtitle}",
-                    fontSize = 10.sp,
-                    color = textSecondary
-                )
-            }
+            SettingsTitleDescription(
+                title = if (isKitKat) "${index + 1}. ${tile.label.uppercase()}" else "${index + 1}. ${tile.label}",
+                description = if (isKitKat) "${tile.category.title.uppercase()} • ${tile.subtitle.uppercase()}" else "${tile.category.title} • ${tile.subtitle}",
+                titleFontSize = 13.sp,
+                titleFontWeight = FontWeight.SemiBold,
+                titleColor = textPrimary,
+                descriptionFontSize = 10.sp,
+                descriptionColor = textSecondary
+            )
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1408,19 +1383,15 @@ fun HiddenTileItem(
                 }
             }
 
-            Column {
-                Text(
-                    text = if (isKitKat) tile.label.uppercase() else tile.label,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = textPrimary
-                )
-                Text(
-                    text = if (isKitKat) tile.category.title.uppercase() else tile.category.title,
-                    fontSize = 10.sp,
-                    color = textSecondary
-                )
-            }
+            SettingsTitleDescription(
+                title = if (isKitKat) tile.label.uppercase() else tile.label,
+                description = if (isKitKat) tile.category.title.uppercase() else tile.category.title,
+                titleFontSize = 13.sp,
+                titleFontWeight = FontWeight.Medium,
+                titleColor = textPrimary,
+                descriptionFontSize = 10.sp,
+                descriptionColor = textSecondary
+            )
         }
 
         Row(

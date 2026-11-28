@@ -61,13 +61,127 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.PanelPreferences
 import com.example.ui.customizer.CustomizeCategory
+
+object SettingsTypographyDefaults {
+    val TitleDescriptionSpacing: Dp = 1.dp
+
+    val CompactPlatformStyle = PlatformTextStyle(includeFontPadding = false)
+
+    val CompactLineHeightStyle = LineHeightStyle(
+        alignment = LineHeightStyle.Alignment.Center,
+        trim = LineHeightStyle.Trim.Both
+    )
+
+    val CompactTextStyle = TextStyle(
+        platformStyle = CompactPlatformStyle,
+        lineHeightStyle = CompactLineHeightStyle
+    )
+
+    fun compactLineHeight(fontSize: TextUnit): TextUnit {
+        val sp = fontSize.value
+        return when {
+            sp <= 10f -> 13.sp
+            sp <= 11.5f -> 14.sp
+            sp <= 12f -> 15.sp
+            sp <= 13.5f -> 16.sp
+            sp <= 14f -> 17.sp
+            sp <= 15f -> 18.sp
+            sp <= 16f -> 19.sp
+            sp <= 17f -> 21.sp
+            sp <= 18f -> 22.sp
+            sp <= 20f -> 24.sp
+            else -> (sp + 3f).sp
+        }
+    }
+
+    fun textStyle(
+        fontSize: TextUnit,
+        lineHeight: TextUnit = compactLineHeight(fontSize),
+        letterSpacing: TextUnit = TextUnit.Unspecified
+    ): TextStyle = TextStyle(
+        lineHeight = lineHeight,
+        letterSpacing = letterSpacing,
+        platformStyle = CompactPlatformStyle,
+        lineHeightStyle = CompactLineHeightStyle
+    )
+}
+
+@Composable
+fun SettingsTitleDescription(
+    title: String,
+    description: String,
+    modifier: Modifier = Modifier,
+    titleFontSize: TextUnit = 14.sp,
+    titleFontWeight: FontWeight = FontWeight.Bold,
+    titleColor: Color = MaterialTheme.colorScheme.onSurface,
+    titleMaxLines: Int = Int.MAX_VALUE,
+    titleOverflow: TextOverflow = TextOverflow.Clip,
+    descriptionFontSize: TextUnit = 11.sp,
+    descriptionFontWeight: FontWeight = FontWeight.Normal,
+    descriptionColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    descriptionMaxLines: Int = Int.MAX_VALUE,
+    descriptionOverflow: TextOverflow = TextOverflow.Clip,
+    verticalSpacing: Dp = SettingsTypographyDefaults.TitleDescriptionSpacing,
+    titleTrailingContent: (@Composable RowScope.() -> Unit)? = null
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(verticalSpacing)
+    ) {
+        if (titleTrailingContent != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = title,
+                    fontSize = titleFontSize,
+                    fontWeight = titleFontWeight,
+                    lineHeight = SettingsTypographyDefaults.compactLineHeight(titleFontSize),
+                    maxLines = titleMaxLines,
+                    overflow = titleOverflow,
+                    style = SettingsTypographyDefaults.CompactTextStyle,
+                    color = titleColor,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                titleTrailingContent()
+            }
+        } else {
+            Text(
+                text = title,
+                fontSize = titleFontSize,
+                fontWeight = titleFontWeight,
+                lineHeight = SettingsTypographyDefaults.compactLineHeight(titleFontSize),
+                maxLines = titleMaxLines,
+                overflow = titleOverflow,
+                style = SettingsTypographyDefaults.CompactTextStyle,
+                color = titleColor
+            )
+        }
+        Text(
+            text = description,
+            fontSize = descriptionFontSize,
+            fontWeight = descriptionFontWeight,
+            lineHeight = SettingsTypographyDefaults.compactLineHeight(descriptionFontSize),
+            maxLines = descriptionMaxLines,
+            overflow = descriptionOverflow,
+            style = SettingsTypographyDefaults.CompactTextStyle,
+            color = descriptionColor
+        )
+    }
+}
 
 val LocalPinnableCardId = staticCompositionLocalOf<String?> { null }
 val LocalPinnableCategory = staticCompositionLocalOf<CustomizeCategory?> { null }
@@ -149,7 +263,8 @@ fun SettingsCard(
         ) {
             CompositionLocalProvider(
                 LocalTextStyle provides LocalTextStyle.current.copy(
-                    platformStyle = PlatformTextStyle(includeFontPadding = false)
+                    platformStyle = SettingsTypographyDefaults.CompactPlatformStyle,
+                    lineHeightStyle = SettingsTypographyDefaults.CompactLineHeightStyle
                 ),
                 LocalPinnableCardOnLongClick provides (cardLongClickHandler ?: localLongClick)
             ) {
@@ -285,9 +400,9 @@ fun ListSubheader(
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.1.sp,
-                lineHeight = 15.sp,
+                lineHeight = SettingsTypographyDefaults.compactLineHeight(11.sp),
                 color = color,
-                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                style = SettingsTypographyDefaults.CompactTextStyle
             )
         }
 

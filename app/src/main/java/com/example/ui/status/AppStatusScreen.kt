@@ -71,6 +71,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.PanelPreferences
 import com.example.model.PrivilegeMode
 import com.example.service.QuickPanelNotificationListenerService
+import com.example.ui.customizer.SettingsTitleDescription
+import com.example.ui.customizer.SettingsTypographyDefaults
 import com.example.ui.theme.ExpressiveCardShapes
 
 object AppStatusCardShapes {
@@ -262,23 +264,14 @@ fun AppStatusScreen(
                             modifier = Modifier.size(18.dp)
                         )
                     }
-                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                        Text(
-                            text = "App Status",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 22.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Overlay Service & System Health",
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "App Status",
+                        titleFontSize = 18.sp,
+                        titleColor = colorScheme.onSurface,
+                        description = "Overlay Service & System Health",
+                        descriptionFontSize = 12.sp,
+                        descriptionColor = colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
@@ -317,35 +310,12 @@ fun AppStatusScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                         }
-                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                            Text(
-                                text = "Initial Setup Wizard",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 18.sp,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                ),
-                                color = colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Setup privileges, configure tiles & triggers",
-                                fontSize = 11.sp,
-                                lineHeight = 14.sp,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                ),
-                                color = colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Initial Setup Wizard",
+                            titleColor = colorScheme.onSurface,
+                            description = "Setup privileges, configure tiles & triggers",
+                            descriptionColor = colorScheme.onSurfaceVariant
+                        )
                     }
                     FilledTonalButton(
                         onClick = onLaunchInitialSetup,
@@ -426,21 +396,14 @@ fun AppStatusScreen(
                                 modifier = Modifier.size(20.dp)
                             )
                         }
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(
-                                text = "Permissions & Service Health",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isDark) Color.White else Color.Black
-                            )
-                            Text(
-                                text = if (allowedCount >= totalCount) "All required permissions granted & active"
-                                else "Allow the required permissions",
-                                fontSize = 11.sp,
-                                lineHeight = 14.sp,
-                                color = if (isDark) Color.White.copy(alpha = 0.85f) else Color.Black.copy(alpha = 0.75f)
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Permissions & Service Health",
+                            titleFontSize = 15.sp,
+                            titleColor = if (isDark) Color.White else Color.Black,
+                            description = if (allowedCount >= totalCount) "All required permissions granted & active"
+                            else "Allow the required permissions",
+                            descriptionColor = if (isDark) Color.White.copy(alpha = 0.85f) else Color.Black.copy(alpha = 0.75f)
+                        )
                     }
 
                     Spacer(modifier = Modifier.width(8.dp))
@@ -642,35 +605,14 @@ fun TopTriggerStripBar(
                         )
                     }
 
-                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                        Text(
-                            text = if (isOverlayEnabled) "Quick Settings Overlay: ON" else "Quick Settings Overlay: OFF",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 16.sp,
-                            style = TextStyle(
-                                platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                lineHeightStyle = LineHeightStyle(
-                                    alignment = LineHeightStyle.Alignment.Center,
-                                    trim = LineHeightStyle.Trim.Both
-                                )
-                            ),
-                            color = colorScheme.onSurface
-                        )
-                        Text(
-                            text = if (isAccessibilityRunning) "Accessibility Interceptor Ready" else if (hasOverlayPermission) "Overlay Service Ready" else "Requires Overlay / Accessibility Perm",
-                            fontSize = 10.sp,
-                            lineHeight = 13.sp,
-                            style = TextStyle(
-                                platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                lineHeightStyle = LineHeightStyle(
-                                    alignment = LineHeightStyle.Alignment.Center,
-                                    trim = LineHeightStyle.Trim.Both
-                                )
-                            ),
-                            color = if (isOverlayEnabled) colorScheme.primary else colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = if (isOverlayEnabled) "Quick Settings Overlay: ON" else "Quick Settings Overlay: OFF",
+                        titleFontSize = 13.sp,
+                        titleColor = colorScheme.onSurface,
+                        description = if (isAccessibilityRunning) "Accessibility Interceptor Ready" else if (hasOverlayPermission) "Overlay Service Ready" else "Requires Overlay / Accessibility Perm",
+                        descriptionFontSize = 10.sp,
+                        descriptionColor = if (isOverlayEnabled) colorScheme.primary else colorScheme.onSurfaceVariant
+                    )
                 }
 
                 Row(

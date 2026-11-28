@@ -223,20 +223,13 @@ fun NotificationManagerBottomSheet(
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
-                            Column {
-                                Text(
-                                    text = "NOTIFICATION MANAGER",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 0.8.sp,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    text = "Manage blocked rules & persistent cards",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "NOTIFICATION MANAGER",
+                                description = "Manage blocked rules & persistent cards",
+                                titleFontSize = 12.sp,
+                                titleColor = MaterialTheme.colorScheme.primary,
+                                descriptionFontSize = 11.sp
+                            )
                         }
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -284,28 +277,32 @@ fun NotificationManagerBottomSheet(
                                 modifier = Modifier.padding(14.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.NotificationsOff,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.size(18.dp)
-                                    )
+                                Column(verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.NotificationsOff,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Text(
+                                            text = "Notification Access Required",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            style = SettingsTypographyDefaults.textStyle(13.sp),
+                                            color = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                    }
                                     Text(
-                                        text = "Notification Access Required",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                        text = "Grant notification listener access to analyze and block persistent notifications.",
+                                        fontSize = 11.sp,
+                                        style = SettingsTypographyDefaults.textStyle(11.sp),
+                                        color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f)
                                     )
                                 }
-                                Text(
-                                    text = "Grant notification listener access to analyze and block persistent notifications.",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f)
-                                )
                                 Button(
                                     onClick = {
                                         QuickPanelNotificationListenerService.openPermissionSettings(context)
@@ -408,17 +405,24 @@ fun NotificationManagerBottomSheet(
                                                 modifier = Modifier.size(24.dp)
                                             )
                                             Spacer(modifier = Modifier.height(6.dp))
-                                            Text(
-                                                text = "No active ongoing notifications",
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Text(
-                                                text = "All active notifications on this device are standard/clearable.",
-                                                fontSize = 11.sp,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)
+                                            ) {
+                                                Text(
+                                                    text = "No active ongoing notifications",
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    style = SettingsTypographyDefaults.textStyle(13.sp),
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Text(
+                                                    text = "All active notifications on this device are standard/clearable.",
+                                                    fontSize = 11.sp,
+                                                    style = SettingsTypographyDefaults.textStyle(11.sp),
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
                                         }
                                     }
                                 } else {
@@ -461,7 +465,8 @@ fun NotificationManagerBottomSheet(
                                                     )
 
                                                     Column(
-                                                        modifier = Modifier.weight(1f, fill = false)
+                                                        modifier = Modifier.weight(1f, fill = false),
+                                                        verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)
                                                     ) {
                                                         Row(
                                                             modifier = Modifier.fillMaxWidth(),
@@ -472,6 +477,7 @@ fun NotificationManagerBottomSheet(
                                                                 text = item.appName,
                                                                 fontSize = 12.sp,
                                                                 fontWeight = FontWeight.Bold,
+                                                                style = SettingsTypographyDefaults.textStyle(12.sp),
                                                                 color = if (isBlocked) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface,
                                                                 maxLines = 1,
                                                                 overflow = TextOverflow.Ellipsis,
@@ -514,6 +520,7 @@ fun NotificationManagerBottomSheet(
                                                             Text(
                                                                 text = displayTitle,
                                                                 fontSize = 11.sp,
+                                                                style = SettingsTypographyDefaults.textStyle(11.sp),
                                                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (isBlocked) 0.5f else 0.85f),
                                                                 maxLines = 1,
                                                                 overflow = TextOverflow.Ellipsis
@@ -621,17 +628,24 @@ fun NotificationManagerBottomSheet(
                                                 modifier = Modifier.size(24.dp)
                                             )
                                             Spacer(modifier = Modifier.height(6.dp))
-                                            Text(
-                                                text = "No blocked notifications",
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Text(
-                                                text = "Any notifications you block will appear here for unhiding.",
-                                                fontSize = 11.sp,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)
+                                            ) {
+                                                Text(
+                                                    text = "No blocked notifications",
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    style = SettingsTypographyDefaults.textStyle(13.sp),
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Text(
+                                                    text = "Any notifications you block will appear here for unhiding.",
+                                                    fontSize = 11.sp,
+                                                    style = SettingsTypographyDefaults.textStyle(11.sp),
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
                                         }
                                     }
                                 } else {
@@ -695,25 +709,17 @@ fun NotificationManagerBottomSheet(
                                                         )
                                                     }
 
-                                                    Column(
+                                                    SettingsTitleDescription(
+                                                        title = if (isPackage) "Package: $ruleId" else "Channel: $ruleId",
+                                                        description = if (isPackage) "Blocked from alert stream" else "Blocked channel alert",
+                                                        titleFontSize = 12.sp,
+                                                        titleMaxLines = 1,
+                                                        titleOverflow = TextOverflow.Ellipsis,
+                                                        descriptionFontSize = 10.sp,
+                                                        descriptionMaxLines = 1,
+                                                        descriptionOverflow = TextOverflow.Ellipsis,
                                                         modifier = Modifier.weight(1f, fill = false)
-                                                    ) {
-                                                        Text(
-                                                            text = if (isPackage) "Package: $ruleId" else "Channel: $ruleId",
-                                                            fontSize = 12.sp,
-                                                            fontWeight = FontWeight.Bold,
-                                                            color = MaterialTheme.colorScheme.onSurface,
-                                                            maxLines = 1,
-                                                            overflow = TextOverflow.Ellipsis
-                                                        )
-                                                        Text(
-                                                            text = if (isPackage) "Blocked from alert stream" else "Blocked channel alert",
-                                                            fontSize = 10.sp,
-                                                            maxLines = 1,
-                                                            overflow = TextOverflow.Ellipsis,
-                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                        )
-                                                    }
+                                                    )
                                                 }
 
                                                 Spacer(modifier = Modifier.width(8.dp))

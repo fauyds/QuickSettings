@@ -115,25 +115,11 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(
-                            text = "Invisible Status Bar Trigger",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Make the status bar trigger totally invisible while keeping swipe gestures active.",
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Invisible Status Bar Trigger",
+                        description = "Make the status bar trigger totally invisible while keeping swipe gestures active.",
+                        descriptionFontSize = 12.sp
+                    )
                 }
 
                 Switch(
@@ -163,26 +149,14 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(
-                            text = "Immersive Mode Thin 8dp Trigger",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 16.sp,
-                            lineHeight = 19.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Enables the ultra-thin 8dp trigger strip (replaces thick status bar activator) with 1st-swipe reveal & 2nd-swipe panel gesture.",
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Immersive Mode Thin 8dp Trigger",
+                        titleFontSize = 16.sp,
+                        titleFontWeight = FontWeight.SemiBold,
+                        description = "Enables the ultra-thin 8dp trigger strip (replaces thick status bar activator) with 1st-swipe reveal & 2nd-swipe panel gesture.",
+                        descriptionFontSize = 12.sp,
+                        modifier = Modifier.weight(1f)
+                    )
 
                     Switch(
                         checked = forceImmersiveTrigger,
@@ -216,26 +190,12 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                        ) {
-                            Text(
-                                text = "System Panel Detection",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Auto-detect when the stock system notification shade opens to substitute it with the custom panel. Disable to only trigger via status bar swipe.",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "System Panel Detection",
+                            description = "Auto-detect when the stock system notification shade opens to substitute it with the custom panel. Disable to only trigger via status bar swipe.",
+                            descriptionFontSize = 12.sp,
+                            modifier = Modifier.weight(1f)
+                        )
 
                         Switch(
                             checked = overrideSystemQs,
@@ -298,23 +258,12 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    Column(
+                    SettingsTitleDescription(
+                        title = "Use auto system panel closing",
+                        description = "Actively forces the stock notification shade to collapse on Android 12 through 15 when opening the custom panel, resolving issues on devices where the system panel remains stuck open.",
+                        descriptionFontSize = 12.sp,
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(
-                                text = "Use auto system panel closing",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.weight(1f, fill = false)
-                            )
+                        titleTrailingContent = {
                             Surface(
                                 color = MaterialTheme.colorScheme.secondaryContainer,
                                 shape = RoundedCornerShape(4.dp)
@@ -323,20 +272,13 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                                     text = "A12-A15",
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                    style = SettingsTypographyDefaults.CompactTextStyle,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }
                         }
-                        Text(
-                            text = "Actively forces the stock notification shade to collapse on Android 12 through 15 when opening the custom panel, resolving issues on devices where the system panel remains stuck open.",
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    )
                 }
 
                 Switch(
@@ -393,25 +335,11 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                        ) {
-                            Text(
-                                text = "Panel Replacement Delay",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Set a custom delay before substituting the stock system notification shade with our custom panel.",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Panel Replacement Delay",
+                            description = "Set a custom delay before substituting the stock system notification shade with our custom panel.",
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     Row(
@@ -553,25 +481,11 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                         )
                     }
 
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                        ) {
-                            Text(
-                                text = "Stock Shade Auto-Override",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Automatically intercepts native System UI notification shade expansion and substitutes it with the custom Quick Settings panel.",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Stock Shade Auto-Override",
+                            description = "Automatically intercepts native System UI notification shade expansion and substitutes it with the custom Quick Settings panel.",
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     Switch(
@@ -597,19 +511,14 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                            Text(
-                                text = "Shade Swipe Only",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Blocks all shade trigger methods except opening via the system shade.",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Shade Swipe Only",
+                            titleFontSize = 13.sp,
+                            titleFontWeight = FontWeight.SemiBold,
+                            description = "Blocks all shade trigger methods except opening via the system shade.",
+                            descriptionFontSize = 11.sp,
+                            modifier = Modifier.weight(1f).padding(end = 12.dp)
+                        )
 
                         Switch(
                             checked = strictShadeDetection,
@@ -633,30 +542,41 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Row(
+                        Column(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)
                         ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Detector Cooldown",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                                    style = SettingsTypographyDefaults.CompactTextStyle,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "$detectorCooldownMs ms",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                                    style = SettingsTypographyDefaults.CompactTextStyle,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+
                             Text(
-                                text = "Detector Cooldown",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "$detectorCooldownMs ms",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                text = "Cooldown delay between consecutive interception triggers (10 ms to 1000 ms).",
+                                fontSize = 11.sp,
+                                lineHeight = SettingsTypographyDefaults.compactLineHeight(11.sp),
+                                style = SettingsTypographyDefaults.CompactTextStyle,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-
-                        Text(
-                            text = "Cooldown delay between consecutive interception triggers (10 ms to 1000 ms).",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
 
                         Slider(
                             value = detectorCooldownMs.toFloat(),
@@ -780,16 +700,11 @@ fun TriggerSection(modifier: Modifier = Modifier) {
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = "Custom Detection Blacklist (Packages & Classes):",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Events containing these packages or class names will be immediately rejected.",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        SettingsTitleDescription(
+                            title = "Custom Detection Blacklist (Packages & Classes):",
+                            titleFontSize = 12.sp,
+                            description = "Events containing these packages or class names will be immediately rejected.",
+                            descriptionFontSize = 11.sp
                         )
 
                         Row(

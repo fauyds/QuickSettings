@@ -68,6 +68,8 @@ import com.example.model.QsTileModel
 import com.example.model.TileActionOverrideType
 import com.example.model.TileCommandConfig
 import com.example.system.ExternalTileScanner
+import com.example.ui.customizer.SettingsTitleDescription
+import com.example.ui.customizer.SettingsTypographyDefaults
 import com.example.ui.theme.ExpressiveCardShapes
 import com.example.ui.theme.MonetOnPrimary
 import com.example.ui.theme.MonetPrimary
@@ -112,21 +114,21 @@ fun ExternalTilesScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)) {
                         Text(
                             text = "EXTERNAL TILE SCANNER",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.1.sp,
-                            lineHeight = 14.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            lineHeight = SettingsTypographyDefaults.compactLineHeight(11.sp),
+                            style = SettingsTypographyDefaults.CompactTextStyle,
                             color = MonetPrimary
                         )
                         Text(
                             text = "Discovers third-party TileService integrations",
                             fontSize = 13.sp,
-                            lineHeight = 16.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            lineHeight = SettingsTypographyDefaults.compactLineHeight(13.sp),
+                            style = SettingsTypographyDefaults.CompactTextStyle,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -150,6 +152,8 @@ fun ExternalTilesScreen(
                 Text(
                     text = "Scans Android PackageManager for installed apps declaring TileService. You can override tile tap behavior to bind media commands (e.g. input keyevent 127) or direct intents without launching foreground app UI.",
                     fontSize = 12.sp,
+                    lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                    style = SettingsTypographyDefaults.CompactTextStyle,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -245,6 +249,8 @@ fun ExternalTilesScreen(
                 Text(
                     text = "Third-party tiles can execute background keyevents (e.g. Media Pause 127) or direct system broadcasts under Standard, Shizuku, or Root modes silently without collapsing the Quick Settings panel.",
                     fontSize = 12.sp,
+                    lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                    style = SettingsTypographyDefaults.CompactTextStyle,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -302,19 +308,13 @@ fun ExternalTileCardItem(
                     )
                 }
 
-                Column {
-                    Text(
-                        text = tile.label,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = if (config.isOverrideEnabled) "Action Overridden (${config.overrideType.displayName})" else tile.subtitle,
-                        fontSize = 11.sp,
-                        color = if (config.isOverrideEnabled) MonetTertiary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                SettingsTitleDescription(
+                    title = tile.label,
+                    titleFontSize = 13.sp,
+                    titleFontWeight = FontWeight.SemiBold,
+                    description = if (config.isOverrideEnabled) "Action Overridden (${config.overrideType.displayName})" else tile.subtitle,
+                    descriptionColor = if (config.isOverrideEnabled) MonetTertiary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -380,19 +380,13 @@ fun ExternalTileCardItem(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Override default tap action",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Bypass app activity launch and execute direct command/intent",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Override default tap action",
+                        titleFontSize = 13.sp,
+                        titleFontWeight = FontWeight.Medium,
+                        description = "Bypass app activity launch and execute direct command/intent",
+                        modifier = Modifier.weight(1f)
+                    )
                     Switch(
                         checked = config.isOverrideEnabled,
                         onCheckedChange = { onConfigChange(config.copy(isOverrideEnabled = it)) },
@@ -408,19 +402,14 @@ fun ExternalTileCardItem(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Bypass parent app UI launch",
-                                fontSize = 12.5.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Prevent opening the app interface in foreground",
-                                fontSize = 10.5.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Bypass parent app UI launch",
+                            titleFontSize = 12.5.sp,
+                            titleFontWeight = FontWeight.Medium,
+                            description = "Prevent opening the app interface in foreground",
+                            descriptionFontSize = 10.5.sp,
+                            modifier = Modifier.weight(1f)
+                        )
                         Switch(
                             checked = config.bypassAppLaunch,
                             onCheckedChange = { onConfigChange(config.copy(bypassAppLaunch = it)) },

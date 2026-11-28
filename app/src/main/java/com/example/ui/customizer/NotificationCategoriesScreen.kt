@@ -212,20 +212,12 @@ fun NotificationCategoriesScreen(
                                 modifier = Modifier.size(22.dp)
                             )
                         }
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(
-                                text = "Category Grouping",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Group shade notifications into collapsible sections with custom icons.",
-                                fontSize = 11.5.sp,
-                                lineHeight = 14.sp,
-                                color = colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Category Grouping",
+                            description = "Group shade notifications into collapsible sections with custom icons.",
+                            titleFontSize = 16.sp,
+                            descriptionFontSize = 11.5.sp
+                        )
                     }
 
                     if (categories.isNotEmpty()) {
@@ -258,19 +250,14 @@ fun NotificationCategoriesScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Sort Notifications by Category",
-                            fontSize = 13.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Unmatched notifications appear under \"Other\"",
-                            fontSize = 11.sp,
-                            color = colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Sort Notifications by Category",
+                        description = "Unmatched notifications appear under \"Other\"",
+                        titleFontSize = 13.5.sp,
+                        titleFontWeight = FontWeight.SemiBold,
+                        descriptionFontSize = 11.sp,
+                        modifier = Modifier.weight(1f)
+                    )
                     Switch(
                         checked = isSortingEnabled,
                         onCheckedChange = { NotificationCategoryManager.setSortingEnabled(context, it) },
@@ -377,18 +364,24 @@ fun NotificationCategoriesScreen(
                         )
                     }
 
-                    Text(
-                        text = "No Custom Categories Yet",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Create your own categories with custom icons, assign apps or keywords, and collapse noisy sections in the shade.",
-                        fontSize = 12.sp,
-                        lineHeight = 16.sp,
-                        color = colorScheme.onSurfaceVariant
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)
+                    ) {
+                        Text(
+                            text = "No Custom Categories Yet",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            style = SettingsTypographyDefaults.textStyle(15.sp),
+                            color = colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Create your own categories with custom icons, assign apps or keywords, and collapse noisy sections in the shade.",
+                            fontSize = 12.sp,
+                            style = SettingsTypographyDefaults.textStyle(12.sp),
+                            color = colorScheme.onSurfaceVariant
+                        )
+                    }
 
                     Button(
                         onClick = { showCreateDialog = true },
@@ -512,26 +505,17 @@ fun NotificationCategoriesScreen(
                                 )
                             }
 
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(2.dp)
-                            ) {
-                                Text(
-                                    text = category.name,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = summaryParts.joinToString(" • "),
-                                    fontSize = 11.5.sp,
-                                    color = colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = category.name,
+                                description = summaryParts.joinToString(" • "),
+                                titleFontSize = 14.sp,
+                                titleMaxLines = 1,
+                                titleOverflow = TextOverflow.Ellipsis,
+                                descriptionFontSize = 11.5.sp,
+                                descriptionMaxLines = 1,
+                                descriptionOverflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
                         }
 
                         Row(verticalAlignment = Alignment.CenterVertically) {

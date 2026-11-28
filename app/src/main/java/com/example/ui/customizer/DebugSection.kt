@@ -74,25 +74,12 @@ fun DebugSection(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(
-                            text = "Force Show Preview Placeholder",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Forces the Media Player card to remain visible with preview track data for testing when no music is playing.",
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Force Show Preview Placeholder",
+                        description = "Forces the Media Player card to remain visible with preview track data for testing when no music is playing.",
+                        titleFontSize = 14.sp,
+                        descriptionFontSize = 12.sp
+                    )
                 }
 
                 Switch(
@@ -141,25 +128,12 @@ fun DebugSection(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(
-                            text = "Endless Root Mode",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Maintains a persistent background root shell daemon indefinitely so root access never expires, times out, or drops privileged control.",
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Endless Root Mode",
+                        description = "Maintains a persistent background root shell daemon indefinitely so root access never expires, times out, or drops privileged control.",
+                        titleFontSize = 14.sp,
+                        descriptionFontSize = 12.sp
+                    )
                 }
 
                 Switch(

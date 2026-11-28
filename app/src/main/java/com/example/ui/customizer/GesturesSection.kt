@@ -76,25 +76,12 @@ fun VolumeKeyGestureCard(
                     )
                 }
 
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(1.dp)
-                ) {
-                    Text(
-                        text = "Hide QS/QQS on Volume Key Press",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        lineHeight = 17.sp,
-                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Automatically close Quick Settings panel when pressing hardware volume keys.",
-                        fontSize = 12.sp,
-                        lineHeight = 15.sp,
-                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                SettingsTitleDescription(
+                    title = "Hide QS/QQS on Volume Key Press",
+                    description = "Automatically close Quick Settings panel when pressing hardware volume keys.",
+                    titleFontSize = 14.sp,
+                    descriptionFontSize = 12.sp
+                )
             }
 
             Switch(

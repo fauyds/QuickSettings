@@ -172,26 +172,12 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    Column(
+                    SettingsTitleDescription(
+                        title = "QS Grid Layout Density",
+                        description = "Choose column and row dimensions for expanded Quick Settings tiles.",
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(
-                            text = "QS Grid Layout Density",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Choose column and row dimensions for expanded Quick Settings tiles.",
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                        descriptionFontSize = 12.sp
+                    )
                 }
                 Row(
                     modifier = Modifier
@@ -261,36 +247,12 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                                 modifier = Modifier.size(20.dp)
                             )
                         }
-                        Column(
+                        SettingsTitleDescription(
+                            title = "Horizontal Scroll QS Tiles",
+                            description = "Allow horizontally scrolling through all active QQS tiles in collapsed header.",
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = "Horizontal Scroll QS Tiles",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
-                            )
-                            Text(
-                                text = "Allow horizontally scrolling through all active QQS tiles in collapsed header.",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(
-                                        alignment = LineHeightStyle.Alignment.Center,
-                                        trim = LineHeightStyle.Trim.Both
-                                    )
-                                )
-                            )
-                        }
+                            descriptionFontSize = 12.sp
+                        )
                     }
                     Switch(
                         checked = enableQqsHorizontalScroll,
@@ -319,7 +281,7 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                     .padding(start = 20.dp, end = 20.dp, top = 36.dp, bottom = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -349,8 +311,8 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                                 text = "Drag Handle Length",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                lineHeight = SettingsTypographyDefaults.compactLineHeight(14.sp),
+                                style = SettingsTypographyDefaults.CompactTextStyle,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         }
@@ -358,8 +320,8 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                             text = "${dragHandleLength.toInt()} dp",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            lineHeight = 16.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            lineHeight = SettingsTypographyDefaults.compactLineHeight(13.sp),
+                            style = SettingsTypographyDefaults.CompactTextStyle,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -367,8 +329,8 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                     Text(
                         text = "Customize the width of the quick settings expansion drag pill indicator.",
                         fontSize = 12.sp,
-                        lineHeight = 15.sp,
-                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                        lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                        style = SettingsTypographyDefaults.CompactTextStyle,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -420,26 +382,12 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    Column(
+                    SettingsTitleDescription(
+                        title = "Date Position in Header",
+                        description = "Choose where to place the date display relative to the clock time in the QQS header bar.",
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(
-                            text = "Date Position in Header",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Choose where to place the date display relative to the clock time in the QQS header bar.",
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                        descriptionFontSize = 12.sp
+                    )
                 }
 
                 if (isClassicStyle) {
@@ -550,26 +498,12 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    Column(
+                    SettingsTitleDescription(
+                        title = "Edit Pencil Icon Location",
+                        description = "Choose whether the edit (pencil) icon is located in the QS footer, top header, both, or hidden.",
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(
-                            text = "Edit Pencil Icon Location",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Choose whether the edit (pencil) icon is located in the QS footer, top header, both, or hidden.",
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                        descriptionFontSize = 12.sp
+                    )
                 }
 
                 if (isClassicStyle) {
@@ -684,24 +618,12 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
+                        SettingsTitleDescription(
+                            title = "Move Collapse Button to QQS Footer",
+                            description = "Show the expand/collapse chevron button directly inside the QQS footer bar",
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = "Move Collapse Button to QQS Footer",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Show the expand/collapse chevron button directly inside the QQS footer bar",
-                                fontSize = 12.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     Switch(
@@ -751,26 +673,12 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    Column(
+                    SettingsTitleDescription(
+                        title = "Battery Percentage Location",
+                        description = "Choose where to place the battery percentage indicator.",
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(
-                            text = "Battery Percentage Location",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Choose where to place the battery percentage indicator.",
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                        descriptionFontSize = 12.sp
+                    )
                 }
 
                 if (isClassicStyle) {
@@ -882,26 +790,12 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    Column(
+                    SettingsTitleDescription(
+                        title = "Settings Icon Location",
+                        description = "Choose where the system settings icon is placed.",
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(
-                            text = "Settings Icon Location",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Choose where the system settings icon is placed.",
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                        descriptionFontSize = 12.sp
+                    )
                 }
 
                 if (isClassicStyle) {
@@ -1023,26 +917,12 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
+                        SettingsTitleDescription(
+                            title = "Tile Label & Subtitle Font Size",
+                            description = "Adjust the typography scale for Quick Settings tile labels and subtitles.",
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                        ) {
-                            Text(
-                                text = "Tile Label & Subtitle Font Size",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Adjust the typography scale for Quick Settings tile labels and subtitles.",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     if (collapseExpandOptions) {
@@ -1178,25 +1058,11 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(
-                            text = "Hide Date in Expanded QS",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Hide the date display when the Quick Settings panel is fully expanded.",
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Hide Date in Expanded QS",
+                        description = "Hide the date display when the Quick Settings panel is fully expanded.",
+                        descriptionFontSize = 12.sp
+                    )
                 }
 
                 Switch(
@@ -1247,25 +1113,11 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(
-                            text = "Disable Labels in Expanded QS",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Hide text labels in expanded QS panel and scale tiles bigger automatically.",
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Disable Labels in Expanded QS",
+                        description = "Hide text labels in expanded QS panel and scale tiles bigger automatically.",
+                        descriptionFontSize = 12.sp
+                    )
                 }
 
                 Switch(
@@ -1316,25 +1168,11 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(
-                            text = "Hide QQS Drag Handle",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Hide the visual drag pill indicator at the bottom of the compact QQS panel.",
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Hide QQS Drag Handle",
+                        description = "Hide the visual drag pill indicator at the bottom of the compact QQS panel.",
+                        descriptionFontSize = 12.sp
+                    )
                 }
 
                 Switch(
@@ -1385,25 +1223,11 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(
-                            text = "Disable Empty Notification Labels",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Hide the 'Notifications' header and 'No new notifications' label in QQS when there are no active notifications.",
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Disable Empty Notification Labels",
+                        description = "Hide the 'Notifications' header and 'No new notifications' label in QQS when there are no active notifications.",
+                        descriptionFontSize = 12.sp
+                    )
                 }
 
                 Switch(
@@ -1454,25 +1278,11 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(
-                            text = "Hide Brightness Percentage",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Hide the percentage text indicator next to the brightness slider.",
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Hide Brightness Percentage",
+                        description = "Hide the percentage text indicator next to the brightness slider.",
+                        descriptionFontSize = 12.sp
+                    )
                 }
 
                 Switch(
@@ -1523,25 +1333,11 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(
-                            text = "Hide Brightness Icon",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Hide the brightness icon on the left side of the brightness slider.",
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Hide Brightness Icon",
+                        description = "Hide the brightness icon on the left side of the brightness slider.",
+                        descriptionFontSize = 12.sp
+                    )
                 }
 
                 Switch(
@@ -1592,25 +1388,11 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(
-                            text = "Show Brightness +/- Buttons",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 17.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Add minus (-) and plus (+) buttons to the sides of the brightness slider for fine control.",
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Show Brightness +/- Buttons",
+                        description = "Add minus (-) and plus (+) buttons to the sides of the brightness slider for fine control.",
+                        descriptionFontSize = 12.sp
+                    )
                 }
 
                 Switch(
@@ -1661,25 +1443,11 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                        ) {
-                            Text(
-                                text = "Disable Clear All Background",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Remove the background container tint from the notification clear all button.",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Disable Clear All Background",
+                            description = "Remove the background container tint from the notification clear all button.",
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     Switch(
@@ -1738,25 +1506,11 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                                 )
                             }
 
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(1.dp)
-                            ) {
-                                Text(
-                                    text = "Disable Clear All Label",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    lineHeight = 17.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Hide the 'Clear All' text label, remove pill background, and keep only the clear icon.",
-                                    fontSize = 12.sp,
-                                    lineHeight = 15.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Disable Clear All Label",
+                                description = "Hide the 'Clear All' text label, remove pill background, and keep only the clear icon.",
+                                descriptionFontSize = 12.sp
+                            )
                         }
 
                         Switch(
@@ -1857,24 +1611,12 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
+                        SettingsTitleDescription(
+                            title = "Show SIM Card Carrier",
+                            description = "Show the dynamic SIM card network operator name on the bottom left of the QQS container.",
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = "Show SIM Card Carrier",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Show the dynamic SIM card network operator name on the bottom left of the QQS container.",
-                                fontSize = 12.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     Switch(
@@ -1931,24 +1673,12 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                                 )
                             }
 
-                            Column(
+                            SettingsTitleDescription(
+                                title = "Divider Between Carrier & QQS Tiles",
+                                description = "Show a divider separating the SIM card carrier name and QQS tiles",
                                 modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = "Divider Between Carrier & QQS Tiles",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Show a divider separating the SIM card carrier name and QQS tiles",
-                                    fontSize = 12.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                                descriptionFontSize = 12.sp
+                            )
                         }
 
                         Switch(
@@ -1973,26 +1703,16 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(
+                        SettingsTitleDescription(
+                            title = "Replace Carrier Divider with Line",
+                            description = "Keep carrier and tiles inside one card with a crisp divider line instead of splitting cards",
                             modifier = Modifier
                                 .weight(1f)
                                 .padding(end = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(3.dp)
-                        ) {
-                            Text(
-                                text = "Replace Carrier Divider with Line",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Keep carrier and tiles inside one card with a crisp divider line instead of splitting cards",
-                                fontSize = 11.5.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                            titleFontSize = 13.sp,
+                            titleFontWeight = FontWeight.SemiBold,
+                            descriptionFontSize = 11.5.sp
+                        )
 
                         Switch(
                             checked = carrierDividerAsLine,
@@ -2045,24 +1765,12 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
+                        SettingsTitleDescription(
+                            title = "Hide Carrier in Expanded QS",
+                            description = "Hide the SIM card carrier label when Quick Settings is fully expanded",
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = "Hide Carrier in Expanded QS",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Hide the SIM card carrier label when Quick Settings is fully expanded",
-                                fontSize = 12.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     Switch(
@@ -2122,25 +1830,11 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                                 )
                             }
 
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(1.dp)
-                            ) {
-                                Text(
-                                    text = "Panel & Notification Shadows",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    lineHeight = 17.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Enable depth shadows under QS panel cards, notification items, and the Clear All button.",
-                                    fontSize = 12.sp,
-                                    lineHeight = 15.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Panel & Notification Shadows",
+                                description = "Enable depth shadows under QS panel cards, notification items, and the Clear All button.",
+                                descriptionFontSize = 12.sp
+                            )
                         }
 
                         Row(
@@ -2210,21 +1904,15 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Column {
-                                        Text(
-                                            text = "Shadow Size / Elevation",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = if (panelShadowElevation.toInt() == 8) "Default (8 dp)"
-                                                   else if (panelShadowElevation < 8) "Subtle Shadow"
-                                                   else "Deep Shadow",
-                                            fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
+                                    SettingsTitleDescription(
+                                        title = "Shadow Size / Elevation",
+                                        description = if (panelShadowElevation.toInt() == 8) "Default (8 dp)"
+                                                      else if (panelShadowElevation < 8) "Subtle Shadow"
+                                                      else "Deep Shadow",
+                                        titleFontSize = 13.sp,
+                                        titleFontWeight = FontWeight.SemiBold,
+                                        descriptionFontSize = 11.sp
+                                    )
                                     Text(
                                         text = "${panelShadowElevation.toInt()} dp",
                                         fontSize = 13.sp,
@@ -2257,21 +1945,15 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Column {
-                                        Text(
-                                            text = "Shadow Vertical Offset",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = if (panelShadowOffsetY.toInt() == 0) "Default (Centered / 0 dp)"
-                                                   else if (panelShadowOffsetY < 0) "Moved Upwards"
-                                                   else "Moved Downwards",
-                                            fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
+                                    SettingsTitleDescription(
+                                        title = "Shadow Vertical Offset",
+                                        description = if (panelShadowOffsetY.toInt() == 0) "Default (Centered / 0 dp)"
+                                                      else if (panelShadowOffsetY < 0) "Moved Upwards"
+                                                      else "Moved Downwards",
+                                        titleFontSize = 13.sp,
+                                        titleFontWeight = FontWeight.SemiBold,
+                                        descriptionFontSize = 11.sp
+                                    )
                                     Text(
                                         text = "${if (panelShadowOffsetY.toInt() > 0) "+" else ""}${panelShadowOffsetY.toInt()} dp",
                                         fontSize = 13.sp,
@@ -2304,21 +1986,15 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Column {
-                                        Text(
-                                            text = "Shadow Transparency",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = if (Math.abs(panelShadowAlpha - 0.35f) < 0.03f) "Default (35% Opacity)"
-                                                   else if (panelShadowAlpha < 0.35f) "More Transparent"
-                                                   else "More Opaque",
-                                            fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
+                                    SettingsTitleDescription(
+                                        title = "Shadow Transparency",
+                                        description = if (Math.abs(panelShadowAlpha - 0.35f) < 0.03f) "Default (35% Opacity)"
+                                                      else if (panelShadowAlpha < 0.35f) "More Transparent"
+                                                      else "More Opaque",
+                                        titleFontSize = 13.sp,
+                                        titleFontWeight = FontWeight.SemiBold,
+                                        descriptionFontSize = 11.sp
+                                    )
                                     Text(
                                         text = "${Math.round(panelShadowAlpha * 100)}%",
                                         fontSize = 13.sp,
@@ -2390,25 +2066,11 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                                 )
                             }
 
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(1.dp)
-                            ) {
-                                Text(
-                                    text = "Clear All FAB Position & Size",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    lineHeight = 17.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Adjust the horizontal position, vertical position, and size of the floating Clear All button.",
-                                    fontSize = 12.sp,
-                                    lineHeight = 15.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Clear All FAB Position & Size",
+                                description = "Adjust the horizontal position, vertical position, and size of the floating Clear All button.",
+                                descriptionFontSize = 12.sp
+                            )
                         }
 
                         Row(
@@ -2507,21 +2169,15 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Column {
-                                        Text(
-                                            text = "Horizontal Offset",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = if (clearAllFabOffsetX.toInt() == 0) "Default (Centered / Anchored)"
-                                                   else if (clearAllFabOffsetX < 0) "Shifted Left"
-                                                   else "Shifted Right",
-                                            fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
+                                    SettingsTitleDescription(
+                                        title = "Horizontal Offset",
+                                        description = if (clearAllFabOffsetX.toInt() == 0) "Default (Centered / Anchored)"
+                                                      else if (clearAllFabOffsetX < 0) "Shifted Left"
+                                                      else "Shifted Right",
+                                        titleFontSize = 13.sp,
+                                        titleFontWeight = FontWeight.SemiBold,
+                                        descriptionFontSize = 11.sp
+                                    )
                                     Text(
                                         text = "${if (clearAllFabOffsetX.toInt() > 0) "+" else ""}${clearAllFabOffsetX.toInt()} dp",
                                         fontSize = 13.sp,
@@ -2554,21 +2210,15 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Column {
-                                        Text(
-                                            text = "Vertical Offset",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = if (clearAllFabOffsetY.toInt() == 0) "Default (Bottom Floating)"
-                                                   else if (clearAllFabOffsetY < 0) "Lowered towards Edge"
-                                                   else "Raised Upwards",
-                                            fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
+                                    SettingsTitleDescription(
+                                        title = "Vertical Offset",
+                                        description = if (clearAllFabOffsetY.toInt() == 0) "Default (Bottom Floating)"
+                                                      else if (clearAllFabOffsetY < 0) "Lowered towards Edge"
+                                                      else "Raised Upwards",
+                                        titleFontSize = 13.sp,
+                                        titleFontWeight = FontWeight.SemiBold,
+                                        descriptionFontSize = 11.sp
+                                    )
                                     Text(
                                         text = "${if (clearAllFabOffsetY.toInt() > 0) "+" else ""}${clearAllFabOffsetY.toInt()} dp",
                                         fontSize = 13.sp,
@@ -2601,21 +2251,15 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Column {
-                                        Text(
-                                            text = "FAB Button Size",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = if (clearAllFabSize == 64) "Default Size (64 dp)"
-                                                   else if (clearAllFabSize < 64) "Compact"
-                                                   else "Large",
-                                            fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
+                                    SettingsTitleDescription(
+                                        title = "FAB Button Size",
+                                        description = if (clearAllFabSize == 64) "Default Size (64 dp)"
+                                                      else if (clearAllFabSize < 64) "Compact"
+                                                      else "Large",
+                                        titleFontSize = 13.sp,
+                                        titleFontWeight = FontWeight.SemiBold,
+                                        descriptionFontSize = 11.sp
+                                    )
                                     Text(
                                         text = "$clearAllFabSize dp",
                                         fontSize = 13.sp,
@@ -2643,9 +2287,9 @@ fun QsTweaksSection(modifier: Modifier = Modifier) {
                                 Text(
                                     text = "Note: Enable \"Clear All FAB Button\" under Customize → QS Design to display the floating button.",
                                     fontSize = 11.sp,
-                                    lineHeight = 14.sp,
+                                    lineHeight = SettingsTypographyDefaults.compactLineHeight(11.sp),
                                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                                    style = SettingsTypographyDefaults.CompactTextStyle
                                 )
                             }
                         }

@@ -124,6 +124,8 @@ import com.example.service.QuickPanelAccessibilityService
 import com.example.system.PrivilegeEngine
 import com.example.system.ShizukuStatusState
 import com.example.ui.MainViewModel
+import com.example.ui.customizer.SettingsTitleDescription
+import com.example.ui.customizer.SettingsTypographyDefaults
 import com.example.ui.theme.LocalIsDarkTheme
 import com.example.ui.theme.getSettingsCardBackgroundColor
 import com.example.ui.theme.getSettingsScreenBackgroundColor
@@ -390,19 +392,20 @@ private fun SetupStepHeader(
             text = title,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
+            lineHeight = SettingsTypographyDefaults.compactLineHeight(20.sp),
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
-            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+            style = SettingsTypographyDefaults.CompactTextStyle
         )
 
         Text(
             text = subtitle,
             fontSize = 13.sp,
-            lineHeight = 17.sp,
+            lineHeight = SettingsTypographyDefaults.compactLineHeight(13.sp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 8.dp),
-            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+            style = SettingsTypographyDefaults.CompactTextStyle
         )
     }
 }
@@ -829,20 +832,14 @@ private fun PrivilegeModeDetailCard(
             }
 
             // Privileges & Capabilities
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = "PRIVILEGES & CAPABILITIES",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colorScheme.primary
-                )
-                Text(
-                    text = privilegesDescription,
-                    fontSize = 12.sp,
-                    lineHeight = 15.sp,
-                    color = colorScheme.onSurfaceVariant
-                )
-            }
+            SettingsTitleDescription(
+                title = "PRIVILEGES & CAPABILITIES",
+                titleFontSize = 10.sp,
+                titleColor = colorScheme.primary,
+                description = privilegesDescription,
+                descriptionFontSize = 12.sp,
+                descriptionColor = colorScheme.onSurfaceVariant
+            )
 
             // Status Bar Detector Status Info
             Row(
@@ -863,7 +860,8 @@ private fun PrivilegeModeDetailCard(
                 Text(
                     text = statusBarDetectorWork,
                     fontSize = 11.sp,
-                    lineHeight = 14.sp,
+                    lineHeight = SettingsTypographyDefaults.compactLineHeight(11.sp),
+                    style = SettingsTypographyDefaults.CompactTextStyle,
                     color = colorScheme.onSurface
                 )
             }
@@ -1048,7 +1046,8 @@ private fun TileCommandsStep(viewModel: MainViewModel) {
                     else
                         "${activeMode.title} option shows ADB shell command input boxes for promptless ON and OFF execution.",
                     fontSize = 12.sp,
-                    lineHeight = 15.sp,
+                    lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                    style = SettingsTypographyDefaults.CompactTextStyle,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
@@ -1138,20 +1137,11 @@ private fun TileCommandsStep(viewModel: MainViewModel) {
                         )
                     }
 
-                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                        Text(
-                            text = "Enable All Tile Overrides",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = if (areAllOverridesEnabled) "All tile overrides are active" else "Turn on custom command overrides for all tiles",
-                            fontSize = 11.5.sp,
-                            lineHeight = 15.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Enable All Tile Overrides",
+                        description = if (areAllOverridesEnabled) "All tile overrides are active" else "Turn on custom command overrides for all tiles",
+                        descriptionFontSize = 11.5.sp
+                    )
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
@@ -1292,24 +1282,17 @@ private fun SetupTileCommandEditorCard(
                         )
                     }
 
-                    Column {
-                        Text(
-                            text = tile.title,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = colorScheme.onSurface
-                        )
-                        Text(
-                            text = if (mode == PrivilegeMode.STANDARD)
-                                (if (intentActionText.isNotBlank()) intentActionText.substringAfterLast('.') else "System Default Intent")
-                            else
-                                (if (onCmdText.isNotBlank()) onCmdText else "Default hardware toggle"),
-                            fontSize = 11.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            color = colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = tile.title,
+                        titleColor = colorScheme.onSurface,
+                        description = if (mode == PrivilegeMode.STANDARD)
+                            (if (intentActionText.isNotBlank()) intentActionText.substringAfterLast('.') else "System Default Intent")
+                        else
+                            (if (onCmdText.isNotBlank()) onCmdText else "Default hardware toggle"),
+                        descriptionMaxLines = 1,
+                        descriptionOverflow = TextOverflow.Ellipsis,
+                        descriptionColor = colorScheme.onSurfaceVariant
+                    )
                 }
 
                 Row(
@@ -1622,7 +1605,8 @@ private fun ComplicationCommandsStep(viewModel: MainViewModel) {
                     else
                         "${activeMode.title} mode defaults complication overrides to ADB shell ON/OFF commands, synced with Complication Actions.",
                     fontSize = 12.sp,
-                    lineHeight = 15.sp,
+                    lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                    style = SettingsTypographyDefaults.CompactTextStyle,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
@@ -1707,24 +1691,15 @@ private fun ComplicationCommandsStep(viewModel: MainViewModel) {
                         )
                     }
 
-                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                        Text(
-                            text = "Enable All Complication Overrides",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = if (customizedCount > 0) {
-                                "$customizedCount of ${complications.size} complications customized"
-                            } else {
-                                "Turn on ${activeMode.title} single-tap overrides for all complications"
-                            },
-                            fontSize = 11.5.sp,
-                            lineHeight = 15.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Enable All Complication Overrides",
+                        description = if (customizedCount > 0) {
+                            "$customizedCount of ${complications.size} complications customized"
+                        } else {
+                            "Turn on ${activeMode.title} single-tap overrides for all complications"
+                        },
+                        descriptionFontSize = 11.5.sp
+                    )
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
@@ -1884,25 +1859,18 @@ private fun SetupComplicationCommandEditorCard(
                         )
                     }
 
-                    Column {
-                        Text(
-                            text = definition.title,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = colorScheme.onSurface
-                        )
-                        Text(
-                            text = if (hasCustomAction) {
-                                "Tap: ${config.tapBehavior.label} • Long: ${config.longPressBehavior.label}"
-                            } else {
-                                definition.defaultTapDescription
-                            },
-                            fontSize = 11.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            color = if (hasCustomAction) colorScheme.primary else colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = definition.title,
+                        titleColor = colorScheme.onSurface,
+                        description = if (hasCustomAction) {
+                            "Tap: ${config.tapBehavior.label} • Long: ${config.longPressBehavior.label}"
+                        } else {
+                            definition.defaultTapDescription
+                        },
+                        descriptionMaxLines = 1,
+                        descriptionOverflow = TextOverflow.Ellipsis,
+                        descriptionColor = if (hasCustomAction) colorScheme.primary else colorScheme.onSurfaceVariant
+                    )
                 }
 
                 Row(
@@ -2157,30 +2125,24 @@ private fun SetupComplicationTriggerBlock(
 
         when (selectedBehavior) {
             ComplicationTriggerBehavior.DEFAULT -> {
-                Text(
-                    text = "DEFAULT COMPLICATION ACTION",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colorScheme.primary
-                )
-                Text(
-                    text = defaultDescription,
-                    fontSize = 11.5.sp,
-                    color = colorScheme.onSurfaceVariant
+                SettingsTitleDescription(
+                    title = "DEFAULT COMPLICATION ACTION",
+                    titleFontSize = 10.sp,
+                    titleColor = colorScheme.primary,
+                    description = defaultDescription,
+                    descriptionFontSize = 11.5.sp,
+                    descriptionColor = colorScheme.onSurfaceVariant
                 )
             }
 
             ComplicationTriggerBehavior.COMPLICATION_MENU -> {
-                Text(
-                    text = "COMPLICATION MENU OVERLAY",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colorScheme.primary
-                )
-                Text(
-                    text = "Opens this complication's interactive menu micro-window when triggered.",
-                    fontSize = 11.5.sp,
-                    color = colorScheme.onSurfaceVariant
+                SettingsTitleDescription(
+                    title = "COMPLICATION MENU OVERLAY",
+                    titleFontSize = 10.sp,
+                    titleColor = colorScheme.primary,
+                    description = "Opens this complication's interactive menu micro-window when triggered.",
+                    descriptionFontSize = 11.5.sp,
+                    descriptionColor = colorScheme.onSurfaceVariant
                 )
             }
 
@@ -2494,20 +2456,25 @@ private fun TileVisibilityStep(viewModel: MainViewModel) {
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text(
-                    text = "OPTIMIZE VISIBILITY",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.1.sp,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)) {
+                    Text(
+                        text = "OPTIMIZE VISIBILITY",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.1.sp,
+                        lineHeight = SettingsTypographyDefaults.compactLineHeight(11.sp),
+                        style = SettingsTypographyDefaults.CompactTextStyle,
+                        color = MaterialTheme.colorScheme.primary
+                    )
 
-                Text(
-                    text = "If running in Standard mode, automatically hide advanced tiles that require ADB/Root so you only see fully working tiles.",
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                    Text(
+                        text = "If running in Standard mode, automatically hide advanced tiles that require ADB/Root so you only see fully working tiles.",
+                        fontSize = 12.sp,
+                        lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                        style = SettingsTypographyDefaults.CompactTextStyle,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
                 FilledTonalButton(
                     onClick = {
@@ -2647,23 +2614,12 @@ private fun TriggerTogglesStep() {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    Text(
-                        text = "Stock shade override",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Auto-detect when the stock system notification shade opens to substitute it with the custom panel.",
-                        fontSize = 12.sp,
-                        lineHeight = 15.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                SettingsTitleDescription(
+                    title = "Stock shade override",
+                    description = "Auto-detect when the stock system notification shade opens to substitute it with the custom panel.",
+                    descriptionFontSize = 12.sp,
+                    modifier = Modifier.weight(1f)
+                )
                 Spacer(modifier = Modifier.width(10.dp))
                 Switch(
                     checked = overrideSystemQs,
@@ -2685,37 +2641,45 @@ private fun TriggerTogglesStep() {
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)
                 ) {
-                    Text(
-                        text = "Panel replacement delay",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = CircleShape
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "${panelReplacementDelayMs}ms",
-                            fontSize = 11.sp,
+                            text = "Panel replacement delay",
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            lineHeight = SettingsTypographyDefaults.compactLineHeight(14.sp),
+                            style = SettingsTypographyDefaults.CompactTextStyle,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            shape = CircleShape
+                        ) {
+                            Text(
+                                text = "${panelReplacementDelayMs}ms",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
                     }
-                }
 
-                Text(
-                    text = "Delay applied before opening the custom panel over the stock shade (0ms - 500ms).",
-                    fontSize = 12.sp,
-                    lineHeight = 15.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                    Text(
+                        text = "Delay applied before opening the custom panel over the stock shade (0ms - 500ms).",
+                        fontSize = 12.sp,
+                        lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                        style = SettingsTypographyDefaults.CompactTextStyle,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
                 // Panel replacement delay buttons
                 Row(
@@ -2774,23 +2738,12 @@ private fun TriggerTogglesStep() {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    Text(
-                        text = "Invisible status bar trigger",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Make the status bar trigger totally invisible while keeping swipe gestures active.",
-                        fontSize = 12.sp,
-                        lineHeight = 15.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                SettingsTitleDescription(
+                    title = "Invisible status bar trigger",
+                    description = "Make the status bar trigger totally invisible while keeping swipe gestures active.",
+                    descriptionFontSize = 12.sp,
+                    modifier = Modifier.weight(1f)
+                )
                 Spacer(modifier = Modifier.width(10.dp))
                 Switch(
                     checked = invisibleStatusBarTrigger,
@@ -2813,21 +2766,12 @@ private fun TriggerTogglesStep() {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
+                SettingsTitleDescription(
+                    title = "Use auto system panel closing",
+                    description = "Use auto system panel closing (if the main variant doesn't work). Actively forces stock shade to collapse on Android 12 through 15.",
+                    descriptionFontSize = 12.sp,
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = "Use auto system panel closing",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
+                    titleTrailingContent = {
                         Surface(
                             color = MaterialTheme.colorScheme.secondaryContainer,
                             shape = RoundedCornerShape(4.dp)
@@ -2836,18 +2780,13 @@ private fun TriggerTogglesStep() {
                                 text = "A12-A15",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
+                                style = SettingsTypographyDefaults.CompactTextStyle,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
                     }
-                    Text(
-                        text = "Use auto system panel closing (if the main variant doesn't work). Actively forces stock shade to collapse on Android 12 through 15.",
-                        fontSize = 12.sp,
-                        lineHeight = 15.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                )
                 Spacer(modifier = Modifier.width(10.dp))
                 Switch(
                     checked = autoSystemPanelClosing,

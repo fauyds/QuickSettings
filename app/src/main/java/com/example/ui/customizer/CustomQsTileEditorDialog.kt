@@ -268,10 +268,14 @@ fun CustomQsTileEditorDialog(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("State Toggle Support", fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, color = colorScheme.onSurface)
-                                    Text("Supports separate ON and OFF labels/subtitles & toggles", fontSize = 11.sp, color = colorScheme.onSurfaceVariant)
-                                }
+                                SettingsTitleDescription(
+                                    title = "State Toggle Support",
+                                    description = "Supports separate ON and OFF labels/subtitles & toggles",
+                                    titleFontSize = 13.5.sp,
+                                    titleFontWeight = FontWeight.SemiBold,
+                                    descriptionFontSize = 11.sp,
+                                    modifier = Modifier.weight(1f)
+                                )
                                 Switch(
                                     checked = isStateToggle,
                                     onCheckedChange = { isStateToggle = it },
@@ -439,8 +443,13 @@ fun CustomQsTileEditorDialog(
                                     )
                                 }
                                 TileActionOverrideType.ACTION_CHAIN -> {
-                                    Text("Action Chaining (Sequential Steps)", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                    Text("Executes steps sequentially with configurable delays", fontSize = 11.sp, color = colorScheme.onSurfaceVariant)
+                                    SettingsTitleDescription(
+                                        title = "Action Chaining (Sequential Steps)",
+                                        description = "Executes steps sequentially with configurable delays",
+                                        titleFontSize = 13.sp,
+                                        titleFontWeight = FontWeight.Bold,
+                                        descriptionFontSize = 11.sp
+                                    )
 
                                     actionChainSteps.forEachIndexed { index, step ->
                                         Row(
@@ -796,19 +805,13 @@ fun GoogleIconPickerModal(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text(
-                            text = "Google Icon Library",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Choose from 500+ Material Design icons",
-                            fontSize = 11.5.sp,
-                            color = colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = "Google Icon Library",
+                        description = "Choose from 500+ Material Design icons",
+                        titleFontSize = 18.sp,
+                        titleFontWeight = FontWeight.Bold,
+                        descriptionFontSize = 11.5.sp
+                    )
                     IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
                         Icon(Icons.Default.Close, contentDescription = "Close", tint = colorScheme.onSurfaceVariant)
                     }

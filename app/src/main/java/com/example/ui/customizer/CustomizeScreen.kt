@@ -78,7 +78,8 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
 
     CompositionLocalProvider(
         LocalTextStyle provides LocalTextStyle.current.copy(
-            platformStyle = PlatformTextStyle(includeFontPadding = false)
+            platformStyle = SettingsTypographyDefaults.CompactPlatformStyle,
+            lineHeightStyle = SettingsTypographyDefaults.CompactLineHeightStyle
         )
     ) {
         Column(
@@ -158,7 +159,8 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.1.sp,
-                            lineHeight = 16.sp,
+                            lineHeight = SettingsTypographyDefaults.compactLineHeight(11.sp),
+                            style = SettingsTypographyDefaults.CompactTextStyle,
                             color = MaterialTheme.colorScheme.primary
                         )
 
@@ -209,7 +211,8 @@ fun CustomizeScreen(modifier: Modifier = Modifier) {
                     Text(
                         text = "Select a category to customize Quick Settings (Hold any category or option to pin or hide it)",
                         fontSize = 13.sp,
-                        lineHeight = 18.sp,
+                        lineHeight = SettingsTypographyDefaults.compactLineHeight(13.sp),
+                        style = SettingsTypographyDefaults.CompactTextStyle,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -590,26 +593,13 @@ fun CategoryButton(
             }
 
             // Category Title & Description
-            Column(
+            SettingsTitleDescription(
+                title = category.title,
+                description = category.description,
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(1.dp)
-            ) {
-                Text(
-                    text = category.title,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    lineHeight = 18.sp,
-                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = category.description,
-                    fontSize = 12.sp,
-                    lineHeight = 15.sp,
-                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+                titleFontSize = 15.sp,
+                descriptionFontSize = 12.sp
+            )
 
             // Chevron Arrow on the right
             Icon(

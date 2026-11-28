@@ -149,23 +149,11 @@ fun ThemesSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                            Text(
-                                text = "Save Current Settings",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Capture all active tile shapes, sliders, colors, triggers, and layout as a custom theme profile.",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Save Current Settings",
+                            description = "Capture all active tile shapes, sliders, colors, triggers, and layout as a custom theme profile.",
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     Row(
@@ -259,23 +247,11 @@ fun ThemesSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                            Text(
-                                text = "Transfer & Clipboard",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Export your configuration to clipboard or import a saved theme JSON.",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Transfer & Clipboard",
+                            description = "Export your configuration to clipboard or import a saved theme JSON.",
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     Row(
@@ -487,20 +463,28 @@ fun ThemesSection(modifier: Modifier = Modifier) {
                                         )
                                     }
 
-                                    Text(
-                                        text = "No Saved Themes",
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)
+                                    ) {
+                                        Text(
+                                            text = "No Saved Themes",
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            lineHeight = SettingsTypographyDefaults.compactLineHeight(16.sp),
+                                            style = SettingsTypographyDefaults.CompactTextStyle,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
 
-                                    Text(
-                                        text = "You haven't saved any themes yet. Use the Save Configuration card above to save your current settings profile. Preset themes are not included.",
-                                        fontSize = 12.sp,
-                                        lineHeight = 16.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        textAlign = TextAlign.Center
-                                    )
+                                        Text(
+                                            text = "You haven't saved any themes yet. Use the Save Configuration card above to save your current settings profile. Preset themes are not included.",
+                                            fontSize = 12.sp,
+                                            lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                                            style = SettingsTypographyDefaults.CompactTextStyle,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -635,7 +619,13 @@ fun ThemesSection(modifier: Modifier = Modifier) {
             title = { Text("Import Theme JSON") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Paste settings configuration JSON below:", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = "Paste settings configuration JSON below:",
+                        fontSize = 12.sp,
+                        lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                        style = SettingsTypographyDefaults.CompactTextStyle,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     TextField(
                         value = importJsonText,
                         onValueChange = { importJsonText = it },
@@ -743,25 +733,12 @@ private fun SavedThemeCard(
                         )
                     }
 
-                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                        Text(
-                            text = theme.name,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            style = TextStyle(
-                                platformStyle = PlatformTextStyle(includeFontPadding = false)
-                            )
-                        )
-                        Text(
-                            text = "${theme.formattedDate} • ${theme.settingsCount} settings",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = TextStyle(
-                                platformStyle = PlatformTextStyle(includeFontPadding = false)
-                            )
-                        )
-                    }
+                    SettingsTitleDescription(
+                        title = theme.name,
+                        titleFontSize = 15.sp,
+                        description = "${theme.formattedDate} • ${theme.settingsCount} settings",
+                        descriptionFontSize = 11.sp
+                    )
                 }
 
                 IconButton(

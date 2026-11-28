@@ -95,23 +95,23 @@ fun BasicSettingsSection(modifier: Modifier = Modifier) {
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                            verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)
                         ) {
                             Text(
                                 text = "App Settings Theme Mode",
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
-                                lineHeight = 18.sp,
+                                lineHeight = SettingsTypographyDefaults.compactLineHeight(15.sp),
                                 textAlign = TextAlign.Center,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                style = SettingsTypographyDefaults.CompactTextStyle,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "Customize the theme for the app settings. The Quick Settings panel retains its authentic system dark appearance.",
                                 fontSize = 12.sp,
-                                lineHeight = 15.sp,
+                                lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
                                 textAlign = TextAlign.Center,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                style = SettingsTypographyDefaults.CompactTextStyle,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -209,23 +209,23 @@ fun BasicSettingsSection(modifier: Modifier = Modifier) {
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                            verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)
                         ) {
                             Text(
                                 text = "Import & Export Settings",
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
-                                lineHeight = 18.sp,
+                                lineHeight = SettingsTypographyDefaults.compactLineHeight(15.sp),
                                 textAlign = TextAlign.Center,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                style = SettingsTypographyDefaults.CompactTextStyle,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "Backup your Quick Settings configurations to a JSON file or restore from a previously exported setup.",
                                 fontSize = 12.sp,
-                                lineHeight = 15.sp,
+                                lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
                                 textAlign = TextAlign.Center,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                style = SettingsTypographyDefaults.CompactTextStyle,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -393,6 +393,8 @@ fun ExportSettingsDialog(onDismiss: () -> Unit) {
                 Text(
                     text = "Copy the JSON content below or save it as a file to backup your configuration:",
                     fontSize = 12.sp,
+                    lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                    style = SettingsTypographyDefaults.CompactTextStyle,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
@@ -506,6 +508,8 @@ fun ImportSettingsDialog(onDismiss: () -> Unit) {
                 Text(
                     text = "Paste a JSON configuration string or choose a JSON file to restore your settings:",
                     fontSize = 12.sp,
+                    lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                    style = SettingsTypographyDefaults.CompactTextStyle,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 

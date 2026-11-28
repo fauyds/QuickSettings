@@ -147,25 +147,11 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                        ) {
-                            Text(
-                                text = "Disable Panel Animations",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Open, close, and expand Quick Settings instantly without transition animations or slide delays.",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Disable Panel Animations",
+                            description = "Open, close, and expand Quick Settings instantly without transition animations or slide delays.",
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     Switch(
@@ -218,25 +204,11 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                        ) {
-                            Text(
-                                text = "Prime Core High Smoothness Mode",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Works with Root only. Pins CPU thread affinity to the prime core to completely eliminate swipe and scrolling micro-stutters.",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Prime Core High Smoothness Mode",
+                            description = "Works with Root only. Pins CPU thread affinity to the prime core to completely eliminate swipe and scrolling micro-stutters.",
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     Switch(
@@ -318,25 +290,11 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                        ) {
-                            Text(
-                                text = "Hide QS/QQS on Volume Key Press",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Automatically close Quick Settings panel and place a transparent corner square when pressing hardware volume keys.",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Hide QS/QQS on Volume Key Press",
+                            description = "Automatically close Quick Settings panel and place a transparent corner square when pressing hardware volume keys.",
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     Switch(
@@ -388,25 +346,11 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                        ) {
-                            Text(
-                                text = "Invisible Status Bar Trigger",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Make the status bar trigger totally invisible while keeping swipe gestures active.",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Invisible Status Bar Trigger",
+                            description = "Make the status bar trigger totally invisible while keeping swipe gestures active.",
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     Switch(
@@ -459,23 +403,12 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
+                        SettingsTitleDescription(
+                            title = "Use auto system panel closing",
+                            description = "Actively forces the stock notification shade to collapse on Android 12 through 15 when opening the custom panel, resolving issues on devices where the system panel remains stuck open.",
+                            descriptionFontSize = 12.sp,
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Text(
-                                    text = "Use auto system panel closing",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    lineHeight = 17.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.weight(1f, fill = false)
-                                )
+                            titleTrailingContent = {
                                 Surface(
                                     color = MaterialTheme.colorScheme.secondaryContainer,
                                     shape = RoundedCornerShape(4.dp)
@@ -484,20 +417,13 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                                         text = "A12-A15",
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
-                                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                                        style = SettingsTypographyDefaults.CompactTextStyle,
                                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                     )
                                 }
                             }
-                            Text(
-                                text = "Actively forces the stock notification shade to collapse on Android 12 through 15 when opening the custom panel, resolving issues on devices where the system panel remains stuck open.",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        )
                     }
 
                     Switch(
@@ -558,25 +484,11 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                                 )
                             }
 
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(1.dp)
-                            ) {
-                                Text(
-                                    text = "Panel Replacement Delay",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    lineHeight = 17.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Set a custom delay before substituting the stock system notification shade with our custom panel.",
-                                    fontSize = 12.sp,
-                                    lineHeight = 15.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Panel Replacement Delay",
+                                description = "Set a custom delay before substituting the stock system notification shade with our custom panel.",
+                                descriptionFontSize = 12.sp
+                            )
                         }
 
                         Row(
@@ -722,25 +634,11 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                                 )
                             }
 
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(1.dp)
-                            ) {
-                                Text(
-                                    text = "Stock Shade Auto-Override",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    lineHeight = 17.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Automatically intercepts native System UI notification shade expansion and substitutes it with the custom Quick Settings panel.",
-                                    fontSize = 12.sp,
-                                    lineHeight = 15.sp,
-                                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Stock Shade Auto-Override",
+                                description = "Automatically intercepts native System UI notification shade expansion and substitutes it with the custom Quick Settings panel.",
+                                descriptionFontSize = 12.sp
+                            )
                         }
 
                         Switch(
@@ -766,19 +664,14 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                                Text(
-                                    text = "Shade Swipe Only",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Blocks all shade trigger methods except opening via the system shade.",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SettingsTitleDescription(
+                                title = "Shade Swipe Only",
+                                titleFontSize = 13.sp,
+                                titleFontWeight = FontWeight.SemiBold,
+                                description = "Blocks all shade trigger methods except opening via the system shade.",
+                                descriptionFontSize = 11.sp,
+                                modifier = Modifier.weight(1f).padding(end = 12.dp)
+                            )
 
                             Switch(
                                 checked = strictShadeDetection,
@@ -802,30 +695,41 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                             modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Row(
+                            Column(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)
                             ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Detector Cooldown",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                                        style = SettingsTypographyDefaults.CompactTextStyle,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "$detectorCooldownMs ms",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                                        style = SettingsTypographyDefaults.CompactTextStyle,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+
                                 Text(
-                                    text = "Detector Cooldown",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "$detectorCooldownMs ms",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
+                                    text = "Cooldown delay between consecutive interception triggers (10 ms to 1000 ms).",
+                                    fontSize = 11.sp,
+                                    lineHeight = SettingsTypographyDefaults.compactLineHeight(11.sp),
+                                    style = SettingsTypographyDefaults.CompactTextStyle,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-
-                            Text(
-                                text = "Cooldown delay between consecutive interception triggers (10 ms to 1000 ms).",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
 
                             Slider(
                                 value = detectorCooldownMs.toFloat(),
@@ -950,16 +854,11 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                             modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(
-                                text = "Custom Detection Blacklist (Packages & Classes):",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Events containing these packages or class names will be immediately rejected.",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            SettingsTitleDescription(
+                                title = "Custom Detection Blacklist (Packages & Classes):",
+                                titleFontSize = 12.sp,
+                                description = "Events containing these packages or class names will be immediately rejected.",
+                                descriptionFontSize = 11.sp
                             )
 
                             Row(
@@ -1119,25 +1018,11 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                        ) {
-                            Text(
-                                text = "Force Show Preview Placeholder",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Forces the Media Player card to remain visible with preview track data for testing when no music is playing.",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Force Show Preview Placeholder",
+                            description = "Forces the Media Player card to remain visible with preview track data for testing when no music is playing.",
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     Switch(
@@ -1192,25 +1077,11 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                        ) {
-                            Text(
-                                text = "Endless Root Mode",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Maintains a persistent background root shell daemon indefinitely so root access never expires, times out, or drops privileged control.",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Endless Root Mode",
+                            description = "Maintains a persistent background root shell daemon indefinitely so root access never expires, times out, or drops privileged control.",
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     Switch(
@@ -1263,25 +1134,11 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                        ) {
-                            Text(
-                                text = "Minimum Brightness",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Lowest brightness limit (up to 2047). Default: 1.",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Minimum Brightness",
+                            description = "Lowest brightness limit (up to 2047). Default: 1.",
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     var textVal by remember(minBrightness) { mutableStateOf(minBrightness.toString()) }
@@ -1341,25 +1198,11 @@ fun MiscellaneousSection(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
-                        ) {
-                            Text(
-                                text = "Maximum Brightness",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 17.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Highest brightness limit (up to 2047). Default: 2047.",
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        SettingsTitleDescription(
+                            title = "Maximum Brightness",
+                            description = "Highest brightness limit (up to 2047). Default: 2047.",
+                            descriptionFontSize = 12.sp
+                        )
                     }
 
                     var textVal by remember(maxBrightness) { mutableStateOf(maxBrightness.toString()) }

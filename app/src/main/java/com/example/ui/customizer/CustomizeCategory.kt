@@ -110,19 +110,14 @@ fun CategorySectionHeader(
                 modifier = Modifier.size(17.dp)
             )
         }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = category.title.uppercase(),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.8.sp,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = category.description,
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        SettingsTitleDescription(
+            title = category.title.uppercase(),
+            description = category.description,
+            modifier = Modifier.weight(1f),
+            titleFontSize = 12.sp,
+            titleFontWeight = FontWeight.Bold,
+            titleColor = MaterialTheme.colorScheme.primary,
+            descriptionFontSize = 11.sp
+        )
     }
 }

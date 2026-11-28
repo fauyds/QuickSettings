@@ -115,25 +115,29 @@ internal fun FeatureSwitchRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(end = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
+        if (subtitle != null) {
+            SettingsTitleDescription(
+                title = label,
+                description = subtitle,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 12.dp),
+                titleFontSize = 13.sp,
+                titleFontWeight = FontWeight.SemiBold,
+                descriptionFontSize = 11.sp
+            )
+        } else {
             Text(
                 text = label,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+                lineHeight = SettingsTypographyDefaults.compactLineHeight(13.sp),
+                style = SettingsTypographyDefaults.CompactTextStyle,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 12.dp)
             )
-            if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
         Switch(
             checked = checked,
@@ -167,12 +171,16 @@ internal fun FeatureSliderBlock(
                 text = label,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
+                lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                style = SettingsTypographyDefaults.CompactTextStyle,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = valueText,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
+                lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                style = SettingsTypographyDefaults.CompactTextStyle,
                 color = MaterialTheme.colorScheme.primary
             )
         }
@@ -211,6 +219,8 @@ internal fun <T> FeatureSegmentedChooser(
                 text = title,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
+                lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                style = SettingsTypographyDefaults.CompactTextStyle,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -2009,6 +2019,8 @@ internal fun RenderThemesAndMiscAndAboutActions(feature: FavoriteFeature, modifi
                 Text(
                     text = "No saved themes yet. Save your current look above to build your theme library.",
                     fontSize = 12.sp,
+                    lineHeight = SettingsTypographyDefaults.compactLineHeight(12.sp),
+                    style = SettingsTypographyDefaults.CompactTextStyle,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
@@ -2031,20 +2043,15 @@ internal fun RenderThemesAndMiscAndAboutActions(feature: FavoriteFeature, modifi
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = theme.name,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Text(
-                                        text = "${theme.settingsCount} settings",
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                                SettingsTitleDescription(
+                                    title = theme.name,
+                                    description = "${theme.settingsCount} settings",
+                                    modifier = Modifier.weight(1f),
+                                    titleFontSize = 13.sp,
+                                    titleMaxLines = 1,
+                                    titleOverflow = TextOverflow.Ellipsis,
+                                    descriptionFontSize = 11.sp
+                                )
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)

@@ -63,6 +63,8 @@ import com.example.model.MediaState
 import com.example.ui.overlay.CompactMediaTile
 import com.example.ui.overlay.ExpandedMediaCard
 import com.example.system.NativeTileManager
+import com.example.ui.customizer.SettingsTitleDescription
+import com.example.ui.customizer.SettingsTypographyDefaults
 import com.example.ui.theme.ExpressiveCardShapes
 import com.example.ui.theme.MonetOnPrimary
 import com.example.ui.theme.MonetPrimary
@@ -114,21 +116,21 @@ fun NativeControlsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(SettingsTypographyDefaults.TitleDescriptionSpacing)) {
                         Text(
                             text = "NATIVE SYSTEM CONTROLS",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.1.sp,
-                            lineHeight = 14.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            lineHeight = SettingsTypographyDefaults.compactLineHeight(11.sp),
+                            style = SettingsTypographyDefaults.CompactTextStyle,
                             color = MonetPrimary
                         )
                         Text(
                             text = "Live telemetry & direct hardware observers",
                             fontSize = 13.sp,
-                            lineHeight = 16.sp,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            lineHeight = SettingsTypographyDefaults.compactLineHeight(13.sp),
+                            style = SettingsTypographyDefaults.CompactTextStyle,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -404,19 +406,14 @@ fun ToggleRow(
                 )
             }
 
-            Column {
-                Text(
-                    text = label,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = if (state) "Enabled" else "Disabled",
-                    fontSize = 11.sp,
-                    color = if (state) MonetPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            SettingsTitleDescription(
+                title = label,
+                titleFontSize = 13.sp,
+                titleFontWeight = FontWeight.SemiBold,
+                description = if (state) "Enabled" else "Disabled",
+                descriptionFontSize = 11.sp,
+                descriptionColor = if (state) MonetPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
 
         Switch(
