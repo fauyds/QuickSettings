@@ -18,7 +18,6 @@
 <img src="screenshots/1.png" width="22%" />
 <img src="screenshots/2.png" width="22%" />
 <img src="screenshots/3.png" width="22%" />
-<img src="screenshots/4.png" width="22%" />
 <img src="screenshots/5.png" width="22%" />
 <img src="screenshots/6.png" width="22%" />
 <img src="screenshots/7.png" width="22%" />
@@ -48,10 +47,15 @@
 <img src="screenshots/31.png" width="22%" />
 <img src="screenshots/32.png" width="22%" />
 <img src="screenshots/33.png" width="22%" />
-<img src="screenshots/34.png" width="22%" />
-<img src="screenshots/35.png" width="22%" />
-<img src="screenshots/36.png" width="22%" />
-<img src="screenshots/37.png" width="22%" />
+
+<p align="center">
+  Some Glass Variants
+<br />
+</p>
+
+<p align="center">
+<img src="screenshots/34.png" width="22%" /> <img src="screenshots/35.png" width="22%" /> <img src="screenshots/36.png" width="22%" /> <img src="screenshots/37.png" width="22%" />
+</p>
 
 <p align="center">
   <a href="./screenshots">
