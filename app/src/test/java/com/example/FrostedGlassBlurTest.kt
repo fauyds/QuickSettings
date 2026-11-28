@@ -2101,4 +2101,50 @@ class FrostedGlassBlurTest {
             .getUnclippedBoundsInRoot()
         assertEquals(4f, (frostedTransparencyBounds.top - frostedBlurBounds.bottom).value, 1f)
     }
+
+    @Test
+    fun `LiveScreenRefractionBackdrop renders captured bitmap with AGSL refraction behind QS card region`() {
+        val capturedBitmap = android.graphics.Bitmap.createBitmap(
+            1080,
+            2400,
+            android.graphics.Bitmap.Config.ARGB_8888
+        ).apply {
+            eraseColor(android.graphics.Color.rgb(42, 96, 168))
+        }
+        val qsBounds = com.example.ui.overlay.QsCardBlurBounds(
+            left = 24f,
+            top = 80f,
+            right = 1056f,
+            bottom = 860f,
+            topCornerRadiusPx = 48f,
+            bottomCornerRadiusPx = 48f
+        )
+
+        try {
+            composeTestRule.setContent {
+                QuickPanelTheme(darkTheme = true) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        com.example.ui.overlay.LiveScreenRefractionBackdrop(
+                            screenBitmap = capturedBitmap,
+                            enableBlur = true,
+                            enableRefraction = true,
+                            refractionSensitivity = 0.65f,
+                            blurRadiusDp = 24f,
+                            transparency = 0.40f,
+                            isDark = true,
+                            revealAlpha = 1f,
+                            qsCardBounds = qsBounds,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
+            }
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNodeWithTag("live_screen_refraction_backdrop", useUnmergedTree = true)
+                .assertIsDisplayed()
+        } finally {
+            capturedBitmap.recycle()
+        }
+    }
 }

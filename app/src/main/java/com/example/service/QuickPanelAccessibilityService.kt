@@ -312,9 +312,14 @@ class QuickPanelAccessibilityService : AccessibilityService() {
     private val _capturedBackdropBitmap = MutableStateFlow<android.graphics.Bitmap?>(null)
     val capturedBackdropBitmap: StateFlow<android.graphics.Bitmap?> = _capturedBackdropBitmap.asStateFlow()
     private var lastBackdropCaptureTimeMs = 0L
+    private var lastTakeScreenshotCallUptimeMs = 0L
+    private var lastScreenshotErrorCode = 0
     private var isBackdropCaptureInFlight = false
     internal var captureGeneration = 0L
         private set
+    private var inFlightCaptureGeneration = 0L
+    private var completedCaptureGeneration = 0L
+    private var inFlightCaptureDeferred: CompletableDeferred<Boolean>? = null
     private val mainHandler = Handler(Looper.getMainLooper())
 
     val pullDownOffset = MutableStateFlow<Float?>(null)
@@ -328,13 +333,19 @@ class QuickPanelAccessibilityService : AccessibilityService() {
     }
 
     fun resetBackdropCaptureForNewGesture() {
+        if (isPanelShowing || isPendingShowOverlay) {
+            return
+        }
         captureGeneration++
         isBackdropCaptureInFlight = false
+        inFlightCaptureGeneration = 0L
+        completedCaptureGeneration = 0L
         lastBackdropCaptureTimeMs = 0L
+        lastScreenshotErrorCode = 0
+        inFlightCaptureDeferred?.complete(false)
+        inFlightCaptureDeferred = null
         triggerStripView?.alpha = 1f
-        if (!isPanelShowing && !isPendingShowOverlay) {
-            clearCapturedBackdropBitmap()
-        }
+        clearCapturedBackdropBitmap()
     }
 
     internal fun isSystemUiShadeVisible(): Boolean {
@@ -385,47 +396,112 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         }
 
         isPendingShowOverlay = true
-        val requestGen = ++captureGeneration
         collapseStockNotificationShade()
+
+        val existingBitmap = _capturedBackdropBitmap.value
+        val nowUptime = android.os.SystemClock.uptimeMillis()
+        val hasFreshGestureBitmap = existingBitmap != null &&
+            !existingBitmap.isRecycled &&
+            completedCaptureGeneration == captureGeneration &&
+            lastBackdropCaptureTimeMs > 0L &&
+            (nowUptime - lastBackdropCaptureTimeMs) <= 1500L &&
+            !isSystemUiShadeVisible()
+
+        if (hasFreshGestureBitmap) {
+            triggerStripView?.alpha = 1f
+            isPendingShowOverlay = false
+            if (!isLockedOrUnlocking()) {
+                showOverlayPanelInternal(initialStage)
+            }
+            return
+        }
+
+        val activeDeferred = inFlightCaptureDeferred
+        val canReuseInFlight = activeDeferred != null &&
+            isBackdropCaptureInFlight &&
+            inFlightCaptureGeneration == captureGeneration &&
+            !isSystemUiShadeVisible()
+
+        val requestGen = if (canReuseInFlight) {
+            captureGeneration
+        } else {
+            ++captureGeneration
+        }
         triggerStripView?.alpha = 0f
 
         serviceScope.launch {
-            var waitedMs = 0L
-            val wasShadeVisibleInitially = isSystemUiShadeVisible()
-            if (wasShadeVisibleInitially) {
-                while (waitedMs < 160L && isSystemUiShadeVisible()) {
+            try {
+                if (canReuseInFlight && activeDeferred != null) {
+                    val captured = withTimeoutOrNull(420L) {
+                        activeDeferred.await()
+                    } == true
+                    if (!captured &&
+                        requestGen == captureGeneration &&
+                        !isPanelShowing &&
+                        !isLockedOrUnlocking() &&
+                        lastScreenshotErrorCode == ERROR_TAKE_SCREENSHOT_INTERVAL_TIME_SHORT
+                    ) {
+                        val elapsedSinceCall = android.os.SystemClock.uptimeMillis() - lastTakeScreenshotCallUptimeMs
+                        val waitMs = (380L - elapsedSinceCall).coerceIn(60L, 380L)
+                        delay(waitMs)
+                        if (requestGen == captureGeneration && !isPanelShowing && !isLockedOrUnlocking()) {
+                            collapseStockNotificationShade()
+                            takeBackdropScreenshotForGeneration(requestGen)
+                            val retryDeferred = inFlightCaptureDeferred
+                            if (retryDeferred != null) {
+                                withTimeoutOrNull(380L) {
+                                    retryDeferred.await()
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    var waitedMs = 0L
+                    val wasShadeVisibleInitially = isSystemUiShadeVisible()
+                    if (wasShadeVisibleInitially) {
+                        while (waitedMs < 180L && isSystemUiShadeVisible()) {
+                            if (requestGen != captureGeneration || isPanelShowing || isLockedOrUnlocking()) {
+                                return@launch
+                            }
+                            delay(16L)
+                            waitedMs += 16L
+                        }
+                        // Let SurfaceFlinger commit the frame without stock shade layers to avoid ghosting
+                        delay(24L)
+                    }
+
                     if (requestGen != captureGeneration || isPanelShowing || isLockedOrUnlocking()) {
-                        triggerStripView?.alpha = 1f
-                        isPendingShowOverlay = false
                         return@launch
                     }
-                    delay(16L)
-                    waitedMs += 16L
-                }
-                // Let SurfaceFlinger commit the frame without stock shade layers to avoid ghosting
-                delay(24L)
-            }
 
-            if (requestGen != captureGeneration || isPanelShowing || isLockedOrUnlocking()) {
-                triggerStripView?.alpha = 1f
-                isPendingShowOverlay = false
-                return@launch
-            }
+                    val elapsedSinceLastCall = android.os.SystemClock.uptimeMillis() - lastTakeScreenshotCallUptimeMs
+                    if (lastTakeScreenshotCallUptimeMs > 0L && elapsedSinceLastCall in 0L until 360L) {
+                        val cooldownWait = (360L - elapsedSinceLastCall).coerceIn(16L, 360L)
+                        delay(cooldownWait)
+                        if (requestGen != captureGeneration || isPanelShowing || isLockedOrUnlocking()) {
+                            return@launch
+                        }
+                    }
 
-            val launched = java.util.concurrent.atomic.AtomicBoolean(false)
-            val finishLaunch = Runnable {
-                triggerStripView?.alpha = 1f
-                if (launched.compareAndSet(false, true)) {
-                    isPendingShowOverlay = false
-                    if (requestGen == captureGeneration && !isLockedOrUnlocking()) {
-                        showOverlayPanelInternal(initialStage)
+                    takeBackdropScreenshotForGeneration(requestGen)
+                    val freshDeferred = inFlightCaptureDeferred
+                    if (freshDeferred != null) {
+                        withTimeoutOrNull(420L) {
+                            freshDeferred.await()
+                        }
                     }
                 }
-            }
-            mainHandler.postDelayed(finishLaunch, 260L)
-            takeBackdropScreenshotForGeneration(requestGen) {
-                mainHandler.removeCallbacks(finishLaunch)
-                finishLaunch.run()
+
+                if (requestGen == captureGeneration && !isPanelShowing && !isLockedOrUnlocking()) {
+                    isPendingShowOverlay = false
+                    triggerStripView?.alpha = 1f
+                    showOverlayPanelInternal(initialStage)
+                }
+            } finally {
+                triggerStripView?.alpha = 1f
+                if (requestGen == captureGeneration) {
+                    isPendingShowOverlay = false
+                }
             }
         }
     }
@@ -439,14 +515,22 @@ class QuickPanelAccessibilityService : AccessibilityService() {
             onComplete?.invoke()
             return
         }
+        inFlightCaptureDeferred?.complete(false)
+        val deferred = CompletableDeferred<Boolean>()
+        inFlightCaptureDeferred = deferred
+        inFlightCaptureGeneration = requestGen
         isBackdropCaptureInFlight = true
+        lastScreenshotErrorCode = 0
+        lastTakeScreenshotCallUptimeMs = android.os.SystemClock.uptimeMillis()
         try {
             takeScreenshot(
                 Display.DEFAULT_DISPLAY,
                 mainExecutor,
                 object : TakeScreenshotCallback {
                     override fun onSuccess(screenshot: ScreenshotResult) {
-                        isBackdropCaptureInFlight = false
+                        if (inFlightCaptureGeneration == requestGen) {
+                            isBackdropCaptureInFlight = false
+                        }
                         triggerStripView?.alpha = 1f
                         val hb = screenshot.hardwareBuffer
                         val wrapped = try {
@@ -458,8 +542,13 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                                 hb.close()
                             } catch (_: Throwable) {}
                         }
-                        if (wrapped != null && requestGen == captureGeneration && !isLockedOrUnlocking()) {
+                        val accepted = wrapped != null &&
+                            requestGen == captureGeneration &&
+                            !isPanelShowing &&
+                            !isLockedOrUnlocking()
+                        if (accepted && wrapped != null) {
                             lastBackdropCaptureTimeMs = android.os.SystemClock.uptimeMillis()
+                            completedCaptureGeneration = requestGen
                             val previous = _capturedBackdropBitmap.value
                             _capturedBackdropBitmap.value = wrapped
                             if (previous != null && previous !== wrapped && !previous.isRecycled) {
@@ -468,19 +557,38 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                         } else {
                             wrapped?.recycle()
                         }
+                        deferred.complete(accepted)
+                        if (inFlightCaptureDeferred === deferred) {
+                            inFlightCaptureDeferred = null
+                        }
                         onComplete?.invoke()
                     }
 
                     override fun onFailure(errorCode: Int) {
-                        isBackdropCaptureInFlight = false
+                        if (inFlightCaptureGeneration == requestGen) {
+                            isBackdropCaptureInFlight = false
+                        }
+                        lastScreenshotErrorCode = errorCode
                         triggerStripView?.alpha = 1f
+                        Log.w("AccessibilityService", "takeScreenshot failed with errorCode=$errorCode (gen=$requestGen)")
+                        deferred.complete(false)
+                        if (inFlightCaptureDeferred === deferred) {
+                            inFlightCaptureDeferred = null
+                        }
                         onComplete?.invoke()
                     }
                 }
             )
-        } catch (_: Throwable) {
-            isBackdropCaptureInFlight = false
+        } catch (t: Throwable) {
+            if (inFlightCaptureGeneration == requestGen) {
+                isBackdropCaptureInFlight = false
+            }
             triggerStripView?.alpha = 1f
+            Log.w("AccessibilityService", "takeScreenshot threw: ${t.message}")
+            deferred.complete(false)
+            if (inFlightCaptureDeferred === deferred) {
+                inFlightCaptureDeferred = null
+            }
             onComplete?.invoke()
         }
     }
@@ -493,15 +601,20 @@ class QuickPanelAccessibilityService : AccessibilityService() {
             onComplete?.invoke()
             return
         }
-        if (isPanelShowing || !PanelPreferences.isLiquidGlassActive()) {
+        if (isPanelShowing || isPendingShowOverlay || isLockedOrUnlocking() || !PanelPreferences.isLiquidGlassActive()) {
             onComplete?.invoke()
             return
         }
-        if (isBackdropCaptureInFlight) {
+        if (isSystemUiShadeVisible()) {
+            onComplete?.invoke()
+            return
+        }
+        if (isBackdropCaptureInFlight && inFlightCaptureGeneration == captureGeneration) {
             onComplete?.invoke()
             return
         }
         val requestGen = ++captureGeneration
+        triggerStripView?.alpha = 0f
         takeBackdropScreenshotForGeneration(requestGen, onComplete)
     }
 
@@ -1904,7 +2017,7 @@ class QuickPanelAccessibilityService : AccessibilityService() {
                     val glassBackdropMode by PanelPreferences.glassBackdropMode.collectAsState()
                     val rawEnableContainerBlur by PanelPreferences.enableContainerBlur.collectAsState()
                     val glassSupported = isAndroid16FrostedGlassSupported()
-                    val enableContainerBlur = rawEnableContainerBlur && glassSupported
+                    val enableContainerBlur = (rawEnableContainerBlur || glassBackdropMode != GlassBackdropMode.OFF) && glassSupported
                     val blurOnlyBehindQsCard by PanelPreferences.blurOnlyBehindQsCard.collectAsState()
                     val containerBlurRadiusDp by PanelPreferences.containerBlurRadiusDp.collectAsState()
                     val containerBlurTransparency by PanelPreferences.containerBlurTransparency.collectAsState()
@@ -2388,7 +2501,11 @@ class QuickPanelAccessibilityService : AccessibilityService() {
         isPendingShowOverlay = false
         captureGeneration++
         isBackdropCaptureInFlight = false
+        inFlightCaptureGeneration = 0L
+        completedCaptureGeneration = 0L
         lastBackdropCaptureTimeMs = 0L
+        inFlightCaptureDeferred?.complete(false)
+        inFlightCaptureDeferred = null
         triggerStripView?.alpha = 1f
         expansionStage.value = QsExpansionStage.COLLAPSED
         dismissAnimatedCallback = null
@@ -2399,7 +2516,7 @@ class QuickPanelAccessibilityService : AccessibilityService() {
 
     fun clearCapturedBackdropIfInactive() {
         if (!isPanelShowing && !isPendingShowOverlay) {
-            clearCapturedBackdropBitmap()
+            resetBackdropCaptureForNewGesture()
         }
     }
 
@@ -2524,7 +2641,9 @@ class AccessibilityStatusTriggerView(context: Context) : View(context) {
                 startY = event.rawY
                 startX = event.rawX
                 isDragging = true
-                QuickPanelAccessibilityService.instance?.resetBackdropCaptureForNewGesture()
+                if (parent !is TriggerContainerLayout) {
+                    QuickPanelAccessibilityService.instance?.resetBackdropCaptureForNewGesture()
+                }
                 QuickPanelAccessibilityService.instance?.notifyUserDragging(true)
                 setPressedState(true)
                 QuickPanelAccessibilityService.collapseStockNotificationShade()

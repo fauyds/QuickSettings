@@ -171,11 +171,11 @@ class TriggerContainerLayout @JvmOverloads constructor(
                 touchDownX = ev.rawX
                 touchDownTime = System.currentTimeMillis()
                 isTrackingSwipe = true
+                QuickPanelAccessibilityService.collapseStockNotificationShade()
                 if (QuickPanelAccessibilityService.isRunning) {
                     QuickPanelAccessibilityService.instance?.resetBackdropCaptureForNewGesture()
                     QuickPanelAccessibilityService.instance?.preCaptureScreenBackdropIfNeeded()
                 }
-                QuickPanelAccessibilityService.collapseStockNotificationShade()
                 super.dispatchTouchEvent(ev)
                 return true
             }
@@ -232,7 +232,11 @@ class TriggerContainerLayout @JvmOverloads constructor(
                     }
                 }
                 isTrackingSwipe = false
-                return super.dispatchTouchEvent(ev)
+                val handled = super.dispatchTouchEvent(ev)
+                if (QuickPanelAccessibilityService.isRunning) {
+                    QuickPanelAccessibilityService.instance?.clearCapturedBackdropIfInactive()
+                }
+                return handled
             }
         }
         return super.dispatchTouchEvent(ev)

@@ -33,7 +33,7 @@ import kotlinx.coroutines.launch
 
 class MainViewModel(
     application: Application,
-    private val savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle = SavedStateHandle()
 ) : AndroidViewModel(application) {
 
     init {
