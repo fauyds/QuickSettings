@@ -388,7 +388,7 @@ class NotificationAdapter(
         super.onViewRecycled(holder)
         try {
             if (holder is NotificationViewHolder) {
-                // holder cleanup
+                holder.resetHeightAnimation()
             }
         } catch (_: Throwable) {}
     }
@@ -1476,7 +1476,6 @@ class NotificationAdapter(
         private val tvAppName: TextView = itemView.findViewById(R.id.tv_notif_app_name)
         private val tvTime: TextView = itemView.findViewById(R.id.tv_notif_time)
         private val ivExpand: ImageView = itemView.findViewById(R.id.iv_notif_expand)
-        private val ivDismiss: ImageView = itemView.findViewById(R.id.iv_notif_dismiss)
         private val tvTitle: TextView = itemView.findViewById(R.id.tv_notif_title)
         private val tvText: TextView = itemView.findViewById(R.id.tv_notif_text)
         private val tvSubtext: TextView = itemView.findViewById(R.id.tv_notif_subtext)
@@ -1721,7 +1720,6 @@ class NotificationAdapter(
             tvTime.setTextColor(textSecondaryColor)
 
             // 5. Header Icons with Monet Theme tint
-            ivDismiss.setColorFilter(textSecondaryColor)
             ivExpand.setColorFilter(textSecondaryColor)
 
             // 6. Expand / Collapse Icon
@@ -1738,20 +1736,10 @@ class NotificationAdapter(
                         activeReplyKey = null
                         activeReplyAction = null
                     }
-                    notifyItemChanged(bindingAdapterPosition)
+                    animateRebind(bindingAdapterPosition)
                 }
             } else {
                 ivExpand.visibility = View.GONE
-            }
-
-            // 7. Dismiss Icon
-            if (item.isClearable) {
-                ivDismiss.visibility = View.VISIBLE
-                ivDismiss.setOnClickListener {
-                    onNotificationDismiss(item)
-                }
-            } else {
-                ivDismiss.visibility = View.GONE
             }
 
             // 9. Title & Text with Monet Typographic Colors
@@ -1846,15 +1834,15 @@ class NotificationAdapter(
                         (8 * density).toInt()
                     )
                 }
-                val send = TextView(context).apply {
-                    text = "Send"
-                    textSize = 11f
-                    setTextColor(actionTextColor)
+                val send = ImageView(context).apply {
+                    setImageResource(R.drawable.ic_notif_send)
+                    setColorFilter(actionTextColor)
                     background = MonetThemeHelper.createMonetActionButtonDrawable(context, isDark, 1000f)
+                    scaleType = ImageView.ScaleType.FIT_CENTER
                     setPadding(
-                        (16 * density).toInt(),
                         (8 * density).toInt(),
-                        (16 * density).toInt(),
+                        (8 * density).toInt(),
+                        (8 * density).toInt(),
                         (8 * density).toInt()
                     )
                     isClickable = true
@@ -1865,7 +1853,7 @@ class NotificationAdapter(
                             QuickPanelNotificationListenerService.executeAction(replyTarget, context, reply)
                             activeReplyKey = null
                             activeReplyAction = null
-                            notifyItemChanged(bindingAdapterPosition)
+                            animateRebind(bindingAdapterPosition)
                         }
                     }
                 }
@@ -1878,8 +1866,8 @@ class NotificationAdapter(
                 llActions.addView(
                     send,
                     LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
+                        (34 * density).toInt(),
+                        (34 * density).toInt()
                     )
                 )
                 input.post {
@@ -1907,7 +1895,7 @@ class NotificationAdapter(
                             if (action.isReply) {
                                 activeReplyKey = item.key
                                 activeReplyAction = action
-                                notifyItemChanged(bindingAdapterPosition)
+                                animateRebind(bindingAdapterPosition)
                             } else {
                                 onActionClick(action)
                             }
@@ -1924,6 +1912,86 @@ class NotificationAdapter(
             } else {
                 llActions.visibility = View.GONE
             }
+        }
+
+        private var heightAnimator: android.animation.ValueAnimator? = null
+        private var rebindGeneration = 0
+
+        private fun animateRebind(position: Int) {
+            if (position == RecyclerView.NO_POSITION) return
+            val generation = ++rebindGeneration
+            val startHeight = itemView.height
+            heightAnimator?.let { previous ->
+                heightAnimator = null
+                previous.cancel()
+            }
+            if (startHeight > 0) {
+                val p = itemView.layoutParams
+                p.height = startHeight
+                itemView.layoutParams = p
+            }
+            onBindViewHolder(this, position, mutableListOf())
+            if (startHeight <= 0 || !itemView.isAttachedToWindow) {
+                val p = itemView.layoutParams
+                p.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                itemView.layoutParams = p
+                itemView.requestLayout()
+                return
+            }
+            itemView.post {
+                if (generation != rebindGeneration) return@post
+                val width = itemView.width
+                if (width <= 0) {
+                    itemView.requestLayout()
+                    return@post
+                }
+                val widthSpec = View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY)
+                val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+                itemView.measure(widthSpec, heightSpec)
+                val endHeight = itemView.measuredHeight
+                if (endHeight <= 0 || endHeight == startHeight) {
+                    val p = itemView.layoutParams
+                    p.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                    itemView.layoutParams = p
+                    itemView.requestLayout()
+                    return@post
+                }
+                val lp = itemView.layoutParams
+                lp.height = startHeight
+                itemView.layoutParams = lp
+                itemView.requestLayout()
+                val animator = android.animation.ValueAnimator.ofInt(startHeight, endHeight)
+                heightAnimator = animator
+                animator.duration = 220L
+                animator.interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
+                animator.addUpdateListener { anim ->
+                    val p = itemView.layoutParams
+                    p.height = anim.animatedValue as Int
+                    itemView.layoutParams = p
+                    itemView.requestLayout()
+                }
+                animator.addListener(object : android.animation.AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: android.animation.Animator) {
+                        if (heightAnimator !== animation) return
+                        heightAnimator = null
+                        val p = itemView.layoutParams
+                        p.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                        itemView.layoutParams = p
+                        itemView.requestLayout()
+                    }
+                })
+                animator.start()
+            }
+        }
+
+        fun resetHeightAnimation() {
+            heightAnimator?.let {
+                heightAnimator = null
+                it.cancel()
+            }
+            val p = itemView.layoutParams ?: return
+            p.height = ViewGroup.LayoutParams.WRAP_CONTENT
+            itemView.layoutParams = p
         }
 
         private fun showOptionsMenu(anchor: View, item: NotificationItem, context: Context) {

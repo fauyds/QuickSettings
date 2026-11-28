@@ -87,15 +87,6 @@
                     android:paddingVertical="6dp"
                     android:src="@drawable/ic_notif_chevron_down"
                     android:visibility="gone" />
-
-                <ImageView
-                    android:id="@+id/iv_notif_dismiss"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:background="?android:attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Dismiss"
-                    android:padding="6dp"
-                    android:src="@drawable/ic_notif_close" />
             </LinearLayout>
 
             <!-- Title -->
@@ -157,6 +148,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:visibility="gone" />
         </LinearLayout>

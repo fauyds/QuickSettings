@@ -70,10 +70,10 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import com.example.data.HeadsUpAction
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallEnd
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Snooze
@@ -1381,26 +1381,6 @@ object HeadsUpOverlayManager {
                                     fontSize = 10.sp,
                                     color = Color.Gray
                                 )
-
-                                Box(
-                                    modifier = Modifier
-                                        .size(22.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White.copy(alpha = 0.08f))
-                                        .clickable(
-                                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                                            indication = null
-                                        ) { onDismiss() }
-                                        .testTag("dismiss_heads_up_btn"),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Dismiss",
-                                        tint = Color.LightGray,
-                                        modifier = Modifier.size(12.dp)
-                                    )
-                                }
                             }
                         }
 
@@ -1530,7 +1510,7 @@ object HeadsUpOverlayManager {
                                         isDeclineAction -> Icons.Default.CallEnd
                                         isStopAction -> Icons.Default.Stop
                                         isSnoozeAction -> Icons.Default.Snooze
-                                        else -> Icons.AutoMirrored.Filled.OpenInNew
+                                        else -> null
                                     }
 
                                     Surface(
@@ -1551,12 +1531,14 @@ object HeadsUpOverlayManager {
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                                         ) {
-                                            Icon(
-                                                imageVector = iconVector,
-                                                contentDescription = action.title,
-                                                tint = btnTextColor,
-                                                modifier = Modifier.size(15.dp)
-                                            )
+                                            if (iconVector != null) {
+                                                Icon(
+                                                    imageVector = iconVector,
+                                                    contentDescription = action.title,
+                                                    tint = btnTextColor,
+                                                    modifier = Modifier.size(15.dp)
+                                                )
+                                            }
                                             Text(
                                                 text = action.title,
                                                 fontSize = 12.sp,
@@ -1608,12 +1590,13 @@ object HeadsUpOverlayManager {
                                     color = monetPrimary,
                                     modifier = Modifier.testTag("heads_up_reply_send")
                                 ) {
-                                    Text(
-                                        text = "Send",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MonetOnPrimary,
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.Send,
+                                        contentDescription = "Send",
+                                        tint = MonetOnPrimary,
+                                        modifier = Modifier
+                                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                                            .size(18.dp)
                                     )
                                 }
                             }
