@@ -1477,7 +1477,6 @@ class NotificationAdapter(
         private val tvTime: TextView = itemView.findViewById(R.id.tv_notif_time)
         private val ivExpand: ImageView = itemView.findViewById(R.id.iv_notif_expand)
         private val ivDismiss: ImageView = itemView.findViewById(R.id.iv_notif_dismiss)
-        private val ivMore: ImageView = itemView.findViewById(R.id.iv_notif_more)
         private val tvTitle: TextView = itemView.findViewById(R.id.tv_notif_title)
         private val tvText: TextView = itemView.findViewById(R.id.tv_notif_text)
         private val tvSubtext: TextView = itemView.findViewById(R.id.tv_notif_subtext)
@@ -1666,7 +1665,7 @@ class NotificationAdapter(
                 onNotificationClick(item)
             }
             flRoot.setOnLongClickListener {
-                showOptionsMenu(ivMore, item, context)
+                showOptionsMenu(flRoot, item, context)
                 true
             }
 
@@ -1723,7 +1722,6 @@ class NotificationAdapter(
 
             // 5. Header Icons with Monet Theme tint
             ivDismiss.setColorFilter(textSecondaryColor)
-            ivMore.setColorFilter(textSecondaryColor)
             ivExpand.setColorFilter(textSecondaryColor)
 
             // 6. Expand / Collapse Icon
@@ -1754,11 +1752,6 @@ class NotificationAdapter(
                 }
             } else {
                 ivDismiss.visibility = View.GONE
-            }
-
-            // 8. Options Menu
-            ivMore.setOnClickListener {
-                showOptionsMenu(ivMore, item, context)
             }
 
             // 9. Title & Text with Monet Typographic Colors
